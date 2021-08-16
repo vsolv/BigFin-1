@@ -131,7 +131,8 @@
                             <label>Invoice Date</label>
                             <md-datepicker ng-disabled="ECFcheckboxModel.value" md-hide-icons="calendar"
                                            ng-model="to_date"
-                                           md-hide-icons="calendar" ng-click="date" md-min-date="maxDate"
+                                           md-hide-icons="calendar" ng-click="date"
+                                           ng-change="validate_date(to_date)"
                                            md-max-date="minDate" formatDate></md-datepicker>
                         </md-input-container>
                         </md-input-container>
@@ -139,10 +140,12 @@
                     <div class="col-md-3" ng-hide="ppx_hide">
                         <md-input-container class="md-block inputcontainer">
                             <label>Invoice Number</label>
-                            <input ng-disabled="ECFcheckboxModel.value" ng-model="invoicenum" no-special-char
+                            <input ng-disabled="ECFcheckboxModel.value" ng-model="invoicenum"
                                    maxlength="16"/>
                         </md-input-container>
                     </div>
+                    <!--                    no-special-char-->
+                    <!--                    my-special-char-->
                     <div class="col-md-3">
                         <md-input-container class="md-block inputcontainer">
                             <label> Amount</label>
@@ -290,7 +293,16 @@
                     <div class="col-md-3">
                         <md-input-container class="md-block inputcontainer">
                             <label>RMU Code</label>
-                            <input ng-model="Rmu_code" maxlength="16" required no-special-char/>
+                            <input ng-model="Rmu_code" maxlength="16" ng-disabled="true" no-special-char/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label> Is Original Invoice</label>
+                            <md-select ng-model="is_original_invoice" ng-required="true">
+                                <md-option ng-repeat="x in invoice_original_list" ng-value="x.value">{{ x.type }}
+                                </md-option>
+                            </md-select>
                         </md-input-container>
                     </div>
 
@@ -350,12 +362,12 @@
                         <md-input-container class="md-block inputcontainer">
                             <label>Purpose</label>
                             <input ng-disabled="ECFcheckboxModel.value" ng-model="remarks"
-                                   maxlength="80" no-special-char required/>
+                                   maxlength="80" my-special-char required/>
                         </md-input-container>
                     </div>
                 </div>
             </div>
-<!--            my-special-char-->
+            <!--            my-special-char-->
             <div class="row">
                 <div class="col-lg-12">
                     <div class="col-md-2"></div>
@@ -408,12 +420,12 @@
                         <th>S.No</th>
                         <th>CR No</th>
                         <th>Invoice Type</th>
-
                         <th>Supplier Name</th>
                         <th>Employee Name</th>
                         <th>Invoice No</th>
                         <th>Invoice Date</th>
                         <th>Invoice Amount</th>
+                        <th>RMU Code</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -421,9 +433,7 @@
                         <td>
                             <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
                         </td>
-                        <td>
-                            {{dtl.invoiceheader_crno}}
-                        </td>
+                        <td> {{dtl.invoiceheader_crno}}</td>
 
                         <td>{{dtl.invoiceheader_invoicetype}}</td>
                         <td>{{dtl.supplier_branchname}}</td>
@@ -431,6 +441,7 @@
                         <td>{{dtl.invoiceheader_invoiceno}}</td>
                         <td>{{dtl.invoiceheader_invoicedate | date:'dd-MMM-yyyy'}}</td>
                         <td>{{dtl.invoiceheader_amount}}</td>
+                        <td>{{dtl.invoiceheader_rmubarcode}}</td>
 
 
                     </tr>
@@ -586,27 +597,35 @@
                                     <h3>No Attached File</h3>
                                 </div>
                                 <div class="col-md-offset-10" ng-show="file_path.length!='0'">
-
                                     <span class="editlink" ng-click="remove_all_files()">
-                               <span class="material-icons removelink">delete</span>
+                                    <span class="material-icons removelink">delete</span>
                                 <md-tooltip>Remove All</md-tooltip>
                                 </span>
                                     <span>Remove All</span>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
                                 <div ng-repeat="files in file_path">
                                     <div class="col-md-10">
                                         <h5 style="color:blue">{{files.file_name}}</h5>
-                                        <img src="{{files.file}}" alt="{{files}}"
+                                        <img src="{{files.file}}" alt="{{files}}" ng-hide="files.extension=='pdf'"
                                              class="myimage img-responsive thumbnail">
+
+                                        <object width="870px" height="500px" ng-show="files.extension=='pdf'"
+                                                data="{{files.file}}" class="internal">
+                                            <embed src="{{files.file}}"/>
+                                            <br/>
+                                        </object>
                                         <hr/>
                                     </div>
-                                    <div class="col-md-2" style="margin-top:200px;">
+                                    <div class="col-md-1" style="margin-top:200px;">
                                         <span class="editlink" ng-click="delete_one_file($index,files.file_name)">
                                         <span class="material-icons removelink">delete</span>
                                         </span>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
 
@@ -804,7 +823,8 @@ var myApp = angular.module('Appsmry', ['ngMaterial', 'ui.bootstrap', 'AppCommon'
     myApp.directive('mySpecialChar', function() {
      function link(scope, elem, attrs, ngModel) {
           ngModel.$parsers.push(function(viewValue) {
-            var reg = /^[`~\^&*()_+ ={}0-9a-zA-Z!@#$%^&*()_+-=|[\]\\:;<>?./\s]*$/;
+            //var reg = /^[`~\^&*()_+ ={}0-9a-zA-Z!@#$%^&*()_+-=|[\]\\:;<>?./\s]*$/;
+            var reg = /^[0-9a-zA-Z ]*$/;
             // if view values matches regexp, update model value
             if (viewValue.match(reg)) {
               return viewValue;
@@ -852,6 +872,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
         $scope.currentPages = 1;
         $scope.maxSizes = 3;
         $scope.itemsPerPages = 10;
+        $scope.is_original_invoice="";
 
       //  $scope.to_date = new Date();
 
@@ -874,6 +895,21 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
             $scope.ls_followup_date.getDate() - 1
         );
 
+
+         $scope.maxDates = new Date(
+            $scope.ls_followup_date.getFullYear(),
+            $scope.ls_followup_date.getMonth() - 6,
+            $scope.ls_followup_date.getDate() - 1
+        );
+
+        $scope.validate_date=function(date){
+            if(date<$scope.maxDates){
+                alert("Invoice date is greater than six months");
+            }
+
+        }
+
+
         $scope.loading = function() {
             $mdDialog.show({
                 templateUrl: 'loaderSpinner',
@@ -893,6 +929,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
         $scope.endloading = function() {
             $mdDialog.hide();
         };
+         $scope.invoice_original_list=[{"type":"YES","value":"Y"},{"type":"NO","value":"N"}];
 
         $scope.pmd_show = false;
 
@@ -1098,7 +1135,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
 
                 if ($scope.CR_data.length == Inward_detail.noofpockets) {
                     alert("Data Inserted Successfully")
-                    $window.location.href = "Invoicesummary";
+<!--                    $window.location.href = "Invoicesummary";-->
                 }
             }).finally($scope.endloading);
 
@@ -1139,7 +1176,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
                 "IS_ECF": $scope.ECF_check,
                 "ECF_NO": $scope.ecf_number,
                 "BAR_CODE": $scope.Bar_code,
-                "RMU_CODE": $scope.Rmu_code,
+                "RMU_CODE": "",
                 "BANK_CODE": $scope.bank_code,
                 "Due_Adjustment": $scope.deu_check,
                 "Advance_incr" : $scope.Advance_incr,
@@ -1151,6 +1188,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
                 "Pono" : $scope.pono,
                 "Advance_type":$scope.advance_gid,
                 "location":$scope.location,
+                 "Is_original_invoice":$scope.is_original_invoice,
 
             })
 
@@ -1226,6 +1264,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
         $scope.file_status=0;
 
         $scope.add_continue = function() {
+        debugger;
              if($scope.selectedtype == "Non PO" || $scope.selectedtype == "PO"){
                  if($scope.checkboxModel.value == false){
                     if($scope.invoiceamount !== $scope.invoicetaxamount){
@@ -1268,6 +1307,10 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
                         $scope.gst_number = '';
 
                     }
+                    if($scope.is_original_invoice==""){
+                        alert("Select Is Original Invoice");
+                        return false;
+                    }
 
                     if ($scope.ECFcheckboxModel.value == true) {
                         $scope.ECF_check = 'Y';
@@ -1295,7 +1338,8 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$filter', '$mdDateLoc
                         Supplier_name: $scope.supplier_data.supplier_name,
                         Invoice_No: $scope.invoicenum,
                         Invoice_Tot_Amount: $scope.invoiceamount,
-                        Invoice_Date: $scope.to_date,
+                        Invoice_Date: $scope.to_date
+
                     })
 
                     APjson_set();
@@ -1391,7 +1435,8 @@ debugger;
                   $scope.searchbrancheName = "";
                   $scope.location = 0;
                   $scope.searchemp=  "";
-                           $scope.pmd_show = false;
+                  $scope.is_original_invoice="";
+                  $scope.pmd_show = false;
 
                   //Already commented
 
@@ -1414,6 +1459,7 @@ debugger;
 
 
         $scope.add_ECF  = function(ecfnumber) {
+        debugger;
                        $scope.po_hide = false;
 
             $scope.ppx_hide = true;
@@ -1887,7 +1933,8 @@ debugger;
             });
             $scope.sttepsModel_Last=[];
             for(var k=0;k<$scope.filenames.length;k++){
-                $scope.sttepsModel_Last.push({"file":$scope.stepsModel[k],"file_name":$scope.filenames[k]});
+                $scope.extension_1=$scope.filenames[k].substr($scope.filenames[k].lastIndexOf('.')+1);
+                $scope.sttepsModel_Last.push({"file":$scope.stepsModel[k],"file_name":$scope.filenames[k],"extension":$scope.extension_1});
             }
         }
 
@@ -2114,6 +2161,17 @@ myApp.service("invoiceService", function ($http,$filter) {
 
 
 });
+
+
+
+
+
+
+
+
+
+
+
 
 
 

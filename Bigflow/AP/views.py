@@ -6969,3 +6969,6 @@ def gl_day_entry_generate(request):
                 # return HttpResponse(output)
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+        #Vignesh Test

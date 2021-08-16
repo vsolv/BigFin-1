@@ -15,7 +15,7 @@ from Bigflow.UserMgmt import views as UM_View
 # from Bigflow.Core import class1
 from Bigflow.inward.model import mInvoice
 import pandas as pd
-from django.http import HttpResponse, request
+from django.http import HttpResponse, request, JsonResponse
 from django.conf import settings
 import Bigflow
 import Bigflow.Core.models as common
@@ -1633,6 +1633,7 @@ class State_Process_Set(APIView):
                 pro_exp.Emp_gid = decry_data(self.request.query_params.get('Emp_gid'))
                 pro_results = pro_exp.set_state()
                 pro_results = pro_results[0]
+                pro_results=pro_results.split(',')[-1]
                 if pro_results == "SUCCESS":
                     return Response("SUCCESS")
                 else:
@@ -1716,13 +1717,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     return {"Error":"Fail In Login"}
             elif (self.context['request'].data['apitype']) == 'Direct':
                 datenow = str(datetime.datetime.now().strftime("%Y-%m-%d"))
-                password = 'vsolv33'
+                password = (self.context['request'].data['username'])
                 password = datenow+password[::-1]
                 password = class1.converttoascii(password)
                 auth_pwd = self.context['request'].data['auth_pwd']
                 common.logger.error([{"LG_APIJ_Pass": str(password)[0:5]}])
                 common.logger.error([{"LG_APIJ_AuthPass": str(auth_pwd)[0:5]}])
-                if password != auth_pwd:
+                if password == auth_pwd:
                     data["refresh"] = str(refresh)
                     data["access"] = str(refresh.access_token)
                     return data
@@ -1752,3 +1753,34 @@ token_refresh = TokenRefreshView.as_view()
 class verifyToken(TokenVerifyView):
     # Replace the serializer with your custom
     serializer_class = CustomTokenverifySerializer
+class geolocation_micro_to_mono(APIView):
+    from django.http import JsonResponse
+    def post(self,request):
+        from django.db import connection
+        params=json.loads(request.body.decode('utf-8'))
+	#All type of params
+        state_upd=['State_name','Country_name']
+        district_upd=['State_name','District_name']
+        city_upd=['State_name','City_name']
+        pin_upd=['City_name','District_name','Pincode']
+        upd_list=[]
+        #check type of parameter recieved
+        if(all(item in params.keys() for item in state_upd)):
+            upd_list.append('state')
+        if (all(item in params.keys() for item in district_upd)):
+            upd_list.append('district')
+        if (all(item in params.keys() for item in city_upd)):
+            upd_list.append('city')
+        if (all(item in params.keys() for item in pin_upd)):
+            upd_list.append('pincode')
+
+
+        params['update_list']=upd_list
+        cursor=connection.cursor()
+        parameters=(str(params).replace("'",'"'),'')
+
+        cursor.callproc('sp_GeolocationMicrotoMono_Set',parameters)
+        data=cursor.fetchone()[0]
+
+        return JsonResponse(json.loads(data))
+

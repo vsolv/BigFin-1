@@ -18,12 +18,19 @@
                     <div class="col-md-1">
                         <div class="col-md-1">
                             <input type="checkbox" id="myCheckECF" ng-model="typecheckboxModel.value">
-                            <strong id="text1">ADD TYPE</strong></div>
+                            <strong id="text1">ADD TYPE</strong>
+                        </div>
                     </div>
                     <div class="col-md-3" ng-hide="!typecheckboxModel.value">
                         <md-input-container class="md-block inputcontainer">
                             <label> TYPE</label>
                             <input ng-model="Type_name" maxlength="64" required/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3" ng-hide="!typecheckboxModel.value">
+                        <md-input-container class="md-block inputcontainer">
+                            <label> Generate Code</label>
+                            <input ng-model="generate_code" maxlength="3" required/>
                         </md-input-container>
                     </div>
                     <div class="col-md-3" ng-hide="!typecheckboxModel.value">
@@ -88,7 +95,7 @@
 
                     <div class="col-lg-1 col-sm-1 col-md-1" ng-hide="!typecheckboxModel.value">
                         <md-button class="md-fab md-mini md-primary custbutton" id="btn_create" type="submit"
-                                    ng-disabled="category_form.$invalid"
+                                   ng-disabled="category_form.$invalid"
                                    ng-click="add_type(Type_name)">
                             <md-icon>add</md-icon>
                             <md-tooltip>Add & Continue</md-tooltip>
@@ -104,6 +111,7 @@
                     <tr>
                         <th>S NO</th>
                         <th>Type</th>
+                        <th>Generate Code</th>
                         <th>Add Column</th>
                     </tr>
                     </thead>
@@ -116,6 +124,7 @@
                         </td>
 
                         <td class="text-center">{{type.exptype_name}}</td>
+                        <td class="text-center">{{type.exptype_code_generate}}</td>
                         <!--                        <td class="text-center">{{type.category_code}}</td>-->
                         <!--                        <td class="text-center">{{type.subcategory_code}}</td>-->
 
@@ -150,8 +159,8 @@
                         <tr ng-repeat="type in typecolumndata">
                             <td>{{$index +1}}</td>
                             <td><input class="textboxgeneral" required ng-disabled="$index +1 <2"
-                                       ng-model="type.expensecolumn_displayname" maxlength="45/></td>
-                            <td style="margin-top:-20px">
+                                       ng-model="type.expensecolumn_displayname" maxlength="45"/></td>
+                            <td style=" margin-top:-20px">
 
                                 <md-input-container class="md-block inputcontainer">
                                     <label>Type</label>
@@ -215,6 +224,10 @@
 
 
 
+
+
+
+
 </style>
 <script>
     var app=angular.module('typecreate',['ngMaterial','ui.bootstrap','AppCommon','rzTable']).config(function($httpProvider) {
@@ -252,6 +265,7 @@ app.controller('ctrltype', ['$scope', '$filter', '$mdDateLocale', 'br_typecreate
 
         }]
 
+     $scope.summary=function(){
         var column_field = {
             "Params": {
                 "FILTER": {
@@ -275,9 +289,10 @@ app.controller('ctrltype', ['$scope', '$filter', '$mdDateLocale', 'br_typecreate
                values.expensecolumn = JSON.parse(values.expensecolumn)
 
                })
-
-
          });
+
+     }
+     $scope.summary();
 
    $scope.selectedRow = null;  // initialize our variable to null
   $scope.setClickedRow = function(index,typedata){  //function that sets the value of selectedRow to current index
@@ -373,6 +388,7 @@ $scope.columndataupdate = []
                     "FILTER": {
                         "Expensetype":typename.toLocaleUpperCase(),
                         "Category_gid":0,
+                        "generate_code":$scope.generate_code.toLocaleUpperCase(),
                         "Sub_Category_gid":0,
                         "Commodity_gid":$scope.selected_commodity.commodity_gid,
                         "Columndata":$scope.columndata
@@ -388,11 +404,18 @@ $scope.columndataupdate = []
                 "Action": "INSERT"
             }
             console.log(datas)
-            var setcolumndata = br_typecreate.setcolumndata(datas);
+            var columndata = br_typecreate.setcolumndata(datas);
             columndata.then(function(result){
                console.log(result)
-            alert("Successfully Expense Type Added...");
-            $window.location.href = "BranchExp/Br_ExpenseTypeCreate/"
+
+            if(result.data.MESSAGE=="SUCCESS"){
+                alert("Successfully Expense Type Added...");
+                $scope.summary();
+            }
+            else{
+                alert(JSON.stringify(result.data));
+            }
+
             });
         }
         else{
@@ -541,6 +564,10 @@ app.service("br_typecreate", function ($http) {
     }
 
 });
+
+
+
+
 
 
 

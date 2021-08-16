@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import json
-# from Bigflow.JV.Model import mJV
+from Bigflow.JV.Model import mJV
 from Bigflow.API import views as commonview
 from Bigflow.Core import models as common
 import Bigflow.Core.jwt_file as jwt
@@ -43,7 +43,7 @@ class JV_Process_Get_API(APIView):
     def post(self,request):
         try:
             path = self.request.stream.path
-            if self.request.query_params.get("action") == "GET" and (self.request.query_params.get("type")=="JV_HEADER_SUMMARY" or "JV_DETAILS"):
+            if self.request.query_params.get("action") == "GET" and (self.request.query_params.get("type")=="JV_HEADER_SUMMARY" or "JV_DETAILS" or "JV_TRANS_GET"):
                 jsondata = json.loads(request.body.decode('utf-8'))
                 jv_Object = mJV.JV()
                 jv_Object.action = self.request.query_params.get("action")

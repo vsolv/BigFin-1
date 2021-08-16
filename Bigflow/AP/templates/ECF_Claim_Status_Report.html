@@ -1,0 +1,198 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}ECF Claim Status Report{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>ECF Claim Status Report</h4>
+            </div>
+        </div>
+        <br>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4"></div>
+                <div class="col-md-6">
+                    <md-button class="md-fab md-mini md-info custbutton"
+                               href="ecf_common_report?action=GET&type=ECF_STATUS&ecf_status=PENDING FOR APPROVAL&ap_status=">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Pending For Approval</md-tooltip>
+                    </md-button>
+
+                     <md-button class="md-fab md-mini md-primary"
+                                href="ecf_common_report?action=GET&type=ECF_STATUS&ecf_status=APPROVED&ap_status=">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Approved</md-tooltip>
+                    </md-button>
+
+                    <md-button class="md-fab md-mini md-raised"
+                                href="ecf_common_report?action=GET&type=ECF_STATUS&ecf_status=APProcess&ap_status=">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>APProcess</md-tooltip>
+                    </md-button>
+
+
+                    <md-button class="md-fab md-mini md-success"
+                               href="ecf_common_report?action=GET&type=ECF_STATUS&ecf_status=&ap_status=PAID">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Paid</md-tooltip>
+                    </md-button>
+
+<!--                    <md-button class="md-fab md-mini md-primary"-->
+<!--                               href="get_Accounting_Entry_Data?action=GET&type=AP_TDS&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">-->
+<!--                        <md-icon>get_app</md-icon>-->
+<!--                        <md-tooltip>TDS Report</md-tooltip>-->
+<!--                    </md-button>-->
+
+<!--                    <md-button class="md-fab md-mini custbutton"-->
+<!--                               href="get_Accounting_Entry_Data?action=GET&type=AP_RCM&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">-->
+<!--                        <md-icon>get_app</md-icon>-->
+<!--                        <md-tooltip>RCM Report</md-tooltip>-->
+<!--                    </md-button>-->
+
+
+<!--                    <md-button class="md-fab md-mini md-warn "-->
+<!--                               ng-click="clear_seach()">-->
+<!--                        <md-icon>search_off</md-icon>-->
+<!--                        <md-tooltip>Clear Search</md-tooltip>-->
+<!--                    </md-button>-->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+<style>
+
+.btn-default.btn-on.active{background-color: #5BB75B;color: white;}
+.btn-default.btn-off.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-1.active{background-color: #006FFC;color: white;}
+.btn-default.btn-off-1.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-2.active{background-color: #00D590;color: white;}
+.btn-default.btn-off-2.active{background-color: #A7A7A7;color: white;}
+
+.btn-default.btn-on-3.active{color: #5BB75B;font-weight:bolder;}
+.btn-default.btn-off-3.active{color: #DA4F49;font-weight:bolder;}
+
+.btn-default.btn-on-4.active{background-color: #006FFC;color: #5BB75B;}
+.btn-default.btn-off-4.active{background-color: #DA4F49;color: #DA4F49;}
+
+
+
+
+
+
+
+</style>
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap','AppCommon','rzTable']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+   });
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'ap_report', '$window', '$mdDialog', '$element','$http',
+    function($scope, $filter, $mdDateLocale, ap_report, $window, $mdDialog, $element,$http) {
+
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.airwayno = '';
+        $scope.courier = '';
+        $scope.Summarydate = '';
+        $scope.status = '';
+        $scope.invdate = "";
+        $scope.download_data=[];
+        $scope.download_from_date="";
+        $scope.download_to_date="";
+        $scope.download_cr_number="";
+        $scope.download_supplier_gid="";
+        $scope.download_branch_gid="";
+        $scope.download_status="";
+        $scope.selected_transaction_status="";
+        $scope.selected_transaction_type="";
+        $scope.download_employee_gid="";
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.loading_popup = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_pop_up')),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+
+
+
+
+
+}]);
+
+app.service("ap_report", function ($http) {
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+.C{
+ background-color: #B3FFC1 !important;
+}
+
+.D{
+ background-color: #FFBDF3 !important;
+}
+
+
+
+
+</style>
+{% endblock %}

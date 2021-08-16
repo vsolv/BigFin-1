@@ -6,9 +6,9 @@ import json
 from Bigflow.API import views as commonview
 from Bigflow.eClaim.model import meClaim
 import Bigflow.Core.jwt_file as jwt
-# from Bigflow.eClaim import eClaim_verify as verify
-# from Bigflow.eClaim import android_interface as android
-# from Bigflow.settings import BASE_DIR,S3_BUCKET_NAME
+from Bigflow.eClaim import eClaim_verify as verify
+from Bigflow.eClaim import android_interface as android
+from Bigflow.settings import BASE_DIR,S3_BUCKET_NAME
 import Bigflow.Core.models as common
 ip = common.localip()
 import requests
@@ -1631,6 +1631,7 @@ class Tour_Request(APIView):
                 ld_out_message = obj_eclaim.eClaim_request_get()
             if ld_out_message.get("MESSAGE") == 'FOUND':
                 out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"out_data": str(out_data)}])
                 data = []
                 for d in out_data:
                     if 'Total_Row' in d:
@@ -1651,6 +1652,7 @@ class Tour_Request(APIView):
                     tmp['approvedby'] = d.get('approvedby')
                     tmp['Total_Row'] = d.get('Total_Row')
                     data.append(tmp)
+                common.logger.error([{"data": str(data)}])
                 permit_gid = []
                 emp_gid = data[0].get('empgid')
 
@@ -1664,6 +1666,7 @@ class Tour_Request(APIView):
                 obj_eclaim.json_classification = json.dumps({})
                 emp_out_message = obj_eclaim.eClaim_employee_get()
                 employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"employee_data": str(employee_data)}])
                 if len(employee_data) == 0:
                     ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
                     return Response(ld_dict)
@@ -1674,6 +1677,7 @@ class Tour_Request(APIView):
                 obj_eclaim.json_classification = json.dumps({})
                 permit_out_message = obj_eclaim.eClaim_employee_get()
                 permit_data = json.loads(permit_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"permit_data": str(permit_data)}])
                 if len(permit_data) == 0:
                     ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
                     return Response(ld_dict)
@@ -1689,7 +1693,9 @@ class Tour_Request(APIView):
                             d["permit_bycode"] = permit_data[i].get('employee_code')
                             break
 
+                common.logger.error([{"data2": str(data)}])
                 ld_dict = {"DATA": data,"MESSAGE": 'FOUND',"STATUS":0}
+
             elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
                 ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
             else:
@@ -1697,7 +1703,8 @@ class Tour_Request(APIView):
             return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
-            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+            e = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 class Approval(APIView):
     def post(self,request):
         try:
@@ -1719,6 +1726,7 @@ class Approval(APIView):
                 ld_out_message = obj_eclaim.eClaim_approval_get()
             if ld_out_message.get("MESSAGE") == 'FOUND':
                 data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"Aprovaldata2": str(data)}])
                 emp_gid = []
                 onbehalf_gid = []
                 for i in data:
@@ -1734,6 +1742,7 @@ class Approval(APIView):
                 obj_eclaim.json_classification = '{}'
                 emp_out_message = obj_eclaim.eClaim_employee_get()
                 employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"Aprovaldata_employee_data": str(employee_data)}])
                 for d in data:
                     for i in employee_data:
                         if i.get('employee_gid') == d.get('empgid'):
@@ -1751,13 +1760,14 @@ class Approval(APIView):
                     obj_eclaim.json_classification = '{}'
                     emp_out_message = obj_eclaim.eClaim_employee_get()
                     onbehalof_employee = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                    common.logger.error([{"Aprovaldata_onbehalof_employee": str(onbehalof_employee)}])
                     for d in data:
                         for i in onbehalof_employee:
                             if i.get('employee_gid') == d.get('onbehalof'):
                                 d["onbehalof_employeename"] = i.get('employee_name')
                                 d["onbehalof_employeecode"] = i.get('employee_code')
                                 break
-
+                common.logger.error([{"Aprovaldata_data2": str(data)}])
                 ld_dict = {"DATA": data, "MESSAGE": 'FOUND', "STATUS": 0}
 
             elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
@@ -1767,7 +1777,8 @@ class Approval(APIView):
             return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
-            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+            e = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 class Approval_Flow(APIView):
     def get(self,request):
         try:
@@ -1911,6 +1922,8 @@ class Tour_Details(APIView):
                     tmp['requestdate'] = d.get('requestdate')
                     tmp['tourreason'] = d.get('name')
                     tmp['empgid'] = d.get('empgid')
+                    tmp['empgrade'] = d.get('empgrade')
+                    tmp['empdesignation'] = d.get('empdesignation')
                     tmp['reason'] = d.get('reason')
                     tmp['startdate'] = d.get('startdate')
                     tmp['enddate'] = d.get('enddate')
@@ -1936,16 +1949,18 @@ class Tour_Details(APIView):
                     d["employee_code"] = employee_data[0].get('employee_code')
                     d["employee_branch"] = employee_data[0].get('branch_name')
                     d["employee_designation"] = employee_data[0].get('designation_name')
-                permit_data = {
-                    "empids": out_data[0].get('permittedby')
-                }
-                obj_claim.filter_json = json.dumps(permit_data)
-                obj_claim.json_classification = json.dumps({})
-                permit_out_message = obj_claim.eClaim_employee_get()
-                permitemp_data = json.loads(permit_out_message.get("DATA").to_json(orient='records'))
-                for d in out_data:
-                    d["permit_empname"] = permitemp_data[0].get('employee_name')
-                    d["permit_empcode"] = permitemp_data[0].get('employee_code')
+
+                if out_data[0].get('permittedby') != None or out_data[0].get('permittedby') != 0 or out_data[0].get('permittedby') != '0':
+                    permit_data = {
+                        "empids": out_data[0].get('permittedby')
+                    }
+                    obj_claim.filter_json = json.dumps(permit_data)
+                    obj_claim.json_classification = json.dumps({})
+                    permit_out_message = obj_claim.eClaim_employee_get()
+                    permitemp_data = json.loads(permit_out_message.get("DATA").to_json(orient='records'))
+                    for d in out_data:
+                        d["permit_empname"] = permitemp_data[0].get('employee_name')
+                        d["permit_empcode"] = permitemp_data[0].get('employee_code')
 
                 approval_data = {
                     "empids": out_data[0].get('approvedby')
@@ -1973,6 +1988,7 @@ class Tour_Details(APIView):
                                                                 ExpiresIn=None)
                     data = {
                         "file_gid": i.get('file_gid'),
+                        "file_key": i.get('file_path'),
                         "file_name": i.get('file_name'),
                         "file_path": response,
                         "file_refgid": i.get('file_refgid')
@@ -2086,23 +2102,25 @@ class Employee_Data(APIView):
             obj_claim.json_classification = json.dumps({})
             emp_out_message = obj_claim.eClaim_employee_get()
             employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+            common.logger.error([{"employee_data": str(employee_data)}])
             employee_code = employee_data[0].get('employee_code')
-            # employee_code ="002892"
-            if employee_code[0:2].upper() == 'VS':
-                obj_claim.employee_gid = employee_gid
-                emp_bnk = obj_claim.eClaim_entity_get()
-                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
-                if len(bank_data) != 0:
-                    entity = bank_data[0].get('entity_gid')
-                    emp_gid = []
-                    emp_gid.append(employee_gid)
-                    emp_data = {
-                        "empids": emp_gid
-                    }
-                    obj_claim.filter_json = json.dumps(emp_data)
-                    obj_claim.json_classification = json.dumps({"Entity_Gid": entity})
-                    emp_out_message = obj_claim.eClaim_employee_get()
-                    employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+            #employee_code ="002892"
+            # if employee_code[0:2].upper() == 'VS':
+            obj_claim.employee_gid = employee_gid
+            emp_bnk = obj_claim.eClaim_entity_get()
+            bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+            if len(bank_data) != 0:
+                entity = bank_data[0].get('entity_gid')
+                emp_gid = []
+                emp_gid.append(employee_gid)
+                emp_data = {
+                    "empids": emp_gid
+                }
+                obj_claim.filter_json = json.dumps(emp_data)
+                obj_claim.json_classification = json.dumps({"Entity_Gid": entity})
+                emp_out_message = obj_claim.eClaim_employee_get()
+                employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                if employee_code[0:2].upper() == 'VS':
                     designation = obj_claim.eClaim_empgrade_get()
                     designation = json.loads(designation.get("DATA").to_json(orient='records'))
                     for i in employee_data:
@@ -2110,88 +2128,93 @@ class Employee_Data(APIView):
                             if i.get('designation_name').upper() == j.get('designation').upper():
                                 i['grade'] = j.get('grade')
                                 break
+                #else:
+                #    for i in employee_data:
+                #       i['grade'] = i.get('employee_grade2')
 
-                    employee = employee_data[0]
-                    employee['entity_gid'] = bank_data[0].get('entity_gid')
-                    ld_dict = {"DATA": employee,
-                               "MESSAGE": 'FOUND'}
-                    return Response(ld_dict)
-                else:
-                    ld_dict = {"MESSAGE": 'NOT FOUND'}
-                    return Response(ld_dict)
+                employee = employee_data[0]
+                #employee['employee_code'] = "002892"
+                common.logger.error([{"employee": str(employee)}])
+                employee['entity_gid'] = bank_data[0].get('entity_gid')
+                ld_dict = {"DATA": employee,
+                           "MESSAGE": 'FOUND'}
+                return Response(ld_dict)
             else:
-                obj_claim.filter_json = json.dumps({"employeecode": employee_code})
-                emp = obj_claim.eClaim_employee_tmp_get()
-                data = json.loads(emp.get("DATA").to_json(orient='records'))
-                data = data[0]
-                token_status = 1
-                generated_token_data = master_views.master_sync_Data_("GET", "get_data", employee_gid)
-                log_data = generated_token_data
-                token = generated_token_data.get("DATA")[0].get("clienttoken_name")
-                if (token == " " or token == None):
-                    token_status = 0
-                if token_status == 1:
-                    try:
-                        client_api = common.clientapi()
-                        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + token}
-                        data_depent = {
-                            "UserName": "EMCUSER",
-                            "Password": "9f",
-                            "EmpId": str(employee_code),
-                            "DtlsToBeFetch": "DependentDetails"
-                        }
-                        data_depent = json.dumps(data_depent)
-                        result2 = requests.post("" + client_api + "/next/v1/mw/employee-detail", headers=headers,
-                                               data=data_depent,
-                                               verify=False)
-                        results_data2 = json.loads(result2.content.decode("utf-8"))
-                        status2 = results_data2.get("out_msg").get("ErrorMessage")
-                        if (status2 == "Success"):
-                            data_dependent = results_data2.get("out_msg")
-                            push_data = {
-                                "Employee_gid":employee_gid,
-                                 "Base_details":{},
-                                 "Dependent_details":data_dependent,
-                                 "processedby":employee_gid
-                                }
-                            obj_claim.jsonData = json.dumps(push_data)
-                            hrd_set = obj_claim.eClaim_hrd_employeedtl_set()
-                            if hrd_set.get("MESSAGE") == 'SUCCESS':
-                                obj_claim.employee_gid = employee_gid
-                                emp_bnk = obj_claim.eClaim_entity_get()
-                                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
-                                if len(bank_data) != 0:
-                                    entity = bank_data[0].get('entity_gid')
-                                    emp_gid = []
-                                    emp_gid.append(employee_gid)
-                                    emp_data = {
-                                        "empids": emp_gid
-                                    }
-                                    obj_claim.filter_json = json.dumps(emp_data)
-                                    obj_claim.json_classification = json.dumps({"Entity_Gid": entity})
-                                    emp_out_message = obj_claim.eClaim_employee_get()
-                                    employee_data = json.loads(
-                                        emp_out_message.get("DATA").to_json(orient='records'))
-                                    employee = employee_data[0]
-                                    employee['designation_name'] = data.get('edesig')
-                                    employee['grade'] = data.get('egrade2')
-                                    employee['entity_gid'] = bank_data[0].get('entity_gid')
-                                    ld_dict = {"DATA": employee,
-                                               "MESSAGE": 'FOUND'}
-                                    return Response(ld_dict)
-                                else:
-                                    ld_dict = {"MESSAGE": 'NOT FOUND'}
-                                    return Response(ld_dict)
-                            else:
-                                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + hrd_set.get("MESSAGE"), "STATUS": 1}
-                        else:
-                            return Response({"MESSAGE": "FAILED", "FAILED_STATUS": results_data2})
-                    except Exception as e:
-                        common.logger.error(e)
-                        return Response({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRANSFER_CLINET_API", "DATA": str(e),
-                                         "log_data": log_data})
-                else:
-                    return Response({"MESSAGE": "ERROR_OCCURED_ON_TOKEN_GENERATIONS OR INVALID AUTHENTICATONS"})
+                ld_dict = {"MESSAGE": 'NOT FOUND'}
+                return Response(ld_dict)
+            # else:
+            #     obj_claim.filter_json = json.dumps({"employeecode": employee_code})
+            #     emp = obj_claim.eClaim_employee_tmp_get()
+            #     data = json.loads(emp.get("DATA").to_json(orient='records'))
+            #     data = data[0]
+            #     token_status = 1
+            #     generated_token_data = master_views.master_sync_Data_("GET", "get_data", employee_gid)
+            #     log_data = generated_token_data
+            #     token = generated_token_data.get("DATA")[0].get("clienttoken_name")
+            #     if (token == " " or token == None):
+            #         token_status = 0
+            #     if token_status == 1:
+            #         try:
+            #             client_api = common.clientapi()
+            #             headers = {"Content-Type": "application/json", "Authorization": "Bearer " + token}
+            #             data_depent = {
+            #                 "UserName": "EMCUSER",
+            #                 "Password": "9f",
+            #                 "EmpId": str(employee_code),
+            #                 "DtlsToBeFetch": "DependentDetails"
+            #             }
+            #             data_depent = json.dumps(data_depent)
+            #             result2 = requests.post("" + client_api + "/next/v1/mw/employee-detail", headers=headers,
+            #                                    data=data_depent,
+            #                                    verify=False)
+            #             results_data2 = json.loads(result2.content.decode("utf-8"))
+            #             status2 = results_data2.get("out_msg").get("ErrorMessage")
+            #             if (status2 == "Success"):
+            #                 data_dependent = results_data2.get("out_msg")
+            #                 push_data = {
+            #                     "Employee_gid":employee_gid,
+            #                      "Base_details":{},
+            #                      "Dependent_details":data_dependent,
+            #                      "processedby":employee_gid
+            #                     }
+            #                 obj_claim.jsonData = json.dumps(push_data)
+            #                 hrd_set = obj_claim.eClaim_hrd_employeedtl_set()
+            #                 if hrd_set.get("MESSAGE") == 'SUCCESS':
+            #                     obj_claim.employee_gid = employee_gid
+            #                     emp_bnk = obj_claim.eClaim_entity_get()
+            #                     bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+            #                     if len(bank_data) != 0:
+            #                         entity = bank_data[0].get('entity_gid')
+            #                         emp_gid = []
+            #                         emp_gid.append(employee_gid)
+            #                         emp_data = {
+            #                             "empids": emp_gid
+            #                         }
+            #                         obj_claim.filter_json = json.dumps(emp_data)
+            #                         obj_claim.json_classification = json.dumps({"Entity_Gid": entity})
+            #                         emp_out_message = obj_claim.eClaim_employee_get()
+            #                         employee_data = json.loads(
+            #                             emp_out_message.get("DATA").to_json(orient='records'))
+            #                         employee = employee_data[0]
+            #                         employee['designation_name'] = data.get('edesig')
+            #                         employee['grade'] = data.get('egrade2')
+            #                         employee['entity_gid'] = bank_data[0].get('entity_gid')
+            #                         ld_dict = {"DATA": employee,
+            #                                    "MESSAGE": 'FOUND'}
+            #                         return Response(ld_dict)
+            #                     else:
+            #                         ld_dict = {"MESSAGE": 'NOT FOUND'}
+            #                         return Response(ld_dict)
+            #                 else:
+            #                     ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + hrd_set.get("MESSAGE"), "STATUS": 1}
+            #             else:
+            #                 return Response({"MESSAGE": "FAILED", "FAILED_STATUS": results_data2})
+            #         except Exception as e:
+            #             common.logger.error(e)
+            #             return Response({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRANSFER_CLINET_API", "DATA": str(e),
+            #                              "log_data": log_data})
+            #     else:
+            #         return Response({"MESSAGE": "ERROR_OCCURED_ON_TOKEN_GENERATIONS OR INVALID AUTHENTICATONS"})
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
@@ -2202,25 +2225,90 @@ class Emp_Branch(APIView):
             out_data = ""
             if request.query_params.get("Api_Type") == "WEB":
                 emp_gid = request.query_params.get("Employee_gid")
-                entity = request.query_params.get("Entity_Gid")
-                br = request.query_params.get("Branch_Gid")
-                obj_claim.filter_json = json.dumps({"Employee_gid": emp_gid, "Entity_Gid": entity, "Branch_Gid": br})
+                type = request.query_params.get("Type")
+                entity_gid = request.query_params.get("Entity_Gid")
+                branch = request.query_params.get("Branch_Gid")
+                obj_claim.filter_json = json.dumps({"Employee_gid": emp_gid, "Entity_Gid": entity_gid, "Branch_Gid": branch})
                 out_data = obj_claim.eClaim_branchtoemp_get()
+                if out_data.get("MESSAGE") == 'FOUND':
+                    empdata = json.loads(out_data.get("DATA").to_json(orient='records'))
+                    if type == "APPROVER":
+                        obj_claim.filter_json = json.dumps({"Entity_Gid": entity_gid, "Branch_Gid": branch})
+                        ld_out_message = obj_claim.eClaim_approverlist_get()
+                        if ld_out_message.get("MESSAGE") == 'FOUND':
+                            app_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                            final_data = []
+                            app_data1 = app_data[0].get('employee_gid')
+                            app_data2 = json.loads(app_data1)
+                            for i in empdata:
+                                if i.get('employee_gid') not  in app_data2:
+                                    final_data.append(i)
+                            ld_dict = {"DATA": final_data,
+                                       "MESSAGE": 'FOUND', "STATUS": 0}
 
+                        else:
+                            ld_dict = {"DATA": empdata,
+                                       "MESSAGE": 'FOUND', "STATUS": 0}
+                    else:
+                        ld_dict = {"DATA": empdata,
+                                   "MESSAGE": 'FOUND', "STATUS": 0}
+
+                elif out_data.get("MESSAGE") == 'NOT_FOUND':
+                    ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
+                else:
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + out_data.get("MESSAGE"), "STATUS": 0}
+                return Response(ld_dict)
             else:
-                filter = android.Android.get_method(self, request)
+                type = request.query_params.get("Type")
+                branch = request.query_params.get("Branch_Gid")
+                empgid = request.auth.payload.get('user_id')
+                obj_claim = meClaim.eClaim_Model()
+                obj_claim.employee_gid = empgid
+                emp_bnk = obj_claim.eClaim_entity_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity_gid = bank_data[0].get('entity_gid')
+                if type == "SELF":
+                    filter = {
+                        "Entity_Gid": entity_gid,
+                        "Branch_Gid": branch
+                    }
+                else:
+                    filter = {
+                        "Employee_gid": empgid,
+                        "Branch_Gid": branch,
+                        "Entity_Gid": entity_gid
+                    }
                 obj_eclaim = meClaim.eClaim_Model()
                 obj_claim.filter_json = json.dumps(filter)
                 out_data = obj_claim.eClaim_branchtoemp_get()
 
-            if out_data.get("MESSAGE") == 'FOUND':
-                ld_dict = {"DATA": json.loads(out_data.get("DATA").to_json(orient='records')),
-                           "MESSAGE": 'FOUND', "STATUS": 0}
-            elif out_data.get("MESSAGE") == 'NOT_FOUND':
-                ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
-            else:
-                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + out_data.get("MESSAGE"), "STATUS": 0}
-            return Response(ld_dict)
+                if out_data.get("MESSAGE") == 'FOUND':
+                    empdata = json.loads(out_data.get("DATA").to_json(orient='records'))
+                    if type == "APPROVER":
+                        obj_claim.filter_json = json.dumps({"Entity_Gid": entity_gid, "Branch_Gid": branch})
+                        ld_out_message = obj_claim.eClaim_approverlist_get()
+                        if ld_out_message.get("MESSAGE") == 'FOUND':
+                            app_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                            final_data = []
+                            app_data1 = app_data[0].get('employee_gid')
+                            app_data2 = json.loads(app_data1)
+                            for i in empdata:
+                                if i.get('employee_gid') not  in app_data2:
+                                    final_data.append(i)
+                            ld_dict = {"DATA": final_data,
+                                       "MESSAGE": 'FOUND', "STATUS": 0}
+                        else:
+                            ld_dict = {"DATA": empdata,
+                                       "MESSAGE": 'FOUND', "STATUS": 0}
+                    else:
+                        ld_dict = {"DATA": empdata,
+                                   "MESSAGE": 'FOUND', "STATUS": 0}
+
+                elif out_data.get("MESSAGE") == 'NOT_FOUND':
+                    ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
+                else:
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + out_data.get("MESSAGE"), "STATUS": 0}
+                return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
@@ -2278,14 +2366,16 @@ class Forward_Get(APIView):
             common.logger.error(e)
             er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": er, "STATUS": 1})
+import time
 class Tour_Maker(APIView):
     def post(self,request):
         try:
             ld_out_message = ""
             path = self.request.stream.path
-            jsondata = json.loads(request.body.decode('utf-8'))
+
             obj_claim = meClaim.eClaim_Model()
             if request.query_params.get("Api_Type") == "WEB":
+                jsondata = json.loads(request.body.decode('utf-8'))
                 obj_claim.jsondata = json.dumps(jsondata.get('Params').get('DETAILS'))
                 obj_claim.jsonData = json.dumps(jsondata.get('Params').get('CHANGE'))
                 common.main_fun1(request.read(), path)
@@ -2307,15 +2397,56 @@ class Tour_Maker(APIView):
                     ld_out_message = {"MESSAGE": msg[1]}
             else:
                 common.logger.error([{"Mobile": str("Yes")}])
+                jsondata = request.POST['Tour']
+                jsondata = json.loads(request.POST['Tour'])
+                common.logger.error([{"jsondata": str(jsondata)}])
+                DETAILS = jsondata.get('DETAILS')
+                DETAILS = android.Android.gid_check(self, DETAILS)
+                common.logger.error([{"DETAILS": str(DETAILS)}])
+                change = jsondata.get('DATA')
+                final = {
+                    "DATA": change
+                }
+                CHANGE = final
+                CHANGE = android.Android.gid_array_check(self, CHANGE)
+                common.logger.error([{"CHANGE": str(CHANGE)}])
+                if 'onbehalfof' in DETAILS:
+                    empgid = DETAILS.get('onbehalfof')
+                    DETAILS['onbehalfof'] = request.auth.payload.get('user_id')
+                else :
+                    empgid = request.auth.payload.get('user_id')
+
                 emp_data = {
-                    "empids": request.auth.payload.get('user_id')
+                    "empids": empgid
                 }
                 obj_claim.filter_json = json.dumps(emp_data)
                 emp_bnk = obj_claim.eClaim_employeebnk_get()
                 bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
                 entity = bank_data[0].get('entity_gid')
+                files = []
+                if request.FILES:
+                    for i in range(0, len(request.FILES)):
+                        name = "file" + str(i)
+                        for j in request.FILES.getlist(name):
+                            file_data = j
+                            millis = int(round(time.time() * 1000))
+                            file_name_new = str(empgid) + '_' + str(millis) + '_' + str(i) + str(j.name)
+                            contents = file_data
+                            s3 = boto3.resource('s3')
+                            s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=file_name_new)
+                            s3_obj.put(Body=contents)
+                            content = {
+                                "File_path": file_name_new,
+                                "File_name": str(request.FILES[name].name),
+                                "Entity_gid": entity,
+                                "createby": empgid
+                            }
+
+                            files.append(content)
+
+                common.logger.error([{"files": str(files)}])
                 emp_gid = []
-                emp_gid.append(request.auth.payload.get('user_id'))
+                emp_gid.append(empgid)
                 emp_data = {
                     "empids": emp_gid
                 }
@@ -2324,13 +2455,8 @@ class Tour_Maker(APIView):
                 emp_out_message = obj_claim.eClaim_employee_get()
                 employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
 
-                DETAILS = android.Android.set_data_dtl(self, request)
-                DETAILS = android.Android.gid_check(self, DETAILS)
-                CHANGE = android.Android.set_data_chng(self, request)
-                CHANGE = android.Android.gid_array_check(self, CHANGE)
-
-                common.main_fun1(request.read(), path)
-
+                # common.main_fun1(request.read(), path)
+                common.logger.error([{"MAKER_employee_data": str(employee_data)}])
                 # request_date = now.strftime("%Y-%m-%d %H:%M")
                 strdt = DETAILS.get('startdate')
                 frdt = DETAILS.get('enddate')
@@ -2344,21 +2470,38 @@ class Tour_Maker(APIView):
 
                 DETAILS['durationdays'] =days
                 DETAILS['requestdate'] =date
-                DETAILS['empgid'] = request.auth.payload.get('user_id')
+                DETAILS['empgid'] = empgid
                 DETAILS['empdesignation'] = employee_data[0].get('employee_designation_gid')
                 DETAILS['empdepartmentgid'] = employee_data[0].get('employee_dept_gid')
                 DETAILS['empgrade'] = "S3"
                 DETAILS['empbranchgid'] = employee_data[0].get('branch_gid')
                 DETAILS['stategid'] = employee_data[0].get('state_gid')
-                DETAILS['processedby'] =  request.auth.payload.get('user_id')
-                DETAILS['createby'] =  request.auth.payload.get('user_id')
-
+                DETAILS['processedby'] =  empgid
+                DETAILS['createby'] =  empgid
+                common.logger.error([{"DETAILS2": str(DETAILS)}])
                 obj_claim.jsondata = json.dumps(DETAILS)
                 obj_claim.jsonData = json.dumps(CHANGE)
                 ld_out_message = obj_claim.eClaim_tourrequest_set()
                 msg = ld_out_message.get("MESSAGE").split(",")
                 print(msg)
                 if msg[0] == 'SUCCESS':
+                    common.logger.error([{"msg[1]": str(msg[1])}])
+                    #file_data = jsondata.get('Params').get('FILE').get('File')
+                    if files != []:
+                        for i in files:
+                            i['RefGid'] = msg[1]
+                        filedata = {
+                                "File": files
+                            }
+                        obj_claim.jsonData = json.dumps(filedata)
+                        common.logger.error([{"filedata": str(filedata)}])
+                        out_message = obj_claim.eClaim_file_set()
+                        if out_message.get("MESSAGE") == 'SUCCESS':
+                            ld_out_message = {"MESSAGE": "SUCCESS"}
+                        else:
+                            ld_out_message = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+                    else:
+                        ld_out_message = {"MESSAGE": "SUCCESS"}
                     ld_out_message = {"MESSAGE": "SUCCESS"}
                 else:
                     ld_out_message = {"MESSAGE": msg[1]}
@@ -2371,7 +2514,8 @@ class Tour_Maker(APIView):
             return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
-            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+            e = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 class eClaim_Approve(APIView):
     def post(self,request):
         try:
@@ -2387,8 +2531,8 @@ class eClaim_Approve(APIView):
                 obj_claim.employee_gid = tourgid
                 ld_out_emp = obj_claim.eClaim_tourtoemp_get()
                 ld_dict = json.loads(ld_out_emp.get("DATA").to_json(orient='records'))
+                common.logger.error([{"tourtoemp_get": str(ld_dict)}])
                 emp_gid = ld_dict[0].get('empgid')
-
                 obj_claim.employee_gid = emp_gid
                 emp_bnk = obj_claim.eClaim_entity_get()
                 data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
@@ -2403,7 +2547,7 @@ class eClaim_Approve(APIView):
                 emp_bnk = obj_claim.get_APbankdetails()
                 bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
                 common.logger.error([{"bankdata": str(bank_data)}])
-                if len(bank_data) != 0 or bank_data !=[] or bank_data !='[]' :
+                if len(bank_data) != 0:
                     empBank = bank_data[0].get('bankdetails_gid')
                     accno = bank_data[0].get('bankdetails_acno')
                 else:
@@ -2527,17 +2671,14 @@ class eClaim_Approve(APIView):
                         elif ld_out_message.get("MESSAGE") == 'FAIL':
                             ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
                         else:
-                            er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno))
-                            ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + str(ld_out_message.get("MESSAGE"))+str(er), "STATUS": 1}
+                            ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + str(ld_out_message.get("MESSAGE")), "STATUS": 1}
                         return Response(ld_dict)
 
                     else:
-                        er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno))
-                        ld_dict = {"MESSAGE": 'ERROR_OCCURED.' +str(response_data.get('MESSAGE'))+str(er), "STATUS": 1}
+                        ld_dict = {"MESSAGE": str(response_data.get('MESSAGE')), "STATUS": 1}
                         return Response(ld_dict)
                 else:
-                    er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno))
-                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' +str(response.get('MESSAGE'))+str(er), "STATUS": 1}
+                    ld_dict = {"MESSAGE": str(response.get('MESSAGE')), "STATUS": 1}
                     return Response(ld_dict)
 
             elif jsondata.get('Params').get('DETAILS').get('apptype') == "ADVANCECANCEL" and jsondata.get('Params').get(
@@ -2563,12 +2704,10 @@ class eClaim_Approve(APIView):
                 elif ld_out_message.get("MESSAGE") == 'FAIL':
                     ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
                 else:
-                    er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno))
-                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + str(ld_out_message.get("MESSAGE"))+str(er), "STATUS": 1}
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + str(ld_out_message.get("MESSAGE")), "STATUS": 1}
                 return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
-            e = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)+str(response_data),"STATUS":1})
 class eClaim_Return(APIView):
     def post(self,request):
@@ -2653,80 +2792,193 @@ class Approver_List(APIView):
         try:
             obj_claim = meClaim.eClaim_Model()
             ld_out_message = 0
-            if request.query_params.get("Api_Type") == "WEB":
-                entity = request.query_params.get("Entity_Gid")
-                br = request.query_params.get("Branch_Gid")
-                apptype = request.query_params.get("App_Type")
+            if request.query_params.get("Type") == "ONBEHALF":
+                employeegid = int(request.query_params.get("Employee_gid"))
+            else:
+                employeegid = int(request.auth.payload.get('user_id'))
+            obj_claim.employee_gid = employeegid
+            emp_bnk = obj_claim.eClaim_entity_get()
+            bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+            entity = bank_data[0].get('entity_gid')
+            br = request.query_params.get("Branch_Gid")
+            apptype = request.query_params.get("App_Type")
+            if apptype == 'TOURADV':
+                obj_claim.filter_json = json.dumps({"App_Type": apptype, "Entity_Gid": entity, "Branch_Gid": br})
+                ld_out_message = obj_claim.eClaim_approverlist_get_galley()
+                if ld_out_message.get("MESSAGE") == 'FOUND':
+                    data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                    common.logger.error([{"Employee_data": str(data)}])
+                    ld_dict = {"DATA": data,
+                               "MESSAGE": 'FOUND', "STATUS": 0}
+                elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                    ld_dict = {"MESSAGE": 'NOT_FOUND'}
+                else:
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                return Response(ld_dict)
+
+            if apptype == 'CLAIM':
                 obj_claim.filter_json = json.dumps({"App_Type": apptype, "Entity_Gid": entity, "Branch_Gid": br})
                 ld_out_message = obj_claim.eClaim_approverlist_get()
-            else:
-                filter = android.Android.get_method(self, request)
-                obj_claim.filter_json = json.dumps(filter)
-                ld_out_message = obj_claim.eClaim_approverlist_get()
-            if ld_out_message.get("MESSAGE") == 'FOUND':
-                data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
-                emp_gid = []
-                employeegid = 0
-                if request.query_params.get("Type") == "ONBEHALF":
-                    employeegid = request.query_params.get("Employee_gid")
+                if ld_out_message.get("MESSAGE") == 'FOUND':
+                    data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                    emp_gid = []
+                    tourgid = request.query_params.get("Tour_Gid")
+                    obj_claim.employee_gid = tourgid
+                    ld_out_emp = obj_claim.eClaim_tourtoemp_get()
+                    ld_dict = json.loads(ld_out_emp.get("DATA").to_json(orient='records'))
+                    common.logger.error([{"tourtoemp_get": str(ld_dict)}])
+                    maker_empgid = int(ld_dict[0].get('empgid'))
+                    empgrade = ld_dict[0].get('empgrade')
+
+                    for i in data:
+                        if maker_empgid != 0:
+                            if i.get('employeegid') not in emp_gid and i.get('employeegid') != employeegid and \
+                                    i.get('employeegid') != maker_empgid:
+                                emp_gid.append(i.get('employeegid'))
+                        else:
+                            if i.get('employeegid') not in emp_gid and i.get('employeegid') != employeegid:
+                                emp_gid.append(i.get('employeegid'))
+
+                    emp_data = {
+                        "empids": emp_gid
+                    }
+                    obj_claim.filter_json = json.dumps(emp_data)
+                    obj_claim.json_classification = json.dumps({})
+                    emp_out_message = obj_claim.eClaim_employee_get()
+                    if emp_out_message.get("MESSAGE") == 'FOUND':
+                        employee_tmp_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                        common.logger.error([{"employee_data": str(employee_tmp_data)}])
+                        employee_data = []
+                        a = empgrade[1]
+                        print(a.isdigit())
+                        if a.isdigit():
+                            if int(a) > 3:
+                                for i in employee_tmp_data:
+                                    if int(i.get('employee_grade1')[1]) >= int(a):
+                                        if i.get('branch_code') == '1101' or  i.get('branch_code') == '2135':
+                                            employee_data.append(i)
+
+                                if len(employee_data) == 0 :
+                                    ld_dict = {"MESSAGE": "No Higher grade Approver/Please Choose 1101 Branch because Employee Grade is Higher"}
+                                    return Response(ld_dict)
+                                else:
+                                    ld_dict = {"DATA": employee_data,
+                                               "MESSAGE": 'FOUND', "STATUS": 0}
+                                    return Response(ld_dict)
+                            else:
+                                ld_dict = {"DATA": employee_tmp_data,
+                                           "MESSAGE": 'FOUND', "STATUS": 0}
+                                return Response(ld_dict)
+                        else:
+                            ld_dict = {"DATA": employee_tmp_data,
+                                       "MESSAGE": 'FOUND', "STATUS": 0}
+                            return Response(ld_dict)
+                    else:
+                        ld_dict = {"MESSAGE": "Employee Data Missing" + str(ld_out_message.get("MESSAGE"))}
+                        return Response(ld_dict)
                 else:
-                    employeegid = request.auth.payload.get('user_id')
-                for i in data:
-                    if i.get('employeegid') not in emp_gid and i.get('employeegid') != employeegid:
-                        emp_gid.append(i.get('employeegid'))
-                emp_data = {
-                    "empids": emp_gid
-                }
-                obj_claim.filter_json = json.dumps(emp_data)
-                obj_claim.json_classification = json.dumps({})
-                emp_out_message = obj_claim.eClaim_employee_get()
-                employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                    ld_dict = {"MESSAGE": "Approver Data Missing" + str(ld_out_message.get("MESSAGE"))}
+                    return Response(ld_dict)
 
-                emp_data = {
-                    "empids": employeegid
-                }
-                obj_claim.filter_json = json.dumps(emp_data)
-                obj_claim.json_classification = json.dumps({})
-                emp_out = obj_claim.eClaim_employee_get()
-                login_employee = json.loads(emp_out.get("DATA").to_json(orient='records'))
-                designation = obj_claim.eClaim_empgrade_get()
-                designation = json.loads(designation.get("DATA").to_json(orient='records'))
-                order = 0
-                for i in login_employee:
-                    for j in designation:
-                        if i.get('designation_name').upper() == j.get('designation').upper():
-                            order = int(j.get('orderno'))
-                            break
-                            break
-
-                for i in employee_data:
-                    for j in designation:
-                        if i.get('designation_name').upper() == j.get('designation').upper():
-                            i['hierarchy_order'] = j.get('orderno')
-                            break
-                app_data = []
-                for d in data:
-                    for e in employee_data:
-                        if int(e.get('employee_gid')) == int(d.get('employeegid')):
-                            if order > int(e.get('hierarchy_order')):
-                                app={}
-                                app["employee_name"] = e.get('employee_name')
-                                app["employee_code"] = e.get('employee_code')
-                                app["employee_gid"] = d.get('employeegid')
-                                app_data.append(app)
-                            break
-
-                ld_dict = {"DATA": app_data,
-                           "MESSAGE": 'FOUND',"STATUS":0}
-            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
-                ld_dict = {"MESSAGE": 'NOT_FOUND'}
             else:
-                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
-            return Response(ld_dict)
+                obj_claim.filter_json = json.dumps({"App_Type": apptype, "Entity_Gid": entity, "Branch_Gid": br})
+                ld_out_message = obj_claim.eClaim_approverlist_get()
+                if ld_out_message.get("MESSAGE") == 'FOUND':
+                    data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                    emp_gid = []
+                    maker_empgid = 0
+                    if "Tour_Gid" in request.query_params:
+                        tourgid = request.query_params.get("Tour_Gid")
+                        obj_claim.employee_gid = tourgid
+                        ld_out_emp = obj_claim.eClaim_tourtoemp_get()
+                        ld_dict = json.loads(ld_out_emp.get("DATA").to_json(orient='records'))
+                        common.logger.error([{"tourtoemp_get": str(ld_dict)}])
+                        maker_empgid = int(ld_dict[0].get('empgid'))
+                        empgrade = ld_dict[0].get('empgrade')
+
+                    for i in data:
+                        if maker_empgid != 0:
+                            if i.get('employeegid') not in emp_gid and i.get('employeegid') != employeegid and \
+                                    i.get('employeegid') != maker_empgid:
+                                emp_gid.append(i.get('employeegid'))
+                        else:
+                            if i.get('employeegid') not in emp_gid and i.get('employeegid') != employeegid:
+                                emp_gid.append(i.get('employeegid'))
+
+                    emp_data = {
+                        "empids": emp_gid
+                    }
+                    obj_claim.filter_json = json.dumps(emp_data)
+                    obj_claim.json_classification = json.dumps({})
+                    emp_out_message = obj_claim.eClaim_employee_get()
+                    if emp_out_message.get("MESSAGE") == 'FOUND':
+                        employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                        common.logger.error([{"employee_data": str(employee_data)}])
+
+                    else:
+                        ld_dict = {"MESSAGE": "Employee Data Missing" + str(ld_out_message.get("DATA"))}
+                        return Response(ld_dict)
+                    # emp_data = {
+                    #     "empids": employeegid
+                    # }
+                    # obj_claim.filter_json = json.dumps(emp_data)
+                    # obj_claim.json_classification = json.dumps({})
+                    # emp_out = obj_claim.eClaim_employee_get()
+                    # if emp_out.get("MESSAGE") == 'FOUND':
+                    #     login_employee = json.loads(emp_out.get("DATA").to_json(orient='records'))
+                    #     common.logger.error([{"login_employee": str(login_employee)}])
+                    # else:
+                    #     ld_dict = {"MESSAGE": "Login employee" + str(ld_out_message.get("DATA"))}
+                    #     return Response(ld_dict)
+                    # designation = obj_claim.eClaim_empgrade_get()
+                    # designation = json.loads(designation.get("DATA").to_json(orient='records'))
+
+                    #order = 0
+                    #for i in login_employee:
+                     #   for j in designation:
+                      #      if i.get('designation_name').upper() == j.get('designation').upper():
+                       #         order = int(j.get('orderno'))
+                        #        break
+                         #       break
+                    #common.logger.error([{"order": str(order)}])
+
+                    #for i in employee_data:
+                     #   for j in designation:
+                      #      if i.get('designation_name').upper() == j.get('designation').upper():
+                       #         i['hierarchy_order'] = j.get('orderno')
+                        #        break
+                        #else:
+                         #   i['hierarchy_order'] = 0
+
+                    #common.logger.error([{"employee_data2": str(employee_data)}])
+                    # app_data = []
+                    # for d in data:
+                    #     for e in employee_data:
+                    #         if int(e.get('employee_gid')) == int(d.get('employeegid')):
+                    #             common.logger.error([{"hierarchy_order": str(e.get('hierarchy_order'))}])
+                    #             common.logger.error([{"order": str(order)}])
+                    #             #if e.get('hierarchy_order') != None:
+                    #              #   if order > int(e.get('hierarchy_order')):
+                    #             app={}
+                    #             app["employee_name"] = e.get('employee_name')
+                    #             app["employee_code"] = e.get('employee_code')
+                    #             app["employee_gid"] = d.get('employeegid')
+                    #             app_data.append(app)
+                    #
+                    #                 break
+                    common.logger.error([{"app_data": str(employee_data)}])
+                    ld_dict = {"DATA": employee_data,
+                               "MESSAGE": 'FOUND',"STATUS":0}
+                elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                    ld_dict = {"MESSAGE": 'NOT_FOUND'}
+                else:
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                return Response(ld_dict)
         except Exception as e:
             common.logger.error(e)
             er = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": er, "STATUS": 1})
+
 class Claim_Summary(APIView):
     def post(self,request):
         try:
@@ -2748,6 +3000,7 @@ class Claim_Summary(APIView):
             if ld_out_message.get("MESSAGE") == 'FOUND':
                 out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
                 data = []
+
                 for d in out_data:
                     if 'Total_Row' in d:
                         pass
@@ -2767,6 +3020,7 @@ class Claim_Summary(APIView):
                     tmp['approvedby'] = int(d.get('approvedby'))
                     tmp['applevel'] = d.get('applevel')
                     tmp['Total_Row'] = d.get('Total_Row')
+
                     data.append(tmp)
                 if len(data) != 0:
                     emp_gid = []
@@ -2905,6 +3159,9 @@ class Advance_Maker_Summary(APIView):
                 jsondata = json.loads(request.body.decode('utf-8'))
                 common.main_fun1(request.read(), path)
                 obj_eclaim = meClaim.eClaim_Model()
+                obj_eclaim.date = 'DATE'
+                date = obj_eclaim.get_server_date()
+                jsondata['Params']['FILTER']['date'] = date
                 obj_eclaim.filter_json = json.dumps(jsondata.get('Params').get('FILTER'))
                 ld_out_message = obj_eclaim.eClaim_request_get()
 
@@ -2912,6 +3169,9 @@ class Advance_Maker_Summary(APIView):
                 filter = android.Android.post_summary(self,request)
                 common.main_fun1(request.read(), path)
                 obj_eclaim = meClaim.eClaim_Model()
+                obj_eclaim.date = 'DATE'
+                date = obj_eclaim.get_server_date()
+                filter['date'] = date
                 obj_eclaim.filter_json = json.dumps(filter)
                 ld_out_message = obj_eclaim.eClaim_request_get()
             if ld_out_message.get("MESSAGE") == 'FOUND':
@@ -3230,6 +3490,9 @@ class Tour_Advance_Get(APIView):
                 out_datas = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
                 tourreason = out_datas[0].get('tourreason')
                 out_data = out_datas[0].get('advance')
+
+                enddate = out_datas[0].get('enddate')
+
                 out_data = json.loads(out_data)
                 emp_data = {
                     "empids": out_data[0].get('approvedby')
@@ -3252,6 +3515,18 @@ class Tour_Advance_Get(APIView):
                 ld_out_message = obj_claim.eClaim_touradvance_get()
                 out_datas = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
                 out_data = json.loads(out_datas[0].get('advance'))
+                enddate = out_datas[0].get('enddate')
+                obj_claim.date = 'DATE'
+                date = obj_claim.get_server_date()
+
+                datetimeFormat = '%d-%b-%Y'
+                enddate1 = datetime.datetime.strptime(enddate, datetimeFormat).strftime('%Y-%m-%d')
+
+                if date > enddate1:
+                    out_datas[0]["istour_end"] = "True"
+                else :
+                    out_datas[0]["istour_end"] = "False"
+
                 emp_data = {
                     "empids": out_data[0].get('approvedby')
                 }
@@ -3315,6 +3590,42 @@ class Tour_Advance_Set(APIView):
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+
+class Advance_Approveamount_Set(APIView):
+    def post(self,request):
+        try:
+            ld_out_message = ""
+            path = self.request.stream.path
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_claim = meClaim.eClaim_Model()
+            if request.query_params.get("Api_Type") == "WEB":
+                obj_claim.jsondata = json.dumps(jsondata.get('Params').get('DETAILS'))
+                common.main_fun1(request.read(), path)
+                ld_out_message = obj_claim.eClaim_advance_approvedamount_set()
+            else:
+                obj_claim.employee_gid = request.auth.payload.get('user_id')
+                emp_bnk = obj_claim.eClaim_entity_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity_gid = bank_data[0].get('entity_gid')
+                jsondata = json.loads(request.body.decode('utf-8'))
+                common.main_fun1(request.read(), path)
+                jsondata['processedby'] = request.auth.payload.get('user_id')
+                jsondata['createby'] = request.auth.payload.get('user_id')
+                jsondata['Entity_Gid'] = entity_gid
+                obj_claim.jsondata = json.dumps(jsondata)
+                ld_out_message = obj_claim.eClaim_advance_approvedamount_set()
+
+            if ld_out_message.get("MESSAGE") == 'SUCCESS':
+                ld_dict = {"MESSAGE": "SUCCESS", "STATUS": 0}
+            elif ld_out_message.get("MESSAGE") == 'FAIL':
+                ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+
 class Tour_Cancel_Set(APIView):
     def post(self,request):
         try:
@@ -3364,9 +3675,30 @@ class Claimed_expense(APIView):
                 obj_eclaim.filter_json = json.dumps(filter)
                 ld_out_message = obj_eclaim.eClaim_claimedexpense_get()
             if ld_out_message.get("MESSAGE") == 'FOUND':
+
                 obj_eclaim.filter_json = json.dumps({"Tour_gid": request.query_params.get("Claimrequest_Tourgid")})
                 ld_out_file = obj_eclaim.eClaim_file_get()
                 out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                enddate = out_data[0].get('enddate')
+                startdate = out_data[0].get('startdate')
+                obj_eclaim.date = 'DATE'
+                date = obj_eclaim.get_server_date()
+
+                datetimeFormat = '%d-%b-%Y'
+                enddate1 = datetime.datetime.strptime(enddate, datetimeFormat).strftime('%Y-%m-%d')
+
+                datetimeFormat = '%d-%b-%Y'
+                startdate1 = datetime.datetime.strptime(startdate, datetimeFormat).strftime('%Y-%m-%d')
+
+                if date > enddate1:
+                    istour_end = "True"
+                else:
+                    istour_end = "False"
+
+                if date > startdate1:
+                    istour_start = "True"
+                else:
+                    istour_start = "False"
                 emp_data = {
                     "empids": out_data[0].get('empgid')
                 }
@@ -3379,6 +3711,8 @@ class Claimed_expense(APIView):
                     d["employee_code"] = employee1_data[0].get('employee_code')
                     d["employee_designation"] = employee1_data[0].get('designation_name')
                     d["employee_branch"] = employee1_data[0].get('branch_name')
+                    d["istour_end"] = istour_end
+                    d["istour_start"] = istour_start
                 if out_data[0].get('approvedby') != 0:
                     emp_data = {
                         "empids": out_data[0].get('approvedby')
@@ -3416,10 +3750,13 @@ class Claimed_expense(APIView):
                     data = {
                         "file_gid": i.get('file_gid'),
                         "file_name": i.get('file_name'),
+                        "file_key": i.get('file_path'),
                         "file_path": response,
                         "file_refgid": i.get('file_refgid')
                     }
                     filedata.append(data)
+
+
 
                 ld_dict = {
                     "DATA": out_data,
@@ -3670,12 +4007,14 @@ class Approver_set(APIView):
 class Expense_Maker(APIView):
     def post(self,request):
         try:
-            path = self.request.stream.path
-            jsondata = json.loads(request.body.decode('utf-8'))
             obj_claim = meClaim.eClaim_Model()
             if request.query_params.get("Api_Type") == "WEB":
+                path = self.request.stream.path
+                jsondata = json.loads(request.body.decode('utf-8'))
                 obj_claim.jsonData = json.dumps(jsondata.get('Params').get('DETAILS'))
                 common.main_fun1(request.read(), path)
+                # data_return = verify.advance_adjust(self,request,jsondata.get('Params').get('DETAILS').get('tourgid'))
+                # if data_return.get("MESSAGE") == 'SUCCESS':
                 ld_out_message = obj_claim.eClaim_movetoapproval_set()
                 if ld_out_message.get("MESSAGE") == 'SUCCESS':
                     file_data = jsondata.get('Params').get('FILE').get('File')
@@ -3690,20 +4029,63 @@ class Expense_Maker(APIView):
                     ld_dict = {"MESSAGE": "FAIL"}
                 else:
                     ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                # else:
+                #     ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + data_return.get("MESSAGE")}
                 return Response(ld_dict)
             else:
-                DETAILS = android.Android.param_conversion3(self,request,jsondata)
+                empgid = request.auth.payload.get('user_id')
+                emp_data = {
+                    "empids": empgid
+                }
+                obj_claim.filter_json = json.dumps(emp_data)
+                emp_bnk = obj_claim.eClaim_employeebnk_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity = bank_data[0].get('entity_gid')
+                files = []
+                if request.FILES:
+                    for i in range(0, len(request.FILES)):
+                        name = "file" + str(i)
+                        for j in request.FILES.getlist(name):
+                            file_data = j
+                            millis = int(round(time.time() * 1000))
+                            file_name_new = str(empgid) + '_' + str(millis) + '_' + str(i) + str(j.name)
+                            contents = file_data
+                            s3 = boto3.resource('s3')
+                            s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=file_name_new)
+                            s3_obj.put(Body=contents)
+                            content = {
+                                "File_path": file_name_new,
+                                "File_name": str(request.FILES[name].name),
+                                "Entity_gid": entity,
+                                "createby": empgid
+                            }
+
+                            files.append(content)
+                # jsondata = request.POST['Tour']
+                jsondata = json.loads(request.POST['Claim'])
+                jsondata['Entity_Gid'] = entity
+                jsondata['Employee_gid'] = empgid
+                jsondata['processedby'] = empgid
+                jsondata['createby'] = empgid
+                tourgid = jsondata.get('tourgid')
+                DETAILS = jsondata
                 DETAILS = android.Android.gid_ccbsarray_check(self,DETAILS)
-                common.main_fun1(request.read(), path)
+                # common.main_fun1(request.read(), path)
                 obj_claim.jsonData = json.dumps(DETAILS)
                 ld_out_message = obj_claim.eClaim_movetoapproval_set()
                 if ld_out_message.get("MESSAGE") == 'SUCCESS':
-                    if 'FILE' in jsondata:
-                        file_data = jsondata.get('FILE').get('File')
-                        obj_claim.jsonData = json.dumps(jsondata.get('FILE'))
+                    if files != []:
+                        for i in files:
+                            i['RefGid'] = tourgid
+                        filedata = {
+                            "File": files
+                        }
+                        obj_claim.jsonData = json.dumps(filedata)
                         out_message = obj_claim.eClaim_file_set()
                         if out_message.get("MESSAGE") == 'SUCCESS':
                             ld_dict = {"MESSAGE": "SUCCESS","STATUS":0}
+                        else:
+                            ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
                     else:
                         ld_dict = {"MESSAGE": "SUCCESS","STATUS":0}
                 elif ld_out_message.get("MESSAGE") == 'FAIL':
@@ -3723,6 +4105,13 @@ class Expense_City(APIView):
                 Expensegid = request.query_params.get("Expensegid")
                 Emp_Grade = request.query_params.get("Emp_Grade")
                 entity = request.query_params.get("Entity_Gid")
+                if 'Type' in request.query_params :
+                    if request.query_params.get('Type') =='LOCAL_DEP':
+                        garde = Emp_Grade
+                        obj_claim.filter_json = json.dumps({"Grade": garde})
+                        designation = obj_claim.eClaim_empwise_grade_get()
+                        designation = json.loads(designation.get("DATA").to_json(orient='records'))
+                        Emp_Grade = designation[0].get('designation')
                 obj_claim.filter_json = json.dumps({"Expensegid": Expensegid, "Entity_Gid": entity,"Emp_Grade":Emp_Grade})
                 out_data = obj_claim.eClaim_expensecity_get()
             else:
@@ -3779,14 +4168,65 @@ class Gst_Get(APIView):
                 emp_data = {
                     "empids": request.auth.payload.get('user_id')
                 }
+                Limit_End = 30
+                Limit_Start = 0
+                Branch_name = request.query_params.get("Branch_name")
                 obj_claim.filter_json = json.dumps(emp_data)
                 emp_bnk = obj_claim.eClaim_employeebnk_get()
                 bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
                 entity = bank_data[0].get('entity_gid')
-                obj_claim.filter_json = json.dumps({"Entity_Gid": entity})
+                obj_claim.filter_json = json.dumps({"Entity_Gid": entity,"Limit_Start":Limit_Start,"Limit_End":Limit_End,"Branch_name":Branch_name})
                 ld_out_message = obj_claim.eClaim_citytogst_get()
             if ld_out_message.get("MESSAGE") == 'FOUND':
                 ld_dict = {"DATA": json.loads(ld_out_message.get("DATA").to_json(orient='records')),
+                           "MESSAGE": 'FOUND    '}
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND'}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+class Hsn_Get(APIView):
+    def get(self, request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            hsn_code = request.query_params.get("Hsn_code")
+            emp_data = {
+                "empids": request.auth.payload.get('user_id')
+            }
+            obj_eclaim.filter_json = json.dumps(emp_data)
+            emp_bnk = obj_eclaim.eClaim_employeebnk_get()
+            bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+            entity = bank_data[0].get('entity_gid')
+            obj_eclaim.filter_json = json.dumps({"Entity_Gid": entity})
+            tk = str(request.auth.token)
+            token = "Bearer  " + tk[2:len(tk) - 1]
+            grp = "GET_EMP_DATA"
+            limit = "0,30"
+            typ = "HSN"
+            sub = "HSN_ALL"
+            params = {"Group": grp, "Type": typ, "Sub_Type": sub, "Limit": limit}
+            headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+            jsondata={
+                "Params":{
+                    "FILTER":{
+                        "hsn_code": hsn_code
+                    }
+                }
+            }
+            classify = {
+                "CLASSIFICATION": {
+                    "Entity_Gid": entity
+                }}
+            jsondata['Params'].update(classify)
+            datas = json.dumps(jsondata)
+            resp = requests.post("" + ip + "/MASTER_DATA", params=params, data=datas, headers=headers,
+                                 verify=False)
+            ld_out_message = json.loads(resp.content.decode("utf-8"))
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                ld_dict = {"DATA": ld_out_message.get("DATA"),
                            "MESSAGE": 'FOUND    '}
             elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
                 ld_dict = {"MESSAGE": 'NOT_FOUND'}
@@ -3800,7 +4240,7 @@ class pkg_eligible_Get(APIView):
     def get(self, request):
         try:
             obj_eclaim = meClaim.eClaim_Model()
-            grade = emp_grade(request.auth.payload.get('user_id'))
+            grade = emp_grade(request.query_params.get("Tour_Gid"))
             datas = {
                 "Grade": grade.upper()
             }
@@ -3835,7 +4275,7 @@ class Employee_Dependent(APIView):
 class Travel_Eligible(APIView):
     def get(self, request):
         try:
-            grade = emp_grade(request.auth.payload.get('user_id'))
+            grade = emp_grade(request.query_params.get("Tour_Gid"))
             data_eligible = verify.travel_exp.grade_eligible(self, grade.upper())
             ld_dict = {"DATA": data_eligible.get('type').get('type'),
                        "MESSAGE": 'FOUND', "STATUS": 0}
@@ -3843,34 +4283,14 @@ class Travel_Eligible(APIView):
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
-def emp_grade(emp):
-    emp_gid = []
-    grade = ''
-    obj_eclaim = meClaim.eClaim_Model()
-    emp_gid.append(emp)
-    emp_data = {
-        "empids": emp_gid
-    }
-    obj_eclaim.filter_json = json.dumps(emp_data)
-    obj_eclaim.json_classification = json.dumps({})
-    emp_out_message = obj_eclaim.eClaim_employee_get()
-    employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
-    employee_code = employee_data[0].get('employee_code')
-    if employee_code[0:2].upper() == 'VS':
-        designation = obj_eclaim.eClaim_empgrade_get()
-        designation = json.loads(designation.get("DATA").to_json(orient='records'))
-        for i in employee_data:
-            for j in designation:
-                if i.get('designation_name').upper() == j.get('designation').upper():
-                    grade = j.get('grade')
-                    break
-        return grade
-    else:
-        obj_eclaim.filter_json = json.dumps({"employeecode": employee_code})
-        emp = obj_eclaim.eClaim_employee_tmp_get()
-        data = json.loads(emp.get("DATA").to_json(orient='records'))
-        data = data[0]
-        return data.get('egrade2')
+def emp_grade(tourgid):
+    obj_claim = meClaim.eClaim_Model()
+    obj_claim.employee_gid = tourgid
+    ld_out_emp = obj_claim.eClaim_tourtoemp_get()
+    ld_dict = json.loads(ld_out_emp.get("DATA").to_json(orient='records'))
+    common.logger.error([{"tourtoemp_get": str(ld_dict)}])
+    empgrade = ld_dict[0].get('empgrade')
+    return empgrade
 class BS_Data_Get(APIView):
     def get(self, request):
         try:
@@ -4023,7 +4443,8 @@ class Dailydiem_Logic(APIView):
             emp_bnk = obj_claim.eClaim_entity_get()
             bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
             entity_gid = bank_data[0].get('entity_gid')
-            grade = emp_grade(empid)
+            tourgid = jsondata.get('tourgid')
+            grade = emp_grade(tourgid)
             json_param = android.Android.param_conversion(self, jsondata,entity_gid)
             ld_dict = verify.dailydiem.eligible_amount(self, json_param,grade,empid)
             return Response(ld_dict)
@@ -4041,7 +4462,7 @@ class Dailydiem(APIView):
                 CHANGE = jsondata.get('Params').get('CHANGE').get('DATA')
                 common.main_fun1(request.read(), path)
                 empid = exp_onbehalf_emp(self,request)
-                grade = emp_grade(empid)
+                grade = emp_grade(DETAILS.get('tourgid'))
                 obj_claim.employee_gid = empid
                 emp_bnk = obj_claim.eClaim_entity_get()
                 bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
@@ -4084,7 +4505,7 @@ class Dailydiem(APIView):
                 DETAILS['processedby'] =  empid
                 DETAILS['createby'] =  empid
                 CHANGE = CHANGE.get('DATA')
-                grade = emp_grade(empid)
+                grade = emp_grade(DETAILS.get('tourgid'))
                 for i in CHANGE:
                     json_param = android.Android.param_conversion(self, i, entity)
                     json_param['Params']['FILTER']['expensegid'] = DETAILS.get('expensegid')
@@ -4202,9 +4623,10 @@ class Travel_Logic(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 def travel_logic(self,empid,json_param):
-    grade = emp_grade(empid)
-    data_eligible = verify.travel_exp.grade_eligible(self, grade.upper())
-    eligible_amount = verify.travel_exp.ticket_fare(self, json_param, data_eligible.get('type').get('type'))
+    #tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    #grade = emp_grade(tourgid)
+    # data_eligible = verify.travel_exp.grade_eligible(self, grade.upper())
+    # eligible_amount = verify.travel_exp.ticket_fare(self, json_param, data_eligible.get('type').get('type'))
     priorpermission = json_param.get('Params').get('FILTER').get('priorpermission')
     claimedamount = json_param.get('Params').get('FILTER').get('claimedamount')
     tktbybank = json_param.get('Params').get('FILTER').get('tktbybank')
@@ -4347,7 +4769,9 @@ class Lodging_Logic(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 def lodging_logic(self,empid,json_param):
-    grade = emp_grade(empid)
+    tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    grade = emp_grade(tourgid)
+    common.logger.error([{"grade": str(grade)}])
     amount = verify.lodging.date_valid(self, json_param, grade)
     noofdays = amount.get('noofdays')
     accbybank = json_param.get('Params').get('FILTER').get('accbybank')
@@ -4488,7 +4912,8 @@ class Locconv_Logic(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 def locconv_logic(self,empid,json_param):
-    grade = emp_grade(empid)
+    tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    grade = emp_grade(tourgid)
     eligible_value = verify.localcon.validate_data(self, json_param, grade)
     return eligible_value
 class Locconv(APIView):
@@ -4621,7 +5046,8 @@ class Pkgmvg_Logic(APIView):
             e = "Erro Line no :" + str(format(sys.exc_info()[-1].tb_lineno)) + " " + "Error :" + str(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e) + str(eligible), "STATUS": 1})
 def pkgmvg_logic(self,empid,json_param):
-    grade = emp_grade(empid)
+    tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    grade = emp_grade(tourgid)
     eligible_value = verify.pkg_moving.validate_data(self, json_param, grade)
     common.logger.error([{"eligible_value": str(eligible_value)}])
     driverbatta = 0
@@ -4863,6 +5289,7 @@ class Incidental(APIView):
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+
 class Misc_Get(APIView):
     def get(self, request):
         try:
@@ -4913,7 +5340,8 @@ class Misc_Logic(APIView):
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
 
 def misc_logic(self,empid,json_param):
-    grade = emp_grade(empid)
+    tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    grade = emp_grade(tourgid)
     amount = verify.miscellaneous.elegibility_data(self, json_param,grade)
     eligible_value = {
         "Eligible_amount": amount,
@@ -4997,6 +5425,141 @@ class Misc(APIView):
         except Exception as e:
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+
+class LocalDeputation_Get(APIView):
+    def get(self, request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            if request.query_params.get("Api_Type") == "WEB":
+                entity = request.query_params.get("Entity_Gid")
+                Claimreqgid = request.query_params.get("Claimreqgid")
+                obj_eclaim.filter_json = json.dumps({"Entity_Gid": entity, "Claimreqgid": Claimreqgid})
+                ld_out_message = obj_eclaim.eClaim_localdeputation_get()
+            else:
+                filter = android.Android.get_method(self, request)
+                obj_eclaim.filter_json = json.dumps(filter)
+                ld_out_message = obj_eclaim.eClaim_localdeputation_get()
+
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                ld_dict = {"DATA": json.loads(ld_out_message.get("DATA").to_json(orient='records')), "MESSAGE": 'FOUND'}
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND'}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+class LocalDeputation_Logic(APIView):
+    def post(self, request):
+        try:
+            path = self.request.stream.path
+            jsondata = json.loads(request.body.decode('utf-8'))
+            common.main_fun1(request.read(), path)
+            empid = 0
+            if request.query_params.get("Type") == "ONBEHALF":
+                empid = jsondata.get('Employee_gid')
+            else:
+                empid = request.auth.payload.get('user_id')
+            obj_claim = meClaim.eClaim_Model()
+            obj_claim.employee_gid = empid
+            emp_bnk = obj_claim.eClaim_entity_get()
+            bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+            entity_gid = bank_data[0].get('entity_gid')
+            json_param = android.Android.param_conversion(self, jsondata, entity_gid)
+            eligible_value = LocalDeputation_logic(self,empid,json_param)
+            ld_dict = {"DATA": eligible_value,
+                       "MESSAGE": 'FOUND'}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+
+def LocalDeputation_logic(self,empid,json_param):
+    tourgid = json_param.get('Params').get('FILTER').get('tourgid')
+    grade = emp_grade(tourgid)
+    amount = verify.local_deputation.elegibility_data(self, json_param,grade)
+    return amount
+
+class LocalDeputation(APIView):
+    def post(self, request):
+        try:
+            obj_claim = meClaim.eClaim_Model()
+            path = self.request.stream.path
+            if request.query_params.get("Api_Type") == "WEB":
+                jsondata = json.loads(request.body.decode('utf-8'))
+                DETAILS = jsondata.get('Params').get('DETAILS')
+                CHANGE = jsondata.get('Params').get('CHANGE').get('DATA')
+                common.main_fun1(request.read(), path)
+                empid = exp_onbehalf_emp(self, request)
+                obj_claim.employee_gid = empid
+                emp_bnk = obj_claim.eClaim_entity_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity = bank_data[0].get('entity_gid')
+                for i in CHANGE:
+                    json_param = android.Android.param_conversion(self, i, entity)
+                    json_param['Params']['FILTER']['expensegid'] = DETAILS.get('expensegid')
+                    ld_dict = LocalDeputation_logic(self,empid,json_param)
+                    i['eligibleamount'] = ld_dict.get('Eligible_amount')
+                logic = verify.local_deputation.validate_data(self, CHANGE, DETAILS)
+                if logic == "True":
+                    obj_claim.jsondata = json.dumps(DETAILS)
+                    obj_claim.jsonData = json.dumps({"DATA": CHANGE})
+                    ld_out_message = obj_claim.eClaim_localdeputation_set()
+                    msg = ld_out_message.get("MESSAGE").split(",")
+                    if msg[0] == 'SUCCESS':
+                        ld_dict = {"MESSAGE": ld_out_message.get("MESSAGE")}
+                    elif msg[0] == 'FAIL':
+                        ld_dict = {"MESSAGE": "FAIL"}
+                    else:
+                        ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                    return Response(ld_dict)
+                else:
+                    return Response(logic[1])
+            else:
+                obj_claim.employee_gid = request.auth.payload.get('user_id')
+                emp_bnk = obj_claim.eClaim_entity_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity = bank_data[0].get('entity_gid')
+
+                DETAILS = android.Android.set_data_dtl(self, request)
+                DETAILS = android.Android.gid_check(self, DETAILS)
+                CHANGE = android.Android.set_data_chng(self, request)
+                CHANGE = android.Android.gid_array_check(self, CHANGE)
+                common.main_fun1(request.read(), path)
+                empid = exp_onbehalf_emp(self, request)
+                DETAILS['Entity_Gid'] = entity
+                DETAILS['processedby'] = empid
+                DETAILS['createby'] = empid
+                CHANGE = CHANGE.get('DATA')
+                obj_claim.employee_gid = empid
+                emp_bnk = obj_claim.eClaim_entity_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity = bank_data[0].get('entity_gid')
+                for i in CHANGE:
+                    json_param = android.Android.param_conversion(self, i, entity)
+                    json_param['Params']['FILTER']['expensegid'] = DETAILS.get('expensegid')
+                    ld_dict = LocalDeputation_logic(self,empid,json_param)
+                    i['eligibleamount'] = ld_dict.get('Eligible_amount')
+                logic = verify.local_deputation.validate_data(self, CHANGE, DETAILS)
+                if logic == "True":
+                    obj_claim.jsondata = json.dumps(DETAILS)
+                    obj_claim.jsonData = json.dumps({"DATA": CHANGE})
+                    ld_out_message = obj_claim.eClaim_localdeputation_set()
+                    msg = ld_out_message.get("MESSAGE").split(",")
+                    if msg[0] == 'SUCCESS':
+                        ld_dict = {"MESSAGE": msg[0]}
+                    elif msg[0] == 'FAIL':
+                        ld_dict = {"MESSAGE": "FAIL"}
+                    else:
+                        ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                    return Response(ld_dict)
+                else:
+                    return Response(logic[1])
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e), "STATUS": 1})
+
 class Expense_delete(APIView):
     def post(self, request):
         try:
@@ -5240,11 +5803,10 @@ class AP_Advance_Get(APIView):
                 emp_out_message = obj_claim.eClaim_Crnno_advance_get()
                 crndata = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
                 if emp_out_message.get("MESSAGE") == 'FOUND':
-                    for d in crndata:
-                        for i in out_data:
-                            d["advancegid"] = i.get('gid')
-                            d["adjustamount"] = i.get('adjustamount')
-                            break
+                    for d in range(0,len(crndata)):
+                        crndata[d]["advancegid"] = out_data[d].get('gid')
+                        crndata[d]["adjustamount"] = out_data[d].get('adjustamount')
+
                     ld_dict = {"DATA": crndata, "MESSAGE": 'FOUND',"STATUS": 0}
                 elif emp_out_message.get("MESSAGE") == 'NOT_FOUND':
                     ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
@@ -5266,12 +5828,9 @@ class AP_Advance_Get(APIView):
                 emp_out_message = obj_claim.eClaim_Crnno_advance_get()
                 crndata = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
                 if emp_out_message.get("MESSAGE") == 'FOUND':
-                    for d in crndata:
-                        for i in out_data:
-                            if i.get('crnno') == d.get('ppxheader_crno'):
-                                d["advancegid"] = i.get('gid')
-                                d["adjustamount"] = i.get('adjustamount')
-                                break
+                    for d in range(0, len(crndata)):
+                        crndata[d]["advancegid"] = out_data[d].get('gid')
+                        crndata[d]["adjustamount"] = out_data[d].get('adjustamount')
                     ld_dict = {"DATA": crndata, "MESSAGE": 'FOUND',"STATUS": 0}
                 elif emp_out_message.get("MESSAGE") == 'NOT_FOUND':
                     ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
@@ -5877,8 +6436,448 @@ class TourExpense_Report_Download(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
 
+class TournoExpense_Report(APIView):
+    def get(self,request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            Tourno = request.query_params.get("Tour_no")
+            obj_eclaim.filter_json = json.dumps(
+                {"tourno": Tourno})
+            ld_out_message = obj_eclaim.eClaim_tournoexpense_get()
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                emp_data = {
+                    "empids": out_data[0].get('empgid')
+                }
+                obj_eclaim.filter_json = json.dumps(emp_data)
+                obj_eclaim.json_classification = json.dumps({})
+                emp_out_message = obj_eclaim.eClaim_employee_get()
+                employee1_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                for d in out_data:
+                    d["employee_name"] = employee1_data[0].get('employee_name')
+                    d["employee_code"] = employee1_data[0].get('employee_code')
+                    d["employee_designation"] = employee1_data[0].get('designation_name')
+                    d["employee_branch_name"] = employee1_data[0].get('branch_name')
+
+                ld_dict = {"DATA": out_data,"MESSAGE": 'FOUND',"STATUS":0}
+                return Response(ld_dict)
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
+                return Response(ld_dict)
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"),"STATUS":1}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
 
 class Branch_Wise_Count(APIView):
+    def get(self,request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            Type = request.query_params.get("Type")
+            if Type == "SELF":
+                obj_eclaim.employee_gid = emp_gid
+                obj_eclaim.date = 'DATE'
+                date = obj_eclaim.get_server_date()
+                obj_eclaim.filter_json = json.dumps(
+                    {"employeegid": emp_gid, "todaydate": date})
+            elif Type == "OTHER"  :
+                obj_eclaim.employee_gid = emp_gid
+                obj_eclaim.date = 'DATE'
+                date = obj_eclaim.get_server_date()
+                obj_eclaim.filter_json = json.dumps(
+                    {"todaydate": date})
+            ld_out_message = obj_eclaim.eClaim_branch_wisecount_get()
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                finaldata = []
+                emp_data = {
+                    "empids": emp_gid
+                }
+                obj_eclaim.filter_json = json.dumps(emp_data)
+                emp_bnk = obj_eclaim.eClaim_employeebnk_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity_gid = bank_data[0].get('entity_gid')
+                # out_data = [{"empbranchgid":259,"datacount":'[0,9,10,14,15,16,17,20,21,22,23,24,26,27,28,29,30,35,36,37,38,39,40,41,42,48,52,54,56,57,59,61,62,63,64,65,66,68,70,71,72,75,76,77,78,79,80,82,83,84,86,87,89,90,91,93,94,96,97,99,100,101,103,104,105,106,108,109,110,111,112,113,114,117,118,119,120,122,124,125,127,129,131,133,134,135,136,138,141,150,156,157,159]'}]
+                for i in out_data:
+                    branch = i.get('empbranchgid')
+                    data = json.loads(i.get('datacount'))
+                    onetotwo = 0
+                    threetoten = 0
+                    eleventothirty = 0
+                    thirtyonetosixty = 0
+                    more = 0
+                    onetotwo_tmp = []
+                    threetoten_tmp = []
+                    eleventothirty_tmp = []
+                    thirtyonetosixty_tmp = []
+                    more_tmp = []
+                    tmp = {}
+                    if len(data) !=0:
+                        for j in data:
+                            if int(j.get('diff')) <=2 :
+                                onetotwo += 1
+                                onetotwo_data = {"requestno":j.get('requestno')}
+                                onetotwo_tmp.append(onetotwo_data)
+                            elif 3 <= int(j.get('diff')) <=10 :
+                                threetoten += 1
+                                threetoten_data = {"requestno": j.get('requestno')}
+                                threetoten_tmp.append(threetoten_data)
+                            elif 11 <= int(j.get('diff')) <=30 :
+                                eleventothirty += 1
+                                eleventothirty_data = {"requestno": j.get('requestno')}
+                                eleventothirty_tmp.append(eleventothirty_data)
+                            elif 31 <= int(j.get('diff')) <=60 :
+                                thirtyonetosixty += 1
+                                thirtyonetosixty_data = {"requestno": j.get('requestno')}
+                                thirtyonetosixty_tmp.append(thirtyonetosixty_data)
+                            else:
+                                more += 1
+                                more_data = {"requestno": j.get('requestno')}
+                                more_tmp.append(more_data)
+                    data_branch = verify.branch_apicall(self, request,entity_gid, branch)
+                    tmp.update(data_branch[0])
+                    onetotwo_dict= {"count":onetotwo,
+                                    "data": onetotwo_tmp}
+                    tmp['onetotwo']= onetotwo_dict
+                    a = threetoten - onetotwo
+                    if a <0:
+                        tt = 0
+                    else :
+                        tt = a
+                    threetoten_dict = {"count": tt,
+                                       "data": threetoten_tmp}
+                    tmp['threetoten']= threetoten_dict
+                    b = eleventothirty -threetoten
+                    if b < 0:
+                        et = 0
+                    else:
+                        et = b
+                    eleventothirty_dict = {"count": et,
+                                           "data": eleventothirty_tmp}
+                    tmp['eleventothirty']= eleventothirty_dict
+                    c = thirtyonetosixty -eleventothirty
+                    if c < 0:
+                        te = 0
+                    else:
+                        te = c
+                    thirtyonetosixty_dict = {"count": te,
+                                             "data": thirtyonetosixty_tmp}
+                    tmp['thirtyonetosixty']= thirtyonetosixty_dict
+                    d = more - thirtyonetosixty
+                    if d < 0:
+                        mt = 0
+                    else:
+                        mt = d
+                    more_dict = {"count": mt,
+                                 "data": more_tmp}
+                    tmp['more']= more_dict
+                    finaldata.append(tmp)
+                ld_dict = {"DATA": finaldata,"MESSAGE": 'FOUND',"STATUS":0}
+                return Response(ld_dict)
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
+                return Response(ld_dict)
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"),"STATUS":1}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+class Allowance(APIView):
+    def get(self,request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            query = request.query_params
+            filter= {}
+            if dict(query) != {}:
+                for key, value in query.items():
+                    filter[key] = value
+            obj_eclaim.filter_json = json.dumps(filter)
+            ld_out_message = obj_eclaim.eClaim_allowance_summary_get()
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                ld_dict = {"DATA": out_data,"MESSAGE": 'FOUND',"STATUS":0}
+                return Response(ld_dict)
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
+                return Response(ld_dict)
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"),"STATUS":1}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+    def post(self,request):
+        try:
+            ld_out_message = ""
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            if request.FILES:
+                # name = "file"
+                # for j in request.FILES.getlist(name):
+                contents = request.FILES['file']
+                # file_name_new =j.name
+                df = pd.read_excel(contents)
+                df['Effectivefrom'] = df['Effectivefrom'].dt.strftime('%Y-%m-%d')
+                df['Effectiveto'] = df['Effectiveto'].dt.strftime('%Y-%m-%d')
+                # entitygid = df['Entitygid']
+                # createdby = df['Createdby']
+                df = pd.DataFrame(
+                    {'gid': df['Gid'], 'expensegid': df['Expensegid'], 'salarygrade': df['Salarygrade'],
+                     'city': df['City'], "amount": df['Amount'], "applicableto": df['Applicableto'], "effectivefrom": df['Effectivefrom'],
+                     "effectiveto": df['Effectiveto'],"entitygid":df['Entitygid'],"createdby":df['Createdby'],"status":df['Status']})
+                ff = df.to_dict('records')
+                obj_eclaim.jsondata = json.dumps({"DATA":ff})
+                ld_out_message = obj_eclaim.eClaim_allowance_set()
+
+            else :
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_eclaim.jsondata = json.dumps({"DATA": jsondata})
+                ld_out_message = obj_eclaim.eClaim_allowance_set()
+            if ld_out_message.get("MESSAGE") == 'SUCCESS':
+                ld_dict = {"MESSAGE": "SUCCESS", "STATUS": 0}
+            elif ld_out_message.get("MESSAGE") == 'FAIL':
+                ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+
+class Tour_Relaxation(APIView):
+    def get(self,request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            query = request.query_params
+            filter= {}
+            if dict(query) != {}:
+                for key, value in query.items():
+                    filter[key] = value
+            obj_eclaim.filter_json = json.dumps(filter)
+            ld_out_message = obj_eclaim.eClaim_tourrelaxation_summary_get()
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                emp_data =[]
+                for i in out_data:
+                    if i.get('empgid') not in emp_data:
+                        emp_data.append(i.get('empgid'))
+                empprmit_data = {
+                    "empids": emp_data
+                }
+                obj_eclaim.filter_json = json.dumps(empprmit_data)
+                obj_eclaim.json_classification = json.dumps({})
+                emp_out_message = obj_eclaim.eClaim_employee_get()
+                emp_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+                common.logger.error([{"emp_out_message": str(emp_data)}])
+                if len(emp_data) == 0:
+                    ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
+                    return Response(ld_dict)
+
+                for d in out_data:
+                    for i in range(0, len(emp_data)):
+                        if emp_data[i].get('employee_gid') == int(d.get('empgid')):
+                            d["employee_name"] = emp_data[i].get('employee_name')
+                            d["employee_code"] = emp_data[i].get('employee_code')
+                            d["employee_designation"] = emp_data[i].get('designation_name')
+                            break
+                common.logger.error([{"data2": str(out_data)}])
+                ld_dict = {"DATA": out_data, "MESSAGE": 'FOUND', "STATUS": 0}
+                return Response(ld_dict)
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
+                return Response(ld_dict)
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"),"STATUS":1}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+    def post(self,request):
+        try:
+            ld_out_message = ""
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            jsondata = json.loads(request.body.decode('utf-8'))
+            jsondata['createby'] = emp_gid
+            obj_eclaim.jsondata = json.dumps(jsondata)
+            ld_out_message = obj_eclaim.eClaim_tourrelaxation_set()
+            if ld_out_message.get("MESSAGE") == 'SUCCESS':
+                ld_dict = {"MESSAGE": "SUCCESS", "STATUS": 0}
+            elif ld_out_message.get("MESSAGE") == 'FAIL':
+                ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+
+
+class Dependent_Details(APIView):
+    def get(self,request):
+        try:
+            obj_claim = meClaim.eClaim_Model()
+            if request.query_params.get("Type") == "ONBEHALF":
+                employee_gid = request.query_params.get("Employee_gid")
+            else:
+                employee_gid = request.auth.payload.get('user_id')
+            emp_gid = []
+            emp_gid.append(employee_gid)
+            emp_data = {
+                "empids": emp_gid
+            }
+            obj_claim.filter_json = json.dumps(emp_data)
+            obj_claim.json_classification = json.dumps({})
+            emp_out_message = obj_claim.eClaim_employee_get()
+            employee_data = json.loads(emp_out_message.get("DATA").to_json(orient='records'))
+            common.logger.error([{"employee_data": str(employee_data)}])
+            employee_code = employee_data[0].get('employee_code')
+            # employee_code = "003443"
+            if employee_code[0:2].upper() == 'VS':
+                obj_claim.employee_gid = employee_gid
+                out_data = obj_claim.eClaim_emptodependent_get()
+                outdata = json.loads(out_data.get("DATA").to_json(orient='records'))
+                if outdata != []:
+                    data_dependent = outdata
+                    for i in data_dependent:
+                        i['employee_gid'] = employee_gid
+                    ld_dict = {"DATA": data_dependent, "MESSAGE": 'FOUND'}
+                    return Response(ld_dict)
+                elif outdata == []:
+                    ld_dict = {"MESSAGE": 'NOT_FOUND', "STATUS": 1}
+                    return Response(ld_dict)
+
+            else:
+                token_status = 1
+                generated_token_data = master_views.master_sync_Data_("GET", "get_data", employee_gid)
+                log_data = generated_token_data
+                token = generated_token_data.get("DATA")[0].get("clienttoken_name")
+                if (token == " " or token == None):
+                    token_status = 0
+                if token_status == 1:
+                    try:
+                        client_api = common.clientapi()
+                        apiname = common.Apiname()
+                        apipassword = common.ApiPassword()
+                        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + token}
+                        data_depent = {
+                            "UserName": apiname,
+                            "Password": apipassword,
+                            "EmpId": str(employee_code),
+                            "DtlsToBeFetch": "DependentDetails"
+                        }
+                        data_depent = json.dumps(data_depent)
+                        result2 = requests.post("" + client_api + "/next/v1/mw/employee-detail", headers=headers,
+                                               data=data_depent,
+                                               verify=False)
+                        results_data2 = json.loads(result2.content.decode("utf-8"))
+                        status2 = results_data2.get("out_msg").get("ErrorMessage")
+                        if (status2 == "Success"):
+                            data_dependent = results_data2.get("out_msg").get('item')
+                            for i in data_dependent:
+                                i['employee_gid'] = employee_gid
+                                i['dependentname'] = i.get('FamilyMemberName')
+                                i['deprelation'] = i.get('FamilyMemberRelation')
+                                i['dependentid'] = i.get('FamilyMemberId')
+                            ld_dict = {"DATA": data_dependent,
+                                       "MESSAGE": 'FOUND'}
+                            return Response(ld_dict)
+
+                        else:
+                            return Response({"MESSAGE": "FAILED", "FAILED_STATUS": results_data2})
+                    except Exception as e:
+                        common.logger.error(e)
+                        return Response({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRANSFER_CLINET_API", "DATA": str(e),
+                                         "log_data": log_data})
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+    def post(self,request):
+        try:
+            ld_out_message = ""
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            jsondata = json.loads(request.body.decode('utf-8'))
+            jsondata['createby'] = emp_gid
+            obj_eclaim.jsondata = json.dumps(jsondata)
+            ld_out_message = obj_eclaim.eClaim_tourrelaxation_set()
+            if ld_out_message.get("MESSAGE") == 'SUCCESS':
+                ld_dict = {"MESSAGE": "SUCCESS", "STATUS": 0}
+            elif ld_out_message.get("MESSAGE") == 'FAIL':
+                ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+
+class Glmapping(APIView):
+    def get(self,request):
+        try:
+            obj_eclaim = meClaim.eClaim_Model()
+            emp_gid = request.auth.payload.get('user_id')
+            obj_eclaim.employee_gid = emp_gid
+            obj_eclaim.date = 'DATE'
+            date = obj_eclaim.get_server_date()
+            obj_eclaim.filter_json = json.dumps(
+                {"employeegid": emp_gid, "todaydate": date})
+            ld_out_message = obj_eclaim.eClaim_branch_wisecount_get()
+            if ld_out_message.get("MESSAGE") == 'FOUND':
+                out_data = json.loads(ld_out_message.get("DATA").to_json(orient='records'))
+                finaldata = []
+                emp_data = {
+                    "empids": emp_gid
+                }
+                obj_eclaim.filter_json = json.dumps(emp_data)
+                emp_bnk = obj_eclaim.eClaim_employeebnk_get()
+                bank_data = json.loads(emp_bnk.get("DATA").to_json(orient='records'))
+                entity_gid = bank_data[0].get('entity_gid')
+                for i in out_data:
+                    branch = i.get('empbranchgid')
+                    data = json.loads(i.get('datacount'))
+                    onetotwo = 0
+                    threetoten = 0
+                    eleventothirty = 0
+                    thirtyonetosixty = 0
+                    more = 0
+                    tmp = {}
+                    for j in data:
+                        if int(j) <=2 :
+                            onetotwo += 1
+                        elif 3 <= int(j) <=10 :
+                            threetoten += 1
+                        elif 11 <= int(j) <=30 :
+                            eleventothirty += 1
+                        elif 31 <= int(j) <=60 :
+                            thirtyonetosixty += 1
+                        else:
+                            more += 1
+                    data_branch = verify.branch_apicall(self, request,entity_gid, branch)
+                    tmp.update(data_branch[0])
+                    tmp['onetotwo']= onetotwo
+                    tmp['threetoten']= threetoten
+                    tmp['eleventothirty']= eleventothirty
+                    tmp['thirtyonetosixty']= thirtyonetosixty
+                    tmp['more']= more
+                    finaldata.append(tmp)
+                ld_dict = {"DATA": finaldata,"MESSAGE": 'FOUND',"STATUS":0}
+                return Response(ld_dict)
+            elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                ld_dict = {"MESSAGE": 'NOT_FOUND',"STATUS":1}
+                return Response(ld_dict)
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"),"STATUS":1}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
+class Gradeeligibility(APIView):
     def get(self,request):
         try:
             obj_eclaim = meClaim.eClaim_Model()
@@ -5939,6 +6938,32 @@ class Branch_Wise_Count(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
 
+class Ccbs_Set(APIView):
+    def post(self,request):
+        try:
+            ld_out_message = ""
+            path = self.request.stream.path
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_claim = meClaim.eClaim_Model()
+            if request.query_params.get("Api_Type") == "WEB":
+                empgid = request.auth.payload.get('user_id')
+                data = jsondata.get('Params').get('CCBS')
+                for i in data :
+                    i['createby'] = empgid
+                obj_claim.jsondata = json.dumps({"CCBS":data})
+                common.main_fun1(request.read(), path)
+                ld_out_message = obj_claim.eClaim_ccbs_set()
+
+            if ld_out_message.get("MESSAGE") == 'SUCCESS':
+                ld_dict = {"MESSAGE": "SUCCESS", "STATUS": 0}
+            elif ld_out_message.get("MESSAGE") == 'FAIL':
+                ld_dict = {"MESSAGE": "FAIL", "STATUS": 1}
+            else:
+                ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE"), "STATUS": 1}
+            return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED", "DATA": str(e),"STATUS":1})
 
 from Bigflow.Core import views as master_views
 class HRD_Employee_Data(APIView):

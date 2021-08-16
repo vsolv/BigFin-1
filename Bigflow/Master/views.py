@@ -1,3 +1,6 @@
+import logging
+import traceback
+
 from django.shortcuts import render
 from Bigflow.Master.Model import mMasters
 from Bigflow.Transaction.Model import mFET
@@ -27,7 +30,7 @@ from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from Bigflow.settings import S3_BUCKET_NAME
 import os.path
 from Bigflow.Core.models import MasterRequestObject
-
+from Bigflow.Core.models import get_data_from_id
 
 ip = common.localip()
 token = common.token()
@@ -37,10 +40,11 @@ def employeeIndex(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
     return render(request, "employee/bigflow_mst_employee.html")
+
+
 def sales_transaction(request):
     utl.check_authorization(request)
     return render(request, "Customer/Sales_Transaction.html")
-
 
 
 def Ccbs_Maker_fun(request):
@@ -66,16 +70,17 @@ def Cat_Subcat_fun(request):
     utl.check_pointaccess(request)
     return render(request, "CCBS/Cat_Subcat_Summary.html")
 
+
 def Cat_Subcat_Approver(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
     return render(request, "CCBS/Cat_Subcat_Approver.html")
 
+
 def Cat_Subcat_Popup(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
     return render(request, "Customer/customer_file_uload.html")
-
 
 
 def Cat_Subcat_Popup(request):
@@ -94,6 +99,7 @@ def Cc_Bb_Popup(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
     return render(request, "CCBS/Cc_Bs_Add_Summary.html")
+
 
 def add_business_segment(request):
     utl.check_authorization(request)
@@ -128,105 +134,109 @@ def empattendanceIndex(request):
     utl.check_pointaccess(request)
     return render(request, "employee/emp_attendance.html")
 
+
 def emp_upload(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
     return render(request, "employee/Employee_Upload.html")
 
+
 def customerupload(request):
-    return render(request,"Customer/customer_upload.html")
+    return render(request, "Customer/customer_upload.html")
+
 
 def custset(request):
-    #utl.check_authorization(request)
+    # utl.check_authorization(request)
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        excel_file = request.FILES['file'] # geting the excel file from angular
-        obj_master.Action=request.POST['Action']
-        obj_master.Type=request.POST['Type']
-        current_month=datetime.datetime.now().strftime('%m')
-        current_day = datetime.datetime.now().strftime('%d')
-        current_year_full = datetime.datetime.now().strftime('%Y')
-        save_path = str(settings.MEDIA_ROOT) + '/Customer/' + str(current_year_full) + '/' + str(
-            current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
-        path = default_storage.save(str(save_path), request.FILES['file'])
-        df = pd.read_excel(excel_file)
-        df['customer_DOB'] = df['customer_DOB'].dt.strftime('%Y-%m-%d')
-        df['customer_WD'] = df['customer_WD'].dt.strftime('%Y-%m-%d')
-        data= df.to_dict('records')
-        obj_master.filerdata={"HEADER":data,"file_name":str(request.POST['name']),"file_path":path}
-        obj_master.filerdata=json.dumps(obj_master.filerdata)
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        #obj_master.classification=json.dumps({"Entity_Gid": [1], "create_by": [1]})
-        obj_master.classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
-        obj_cancel_data = obj_master.set_customerset()
-        excel_status = "".join(obj_cancel_data)
-        excel_status = excel_status.split(',')
-        return JsonResponse( excel_status[1], safe=False)
-     except Exception as e:
-               return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            obj_master = mMasters.Masters()
+            excel_file = request.FILES['file']  # geting the excel file from angular
+            obj_master.Action = request.POST['Action']
+            obj_master.Type = request.POST['Type']
+            current_month = datetime.datetime.now().strftime('%m')
+            current_day = datetime.datetime.now().strftime('%d')
+            current_year_full = datetime.datetime.now().strftime('%Y')
+            save_path = str(settings.MEDIA_ROOT) + '/Customer/' + str(current_year_full) + '/' + str(
+                current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
+            path = default_storage.save(str(save_path), request.FILES['file'])
+            df = pd.read_excel(excel_file)
+            df['customer_DOB'] = df['customer_DOB'].dt.strftime('%Y-%m-%d')
+            df['customer_WD'] = df['customer_WD'].dt.strftime('%Y-%m-%d')
+            data = df.to_dict('records')
+            obj_master.filerdata = {"HEADER": data, "file_name": str(request.POST['name']), "file_path": path}
+            obj_master.filerdata = json.dumps(obj_master.filerdata)
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            # obj_master.classification=json.dumps({"Entity_Gid": [1], "create_by": [1]})
+            obj_master.classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
+            obj_cancel_data = obj_master.set_customerset()
+            excel_status = "".join(obj_cancel_data)
+            excel_status = excel_status.split(',')
+            return JsonResponse(excel_status[1], safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def custupload(request):
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.action =jsondata.get('Action')
-        obj_master.type =jsondata.get('Type')
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        obj_master.Classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
-        #obj_master.Classification=json.dumps(jsondata.get('data').get('Classification'))
-        common.main_fun1(request.read(), request.path)
-        obj_cancel_data = obj_master.get_customerupload()
-        jdata = obj_cancel_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-     except Exception as e:
-              return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            obj_master = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_master.action = jsondata.get('Action')
+            obj_master.type = jsondata.get('Type')
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            obj_master.Classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
+            # obj_master.Classification=json.dumps(jsondata.get('data').get('Classification'))
+            common.main_fun1(request.read(), request.path)
+            obj_cancel_data = obj_master.get_customerupload()
+            jdata = obj_cancel_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def customersubmit(request):
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.action =jsondata.get('Action')
-        obj_master.type =jsondata.get('Type')
-        obj_master.filerdata = json.dumps(jsondata.get('data').get('FILTER'))
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        obj_master.Classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
-        #common.main_fun1(request.read(), request.path)
-        obj_cancel_data = obj_master.get_submit()
-        return JsonResponse(json.dumps(obj_cancel_data), safe=False)
-     except Exception as e:
-           return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            obj_master = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_master.action = jsondata.get('Action')
+            obj_master.type = jsondata.get('Type')
+            obj_master.filerdata = json.dumps(jsondata.get('data').get('FILTER'))
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            obj_master.Classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
+            # common.main_fun1(request.read(), request.path)
+            obj_cancel_data = obj_master.get_submit()
+            return JsonResponse(json.dumps(obj_cancel_data), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def customerdelete(request):
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.Action =jsondata.get('Action')
-        obj_master.Type =jsondata.get('Type')
-        obj_master.filerdata = json.dumps(jsondata.get('data').get('FILTER'))
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        obj_master.classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
-        common.main_fun1(request.read(), request.path)
-        obj_cancel_data = obj_master.set_customerset()
-        jdata = obj_cancel_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-     except Exception as e:
-        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
-
+        try:
+            obj_master = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_master.Action = jsondata.get('Action')
+            obj_master.Type = jsondata.get('Type')
+            obj_master.filerdata = json.dumps(jsondata.get('data').get('FILTER'))
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            obj_master.classification = json.dumps({'Entity_Gid': entity_gid, "create_by": createby})
+            common.main_fun1(request.read(), request.path)
+            obj_cancel_data = obj_master.set_customerset()
+            jdata = obj_cancel_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def select_query_screen(request):
     utl.check_authorization(request)
     if request.method == 'POST':
-         try:
+        try:
             objdata = mMasters.Masters()
             jsondata = json.loads(request.body.decode('utf-8'))
             objdata.type = jsondata.get('Type')
@@ -236,7 +246,7 @@ def select_query_screen(request):
             if objdata.sub_type == 'Table':
                 common.main_fun1(request.read(), request.path)
                 obj_cancel_data = objdata.SelectSummary()
-                obj_cancel_data.columns=['tabels_data']
+                obj_cancel_data.columns = ['tabels_data']
                 jdata = obj_cancel_data.to_json(orient='records')
                 return JsonResponse(jdata, safe=False)
             else:
@@ -244,11 +254,12 @@ def select_query_screen(request):
                 obj_cancel_data = objdata.SelectSummary()
                 jdata = obj_cancel_data.to_json(orient='records')
                 return JsonResponse({"MESSAGE": "FOUND", "DATA": jdata}, safe=False)
-         except Exception as e:
+        except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
     else:
         return render(request, "Common/select_query_screen.html")
+
 
 def emprouteIndex(request):
     utl.check_authorization(request)
@@ -266,72 +277,76 @@ def courier_index(request):
     utl.check_authorization(request)
     return render(request, "employee/bigflow_mst_courier.html")
 
+
 def casequery_temp(request):
     utl.check_authorization(request)
     return render(request, "Customer/customer_casequery.html")
 
+
 def agency(request):
-    return render(request,"Customer/customer_agency.html")
+    return render(request, "Customer/customer_agency.html")
+
 
 def agencyupload(request):
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.action ='Agent'
-        obj_master.type ='Summary'
-        obj_master.Classification=json.dumps(jsondata.get('data').get('Classification'))
-        obj_master.ls_Createby=1
+        try:
+            obj_master = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_master.action = 'Agent'
+            obj_master.type = 'Summary'
+            obj_master.Classification = json.dumps(jsondata.get('data').get('Classification'))
+            obj_master.ls_Createby = 1
 
-        obj_cancel_data = obj_master.get_agencyupload()
-        jdata = obj_cancel_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+            obj_cancel_data = obj_master.get_agencyupload()
+            jdata = obj_cancel_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def agencyset(request):
-
     utl.check_authorization(request)
     if request.method == 'POST':
-     try:
-        obj_master = mMasters.Masters()
-        excel_file = request.FILES['file'] # geting the excel file from angular
-        obj_master.Action=request.POST['Action']
-        obj_master.Type=request.POST['Type']
-        #obj_master.create_by=request.session['Emp_gid']
-        df = pd.read_excel(excel_file)
-        data= df.to_dict('records')
-        obj_master.filerdata=json.dumps({"HEADER":data})
-        obj_master.classification=json.dumps({"Entity_Gid": [1], "create_by": [1]})
-        obj_cancel_data = obj_master.set_agencyset()
-        excel_status = "".join(obj_cancel_data)
-        excel_status = excel_status.split(',')
-        return JsonResponse( excel_status[1], safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            obj_master = mMasters.Masters()
+            excel_file = request.FILES['file']  # geting the excel file from angular
+            obj_master.Action = request.POST['Action']
+            obj_master.Type = request.POST['Type']
+            # obj_master.create_by=request.session['Emp_gid']
+            df = pd.read_excel(excel_file)
+            data = df.to_dict('records')
+            obj_master.filerdata = json.dumps({"HEADER": data})
+            obj_master.classification = json.dumps({"Entity_Gid": [1], "create_by": [1]})
+            obj_cancel_data = obj_master.set_agencyset()
+            excel_status = "".join(obj_cancel_data)
+            excel_status = excel_status.split(',')
+            return JsonResponse(excel_status[1], safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def SubAgency(request):
     utl.check_authorization(request)
     if request.method == 'POST':
-     try:
-       # parameters = (self.action, self.Type, self.FILTER, self.Classification, 1, '')
-        obj_master = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.Action = jsondata.get('Action')
-        obj_master.Type =jsondata.get('Type')
-        obj_master.filerdata=json.dumps(jsondata.get('data').get('FILTER'))
-        obj_master.Classification=json.dumps(jsondata.get('data').get('Classification'))
-        obj_master.ls_Createby=1
-        obj_cancel_data = obj_master.sub_agencyset()
-        return JsonResponse(json.dumps(obj_cancel_data), safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            # parameters = (self.action, self.Type, self.FILTER, self.Classification, 1, '')
+            obj_master = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            obj_master.Action = jsondata.get('Action')
+            obj_master.Type = jsondata.get('Type')
+            obj_master.filerdata = json.dumps(jsondata.get('data').get('FILTER'))
+            obj_master.Classification = json.dumps(jsondata.get('data').get('Classification'))
+            obj_master.ls_Createby = 1
+            obj_cancel_data = obj_master.sub_agencyset()
+            return JsonResponse(json.dumps(obj_cancel_data), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def deleteagency(request):
-        utl.check_authorization(request)
-        if request.method == 'POST':
-         try:
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
             obj_master = mMasters.Masters()
             jsondata = json.loads(request.body.decode('utf-8'))
             obj_master.action = 'Delete'
@@ -341,111 +356,109 @@ def deleteagency(request):
             obj_master.ls_Createby = 1
             obj_cancel_data = obj_master.del_agencyset()
             return JsonResponse(json.dumps(obj_cancel_data), safe=False)
-         except Exception as e:
-             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def set_empupload(request):
-   if request.method == 'POST':
-     try:
+    if request.method == 'POST':
+        try:
             obj_master = mMasters.Masters()
-            excel_file = request.FILES['file'] # getting the excel file from angular
-            obj_master.action=request.POST['Action']
-            obj_master.type=request.POST['Type']
+            excel_file = request.FILES['file']  # getting the excel file from angular
+            obj_master.action = request.POST['Action']
+            obj_master.type = request.POST['Type']
             df = pd.read_excel(excel_file)
-            data= df.to_dict('records')
-            current_month =datetime.datetime.now().strftime('%m')
+            data = df.to_dict('records')
+            current_month = datetime.datetime.now().strftime('%m')
             current_day = datetime.datetime.now().strftime('%d')
             current_year_full = datetime.datetime.now().strftime('%Y')
-            save_path = str(settings.MEDIA_ROOT) + '/EMPLOYEE/' + str(current_year_full)+'/'+str(current_month)+ '/'+str(current_day)+'/'+str(request.POST['name'])
+            save_path = str(settings.MEDIA_ROOT) + '/EMPLOYEE/' + str(current_year_full) + '/' + str(
+                current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
             path = default_storage.save(str(save_path), request.FILES['file'])
-            obj_master.filterdata={"HEADER":data,"file_name":str(request.POST['name']),"file_path":path}
+            obj_master.filterdata = {"HEADER": data, "file_name": str(request.POST['name']), "file_path": path}
             obj_master.filter = json.dumps(obj_master.filterdata)
-            createby=decry_data(request.session['Emp_gid'])
-            entity_gid=decry_data(request.session['Entity_gid'])
-            obj_master.json_classification=json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            obj_master.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
             # common.main_fun1(request.read(), request.path)
             obj_emp_data = obj_master.set_emp_upload()
             excel_status = "".join(obj_emp_data)
             excel_status = excel_status.split(',')
-            return JsonResponse( excel_status[1], safe=False)
-     except Exception as e:
+            return JsonResponse(excel_status[1], safe=False)
+        except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
 
 
 def get_empupload(request):
     if request.method == 'POST':
-     try:
-        objdata = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.action = jsondata.get('Action')
-        objdata.type = jsondata.get('Type')
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
-        common.main_fun1(request.read(), request.path)
-        obj_getemp_data = objdata.get_emp_upload()
-        jdata = obj_getemp_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            objdata = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.action = jsondata.get('Action')
+            objdata.type = jsondata.get('Type')
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
+            common.main_fun1(request.read(), request.path)
+            obj_getemp_data = objdata.get_emp_upload()
+            jdata = obj_getemp_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def del_empupload(request):
-  if request.method == 'POST':
-     try:
-        objdata = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.action = jsondata.get('Action')
-        objdata.type = jsondata.get('Type')
-        objdata.filter = json.dumps(jsondata.get('data').get('Filter'))
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
-        common.main_fun1(request.read(), request.path)
-        obj_delete_data = objdata.set_emp_upload()
-        return JsonResponse(obj_delete_data, safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+    if request.method == 'POST':
+        try:
+            objdata = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.action = jsondata.get('Action')
+            objdata.type = jsondata.get('Type')
+            objdata.filter = json.dumps(jsondata.get('data').get('Filter'))
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
+            common.main_fun1(request.read(), request.path)
+            obj_delete_data = objdata.set_emp_upload()
+            return JsonResponse(obj_delete_data, safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def saveemp(request):
-
     if request.method == 'POST':
-     try:
-        objdata = mMasters.Masters()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.action = jsondata.get('Action')
-        objdata.type = jsondata.get('Type')
-        objdata.filter = json.dumps(jsondata.get('data').get('Filter'))
-        createby = decry_data(request.session['Emp_gid'])
-        entity_gid = decry_data(request.session['Entity_gid'])
-        objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
-        # common.main_fun1(request.read(), request.path)
-        obj_save_data = objdata.set_emp_upload()
-        return JsonResponse(obj_save_data, safe=False)
-     except Exception as e:
-         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        try:
+            objdata = mMasters.Masters()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.action = jsondata.get('Action')
+            objdata.type = jsondata.get('Type')
+            objdata.filter = json.dumps(jsondata.get('data').get('Filter'))
+            createby = decry_data(request.session['Emp_gid'])
+            entity_gid = decry_data(request.session['Entity_gid'])
+            objdata.json_classification = json.dumps({"Entity_Gid": entity_gid, "create_by": createby})
+            # common.main_fun1(request.read(), request.path)
+            obj_save_data = objdata.set_emp_upload()
+            return JsonResponse(obj_save_data, safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def customerall(request):
-     if request.method == 'POST':
-            #path = request.path
-            obj_master = mMasters.Masters()
-            jsondata = json.loads(request.body.decode('utf-8'))
-            obj_master.Type = 'CUSTOMER'
-            obj_master.Subtype = 'CUSTOMER_ALL'
-            obj_master.jsonData = json.dumps(jsondata.get('FILTER'))
-            #obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-            # obj_master.customergroup_gid = request.session['customergroup_gid']
-            obj_master.entity_gid = json.dumps({"Entity_Gid":decry_data(request.session['Entity_gid'])})
-            common.main_fun1(request.read(), request.path)
-            # obj_master.entity_gid = json.dumps({"Entity_Gid":(request.session['Entity_gid'])})
-            obj_cancel_data = obj_master.get_customerall()
-            jdata = obj_cancel_data.to_json(orient='records')
-            return JsonResponse(json.loads(jdata), safe=False)
+    if request.method == 'POST':
+        # path = request.path
+        obj_master = mMasters.Masters()
+        jsondata = json.loads(request.body.decode('utf-8'))
+        obj_master.Type = 'CUSTOMER'
+        obj_master.Subtype = 'CUSTOMER_ALL'
+        obj_master.jsonData = json.dumps(jsondata.get('FILTER'))
+        # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.customergroup_gid = request.session['customergroup_gid']
+        obj_master.entity_gid = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        common.main_fun1(request.read(), request.path)
+        # obj_master.entity_gid = json.dumps({"Entity_Gid":(request.session['Entity_gid'])})
+        obj_cancel_data = obj_master.get_customerall()
+        jdata = obj_cancel_data.to_json(orient='records')
+        return JsonResponse(json.loads(jdata), safe=False)
 
 
 def soorderdetails(request):
@@ -462,24 +475,27 @@ def soorderdetails(request):
         jdata = obj_cancel_data.to_json(orient='records')
         return JsonResponse(json.loads(jdata), safe=False)
 
+
 def custset(request):
-    #utl.check_authorization(request)
+    # utl.check_authorization(request)
     if request.method == 'POST':
         obj_master = mMasters.Masters()
-        excel_file = request.FILES['file'] # geting the excel file from angular
-        obj_master.Action=request.POST['Action']
-        obj_master.Type=request.POST['Type']
+        excel_file = request.FILES['file']  # geting the excel file from angular
+        obj_master.Action = request.POST['Action']
+        obj_master.Type = request.POST['Type']
         df = pd.read_excel(excel_file)
-        datas= df.to_dict('records')
-        obj_master.filerdata=json.dumps({"HEADER":datas})
-        obj_master.classification=json.dumps({"Entity_Gid": [1], "create_by": [1]})
+        datas = df.to_dict('records')
+        obj_master.filerdata = json.dumps({"HEADER": datas})
+        obj_master.classification = json.dumps({"Entity_Gid": [1], "create_by": [1]})
         obj_cancel_data = obj_master.set_customerset()
         excel_status = "".join(obj_cancel_data)
         excel_status = excel_status.split(',')
-        return JsonResponse( excel_status[1], safe=False)
+        return JsonResponse(excel_status[1], safe=False)
+
 
 def customerupload(request):
-    return render(request,"Customer/customer_upload.html")
+    return render(request, "Customer/customer_upload.html")
+
 
 def saleorder(request):
     if request.method == 'POST':
@@ -531,56 +547,61 @@ def customergroupname(request):
 
 def casequerys(request):
     if request.method == 'POST':
-
-        #path = request.path
+        # path = request.path
         obj_master = mMasters.Masters()
         jsondata = json.loads(request.body.decode('utf-8'))
-        obj_master.action ='CaseQueryScreen'
-        obj_master.Type ='Details'
+        obj_master.action = 'CaseQueryScreen'
+        obj_master.Type = 'Details'
         obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-        #obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
         # obj_master.customergroup_gid = request.session['customergroup_gid']
-        obj_master.entity_gid = json.dumps({"Entity_Gid":decry_data(request.session['Entity_gid'])})
-        #obj_master.entity_gid = json.dumps({"Entity_Gid":(request.session['Entity_gid'])})
+        obj_master.entity_gid = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        # obj_master.entity_gid = json.dumps({"Entity_Gid":(request.session['Entity_gid'])})
         common.main_fun1(request.read(), request.path)
         obj_cancel_data = obj_master.get_casequery()
         jdata = obj_cancel_data.to_json(orient='records')
         return JsonResponse(json.loads(jdata), safe=False)
+
+
 def casequery(request):
-        if request.method == 'POST':
-            #path =request.path
-            obj_master = mMasters.Masters()
-            jsondata = json.loads(request.body.decode('utf-8'))
-            obj_master.action = 'Cheque'
-            obj_master.Type = 'BounceHistory'
-            obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-            # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-            # obj_master.customergroup_gid = request.session['customergroup_gid']
-            obj_master.entity_gid = json.dumps({"Entity_Gid":decry_data(request.session['Entity_gid'])})
-            common.main_fun1(request.read(), request.path)
-            #obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
-            obj_cancel_data = obj_master.get_casequery()
-            jdata = obj_cancel_data.to_json(orient='records')
-            return JsonResponse(json.loads(jdata), safe=False)
+    if request.method == 'POST':
+        # path =request.path
+        obj_master = mMasters.Masters()
+        jsondata = json.loads(request.body.decode('utf-8'))
+        obj_master.action = 'Cheque'
+        obj_master.Type = 'BounceHistory'
+        obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.customergroup_gid = request.session['customergroup_gid']
+        obj_master.entity_gid = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        common.main_fun1(request.read(), request.path)
+        # obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
+        obj_cancel_data = obj_master.get_casequery()
+        jdata = obj_cancel_data.to_json(orient='records')
+        return JsonResponse(json.loads(jdata), safe=False)
+
+
 def followup(request):
-        if request.method == 'POST':
-            #path =request.path
-            obj_master = mMasters.Masters()
-            jsondata = json.loads(request.body.decode('utf-8'))
-            obj_master.action = 'Display'
-            obj_master.Type = 'FollowUpDetails'
-            obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-            # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
-            # obj_master.customergroup_gid = request.session['customergroup_gid']
-            obj_master.entity_gid = json.dumps({"Entity_Gid":decry_data(request.session['Entity_gid'])})
-            #obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
-            common.main_fun1(request.read(), request.path)
-            obj_cancel_data = obj_master.get_casequery()
-            jdata = obj_cancel_data.to_json(orient='records')
-            return JsonResponse(json.loads(jdata), safe=False)
+    if request.method == 'POST':
+        # path =request.path
+        obj_master = mMasters.Masters()
+        jsondata = json.loads(request.body.decode('utf-8'))
+        obj_master.action = 'Display'
+        obj_master.Type = 'FollowUpDetails'
+        obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
+        # obj_master.customergroup_gid = request.session['customergroup_gid']
+        obj_master.entity_gid = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        # obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
+        common.main_fun1(request.read(), request.path)
+        obj_cancel_data = obj_master.get_casequery()
+        jdata = obj_cancel_data.to_json(orient='records')
+        return JsonResponse(json.loads(jdata), safe=False)
+
+
 def outstanding(request):
     if request.method == 'POST':
-        #path =request.path
+        # path =request.path
         obj_master = mMasters.Masters()
         jsondata = json.loads(request.body.decode('utf-8'))
         obj_master.action = 'Report'
@@ -588,14 +609,12 @@ def outstanding(request):
         obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
         # obj_master.jsonData = json.dumps(jsondata.get('params').get('FILTER'))
         # obj_master.customergroup_gid = request.session['customergroup_gid']
-        obj_master.entity_gid = json.dumps({"Entity_Gid":decry_data(request.session['Entity_gid'])})
-        #obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
+        obj_master.entity_gid = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        # obj_master.entity_gid = json.dumps({"Entity_Gid": (request.session['Entity_gid'])})
         common.main_fun1(request.read(), request.path)
         obj_cancel_data = obj_master.get_casequery()
         jdata = obj_cancel_data.to_json(orient='records')
         return JsonResponse(json.loads(jdata), safe=False)
-
-
 
 
 def executivemapping_index(request):
@@ -638,20 +657,24 @@ def Product_Type_Popup(request):
     utl.check_pointaccess(request)
     return render(request, "Product/Product_Type_popup.html")
 
-#Hsn Code
+
+# Hsn Code
 def mst_hsn(request):
     utl.check_authorization(request)
-    return render(request,"Product/mst_hsn.html")
+    return render(request, "Product/mst_hsn.html")
 
-#Tax Code
+
+# Tax Code
 def mst_tax(request):
     utl.check_authorization(request)
-    return render(request,"Tax/mst_tax.html")
+    return render(request, "Tax/mst_tax.html")
 
-#master state distric city
+
+# master state distric city
 def mst_state_dist_city(request):
     utl.check_authorization(request)
-    return render(request,"Common/mst_state_dist_city.html")
+    return render(request, "Common/mst_state_dist_city.html")
+
 
 def hsn_data(request):
     utl.check_authorization(request)
@@ -663,15 +686,15 @@ def hsn_data(request):
             if (jsondata.get('params').get('Group')) == 'GET_HSN_DATA':
                 entity = request.session['Entity_gid']
                 drop_b = {
-                    "Table_name":"gal_mst_thsn",
-                    "Column_1":"hsn_code,hsn_description,hsn_cgstrate,hsn_sgstrate,hsn_igstrate",
-                    "Column_2":"",
-                    "Where_Common":"hsn",
-                    "Where_Primary":"",
-                    "Primary_Value":"",
-                    "Order_by":"gid"
+                    "Table_name": "gal_mst_thsn",
+                    "Column_1": "hsn_code,hsn_description,hsn_cgstrate,hsn_sgstrate,hsn_igstrate",
+                    "Column_2": "",
+                    "Where_Common": "hsn",
+                    "Where_Primary": "",
+                    "Primary_Value": "",
+                    "Order_by": "gid"
                 }
-                response = alltable(drop_b, entity,token)
+                response = alltable(drop_b, entity, token)
                 return HttpResponse(response)
             elif (jsondata.get('params').get('Group')) == 'GET_TAX_DATA':
                 entity = request.session['Entity_gid']
@@ -684,7 +707,7 @@ def hsn_data(request):
                     "Primary_Value": "",
                     "Order_by": "gid"
                 }
-                response = alltable(drop_b, entity,token)
+                response = alltable(drop_b, entity, token)
                 return HttpResponse(response)
             elif (jsondata.get('params').get('Group')) == 'GET_CATEGORY_OD_OR_ID':
                 entity = request.session['Entity_gid']
@@ -697,7 +720,7 @@ def hsn_data(request):
                     "Primary_Value": "category_isodit",
                     "Order_by": "columnname"
                 }
-                response = alltable(drop_b, entity,token)
+                response = alltable(drop_b, entity, token)
                 return HttpResponse(response)
 
             elif (jsondata.get('params').get('Group')) == 'SET_HSN_DATA':
@@ -727,16 +750,17 @@ def hsn_data(request):
                 sub = jsondata.get('params').get('Sub_Type')
                 entity_gid = int(decry_data(request.session['Entity_gid']))
                 headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-                datas = json.dumps({"Params":{"DETAILS": {}, "CLASSIFICATION": {"Entity_Gid": entity_gid}}})
-                params = {'Action': act, 'Type': typ,'Group':grp}
+                datas = json.dumps({"Params": {"DETAILS": {}, "CLASSIFICATION": {"Entity_Gid": entity_gid}}})
+                params = {'Action': act, 'Type': typ, 'Group': grp}
                 result = requests.post("" + ip + "/HSN_MASTER", params=params, data=datas, headers=headers,
-                                     verify=False)
+                                       verify=False)
                 results = result.content.decode("utf-8")
                 return JsonResponse(json.loads(results), safe=False)
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
-def alltable(table_data,entity,token):
+
+def alltable(table_data, entity, token):
     drop_tables = {"data": table_data}
     action = ''
     entity_gid = entity
@@ -747,7 +771,9 @@ def alltable(table_data,entity,token):
                          verify=False)
     response_data = resp.content.decode("utf-8")
     return response_data
-#set_mst_State-Distric-City-Pincode
+
+
+# set_mst_State-Distric-City-Pincode
 def set_mst_SDCP(request):
     utl.check_authorization(request)
     if request.method == 'POST':
@@ -762,33 +788,54 @@ def set_mst_SDCP(request):
         datas = json.dumps(jsondata.get('data').get('params'))
         Emp_gid = request.session['Emp_gid']
         Entity_gid = request.session['Entity_gid']
-        param = {'Action': Action, 'Entity_gid': Entity_gid,'Type': Type, 'Emp_gid': Emp_gid}
+        param = {'Action': Action, 'Entity_gid': Entity_gid, 'Type': Type, 'Emp_gid': Emp_gid}
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
         result = requests.post("" + ip + "/Master_State_Details", params=param, headers=headers, data=datas,
                                verify=False)
         result = result.content.decode("utf-8")
-        if (jsondata.get('Type') == 'State_Insert'):
-            data = jsondata.get('data').get('params').get('filter')
-            data = {'name': data['State_name'], 'country_id': data['State_country_gid'],'Entity_Gid': Entity_gid,'create_by':Emp_gid}
-            mrobject = MasterRequestObject('STATE', data, 'POST')
-        if (jsondata.get('Type') == 'District_Insert'):
-            data = jsondata.get('data').get('params').get('filter')
-            data = {'name': data['district_name'], 'state_id': data['district_state_gid'],'Entity_Gid': Entity_gid,'create_by':Emp_gid}
-            mrobject = MasterRequestObject('DISTRICT', data, 'POST')
-        elif (jsondata.get('Type') == None):
-            data = jsondata.get('data').get('params')
-            city_data = {'name': data['city_name'], 'state_id': data['state_gid'],'Entity_Gid': Entity_gid,'create_by':Emp_gid}
-            mrobject = MasterRequestObject('CITY', city_data, 'POST')
-            city_data['district_id'] = data['district_gid']
-            city_data['no'] = data['pincode_no']
-            city_data['Entity_Gid']=Entity_gid
-            city_data['create_by']=Emp_gid
-            data = mrobject.param_data
-            city_data['city_id'] = json.loads(data.text).get('id')
-            pincode_mrobject = MasterRequestObject('PINCODE', city_data, 'POST')
-
+        try:
+            if (result == '"SUCCESS"' or result.replace('["', '').replace('"]', '').split(',')[-1] == 'SUCCESS'):
+                if (jsondata.get('Type') == 'State_Insert'):
+                    data = jsondata.get('data').get('params').get('filter')
+                    # print(data)
+                    from Bigflow.Core.models import get_data_from_id as gdfi
+                    codes = gdfi('STATE', data)
+                    data = {'code': codes['code'], 'name': data['State_name'], 'country_id': data['State_country_gid'],
+                            'Entity_Gid': Entity_gid, 'create_by': Emp_gid}
+                    mrobject = MasterRequestObject('STATE', data, 'POST')
+                if (jsondata.get('Type') == 'District_Insert'):
+                    data = jsondata.get('data').get('params').get('filter')
+                    codes = get_data_from_id('DISTRICT', data)
+                    data = {'code': codes['code'], 'name': data['district_name'], 'state_code': codes['state_code'],
+                            'Entity_Gid': Entity_gid, 'create_by': Emp_gid}
+                    mrobject = MasterRequestObject('DISTRICT', data, 'POST')
+                elif (jsondata.get('Type') == None):
+                    data = jsondata.get('data').get('params')
+                    codes = get_data_from_id('CITY', data)
+                    city_data = {'code': codes['code'], 'name': data['city_name'], 'state_code': codes['state_code'],
+                                 'Entity_Gid': Entity_gid, 'create_by': Emp_gid}
+                    city_code = codes['code']
+                    state_code_pin = codes['state_code']
+                    mrobject = MasterRequestObject('CITY', city_data, 'POST')
+                    city_data['district_id'] = data['district_gid']
+                    pincode = data['pincode_no']
+                    data = mrobject.param_data
+                    print(city_data)
+                    codes = get_data_from_id('PINCODE', city_data)
+                    pindata = {}
+                    pindata['state_code'] = state_code_pin
+                    pindata['city_code'] = city_code
+                    pindata['district_code'] = codes['district_code']
+                    pindata['no'] = pincode
+                    pindata['Entity_Gid'] = Entity_gid
+                    pindata['create_by'] = Emp_gid
+                    common.logger.info(pindata)
+                    pincode_mrobject = MasterRequestObject('PINCODE', pindata, 'POST')
+        except:
+            common.logger.error(str(traceback.print_exc()))
         return JsonResponse(json.loads(result), safe=False)
+
 
 def tax_data(request):
     utl.check_authorization(request)
@@ -798,15 +845,15 @@ def tax_data(request):
         if (jsondata.get('params').get('Groups')) == 'GET_TAX':
             entity = request.session['Entity_gid']
             drop_b = {
-                "Table_name":"gal_mst_ttax",
-                "Column_1":"tax_gid,tax_code,tax_name,tax_recivable,tax_payable,tax_glno",
-                "Column_2":"",
-                "Where_Common":"tax",
-                "Where_Primary":"",
-                "Primary_Value":"",
-                "Order_by":"gid"
+                "Table_name": "gal_mst_ttax",
+                "Column_1": "tax_gid,tax_code,tax_name,tax_recivable,tax_payable,tax_glno",
+                "Column_2": "",
+                "Where_Common": "tax",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "gid"
             }
-            response = alltable(drop_b, entity,token)
+            response = alltable(drop_b, entity, token)
             res = json.dumps(response)
             res = str(res)
             return HttpResponse(res)
@@ -822,7 +869,7 @@ def tax_data(request):
                 "Primary_Value": tax_gid,
                 "Order_by": "gid"
             }
-            response = alltable(drop_b, entity,token)
+            response = alltable(drop_b, entity, token)
             res = json.dumps(response)
             res = str(res)
             return HttpResponse(res)
@@ -835,10 +882,10 @@ def tax_data(request):
                 "Column_2": "",
                 "Where_Common": "taxrate",
                 "Where_Primary": "subtax_gid",
-                "Primary_Value":subtax_gid ,
+                "Primary_Value": subtax_gid,
                 "Order_by": "gid"
             }
-            response = alltable(drop_b, entity,token)
+            response = alltable(drop_b, entity, token)
             res = json.dumps(response)
             res = str(res)
             return HttpResponse(res)
@@ -861,6 +908,7 @@ def tax_data(request):
                                  verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
 
 def Supplier_Master(request):
     utl.check_authorization(request)
@@ -946,7 +994,8 @@ def productorservice(request):
             grp = jsondata.get('Group')
             typ = jsondata.get('Type')
             sbtyp = jsondata.get('Sub_Type')
-            params = {'Group': "" + grp + "", 'Type': "" + typ + "", 'Sub_Type': "" + sbtyp + "",'Entity_Gid':request.session['Entity_gid']}
+            params = {'Group': "" + grp + "", 'Type': "" + typ + "", 'Sub_Type': "" + sbtyp + "",
+                      'Entity_Gid': request.session['Entity_gid']}
             token = jwt.token(request)
             headers = {"content-type": "application/json", "Authorization": "" + token + ""}
             datas = json.dumps(jsondata.get('data'))
@@ -978,16 +1027,16 @@ def ccbs_master(request):
         type = jsondata.get('Type')
         sub_type = jsondata.get('Sub_type')
         params = {'Group': "" + group + "", 'Type': "" + type + "", 'Sub_type': "" + sub_type + ""}
-        #datas = json.dumps(jsondata.get('data'))
+        # datas = json.dumps(jsondata.get('data'))
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
         datas = json.dumps(jsondata.get('data'))
         resp = requests.post("" + ip + "/ccbsapi", params=params, data=datas, headers=headers, verify=False)
-        #data = {"no": datas['category_no'], "name": datas['category_name'],
-                #"glno": datas['category_glno'], "isasset": datas['category_isasset'],
-                #"isodit": datas['category_isodit']}
+        # data = {"no": datas['category_no'], "name": datas['category_name'],
+        # "glno": datas['category_glno'], "isasset": datas['category_isasset'],
+        # "isodit": datas['category_isodit']}
         # print(data)
-        #mrobject = MasterRequestObject('AP CAT', data, 'post')
+        # mrobject = MasterRequestObject('AP CAT', data, 'post')
         response = resp.content.decode("utf-8")
         return HttpResponse(response)
 
@@ -1026,6 +1075,7 @@ def cat_subcat_master(request):
 
         return HttpResponse(response)
 
+
 def get_bus_seg(request):
     if request.method == 'POST':
         token = jwt.token(request)
@@ -1041,7 +1091,7 @@ def get_bus_seg(request):
                 "Primary_Value": "",
                 "Order_by": "gid"
             }
-            response = alltable(drop_b, entity,token)
+            response = alltable(drop_b, entity, token)
             return HttpResponse(response)
         elif (jsondata.get('params').get('Group')) == 'BUS_DATA_GID':
             bus_gid = jsondata.get('params').get('Businesssegment_Gid')
@@ -1055,9 +1105,9 @@ def get_bus_seg(request):
                 "Primary_Value": bus_gid,
                 "Order_by": "gid"
             }
-            response = alltable(drop_b, entity,token)
+            response = alltable(drop_b, entity, token)
             return HttpResponse(response)
-        elif(jsondata.get('params').get('Group')) == 'BUS_DATA_SET':
+        elif (jsondata.get('params').get('Group')) == 'BUS_DATA_SET':
             act = jsondata.get('params').get('Action')
             grp = jsondata.get('params').get('Group')
             typ = jsondata.get('params').get('Type')
@@ -1076,6 +1126,7 @@ def get_bus_seg(request):
                                  verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
 
 def get_exemapping(request):
     utl.check_pointaccess(request)
@@ -1143,7 +1194,7 @@ def employee_getexcel(request):
         XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         response = HttpResponse(content_type=XLSX_MIME)
         filename = Excelfilename('Employee Details_')
-       # filename = Excelfilename('Outstandingreport Details_')
+        # filename = Excelfilename('Outstandingreport Details_')
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
         # response['Content-Disposition'] = 'attachment; filename="PythonExport.xlsx"'
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
@@ -1166,7 +1217,7 @@ def execmapping_excel(request):
         response = HttpResponse(content_type=XLSX_MIME)
         filename = Excelfilename('Executive Mapping Details_')
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-        #response['Content-Disposition'] = 'attachment; filename="execmapping.xlsx"'
+        # response['Content-Disposition'] = 'attachment; filename="execmapping.xlsx"'
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
         df_view = obj_master.getexecmapping()
         df_view.to_excel(writer, 'Sheet1')
@@ -1187,7 +1238,6 @@ def dept_get(request):
         formm.entity_gid = decry_data(request.session['Entity_gid'])
         dict_add = formm.get_department()
         return JsonResponse(json.dumps(dict_add), safe=False)
-
 
 
 def departjson(request):
@@ -1300,7 +1350,7 @@ def get_contctgroup(request):
         obj_master.table_name = 'contacttype'
         obj_master.entity_gid = decry_data(request.session['Entity_gid'])
 
-        log_data = [{"ATMA_BEFORE_get_contctgroup":"contacttype" }]
+        log_data = [{"ATMA_BEFORE_get_contctgroup": "contacttype"}]
         common.logger.error(log_data)
 
         dict_custgrp = obj_master.get_Masters()
@@ -1370,7 +1420,7 @@ def customer_getexcel(request):
         filename = Excelfilename('Customer Details_')
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
 
-        #response['Content-Disposition'] = 'attachment; filename="PythonExpor.xlsx"'
+        # response['Content-Disposition'] = 'attachment; filename="PythonExpor.xlsx"'
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
         df_view = obj_master.get_customer()
         df_view.to_excel(writer, 'Sheet1')
@@ -1486,10 +1536,10 @@ def cityddl(request):
         ctyddl = mMasters.Masters()
         ctyddl.district_gid = request.GET['district_gid']
         ctyddl.entity_gid = decry_data(request.session['Entity_gid'])
-        log_data = [{"BEFORE_cityddl": ctyddl.district_gid }]
+        log_data = [{"BEFORE_cityddl": ctyddl.district_gid}]
         common.logger.error(log_data)
         city = ctyddl.get_city()
-        log_data = [{"AFTER_cityddl":len(city)}]
+        log_data = [{"AFTER_cityddl": len(city)}]
         common.logger.error(log_data)
         jdata = city.to_json(orient='records')
         return JsonResponse(jdata, safe=False)
@@ -2025,7 +2075,6 @@ def dept_get(request):
         return JsonResponse(json.dumps(dict_add), safe=False)
 
 
-
 def desg_get(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
@@ -2033,7 +2082,7 @@ def desg_get(request):
         formm = mMasters.Masters()
         formm.entity_gid = decry_data(request.session['Entity_gid'])
 
-        log_data = [{"BEFORE_desgjson":formm.entity_gid }]
+        log_data = [{"BEFORE_desgjson": formm.entity_gid}]
         common.logger.error(log_data)
 
         dict_add = formm.get_designation()
@@ -2041,6 +2090,7 @@ def desg_get(request):
         log_data = [{"AFTER_desgjson": len(dict_add)}]
         common.logger.error(log_data)
         return JsonResponse(json.dumps(dict_add), safe=False)
+
 
 # Product
 def productdetails(request):
@@ -2415,6 +2465,7 @@ def employedit_get(request):
         jdata = customer.to_json(orient='records')
         return JsonResponse(jdata, safe=False)
 
+
 def get_emailverify(request):
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
@@ -2484,9 +2535,6 @@ def texteditor(request):
 def userreport(request):
     utl.check_authorization(request)
     return render(request, "Common/userreport.html")
-
-
-
 
 
 def mailtemplate(request):
@@ -2842,6 +2890,7 @@ def SetCityPincode(request):
             results = results[1]
             return JsonResponse(results, safe=False)
 
+
 def common_summary(request):
     utl.check_authorization(request)
     return render(request, 'Common/common_summary.html')
@@ -2880,27 +2929,41 @@ def insert_summary(request):
         insert_data.action6 = json.dumps(
             {'t_name': insert_data.action1, 't_code': insert_data.action2, 't_tname': insert_data.action3,
              'entity_gid': entity_gid, 'create_by': create_by})
-        df_cityset=insert_data.set_summary()
+        df_cityset = insert_data.set_summary()
         print(df_cityset)
-        if(df_cityset[0]=='SUCCESS'):
-            if (jsondata.get('Params').get('t_name') == 'bank'):
-                data = {'name': jsondata.get('Params').get('t_tname'),'Entity_Gid':jsondata.get('Params').get('entity_gid'),'create_by':jsondata.get('Params').get('create_by')}
-                # print(data)
-                mrobject = MasterRequestObject('BANK', data, 'POST')
-            if (jsondata.get('Params').get('t_name') == 'designation'):
-                data = {'name': jsondata.get('Params').get('t_tname'),'Entity_Gid':jsondata.get('Params').get('entity_gid'),'create_by':jsondata.get('Params').get('create_by')}
-                # print(data)
-                mrobject = MasterRequestObject('DESIGNATION', data, 'POST')
-            if (jsondata.get('Params').get('t_name') == 'contacttype'):
-                data = {'name': jsondata.get('Params').get('t_tname'),'Entity_Gid':jsondata.get('Params').get('entity_gid'),'create_by':jsondata.get('Params').get('create_by')}
-                # print(data)
-                mrobject = MasterRequestObject('CONTACT TYPE', data, 'POST')
-            if (insert_data.action1 == jsondata.get('Params').get('t_name') == 'uom'):
-                data = {'name': jsondata.get('Params').get('t_tname'),'Entity_Gid':jsondata.get('Params').get('entity_gid'),'create_by':jsondata.get('Params').get('create_by')}
-                mrobject = MasterRequestObject('UOM', data, 'POST')
-            if (insert_data.action1 == jsondata.get('Params').get('t_name') == 'paymode'):
-                data = {'name': jsondata.get('Params').get('t_tname'),'Entity_Gid':jsondata.get('Params').get('entity_gid'),'create_by':jsondata.get('Params').get('create_by')}
-                mrobject = MasterRequestObject('PAYMODE', data, 'POST')
+        if (df_cityset[0] == 'SUCCESS'):
+            try:
+                if (jsondata.get('Params').get('t_name') == 'bank'):
+                    data = {'code': jsondata.get('Params').get('t_code'), 'name': jsondata.get('Params').get('t_tname'),
+                            'Entity_Gid': jsondata.get('Params').get('entity_gid'),
+                            'create_by': jsondata.get('Params').get('create_by')}
+                    mrobject = MasterRequestObject('BANK', data, 'POST')
+                if (jsondata.get('Params').get('t_name') == 'designation'):
+                    data = {'code': jsondata.get('Params').get('t_code'), 'name': jsondata.get('Params').get('t_tname'),
+                            'Entity_Gid': jsondata.get('Params').get('entity_gid'),
+                            'create_by': jsondata.get('Params').get('create_by')}
+                    # print(data)
+                    mrobject = MasterRequestObject('DESIGNATION', data, 'POST')
+                if (jsondata.get('Params').get('t_name') == 'contacttype'):
+                    data = {'name': jsondata.get('Params').get('t_tname'),
+                            'Entity_Gid': jsondata.get('Params').get('entity_gid'),
+                            'create_by': jsondata.get('Params').get('create_by')}
+                    # print(data)
+                    mrobject = MasterRequestObject('CONTACT TYPE', data, 'POST')
+                if (insert_data.action1 == jsondata.get('Params').get('t_name') == 'uom'):
+                    data = {'code': jsondata.get('Params').get('t_code'), 'name': jsondata.get('Params').get('t_tname'),
+                            'Entity_Gid': jsondata.get('Params').get('entity_gid'),
+                            'create_by': jsondata.get('Params').get('create_by')}
+                    print(jsondata.get('Params'))
+                    mrobject = MasterRequestObject('UOM', data, 'POST')
+                if (insert_data.action1 == jsondata.get('Params').get('t_name') == 'paymode'):
+                    data = {'code': jsondata.get('Params').get('t_code'), 'name': jsondata.get('Params').get('t_tname'),
+                            'Entity_Gid': jsondata.get('Params').get('entity_gid'),
+                            'create_by': jsondata.get('Params').get('create_by')}
+                    print(jsondata.get('Params'))
+                    mrobject = MasterRequestObject('PAYMODE', data, 'POST')
+            except:
+                logging.ERROR(traceback.print_exc())
         return JsonResponse(df_cityset, safe=False)
 
 
@@ -2923,63 +2986,92 @@ def update_summary(request):
         df_update = outputReturn(update.upsatesummary(), 0)
         return JsonResponse(df_update, safe=False)
 
+
 def insert_bank_branch(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
-    if request.method=='POST':
+    if request.method == 'POST':
         try:
-            jsondata=json.loads(request.body.decode('utf-8'))
+            jsondata = json.loads(request.body.decode('utf-8'))
             action = jsondata.get('action')
             type = jsondata.get('type')
             entity_gid = decry_data(request.session['Entity_gid'])
             create_by = decry_data(request.session['Emp_gid'])
             master_object = mMasters.Masters()
-            if(action=='INSERT' and type=="bankbranch"):
-                master_object.action=action
-                master_object.type=type
-                master_object.filter= json.dumps(jsondata.get('filter'))
-                master_object.classification=json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
+            if (action == 'INSERT' and type == "bankbranch"):
+
+                master_object.action = action
+                master_object.type = type
+                master_object.filter = json.dumps(jsondata.get('filter'))
+                master_object.classification = json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
                 output = master_object.set_bank_branch()
-                data = jsondata.get('filter')
-                address = data['ADDRESS'][0]
-                address1 = {"line1": address['Address1'], "line2": address['Address2'], "line3": address['Address3'],
-                            "pincode_id": int(address['Pincode']), "city_id": address['City_Gid'],
-                            "district_id": address['District_Gid'], "state_id": address['State_Gid']}
-                api_send_data = {"bank_id": data["bankbranch_bank_gid"], "address_id": address1,
-                                 "ifsccode": data["bankbranch_ifsccode"], "microcode": data["bankbranch_microcode"],
-                                 "name": data["bankbranch_name"],"Entity_Gid": request.session['Entity_gid'], "create_by": request.session['Emp_gid']}
-                mrobject = MasterRequestObject('BANK BRANCH', api_send_data, 'POST')
+                try:
+                    # print(output)
+                    if (output['MESSAGE'] == 'SUCCESS'):
+                        data = jsondata.get('filter')
+                        # print(data)
+                        address = data['ADDRESS'][0]
+                        if "Address2" in data.keys():
+                            address2 = address['Address2']
+                        else:
+                            address2 = 'null'
+                        if "Address3" in data.keys():
+                            address3 = address['Address3']
+                        else:
+                            address3 = 'null'
+                        address1 = {"line1": address['Address1'], "line2": address2, "line3": address3,
+                                    "pincode_code": int(address['Pincode']), "city_id": address['City_Gid'],
+                                    "district_id": address['District_Gid'], "state_id": address['State_Gid']}
+                        address1['bank_id'] = data["bankbranch_bank_gid"]
+                        codes = get_data_from_id('BANKBRANCH', address1)
+
+                        address1 = {"line1": address['Address1'], "line2": address2, "line3": address3,
+                                    "pincode_code": address['Pincode'], "city_code": codes['city_code'],
+                                    "district_code": codes['district_code'], "state_code": codes['state_code']}
+                        api_send_data = {'code': codes['code'], "bank_code": codes["bank_code"], "address_id": address1,
+                                         "ifsccode": data["bankbranch_ifsccode"],
+                                         "microcode": data["bankbranch_microcode"],
+                                         "name": data["bankbranch_name"], "Entity_Gid": request.session['Entity_gid'],
+                                         "create_by": request.session['Emp_gid']}
+                        common.logger.error(api_send_data)
+                        print(codes)
+                        mrobject = MasterRequestObject('BANK BRANCH', api_send_data, 'POST')
+                except:
+                    traceback.print_exc()
                 return JsonResponse(output, safe=False)
+
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def insert_paymode_details(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
-    if request.method=='POST':
+    if request.method == 'POST':
         try:
-            jsondata=json.loads(request.body.decode('utf-8'))
+            jsondata = json.loads(request.body.decode('utf-8'))
             action = jsondata.get('action')
             type = jsondata.get('type')
             entity_gid = decry_data(request.session['Entity_gid'])
             create_by = decry_data(request.session['Emp_gid'])
             master_object = mMasters.Masters()
-            if(action=='INSERT' and type=="paymode"):
-                master_object.action=action
-                master_object.type=type
-                master_object.filter= json.dumps(jsondata.get('filter'))
-                master_object.classification=json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
+            if (action == 'INSERT' and type == "paymode"):
+                master_object.action = action
+                master_object.type = type
+                master_object.filter = json.dumps(jsondata.get('filter'))
+                master_object.classification = json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
                 output = master_object.set_paymode_details()
                 return JsonResponse(output, safe=False)
-            elif(action=="UPDATE" and type=="active_inactive_paymode_detail"):
-                master_object.action=action
-                master_object.type=type
-                master_object.filter= json.dumps(jsondata.get('filter'))
-                master_object.classification=json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
+            elif (action == "UPDATE" and type == "active_inactive_paymode_detail"):
+                master_object.action = action
+                master_object.type = type
+                master_object.filter = json.dumps(jsondata.get('filter'))
+                master_object.classification = json.dumps({"Entity_Gid": entity_gid, "Create_by": create_by})
                 output = master_object.set_paymode_details()
                 return JsonResponse(output, safe=False)
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def view_summary_dynamic(request):
     utl.check_authorization(request)
@@ -3002,6 +3094,7 @@ def view_summary_dynamic(request):
 def mst_courier(request):
     utl.check_authorization(request)
     return render(request, 'Common/mst_courier.html')
+
 
 def courier_data(request):
     utl.check_authorization(request)
@@ -3045,30 +3138,44 @@ def courier_data(request):
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
 
+
 def fileUploadS3(request):
     try:
         utl.check_pointaccess(request)
         if request.method == 'POST' and request.FILES['file']:
-            filename = str(request.FILES['file'])
-            extension = os.path.splitext(filename)[1]
-            filename=''.join(e for e in filename if e.isalnum())
-            filename=filename+extension
-            millis = int(round(time.time() * 1000))
-            Emp_gid = decry_data(request.session['Emp_gid'])
-            concat_filename = str(Emp_gid) + "_" + str(millis) + "_" + filename
-            s3 = boto3.resource('s3')
-            s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
-            s3_obj.put(Body=request.FILES['file'])
-            #s3_client = boto3.client('s3')
-            #file_path = s3_client.generate_presigned_url('get_object',Params={'Bucket': S3_BUCKET_NAME, 'Key': concat_filename},ExpiresIn=3600)
-            return JsonResponse({"file_key":concat_filename,"file_path":"fiile_path","status":"SUCCESS"})
+            if request.method == 'POST' or request.FILES['file']:
+                current_month = datetime.datetime.now().strftime('%m')
+                current_day = datetime.datetime.now().strftime('%d')
+                current_year_full = datetime.datetime.now().strftime('%Y')
+                filename = request.POST['name']
+                millis = int(round(time.time() * 1000))
+                Emp_gid = decry_data(request.session['Emp_gid'])
+                concat_filename = str(Emp_gid) + "_" + str(millis) + "_" + filename
+                save_path = str(settings.MEDIA_ROOT) + '/AP/' + str(current_year_full) + '/' + str(
+                    current_month) + '/' + str(current_day) + '/' + str(concat_filename)
+                path = default_storage.save(str(save_path), request.FILES['file'])
+                db_path = 'AP/' + str(current_year_full) + '/' + str(current_month) + '/' + str(
+                    current_day) + '/' + str(concat_filename)
+                # path = default_storage.save(str(save_path), request.FILES['file'])
+                # return JsonResponse({"MESSAGE": "SUCCESS", "IMAGE_URL": db_path})
+                print(db_path)
+                return JsonResponse({"file_key": db_path, "file_path": db_path, "status": "SUCCESS"})
+
+            # filename = str(request.FILES['file'])
+            # extension = os.path.splitext(filename)[1]
+            # filename=''.join(e for e in filename if e.isalnum())
+            # filename=filename+extension
+            # millis = int(round(time.time() * 1000))
+            # Emp_gid = decry_data(request.session['Emp_gid'])
+            # concat_filename = str(Emp_gid) + "_" + str(millis) + "_" + filename
+            # s3 = boto3.resource('s3')
+            # s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
+            # s3_obj.put(Body=request.FILES['file'])
+            # #s3_client = boto3.client('s3')
+            # #file_path = s3_client.generate_presigned_url('get_object',Params={'Bucket': S3_BUCKET_NAME, 'Key': concat_filename},ExpiresIn=3600)
+            # return JsonResponse({"file_key":concat_filename,"file_path":"fiile_path","status":"SUCCESS"})
     except Exception as e:
-        return JsonResponse({"status":e})
-
-
-
-
-
+        return JsonResponse({"status": e})
 
 
 # def master_sync_(request):
@@ -3113,69 +3220,81 @@ def fileUploadS3(request):
 #              return JsonResponse({"MESSAGE": "ERROR_OCCURED"})
 
 
-def master_sync_(action,type,emp_gid):
-        try:
-            data = mMasters.Masters()
-            data.action = action
-            data.type = type
-            data.clientdata = json.dumps({})
-            message = data.mastersync_get_()
-            if message.get("MESSAGE") == 'SUCCESS':
-                ld_dict = {"DATA": json.loads(message.get("DATA").to_json(orient='records')),
+def master_sync_(action, type, emp_gid):
+    try:
+        data = mMasters.Masters()
+        data.action = action
+        data.type = type
+        data.clientdata = json.dumps({})
+        message = data.mastersync_get_()
+        if message.get("MESSAGE") == 'SUCCESS':
+            ld_dict = {"DATA": json.loads(message.get("DATA").to_json(orient='records')),
+                       "MESSAGE": 'SUCCESS'}
+            return ld_dict
+
+        elif message.get("MESSAGE") == 'FAILED':
+            url = common.master_accesstoken()
+            client_id = common.ADToken()
+            client_secret = common.ClientSecret()
+            grant_type = 'client_credentials'
+            response = requests.post(url, auth=(client_id, client_secret),
+                                     data={'grant_type': grant_type, 'client_id': client_id,
+                                           'client_secret': client_secret})
+            datas = json.loads(response.content.decode("utf-8"))
+            access_token = datas.get("access_token")
+            token_expires = datas.get("expires_in")
+            obj_ = mMasters.Masters()
+            obj_.type = "insert_data"
+            obj_.action = "Insert"
+            obj_.jsonData = json.dumps({"clienttoken_name": access_token, "clienttoken_expiry": token_expires,
+                                        "clienttoken_user": "vsolv", "clienttoken_pwd": "12345", "create_by": emp_gid})
+            message = obj_.mastersync_set()
+            if message[0] == 'SUCCESS':
+                ld_dict = {"DATA": [{'clienttoken_name': access_token}],
                            "MESSAGE": 'SUCCESS'}
                 return ld_dict
-
-            elif message.get("MESSAGE") == 'FAILED':
-                url = common.master_accesstoken()
-                client_id = common.ADToken()
-                client_secret = common.ClientSecret()
-                grant_type = 'client_credentials'
-                response = requests.post(url, auth=(client_id, client_secret),
-                                         data={'grant_type': grant_type, 'client_id': client_id,
-                                               'client_secret': client_secret})
-                datas = json.loads(response.content.decode("utf-8"))
-                access_token = datas.get("access_token")
-                token_expires = datas.get("expires_in")
-                obj_ = mMasters.Masters()
-                obj_.type = "insert_data"
-                obj_.action = "Insert"
-                obj_.jsonData = json.dumps({"clienttoken_name": access_token,"clienttoken_expiry": token_expires,
-                                            "clienttoken_user": "vsolv", "clienttoken_pwd": "12345", "create_by":emp_gid })
-                message = obj_.mastersync_set()
-                if message[0] == 'SUCCESS':
-                    ld_dict = {"DATA": [{'clienttoken_name':access_token}],
-                               "MESSAGE": 'SUCCESS'}
-                    return ld_dict
-        except Exception as e:
-             return ({"MESSAGE": "ERROR_OCCURED"})
-
+    except Exception as e:
+        return ({"MESSAGE": "ERROR_OCCURED"})
 
 
 def common_s3_file_url_generate(request):
     utl.check_pointaccess(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
-        file_details=jsondata.get("file_data")
-        final_url_data=[]
+        file_details = jsondata.get("file_data")
+        final_url_data = []
         for i in file_details:
-            filename= i.get('file_name')
-            s3_client = boto3.client('s3','ap-south-1')
+            filename = i.get('file_name')
+            s3_client = boto3.client('s3', 'ap-south-1')
             file_path = s3_client.generate_presigned_url('get_object',
                                                          Params={'Bucket': S3_BUCKET_NAME,
-                                                                 'Key': filename},ExpiresIn=900)
-            final_url_data.append({"file_name":filename,"file_path":file_path})
+                                                                 'Key': filename}, ExpiresIn=900)
+            final_url_data.append({"file_name": filename, "file_path": file_path})
         return JsonResponse(final_url_data, safe=False)
 
+import os
+from django.conf import settings
+from django.http import HttpResponse, Http404
 def common_s3_file_download(request):
     utl.check_pointaccess(request)
     if request.method == 'GET':
         filename = request.GET['filename']
-        s3 = boto3.resource('s3')
-        s3_obj=s3.Object(bucket_name=S3_BUCKET_NAME,key=filename)
-        body=s3_obj.get()['Body']
-        response = StreamingHttpResponse(body, content_type='application/octet-stream')
-        response['Content-Disposition'] = 'inline; filename="{}"'.format(filename)
-        return response
+        file_path = os.path.join(settings.MEDIA_ROOT, filename)
+        print(file_path)
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as fh:
+                response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+                response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                return response
+        raise Http404
+
+        # s3 = boto3.resource('s3')
+        # s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=filename)
+        # body = s3_obj.get()['Body']
+        # response = StreamingHttpResponse(body, content_type='application/octet-stream')
+        # response['Content-Disposition'] = 'inline; filename="{}"'.format(filename)
+        # return response
+
 
 def prod_specification(request):
     if request.method == 'POST':
@@ -3201,6 +3320,7 @@ def prod_specification(request):
             result = result.content.decode("utf-8")
             return JsonResponse(json.loads(result), safe=False)
 
+
 def customer_query_screen(request):
     # utl.check_authorization(request)
     if request.method == 'POST':
@@ -3219,6 +3339,7 @@ def customer_query_screen(request):
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
     else:
         return render(request, "Common/customer_query_screen.html")
+
 
 def customer_query_screen_update(request):
     # utl.check_authorization(request)
@@ -3273,4 +3394,34 @@ def customer_query_screen_dependent(request):
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
-
+def memo_details(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
+            jsondata = json.loads(request.body.decode('utf-8'))
+            if jsondata.get("params").get('Action') == 'TOKEN':
+                datas = json.dumps({"username": "apuser", "password": "dnNvbHYxMjM="})
+                # datas = json.dumps({"username": "ram","password": "MTIzNA=="})
+                param = {}
+                # token = jwt.token(request)
+                memo_ip = common.memoapi_url()
+                # memo_ip="http://143.110.244.51:8000"
+                # memo_ip = "https://emc-memo-be-uat.kvbank.in/"
+                headers = {"content-type": "application/json", "Authorization": ""}
+                login_data = requests.post("" + memo_ip + "/usrserv/auth_token", params=param, headers=headers,
+                                           data=datas, verify=False)
+                login_result = login_data.content.decode("utf-8")
+                user_data = (json.loads(login_result))
+                user_data['memo_ip'] = memo_ip
+                return JsonResponse(user_data)
+                # token=user_data.get("token")
+                # headers1 = { "Authorization": 'token'+ token}
+                # headers1 = {"content-type": "application/octet-stream",'Authorization': 'Token ' + token}
+                # result = requests.get("" + memo_ip+"/prserv/file/Prpo_"+str(2), headers=headers1, data=datas, verify=False)
+                # response = StreamingHttpResponse(result, content_type='application/octet-stream')
+                # response['Content-Disposition'] = 'inline; filename="{}"'.format("filename.png")
+                # return response
+                # return HttpResponse(result)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})

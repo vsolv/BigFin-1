@@ -321,7 +321,7 @@ class MasterSync_Data_(APIView):
 
 
 class PPR_Data_Get(APIView):
-    def post(self,request):
+    def post(self, request):
         try:
             if self.request.query_params.get("Group") == "PPR_Data":
                 jsondata = json.loads(request.body.decode('utf-8'))
@@ -329,7 +329,9 @@ class PPR_Data_Get(APIView):
                 obj_prodcat.action = self.request.query_params.get("Action")
                 obj_prodcat.type = self.request.query_params.get("Type")
                 obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
-                obj_prodcat.dataw = json.dumps(jsondata.get('Classification'))
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
                 out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen()
                 if out_message["MESSAGE"] == "FOUND":
                     return Response({"DATA": out_message["DATA"]})
@@ -339,27 +341,30 @@ class PPR_Data_Get(APIView):
             return Response({"MESSAGE": "ERROR", "DATA": str(e)})
 
 
-
-class PPR_Data_Get(APIView):
-    def post(self,request):
+class PPR_Data_Set(APIView):
+    def post(self, request):
         try:
-            if self.request.query_params.get("Group") == "PPR_Data":
+            if self.request.query_params.get("Group") == "PPR_SET":
                 jsondata = json.loads(request.body.decode('utf-8'))
                 obj_prodcat = magentsummary.control()
                 obj_prodcat.action = self.request.query_params.get("Action")
-                obj_prodcat.type = self.request.query_params.get("Type")
+                # obj_prodcat.type = self.request.query_params.get("Type")
                 obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
-                obj_prodcat.dataw = json.dumps({"Entity_Gid":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),"Create_By":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
-                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen()
-                if out_message["MESSAGE"] == "FOUND":
-                    return Response({"DATA": out_message["DATA"]})
+
+                if "Local" in request.query_params:
+                    obj_prodcat.dataw = json.dumps(jsondata.get('Classification'))
                 else:
-                    return Response({"MESSAGE": out_message})
+                    obj_prodcat.dataw = json.dumps(
+                        {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                         "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Data_Set_frm_gen()
+                return Response({"MESSAGE": out_message["MESSAGE"]})
         except Exception as e:
             return Response({"MESSAGE": "ERROR", "DATA": str(e)})
+
 
 class AllTableValues_Get(APIView):
-    def post(self,request):
+    def post(self, request):
         try:
             if self.request.query_params.get("Group") == "sector":
                 jsondata = json.loads(request.body.decode('utf-8'))
@@ -378,20 +383,26 @@ class AllTableValues_Get(APIView):
                 obj_prodcat.action = self.request.query_params.get("Action")
                 obj_prodcat.type = self.request.query_params.get("Type")
                 obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
-                obj_prodcat.dataw = json.dumps({"Entity_Gid":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),"Create_By":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
-                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen_Bussiness()
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen()
                 if out_message["MESSAGE"] == "FOUND":
                     return Response({"DATA": out_message["DATA"]})
                 else:
                     return Response({"MESSAGE": out_message})
+
+
             elif self.request.query_params.get("Group") == "bussinessGid":
                 jsondata = json.loads(request.body.decode('utf-8'))
                 obj_prodcat = magentsummary.control()
                 obj_prodcat.action = self.request.query_params.get("Action")
                 obj_prodcat.type = self.request.query_params.get("Type")
                 obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
-                obj_prodcat.dataw = json.dumps({"Entity_Gid":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),"Create_By":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
-                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen_Bussiness()
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen()
                 if out_message["MESSAGE"] == "FOUND":
                     return Response({"DATA": out_message["DATA"]})
                 else:
@@ -403,12 +414,88 @@ class AllTableValues_Get(APIView):
                 obj_prodcat.action = self.request.query_params.get("Action")
                 obj_prodcat.type = self.request.query_params.get("Type")
                 obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
-                obj_prodcat.dataw = json.dumps({"Entity_Gid":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),"Create_By":decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
-                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen_Bussiness()
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Data_Get_frm_gen()
                 if out_message["MESSAGE"] == "FOUND":
                     return Response({"MESSAGE": out_message})
                 else:
                     return Response({"MESSAGE": out_message})
 
+        except Exception as e:
+            return Response({"MESSAGE": "ERROR", "DATA": str(e)})
+
+class PPR_Budget_Get(APIView):
+    def post(self, request):
+        try:
+            if self.request.query_params.get("Group") == "PPR_FIND_ALL":
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_prodcat = magentsummary.control()
+                obj_prodcat.action = self.request.query_params.get("Action")
+                obj_prodcat.type = self.request.query_params.get("Group")
+                obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Budget_Get_frm_gen()
+                if out_message["MESSAGE"] == "FOUND":
+                    return Response({"DATA": out_message["DATA"]})
+                elif out_message["MESSAGE"] == "Error in Data":
+                    return Response({"DATA": out_message["DATA"], "MESSAGE": out_message["MESSAGE"]})
+                else:
+                    return Response({"MESSAGE": out_message})
+            elif self.request.query_params.get("Group") == "SUMMARY":
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_prodcat = magentsummary.control()
+                obj_prodcat.action = self.request.query_params.get("Action")
+                obj_prodcat.type = self.request.query_params.get("Group")
+                obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Budget_Get_frm_gen()
+                if out_message["MESSAGE"] == "FOUND":
+                    return Response({"DATA": out_message["DATA"]})
+                elif out_message["MESSAGE"] == "Error in Data":
+                    return Response({"DATA": out_message["DATA"], "MESSAGE": out_message["MESSAGE"]})
+                else:
+                    return Response({"MESSAGE": out_message})
+            elif self.request.query_params.get("Group") == "FinYear_Fetch" or "Sector_Fetch" or "Business_Fetch" or "Bs_Fetch" or "CC_Fetch" or "Expense_grp":
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_prodcat = magentsummary.control()
+                obj_prodcat.action = self.request.query_params.get("Action")
+                obj_prodcat.type = self.request.query_params.get("Group")
+                obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Budget_Get_frm_gen()
+                if out_message["MESSAGE"] == "FOUND":
+                    return Response({"DATA": out_message["DATA"]})
+                elif out_message["MESSAGE"] == "Error in Data":
+                    return Response({"DATA": out_message["DATA"], "MESSAGE": out_message["MESSAGE"]})
+                else:
+                    return Response({"MESSAGE": out_message})
+
+        except Exception as e:
+            return Response({"MESSAGE": "ERROR", "DATA": str(e)})
+
+class PPR_Budget_Set(APIView):
+    def post(self, request):
+        try:
+            if self.request.query_params.get("Group") == "Budget_Insert":
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_prodcat = magentsummary.control()
+                obj_prodcat.action = self.request.query_params.get("Action")
+                obj_prodcat.jsonData = json.dumps(jsondata.get('Params'))
+                obj_prodcat.dataw = json.dumps(
+                    {"Entity_Gid": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Entity_Gid"]),
+                     "Create_By": decry_data(json.loads(json.dumps(jsondata.get('Classification')))["Create_By"])})
+                out_message = obj_prodcat.sp_PPR_Budget_Set_frm_gen()
+                if out_message["MESSAGE"] == "SUCCESS":
+                    return Response({"MESSAGE": out_message["MESSAGE"]})
+                else:
+                    return Response({"MESSAGE": out_message})
         except Exception as e:
             return Response({"MESSAGE": "ERROR", "DATA": str(e)})

@@ -19,7 +19,7 @@ from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 import Bigflow.Core.class1 as core_calss1
 import re
-# from Bigflow.settings import S3_BUCKET_NAME
+from Bigflow.settings import S3_BUCKET_NAME
 
 
 class Emp_Bank_Details(APIView):
@@ -554,6 +554,32 @@ class APStatus_set(APIView):
             common.logger.error(e)
             return Response({"MESSAGE": "ERROR_OCCURED_ON_API", "DATA": str(e)})
 
+class WS_PROFFING_API(APIView):
+    def post(self, request):
+        try:
+            data=json.loads(request.body.decode('utf-8'))
+            if data['Type'] == "GET" and data['Sub_Type']=="PROFFING":
+                # Get The Data And Shown in Assert Maker Summary :: Pending Data.
+                print("we profing")
+                # path = self.request.stream.path
+                jsondata = json.loads(request.body.decode('utf-8'))
+                obj_ap = mAP.ap_model()
+                obj_ap.type = data["Type"]
+                obj_ap.sub_type = data["Sub_Type"]
+                obj_ap.filter = json.dumps(jsondata.get('Params').get('FILTER'))
+                obj_ap.classification = json.dumps(jsondata.get('Params').get('CLASSIFICATION'))
+                ld_out_message = obj_ap.get_WS_PROFFING_API_details()
+                if ld_out_message.get("MESSAGE") == 'FOUND':
+                    ld_dict = {"DATA": json.loads(ld_out_message.get("DATA").to_json(orient='records')),
+                               "MESSAGE": 'FOUND'}
+                elif ld_out_message.get("MESSAGE") == 'NOT_FOUND':
+                    ld_dict = {"MESSAGE": 'NOT_FOUND'}
+                else:
+                    ld_dict = {"MESSAGE": 'ERROR_OCCURED.' + ld_out_message.get("MESSAGE")}
+                return Response(ld_dict)
+        except Exception as e:
+            common.logger.error(e)
+            return Response({"MESSAGE": "ERROR_OCCURED_ON_API", "DATA": str(e)})
 
 def outputSplit(tubledtl, index):
     temp = tubledtl[0].split(',')

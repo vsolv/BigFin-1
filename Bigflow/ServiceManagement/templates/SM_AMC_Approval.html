@@ -188,40 +188,49 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_approval','$mdDialog','$wi
     $scope.text_area_values=1;
 
     $scope.loading = function() {
-    $mdDialog.show({
-        templateUrl: 'loaderSpinner',
-        parent: angular.element(document.body),
-        clickOutsideToClose: false
-    });
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
     };
 
     $scope.endloading = function() {
         $mdDialog.hide();
     };
 
+     $scope.get_session_Data = function(){
+        var datas = {"action":"GET","type":"BRANCH_EXPENSE_GID",
+        "filter": {"SMS_AMC_Header_Gid":"","View":""}}
 
-     if (sessionStorage.getItem('amcs') != null)
-        {
-            var ticket_all = JSON.parse(sessionStorage.getItem('amcs'));
-            $scope.update = ticket_all.view;
-            $scope.amcheader_gid=ticket_all.amcheader_gid;
-            console.log($scope.amcheader_gid);
+        var setcolumndata = Service_approval.get_session_sms(datas);
+            setcolumndata.then(function(result) {
 
-        }
-        else{
-
+            $scope.amcheader_gid=result.data.SMS_AMC_Header_Gid;
+            $scope.update=result.data.View;
+            console.log(result.data);
+            if($scope.amcheader_gid!=0){
+                $scope.Get_SMS_Data();
+            }
+        },
+       function(err) {
             alert("No AMC Header Gid");
+       }).finally($scope.endloading);
+    }
+    $scope.get_session_Data();
 
-        }
-
-
-     var datas={params:{"action":"GET","type":"AMC_HEADER",
+    $scope.Get_SMS_Data=function(){
+        var datas={params:{"action":"GET","type":"AMC_HEADER",
                 "filter":{"AmcHeader_Gid":$scope.amcheader_gid}}};
 
-      $scope.loading();
-     var amc_header = Service_approval.get_amc_header(datas);
+        $scope.loading();
+        var amc_header = Service_approval.get_amc_header(datas);
         amc_header.then(function(result) {
          var res = result.data;
+         debugger;
+         if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+         }
          $scope.amc_header_all=res;
          console.log($scope.amc_header_all);
          $scope.amc_head_name=$scope.amc_header_all[0].amcheader_name;
@@ -235,6 +244,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_approval','$mdDialog','$wi
          }, function(err) {
           alert(result);
         }).finally($scope.endloading);
+    }
 
 
 
@@ -246,18 +256,22 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_approval','$mdDialog','$wi
         if($scope.amcheader_gid!=0&&$scope.amc_approval_data!=""){
 
             var datas={params:{"action":"UPDATE","type":"AMC_STATUS",
-                "filter":{"Amcheader_Gid":$scope.amcheader_gid,"Amcheader_Status":$scope.amc_approval_data}}};
+                "filter":{"Amcheader_Gid":$scope.amcheader_gid,"Amcheader_Status":"APPROVED"}}};
 
             $scope.loading();
             var emp_act = Service_approval.amc_approve_reject(datas);
             emp_act.then(function(result) {
             var res=JSON.parse(result.data);
+            debugger;
                    if (res.MESSAGE[0]=== "SUCCESS") {
                         alert("Succesfully Updated");
                         $window.location.href = "ServiceManagement/SM_AMC_Approval_Summary/";
-                    } else {
+                    }
+                    else if(res.MESSAGE=="ERROR_OCCURED"){
+                        alert(res.DATA);
+                    }
+                     else {
                         alert(result.data);
-                        $window.location.href = "ServiceManagement/SM_AMC_Approval/";
                     }
             }).finally($scope.endloading);
         }
@@ -278,7 +292,12 @@ myApp.service("Service_approval", function ($http) {
 
 
     this.amc_approve_reject=function (data) {
-        var response=$http.post(Appname+"/Set_AMC_Details/",data);
+            var response=$http.post(Appname+"/Set_AMC_Details/",data);
+        return response;
+    }
+
+    this.get_session_sms = function (data) {
+        var response=$http.post(Appname+"/Session_Get_SMS_Data/",data);
         return response;
     }
 

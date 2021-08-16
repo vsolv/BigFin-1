@@ -208,6 +208,10 @@ def ECFSummary(request):
     utl.check_authorization(request)
     return render(request, "ECF_Summary.html")
 
+def ECF_Claim_Status_Report(request):
+    utl.check_authorization(request)
+    return render(request, "ECF_Claim_Status_Report.html")
+
 
 def Ap_EmployeeQuery(request):
     utl.check_authorization(request)
@@ -317,6 +321,14 @@ def pmd_create(request):
 def AP_Failed_Transaction(request):
     utl.check_authorization(request)
     return render(request, "AP_Failed_Transaction.html")
+
+def AP_Advance_Summary(request):
+    utl.check_authorization(request)
+    return render(request, "AP_Advance_Summary.html")
+
+def AP_Entry_Update_Summary(request):
+    utl.check_authorization(request)
+    return render(request, "AP_Entry_Update_Summary.html")
 
 
 def getgrndetail(request):
@@ -536,12 +548,33 @@ def fa_accounging_entry(request):
             try:
                 result = requests.post("" + ip + "/FA_TRAN", params=params, headers=headers, data=data,
                                        verify=False)
-                results = result.content.decode("utf-8")
+                results = json.loads(result.content.decode("utf-8"))
 
                 log_data = [{"AFTER_FA_API_DATA": results}]
                 common.logger.error(log_data)
 
-                return HttpResponse(results)
+                if results["MESSAGE"]=="SUCCESS":
+                    try:
+                        print("Vignesh")
+                        apfa_obj=mAP.ap_model()
+                        apfa_obj.action = "UPDATE"
+                        apfa_obj.type = "APTOFA_FLAG"
+                        apfa_obj.filter = json.dumps({"InvoiceHeader_Gid": invoicehd_Gid})
+                        apfa_obj.classification = '{}'
+                        #common.main_fun1(request.read(), path)
+                        output = apfa_obj.ap_update_flag()
+                        print(output[0])
+                        if(output[0]=="SUCCESS"):
+                            print(results)
+                            return HttpResponse(json.dumps(results))
+                        else:
+                            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "APTOFA_STATUS_FLAG": output})
+
+                    except Exception as e:
+                        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+                else:
+                    return HttpResponse(results)
+
             except Exception as e:
                 return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
         except Exception as e:
@@ -636,13 +669,23 @@ def HsntaxCredit_get(request):
             path=request.path
             tax = mAP.ap_model()
             jsondata = json.loads(request.body.decode('utf-8'))
-            tax.hsndtl = jsondata.get('params').get('hsndtl')
-            tax.entity_gid = int(decry_data(request.session['Entity_gid']))
-            tax.group = jsondata.get('params').get('group')
-            common.main_fun1(request.read(), path)
-            out = tax.hsn_Credittaxget()
-            jdata = out.to_json(orient='records')
-            return JsonResponse(jdata, safe=False)
+            group=jsondata.get("params").get("group")
+            if(group=="TDS_DATAGET"):
+                tax.hsndtl = jsondata.get('params').get('hsndtl')
+                tax.entity_gid = int(decry_data(request.session['Entity_gid']))
+                tax.group = jsondata.get('params').get('group')
+                common.main_fun1(request.read(), path)
+                out = tax.hsn_Credittaxget_multiple()
+                #jdata = out.to_json(orient='records')
+                return JsonResponse(out, safe=False)
+            else:
+                tax.hsndtl = jsondata.get('params').get('hsndtl')
+                tax.entity_gid = int(decry_data(request.session['Entity_gid']))
+                tax.group = jsondata.get('params').get('group')
+                common.main_fun1(request.read(), path)
+                out = tax.hsn_Credittaxget()
+                jdata = out.to_json(orient='records')
+                return JsonResponse(jdata, safe=False)
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
@@ -1562,11 +1605,11 @@ def get_Accounting_Entry_Data(request):
             elif (action == "GET" and type == "AP_DAILY_GL_REPORT"):
                 invoice_set.action = final_data.get('action')
                 invoice_set.type = final_data.get('type')
-                gl_number = final_data.get("gl_number")
+                gl_type_name = final_data.get("gl_type_name")
                 branch_gid = final_data.get("branch_gid")
                 from_date = final_data.get("download_from_date")
                 to_date = final_data.get("download_to_date")
-                filter={"fromdate": from_date, "todate": to_date,"gl_number":gl_number,"branch_gid":branch_gid}
+                filter={"fromdate": from_date, "todate": to_date,"branch_gid":branch_gid,"gl_type_name":gl_type_name}
                 invoice_set.filter = json.dumps(filter)
                 invoice_set.classification = json.dumps({"Entity_Gid": entity_gid})
                 XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -1576,10 +1619,34 @@ def get_Accounting_Entry_Data(request):
                 df_view = invoice_set.get_gl_report()
                 df_view['null_values'] = ""
                 df_view['S_No'] = range(1, 1 + len(df_view))
-                final_df = df_view[['S_No','branch_name','dayentry_gl','dayentry_transactiondate','dayentry_valuedate',
+                final_df = df_view[['S_No','branch_name','branch_code','dayentry_gl','dayentry_transactiondate',
                                     'dayentry_debitamt','dayentry_creditamt','dayentry_openingbalc','dayentry_closingbalc']]
-                final_df.columns = ['S.No','Branch Name','GL Number','Transaction Date','Value Date',
+                final_df.columns = ['S.No','Branch Name','Branch Code','GL Number','Date',
                                     'Debit Amount','Credit Amount','Opening  Balance','Closing Balance']
+                final_df.to_excel(writer, index=False)
+                writer.save()
+                return response
+            elif (action == "ADVANCE" and type == "PPX"):
+                invoice_set.action = final_data.get('action')
+                invoice_set.type = final_data.get('type')
+                Type_ = final_data.get("Type_")
+                Employee_gid = final_data.get("Employee_gid")
+                Supplier_gid = final_data.get("Supplier_gid")
+                Branch_gid = final_data.get("Branch_gid")
+                filter={"Type_": Type_, "Employee_gid": Employee_gid,"Supplier_gid":Supplier_gid,"Branch_gid":Branch_gid}
+                invoice_set.filter = json.dumps(filter)
+                invoice_set.classification = json.dumps({"Entity_Gid": entity_gid})
+                XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response = HttpResponse(content_type=XLSX_MIME)
+                response['Content-Disposition'] = 'attachment; filename="Advance_Report.xlsx"'
+                writer = pd.ExcelWriter(response, engine='xlsxwriter')
+                df_view = invoice_set.get_advance_details()
+                df_view['null_values'] = ""
+                df_view['S_No'] = range(1, 1 + len(df_view))
+                final_df = df_view[['S_No','invoiceheader_crno','branch_name','branch_code','supplier_name','supplier_code','invoiceheader_ponumber',
+                                    'ppxheader_amount','ppxheader_balance','ppxheader_date','debit_glno','Advance_By','invoiceheader_remarks']]
+                final_df.columns = ['S.No','Invoice Header CRNO','Branch Name','Branch Code','Supplier Name','Supplier Code','PO Number',
+                                    'PPX Header Amount','PPX Header Balance','PPX Header Date','Debit GL No','Advance By','Remark']
                 final_df.to_excel(writer, index=False)
                 writer.save()
                 return response
@@ -1634,6 +1701,47 @@ def get_Accounting_Entry_Data(request):
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
+def ecf_common_report(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'GET':
+        try:
+            invoice_set = mAP.ap_model()
+            get_values= request.GET
+            data=json.dumps(get_values)
+            final_data=json.loads(data)
+            action=final_data.get("action")
+            type=final_data.get("type")
+            ap_status=final_data.get("ap_status")
+            ecf_status=final_data.get("ecf_status")
+
+            send_file_name='attachment; filename="Status_Report.xlsx"'
+            entity_gid = int(decry_data(request.session['Entity_gid']))
+            employee_gid = int(decry_data(request.session['Emp_gid']))
+            Branch_Gid = request.session['Branch_gid']
+            if (action == "GET" and type == "ECF_STATUS"):
+                filter ={"ecf_number": "", "invoiceheader_invoicetype": "", "employee_name": "",
+                         "invoiceheader_invoiceno": "", "ap_status": ap_status,
+                           "ecf_status":ecf_status, "supplier_name": " ", "branch_gid": Branch_Gid, "from_date": "",
+                         "to_date": "","min_amount": "", "max_amount": ""}
+                invoice_set.action = action
+                invoice_set.type = "ECF_Report"
+                invoice_set.filter = json.dumps(filter)
+                invoice_set.classification = json.dumps({"Entity_Gid": entity_gid})
+                XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response = HttpResponse(content_type=XLSX_MIME)
+                response['Content-Disposition'] = send_file_name
+                writer = pd.ExcelWriter(response, engine='xlsxwriter')
+                df_view = invoice_set.get_ecf_details()
+                final_df = df_view[['invoiceheader_crno','invoiceheader_invoicetype','supplier_name','invoiceheader_invoiceno',
+                                    'invoiceheader_amount','invoiceheader_taxableamt','ecf_status','ap_status']]
+                final_df.columns = ['CR Number','Invoice Type','Supplier Name','Invoice Number',
+                                    'Invoice Header Amount','Invoice Taxable Amount','ECF Status','AP Status']
+                final_df.to_excel(writer, index=False)
+                writer.save()
+                return response
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 def getDedubeData(request):
     utl.check_pointaccess(request)
@@ -1657,6 +1765,28 @@ def getDedubeData(request):
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
+def get_GL_Report(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
+            path=request.path
+            dedube_get = mAP.ap_model()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            action = jsondata.get('action')
+            type = jsondata.get('type')
+            if (action == "GET" and (type == "AP_TRANSACTION_GL_REPORT" or type=="AP_DAILY_GL_REPORT")):
+                dedube_get.action = action
+                dedube_get.type = type
+                dedube_get.filter = json.dumps(jsondata.get('filter'))
+                dedube_get.classification = json.dumps({"Entity_Gid": int(decry_data(request.session['Entity_gid']))})
+                dedube_get.create_by = int(decry_data(request.session['Emp_gid']))
+                common.main_fun1(request.read(), path)
+                output = dedube_get.get_gl_report()
+                jdata = output.to_json(orient='records')
+                return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 def set_Ammort(request):
     utl.check_pointaccess(request)
@@ -1702,6 +1832,7 @@ def AP_History_get(request):
 
 def AP_status_update(data):
     Status = data.get("Status")
+    file_data = data.get("file_data")
     try:
         inward_dtl = mAP.ap_model()
         inward_dtl.action = "UPDATE"
@@ -1713,7 +1844,7 @@ def AP_status_update(data):
         inward_dtl.employee_gid = data.get("employee_gid")
         if(Status=="AP INITIATED" or Status=="PAY INITIATED" or Status=="NEFT INITIATED" or Status=="DD INITIATED" or Status=="TRANSACTION INITIATED"):
             Invoice_Header_Gid=data.get("Invoice_Header_Gid")
-            inward_dtl.status_json = {"Invoice_Header_Gid":Invoice_Header_Gid,"Status":Status}
+            inward_dtl.status_json = {"Invoice_Header_Gid":Invoice_Header_Gid,"Status":Status,"file_data":file_data}
             final_out = outputSplit(inward_dtl.set_Invoiceheader_status_update(), 1)
             return final_out
     except Exception as e:
@@ -1927,15 +2058,17 @@ def Invoiceheader_set1(request):
                     today_date = str(current_day + "/" + current_month + "/" + current_year_full)
                     Is_approve_and_pay=jsondata.get('params').get('status_json').get('Is_approve_and_pay')
                     invoice_header_gid=jsondata.get('params').get('status_json').get('Invoice_Header_Gid')
+                    file_data=jsondata.get('params').get('status_json').get('file_data')
                     Invoice_Type=jsondata.get('params').get('status_json').get('Invoice_Type')
                     cr_no=jsondata.get('params').get('status_json').get('ref_no')
                     status=jsondata.get('params').get('status_json').get('Header_Status')
+                    Remark=jsondata.get('params').get('status_json').get('Remark')
                     entity_gid = int(decry_data(request.session['Entity_gid']))
                     employee_gid = int(decry_data(request.session['Emp_gid']))
                     ap_statu_update_result=""
                     try:
                         status_update_data = {"Invoice_Header_Gid": invoice_header_gid, "entity_gid": entity_gid,
-                                              "employee_gid": employee_gid,"Status":"AP INITIATED"}
+                                              "employee_gid": employee_gid,"Status":"AP INITIATED","file_data":file_data}
                         ap_statu_update_result=AP_status_update(status_update_data)
                         if(ap_statu_update_result=="SUCCESS"):
                             pass
@@ -2041,7 +2174,7 @@ def Invoiceheader_set1(request):
                                                             inward_dtl.type = "INVOICE_HEADER_UPDATE"
                                                             inward_dtl.header_json = {
                                                                 "HEADER": [{"Invoice_Header_Gid": Invoice_Header_Gid,"refno": CBSReferenceNo,"status_": Final_status,
-                                                                            "crno": Single_Unique_Values}]}
+                                                                            "crno": Single_Unique_Values,"Remark":Remark}]}
                                                             inward_dtl.debit_json = {}
                                                             inward_dtl.detail_json = {}
                                                             inward_dtl.status_json = {}
@@ -2172,6 +2305,7 @@ def approve_and_pay(request):
                     today_date = str(current_day + "/" + current_month + "/" + current_year_full)
                     Is_approve_and_pay=jsondata.get('params').get('status_json').get('Is_approve_and_pay')
                     invoice_header_gid=jsondata.get('params').get('status_json').get('Invoice_Header_Gid')
+                    file_data=jsondata.get('params').get('status_json').get('file_data')
                     Invoice_Type=jsondata.get('params').get('status_json').get('Invoice_Type')
                     cr_no=jsondata.get('params').get('status_json').get('ref_no')
                     status=jsondata.get('params').get('status_json').get('Header_Status')
@@ -2180,7 +2314,7 @@ def approve_and_pay(request):
                     ap_statu_update_result=""
                     try:
                         status_update_data = {"Invoice_Header_Gid": invoice_header_gid, "entity_gid": entity_gid,
-                                              "employee_gid": employee_gid,"Status":"AP INITIATED"}
+                                              "employee_gid": employee_gid,"Status":"AP INITIATED","file_data":file_data}
                         ap_statu_update_result=AP_status_update(status_update_data)
                         if(ap_statu_update_result=="SUCCESS"):
                             try:
@@ -2841,6 +2975,7 @@ def APpayment_set(request):
                         invoiceheader_status = details_data.get("DETAILS")[0].get("invoiceheader_status")
                         invoiceheader_crno = details_data.get("DETAILS")[0].get("invoiceheader_crno")
                         invoiceheader_invoiceno = details_data.get("DETAILS")[0].get("invoiceheader_invoiceno")
+                        invoiceheader_dedupeinvoiceno = details_data.get("DETAILS")[0].get("invoiceheader_dedupeinvoiceno")
                         invoiceheader_remarks = details_data.get("DETAILS")[0].get("invoiceheader_remarks")
                         Header_Amount = header_data.get("HEADER")[0].get("Paymentheader_Amount")
                         Payment_Mode = header_data.get("HEADER")[0].get("Payment_Mode")
@@ -2967,28 +3102,31 @@ def APpayment_set(request):
                                                             ErrorCode = results_data.get("CbsStatus")[0].get("ErrorCode")
                                                             if (ErrorStatus == "Success" and ErrorCode == '0'):
                                                                 cbsno_ref_number = results_data.get("CbsStatus")[0].get("CBSReferenceNo")
-                                                                try:
-                                                                    inward_dtl.action = "UPDATE"
-                                                                    inward_dtl.type = "STATUS"
-                                                                    inward_dtl.header_json = '{}'
-                                                                    inward_dtl.debit_json = '{}'
-                                                                    inward_dtl.detail_json = '{}'
-                                                                    inward_dtl.status_json = {
-                                                                        "Invoice_Header_Gid": invoiceheader_gid,
-                                                                        "Status": "AMOUNT TRAN", "crno": invoiceheader_crno,
-                                                                        "cbsno": cbsno_ref_number, "pvno": pv_number,
-                                                                        "neftstatus": "TRAN_PASS"}
-                                                                    inward_dtl.entity_gid = entity_gid
-                                                                    inward_dtl.employee_gid = employee_gid
-                                                                    final_out = outputSplit(inward_dtl.set_Invoiceheader_status_update(), 1)
-                                                                    if(final_out=="SUCCESS"):
-                                                                        amount_transfer_message = "SUCCESS"
-                                                                        pass
-                                                                    else:
-                                                                        return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS":final_out})
-                                                                except Exception as e:
-                                                                    common.logger.error(e)
-                                                                    return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
+                                                                if(Payment_Mode=="KVBAC" or Payment_Mode=="BRA" or Payment_Mode=="ERA"):
+                                                                    amount_transfer_message = "SUCCESS"
+                                                                else:
+                                                                    try:
+                                                                        inward_dtl.action = "UPDATE"
+                                                                        inward_dtl.type = "STATUS"
+                                                                        inward_dtl.header_json = '{}'
+                                                                        inward_dtl.debit_json = '{}'
+                                                                        inward_dtl.detail_json = '{}'
+                                                                        inward_dtl.status_json = {
+                                                                            "Invoice_Header_Gid": invoiceheader_gid,
+                                                                            "Status": "AMOUNT TRAN", "crno": invoiceheader_crno,
+                                                                            "cbsno": cbsno_ref_number, "pvno": pv_number,
+                                                                            "neftstatus": "TRAN_PASS"}
+                                                                        inward_dtl.entity_gid = entity_gid
+                                                                        inward_dtl.employee_gid = employee_gid
+                                                                        final_out = outputSplit(inward_dtl.set_Invoiceheader_status_update(), 1)
+                                                                        if(final_out=="SUCCESS"):
+                                                                            amount_transfer_message = "SUCCESS"
+                                                                            pass
+                                                                        else:
+                                                                            return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS":final_out})
+                                                                    except Exception as e:
+                                                                        common.logger.error(e)
+                                                                        return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
                                                             else:
                                                                 return JsonResponse({"MESSAGE": "FAILED", "FAILED_STATUS": results_data})
                                                         except Exception as e:
@@ -3033,7 +3171,7 @@ def APpayment_set(request):
                                                                          "BenAcctType": "CA",
                                                                          "BenIFSC": ifsccode,
                                                                          "BenName": beneficiaryname,
-                                                                         "Remarks": "Inv"+str(invoiceheader_invoiceno) + " "+str(branch_code)+" "+str(branch_name),
+                                                                         "Remarks": "Inv"+str(invoiceheader_dedupeinvoiceno) + " "+str(branch_code)+" "+str(branch_name),
                                                                          "RemitterMobileNo": "8072488536","TranId": pv_number,
                                                                          "ApplicationDate": CBSDATE,"RetryFlag":"N"}]}
                                                     try:
@@ -3156,7 +3294,7 @@ def APpayment_set(request):
                                                                 "BeneficiaryName" : beneficiaryname,
                                                                 "InstrumentAmount" : str(DD_Header_Amount),
                                                                 "IssueBankCode" : "53",
-                                                                "Narrative" : str(invoiceheader_invoiceno) + " "+str(branch_name),
+                                                                "Narrative" : str(invoiceheader_dedupeinvoiceno) + " "+str(branch_name),
                                                                 "PayableBranch" :Credit_DDpay_Branch,
                                                             }
                                                         ]
@@ -3454,28 +3592,31 @@ def APpayment_set_function(jsondata,employee_gid,entity_gid):
                                                             ErrorCode = results_data.get("CbsStatus")[0].get("ErrorCode")
                                                             if (ErrorStatus == "Success" and ErrorCode == '0'):
                                                                 cbsno_ref_number = results_data.get("CbsStatus")[0].get("CBSReferenceNo")
-                                                                try:
-                                                                    inward_dtl.action = "UPDATE"
-                                                                    inward_dtl.type = "STATUS"
-                                                                    inward_dtl.header_json = '{}'
-                                                                    inward_dtl.debit_json = '{}'
-                                                                    inward_dtl.detail_json = '{}'
-                                                                    inward_dtl.status_json = {
-                                                                        "Invoice_Header_Gid": invoiceheader_gid,
-                                                                        "Status": "AMOUNT TRAN", "crno": invoiceheader_crno,
-                                                                        "cbsno": cbsno_ref_number, "pvno": pv_number,
-                                                                        "neftstatus": "TRAN_PASS"}
-                                                                    inward_dtl.entity_gid = entity_gid
-                                                                    inward_dtl.employee_gid = employee_gid
-                                                                    final_out = outputSplit(inward_dtl.set_Invoiceheader_status_update(), 1)
-                                                                    if(final_out=="SUCCESS"):
-                                                                        amount_transfer_message = "SUCCESS"
-                                                                        pass
-                                                                    else:
-                                                                        return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS":final_out})
-                                                                except Exception as e:
-                                                                    common.logger.error(e)
-                                                                    return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
+                                                                if (Payment_Mode == "KVBAC" or Payment_Mode == "BRA" or Payment_Mode == "ERA"):
+                                                                    amount_transfer_message = "SUCCESS"
+                                                                else:
+                                                                    try:
+                                                                        inward_dtl.action = "UPDATE"
+                                                                        inward_dtl.type = "STATUS"
+                                                                        inward_dtl.header_json = '{}'
+                                                                        inward_dtl.debit_json = '{}'
+                                                                        inward_dtl.detail_json = '{}'
+                                                                        inward_dtl.status_json = {
+                                                                            "Invoice_Header_Gid": invoiceheader_gid,
+                                                                            "Status": "AMOUNT TRAN", "crno": invoiceheader_crno,
+                                                                            "cbsno": cbsno_ref_number, "pvno": pv_number,
+                                                                            "neftstatus": "TRAN_PASS"}
+                                                                        inward_dtl.entity_gid = entity_gid
+                                                                        inward_dtl.employee_gid = employee_gid
+                                                                        final_out = outputSplit(inward_dtl.set_Invoiceheader_status_update(), 1)
+                                                                        if(final_out=="SUCCESS"):
+                                                                            amount_transfer_message = "SUCCESS"
+                                                                            pass
+                                                                        else:
+                                                                            return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS":final_out})
+                                                                    except Exception as e:
+                                                                        common.logger.error(e)
+                                                                        return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
                                                             else:
                                                                 return JsonResponse({"MESSAGE": "FAILED", "FAILED_STATUS": results_data})
                                                         except Exception as e:
@@ -3815,6 +3956,7 @@ def APpayment_set_function_approve_and_pay(jsondata, employee_gid, entity_gid):
                     invoiceheader_status = details_data.get("DETAILS")[0].get("invoiceheader_status")
                     invoiceheader_crno = details_data.get("DETAILS")[0].get("invoiceheader_crno")
                     invoiceheader_invoiceno = details_data.get("DETAILS")[0].get("invoiceheader_invoiceno")
+                    invoiceheader_dedupeinvoiceno = details_data.get("DETAILS")[0].get("invoiceheader_dedupeinvoiceno")
                     invoiceheader_remarks = details_data.get("DETAILS")[0].get("invoiceheader_remarks")
                     Header_Amount = header_data.get("HEADER")[0].get("Paymentheader_Amount")
                     Payment_Mode = header_data.get("HEADER")[0].get("Payment_Mode")
@@ -3956,56 +4098,57 @@ def APpayment_set_function_approve_and_pay(jsondata, employee_gid, entity_gid):
                                                                 ErrorCode = results_data.get("CbsStatus")[0].get(
                                                                     "ErrorCode")
                                                                 if (ErrorStatus == "Success" and ErrorCode == '0'):
-                                                                    cbsno_ref_number = results_data.get("CbsStatus")[
-                                                                        0].get(
-                                                                        "CBSReferenceNo")
-                                                                    try:
-                                                                        inward_dtl.action = "UPDATE"
-                                                                        inward_dtl.type = "STATUS"
-                                                                        inward_dtl.header_json = '{}'
-                                                                        inward_dtl.debit_json = '{}'
-                                                                        inward_dtl.detail_json = '{}'
-                                                                        inward_dtl.status_json = {
-                                                                            "Invoice_Header_Gid": invoiceheader_gid,
-                                                                            "Status": "AMOUNT TRAN",
-                                                                            "crno": invoiceheader_crno,
-                                                                            "cbsno": cbsno_ref_number,
-                                                                            "pvno": pv_number,
-                                                                            "neftstatus": "TRAN_PASS"}
-                                                                        inward_dtl.entity_gid = entity_gid
-                                                                        inward_dtl.employee_gid = employee_gid
-                                                                        final_out = outputSplit(
-                                                                            inward_dtl.set_Invoiceheader_status_update(),
-                                                                            1)
-                                                                        if (final_out == "SUCCESS"):
-                                                                            amount_transfer_message = "SUCCESS"
-                                                                            pass
-                                                                        else:
+                                                                    cbsno_ref_number = results_data.get("CbsStatus")[0].get("CBSReferenceNo")
+                                                                    if (Payment_Mode == "KVBAC" or Payment_Mode == "BRA" or Payment_Mode == "ERA"):
+                                                                        amount_transfer_message = "SUCCESS"
+                                                                    else:
+                                                                        try:
+                                                                            inward_dtl.action = "UPDATE"
+                                                                            inward_dtl.type = "STATUS"
+                                                                            inward_dtl.header_json = '{}'
+                                                                            inward_dtl.debit_json = '{}'
+                                                                            inward_dtl.detail_json = '{}'
+                                                                            inward_dtl.status_json = {
+                                                                                "Invoice_Header_Gid": invoiceheader_gid,
+                                                                                "Status": "AMOUNT TRAN",
+                                                                                "crno": invoiceheader_crno,
+                                                                                "cbsno": cbsno_ref_number,
+                                                                                "pvno": pv_number,
+                                                                                "neftstatus": "TRAN_PASS"}
+                                                                            inward_dtl.entity_gid = entity_gid
+                                                                            inward_dtl.employee_gid = employee_gid
+                                                                            final_out = outputSplit(
+                                                                                inward_dtl.set_Invoiceheader_status_update(),
+                                                                                1)
+                                                                            if (final_out == "SUCCESS"):
+                                                                                amount_transfer_message = "SUCCESS"
+                                                                                pass
+                                                                            else:
+                                                                                header_update_data = {
+                                                                                    "Invoice_Header_Gid": invoiceheader_gid,
+                                                                                    "entity_gid": entity_gid,
+                                                                                    "type": "ERROR_UPDATE",
+                                                                                    "employee_gid": employee_gid,
+                                                                                    "Error_log": {
+                                                                                        "MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE",
+                                                                                        "UPDATE_STATUS": final_out}}
+                                                                                AP_Header_Update_result = AP_Header_Update(
+                                                                                    header_update_data)
+                                                                                # return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS": final_out})
+                                                                        except Exception as e:
+                                                                            common.logger.error(e)
                                                                             header_update_data = {
                                                                                 "Invoice_Header_Gid": invoiceheader_gid,
                                                                                 "entity_gid": entity_gid,
                                                                                 "type": "ERROR_UPDATE",
                                                                                 "employee_gid": employee_gid,
                                                                                 "Error_log": {
-                                                                                    "MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE",
-                                                                                    "UPDATE_STATUS": final_out}}
+                                                                                    "MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE_",
+                                                                                    "DATA": str(e)}}
                                                                             AP_Header_Update_result = AP_Header_Update(
                                                                                 header_update_data)
-                                                                            # return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","UPDATE_STATUS": final_out})
-                                                                    except Exception as e:
-                                                                        common.logger.error(e)
-                                                                        header_update_data = {
-                                                                            "Invoice_Header_Gid": invoiceheader_gid,
-                                                                            "entity_gid": entity_gid,
-                                                                            "type": "ERROR_UPDATE",
-                                                                            "employee_gid": employee_gid,
-                                                                            "Error_log": {
-                                                                                "MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE_",
-                                                                                "DATA": str(e)}}
-                                                                        AP_Header_Update_result = AP_Header_Update(
-                                                                            header_update_data)
-                                                                        # return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
-                                                                        # pass
+                                                                            # return JsonResponse({"MESSAGE": "ERROR_OCCURED_ON_AMOUNT_TRN_SUCCESS_STATUS_UPDATE","DATA": str(e)})
+                                                                            # pass
                                                                 else:
                                                                     header_update_data = {
                                                                         "Invoice_Header_Gid": invoiceheader_gid,
@@ -4099,7 +4242,7 @@ def APpayment_set_function_approve_and_pay(jsondata, employee_gid, entity_gid):
                                                                      "BenIFSC": ifsccode,
                                                                      "BenName": beneficiaryname,
                                                                      "Remarks": "Inv" + str(
-                                                                         invoiceheader_invoiceno) + " " + str(
+                                                                         invoiceheader_dedupeinvoiceno) + " " + str(
                                                                          branch_code) + " " + str(branch_name),
                                                                      "RemitterMobileNo": "8072488536",
                                                                      "TranId": pv_number,
@@ -4353,7 +4496,7 @@ def APpayment_set_function_approve_and_pay(jsondata, employee_gid, entity_gid):
                                                                      "InstrumentAmount": str(DD_Header_Amount),
                                                                      "IssueBankCode": "53",
                                                                      "Narrative": str(
-                                                                         invoiceheader_invoiceno) + " " + str(
+                                                                         invoiceheader_dedupeinvoiceno) + " " + str(
                                                                          branch_name),
                                                                      "PayableBranch": Credit_DDpay_Branch,
                                                                  }
@@ -5991,12 +6134,12 @@ def ECF_ApChecker_get(request):
                      'bankdetails_bank_gid',
                      'credit_glno', 'credit_amount', 'Paymode_name', 'bankdetails_beneficiaryname',
                      'credit_suppliertaxtrate', 'credit_suppliertaxtype',
-                     'ppxdetails_ppxheadergid', 'ppxdetails_gid', 'bankbranch_name']]).groupby(
+                     'ppxdetails_ppxheadergid', 'ppxdetails_gid', 'bankbranch_name','credit_taxableamount','credit_categorygid','credit_subcategorygid']]).groupby(
                     ['bankdetails_gid', 'credit_gid', 'credit_paymodegid', 'credit_refno', 'bankbranch_ifsccode',
                      'bankdetails_bank_gid',
                      'credit_glno', 'credit_amount', 'Paymode_name', 'bankdetails_beneficiaryname',
                      'credit_suppliertaxtrate', 'credit_suppliertaxtype',
-                     'ppxdetails_ppxheadergid', 'ppxdetails_gid', 'bankbranch_name']).size().reset_index();
+                     'ppxdetails_ppxheadergid', 'ppxdetails_gid', 'bankbranch_name','credit_taxableamount','credit_categorygid','credit_subcategorygid']).size().reset_index();
                 df_credit.loc[df_credit['Paymode_name'] != 'NEFT', 'bankbranch_ifsccode'] = ''
                 df_credit.loc[df_credit['Paymode_name'] != 'NEFT', 'bankdetails_beneficiaryname'] = ''
                 df_credit.loc[df_credit['Paymode_name'] != 'NEFT', 'bankbranch_name'] = ''
@@ -6799,7 +6942,7 @@ def get_delmat(request):
             create_by = int(decry_data(request.session['Emp_gid']))
             Entity_gid = int(decry_data(request.session['Entity_gid']))
             type = jsondata.get('params').get('type')
-            if (action == "limit" and type == "DELMAT") or (action == "limit" and type == "DELMAT_EMPLOYEE_LIMIT" or type=="DELMAT_DETAIL"):
+            if (action == "limit" and type == "DELMAT") or (action == "limit" and type == "DELMAT_EMPLOYEE_LIMIT" or type=="DELMAT_DETAIL" or type=="DELMAT_COMMODITY"):
                 jsondata['params']['filter']['employee_gid'] = create_by
                 object_data.action = action
                 object_data.type = type
@@ -6871,6 +7014,83 @@ def get_pmd_data(request):
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
+def advance_get(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
+            path=request.path
+            object_data = mAP.ap_model()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            action = jsondata.get('action')
+            create_by = int(decry_data(request.session['Emp_gid']))
+            Entity_gid = int(decry_data(request.session['Entity_gid']))
+            type = jsondata.get('type')
+            if (action == "ADVANCE" and type=="PPX"):
+                object_data.action = action
+                object_data.type = type
+                object_data.filter = json.dumps(jsondata.get('filter'))
+                object_data.classification = json.dumps({"Entity_Gid": Entity_gid,"create_by":create_by})
+                object_data.create_by = create_by
+                common.main_fun1(request.read(), path)
+                output = object_data.get_advance_details()
+                jdata = output.to_json(orient='records')
+                return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+def entry_update_get(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
+            path=request.path
+            object_data = mAP.ap_model()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            action = jsondata.get('action')
+            create_by = int(decry_data(request.session['Emp_gid']))
+            Entity_gid = int(decry_data(request.session['Entity_gid']))
+            type = jsondata.get('type')
+            if (action == "ENTRY"):
+                object_data.action = action
+                object_data.type = type
+                object_data.filter = json.dumps(jsondata.get('filter'))
+                # object_data.classification = json.dumps({"Entity_Gid": Entity_gid,"create_by":create_by})
+                object_data.create_by = create_by
+                common.main_fun1(request.read(), path)
+                output = object_data.get_EntryUpdate()
+                jdata = output.to_json(orient='records')
+                return JsonResponse(json.loads(jdata), safe=False)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def entry_update_set(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        try:
+            path=request.path
+            object_data = mAP.ap_model()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            action = jsondata.get('action')
+            create_by = int(decry_data(request.session['Emp_gid']))
+            Entity_gid = int(decry_data(request.session['Entity_gid']))
+            type = jsondata.get('type')
+            if (action == "UPDATE"):
+                object_data.action = action
+                object_data.type = type
+                object_data.filter = json.dumps(jsondata.get('filter'))
+                object_data.classification = json.dumps({"Entity_Gid": Entity_gid,"create_by":create_by})
+                object_data.create_by = create_by
+                common.main_fun1(request.read(), path)
+                output = object_data.set_EntryUpdate()
+                #jdata = output.to_json(orient='records')
+                #return JsonResponse(json.loads(output), safe=False)
+                return HttpResponse(output)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 def set_pmd_data(request):
     utl.check_pointaccess(request)
     utl.check_authorization(request)
@@ -6932,6 +7152,22 @@ def Session_Get_AP_Data(request):
                 data[k] = request.session[k]
         return JsonResponse(data, safe=False)
 
+from multiprocessing.pool import ThreadPool as Pool
+
+def gl_day_entry_genrate_with_Thread(action,type,filter,classification):
+    branch_gid=filter.get("branch_gid")
+    create_by=classification.get("create_by")
+    pmd_obj = mAP.ap_model()
+    pmd_obj.action = action
+    pmd_obj.type = type
+    pmd_obj.filter = json.dumps(filter)
+    pmd_obj.classification = json.dumps(classification)
+    pmd_obj.employee_gid = create_by
+    output = pmd_obj.set_day_entry_details()
+    if (output[0] != "SUCCESS"):
+        log_data = [{"DAY_ENTRY_SET_FAILED_DATA": {"branch_Gid": branch_gid}}]
+        common.logger.error(log_data)
+
 
 def gl_day_entry_generate(request):
     utl.check_pointaccess(request)
@@ -6954,21 +7190,19 @@ def gl_day_entry_generate(request):
                 data = alltable(branch_querys, Entity_Gid, token)
                 jsondata = json.loads(data)
                 Branch_details=jsondata.get("DATA")
+                pool_size = 10
+                pool = Pool(pool_size)
                 for branch in Branch_details:
                     log_data=[]
-                    branch_gid=branch.get("branch_gid")
-                    pmd_obj.action = action
-                    pmd_obj.type = type
-                    pmd_obj.filter = json.dumps({"branch_Gid":branch_gid})
-                    pmd_obj.classification = json.dumps({"Entity_Gid":Entity_Gid,"create_by":create_by })
-                    pmd_obj.employee_gid=create_by
-                    output = pmd_obj.set_day_entry_details()
-                    if(output[0]!="SUCCESS"):
-                        log_data = [{"DAY_ENTRY_SET_FAILED_DATA": {"branch_Gid":branch_gid}}]
-                        common.logger.error(log_data)
+                    branch_gid = branch.get("branch_gid")
+                    filter={"branch_Gid": branch_gid}
+                    classification={"Entity_Gid": Entity_Gid, "create_by": create_by}
+                    #x = threading.Thread(target=gl_day_entry_genrate_with_Thread(action,type,filter,classification), args=(4,))
+                    #pass
+                    #x.start()
+                    pool.apply_async(gl_day_entry_genrate_with_Thread, (action,type,filter,classification,))
+                pool.close()
+                pool.join()
                 # return HttpResponse(output)
         except Exception as e:
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
-
-        #Vignesh Test

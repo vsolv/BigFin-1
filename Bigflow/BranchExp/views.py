@@ -150,7 +150,7 @@ def Get_expense(request):
                     final_df = df_view[
                         ['S_No','invoiceheader_invoiceno','trandate','invoiceheader_crno',
                          'invoiceheader_invoicedate','branch_code','invoicedetails_item','invoicedetails_desc',
-                         'Supplier_code','supplier_name','supplier_gstno','supplier_panno',
+                         'Supplier_code','supplier_branchname','supplier_gstno','supplier_panno',
                          'tcc_name','tbs_name','category_name','subcategory_name','invoiceheader_amount',
                          'invoiceheader_taxableamt', 'invoicedetails_igst', 'invoicedetails_cgst',
                          'invoicedetails_sgst', 'invoicedetails_hsncode','invoiceheader_deductionamount','invoiceheader_roundoff',
@@ -439,3 +439,26 @@ def Get_premises(request):
             except Exception as e:
                 common.logger.error(e)
                 return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+import logging
+import threading
+import time
+import subprocess
+import sys
+
+# def thread_testing(request):
+#     if request.method == 'POST':
+#         jsondata = json.loads(request.body.decode('utf-8'))
+#         for i in range(50):
+#             x = threading.Thread(target=insert_temp(request), args=(1,))
+#             pass
+# def insert_temp(request):
+#     jsondata = json.loads(request.body.decode('utf-8'))
+#     exp_process = mbranch.BranchExp_model()
+#     exp_process.type = jsondata.get("Type")
+#     exp_process.sub_type = jsondata.get("Sub_Type")
+#     exp_process.filters = json.dumps(jsondata.get("data").get('params').get("filters"))
+#     exp_process.classification = json.dumps({"Entity_Gid": 1, "Create_by": 5})
+#     result = exp_process.property_set()
+#     # print(result)
+

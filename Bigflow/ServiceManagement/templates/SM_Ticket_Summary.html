@@ -142,14 +142,14 @@
                         <th>Ticket Code</th>
                         <th>Branch Name</th>
                         <th>Issue Type</th>
-                        <th>Nature Of The Problem</th>
+                        <th>Nature of the Problem</th>
                         <th>Created Date</th>
                         <th>Due Date</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr ng-repeat="ts in ticket_data_summary.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict"
-                        align="center" ng-if="ts.employee_gid==emp_gid">
+                        align="center">
                         <td>
                             <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
                         </td>
@@ -210,13 +210,19 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
     $scope.ticket_data_summary_all=[];
     $scope.ticket_data_summary_30=[];
     $scope.ticket_data_summary_30_to_60=[];
+    $scope.ticket_data_summary=[];
 
-    if (sessionStorage.getItem('today') != null)
-        {
-            $scope.emp= JSON.parse(sessionStorage.getItem('today'));
-            $scope.emp_gid=$scope.emp.employee_gid;
+    $scope.empty_sms_session = function(amc,e) {
+        var datas={"action":"SET","type":"SMS",
+        "filter":{"SMS_Ticket_Header_Gid":"","View": ""}};
+        var asset = Service_Ticket_Summary.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
 
-        }
+               }
+            }).finally($scope.endloading);
+    };
+    $scope.empty_sms_session();
 
 
     $scope.loading = function() {
@@ -237,24 +243,23 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
                        "filter":{"Date_From":"","Date_To":""}
                       }
         };
-        $scope.loading();
         var ticket = Service_Ticket_Summary.get_ticket_data(datas);
 
         ticket.then(function(result) {
 
                 var ticket_data = JSON.parse(JSON.stringify(result.data))
-                $scope.ticket_data_summarys = ticket_data;
-                console.log($scope.ticket_data_summarys);
-
-                $scope.ticket_data_summary_all = $filter('filter')($scope.ticket_data_summarys, {
-                "employee_gid": $scope.emp_gid,
-<!--                "ticketheader_onhold":"Y",-->
-                 });
+                $scope.ticket_data_summary_all = ticket_data;
+                console.log($scope.ticket_data_summary_all);
+                //some codes
                 if($scope.ticket_data_summary_all.length==0){
                 $scope.all_data_count=0;
                 }
                 else{
                 $scope.all_data_count=$scope.ticket_data_summary_all.length
+                }
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                        $scope.ticket_data_summary_all=[];
                 }
 
             },
@@ -276,20 +281,20 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
                                        "filter":{"Date_From":$scope.lessthan_30,"Date_To":$scope.todays}
                                       }
                      };
-                    $scope.loading();
                     var ticket = Service_Ticket_Summary.get_ticket_data(datas);
                         ticket.then(function(result) {
                             var ticket_data = JSON.parse(JSON.stringify(result.data))
-                            $scope.lessthan_30= ticket_data;
+                            $scope.ticket_data_summary_30= ticket_data;
 
-                             $scope.ticket_data_summary_30 = $filter('filter')($scope.lessthan_30, {
-                                "employee_gid": $scope.emp_gid,
-                                 });
                                 if($scope.ticket_data_summary_30.length==0){
                                 $scope.lessthan_30_count=0;
                                 }
                                 else{
                                 $scope.lessthan_30_count=$scope.ticket_data_summary_30.length;
+                                }
+                                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                    alert(JSON.stringify(result.data.DATA));
+                                    $scope.lessthan_30=[];
                                 }
                         },
                     function(err) {
@@ -316,17 +321,16 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
                     var tickets = Service_Ticket_Summary.get_ticket_data(datas);
                         tickets.then(function(result) {
                             var ticket_datas = JSON.parse(JSON.stringify(result.data))
-                            $scope.lessthan_30_to_60= ticket_datas;
-                            $scope.ticket_data_summary_30_to_60;
-
-                             $scope.ticket_data_summary_30_to_60 = $filter('filter')($scope.lessthan_30_to_60, {
-                                "employee_gid": $scope.emp_gid,
-                                 });
+                            $scope.ticket_data_summary_30_to_60= ticket_datas;
                                 if($scope.ticket_data_summary_30_to_60.length==0){
                                 $scope.lessthan_30_to_60_count=0;
                                 }
                                 else{
                                 $scope.lessthan_30_to_60_count=$scope.ticket_data_summary_30_to_60.length
+                                }
+                                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                    alert(JSON.stringify(result.data.DATA));
+                                    $scope.lessthan_30_to_60=[];
                                 }
                         },
                     function(err) {
@@ -358,7 +362,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
             });
         }
 
-        $scope.edit_data = function(exp,e) {
+        $scope.edit_datas = function(exp,e) {
             var ticket_data = {
                 ticket_values: exp,
                 view: e
@@ -366,6 +370,18 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_Ticket_Summary','$mdDialog
             sessionStorage.setItem('ticket_detail', JSON.stringify(ticket_data));
             $window.location.href = "ServiceManagement/SM_Ticket_Followup/";
         };
+
+        $scope.edit_data = function(ticket,e) {
+            debugger
+            var datas={"action":"SET","type":"SMS",
+            "filter":{"SMS_Ticket_Header_Gid":ticket.ticketheader_gid,"View": e}};
+            var asset = Service_Ticket_Summary.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
+                    $window.location.href = "ServiceManagement/SM_Ticket_Followup/";
+               }
+            }).finally($scope.endloading);
+    };
 
 
 }]);
@@ -376,6 +392,11 @@ myApp.service("Service_Ticket_Summary", function ($http) {
          var response=$http.post(Appname+"/Get_Service_Management/",datas);
          return response;
      }
+
+    this.set_session_sms = function (data) {
+        var response=$http.post(Appname+"/Session_Set_SMS_Data/",data);
+        return response;
+    }
 
 
 });

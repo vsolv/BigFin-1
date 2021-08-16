@@ -50,6 +50,8 @@ class Expense_Process(APIView):
                     (self.request.query_params.get("type")=="PROPERTY" or
                      self.request.query_params.get("type")=="EXPENSE_DETAIL" or
                      self.request.query_params.get("type")=="INVOICE_BRANEXP_SUMMARY" or
+                     self.request.query_params.get("type")=="INVOICE_BRANEXP_SUMMARY_COUNT" or
+                     self.request.query_params.get("type")=="INVOICE_APPROVAL_COUNT" or
                      self.request.query_params.get("type")=="INVOICE_APPROVAL"):
                 jsondata = json.loads(request.body.decode('utf-8'))
                 exp_process = mBranch.BranchExp_model()

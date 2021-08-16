@@ -150,6 +150,7 @@ class CCBS_MASTER(APIView):
                                     data["assetcode"]: int(datas['subcategory_asst_code'])
                                 from Bigflow.Core.models import get_data_from_id as gdfi
                                 codes=gdfi('APSUBCAT',data)
+
                                 data.pop('category_id')
                                 data.pop('expense_id')
                                 data['category_code']=codes['category_code']
@@ -866,14 +867,19 @@ class new_ecf_data_insert(APIView):
 class update_pesonal_number(APIView):
     def post(self,request):
         try:
+            common.logger.error("UPDATE_NO_JSON:" + str(json.loads(request.body.decode('utf-8'))))
             if self.request.query_params.get("GROUP") == "EMPLOYEE_MOBILENO":
                 jsondata = json.loads(request.body.decode('utf-8'))
+                common.logger.error("UPDATE_NO_JSON:"+str(jsondata))
                 obj_prodcat = mMasters.Masters()
                 obj_prodcat.action = self.request.query_params.get("Action")
                 obj_prodcat.jsondata = json.dumps(jsondata.get('Params').get('Filter'))
+                params=(obj_prodcat.action,obj_prodcat.jsondata,'')
+                common.logger.error("SP_PARAMETERS:"+str(params))
                 log_data = [{"BEFORE_mob_num": jsondata}]
                 common.logger.error(log_data)
                 out_message = obj_prodcat.update_personal_info()
+                common.logger.error([{"UPDATEMOBILE_SP_OUT":out_message}])
                 log_data = [{"AFTER_mob_num": out_message}]
                 common.logger.error(log_data)
                 ld_dict = {"MESSAGE": out_message}

@@ -44,6 +44,7 @@
                         <th>Service Period From Date</th>
                         <th>Service period To Date</th>
                         <th>Service Period</th>
+                        <th>Supplier Name</th>
                         <th>AMC Total Amount</th>
                         <th>Action</th>
 
@@ -63,6 +64,7 @@
                         <td>{{amc.amcheader_periodfrom |date:'dd-MMM-yyyy'}}</td>
                         <td>{{amc.amcheader_periodto |date:'dd-MMM-yyyy'}}</td>
                         <td>{{amc.amcheader_serviceperiod}}</td>
+                        <td>{{amc.supplier_name}}</td>
                         <td>{{amc.amcheader_amctotalamt}}</td>
                         <td>
                             <span title="Approv/Reject" ng-click="approv_data(amc,'approv')" align="center"
@@ -80,7 +82,7 @@
                     </tbody>
                     <tfoot>
                     <tr>
-                        <td colspan="8">
+                        <td colspan="10">
                             <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
                                 max-size="maxSize"
                                 class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
@@ -118,12 +120,26 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
         });
     };
 
+    $scope.empty_sms_session = function(amc,e) {
+        var datas={"action":"SET","type":"SMS",
+        "filter":{"SMS_AMC_Header_Gid":"",
+        "View": ""}};
+        var asset = Service_amc.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
+
+               }
+            }).finally($scope.endloading);
+    };
+    $scope.empty_sms_session();
+
+
     $scope.endloading = function() {
         $mdDialog.hide();
     };
     $scope.get_amc_header=function(){
          var datas={params:{"action":'GET',"type":"AMC_HEADER_DETAIL",
-                           "filter":{"AmcHeader_Status":"PENDING FOR APPROVAL","Page_Index":$scope.currentPage-1,
+                           "filter":{"AmcHeader_Status":"PENDING FOR APPROVAL", "Page_Index":$scope.currentPage-1,
                                      "Page_Size":$scope.itemsPerPage}
                           }
                     };
@@ -133,10 +149,17 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
          debugger;
             var amc_all_data = JSON.parse(JSON.stringify(result.data))
             $scope.amc_data_summary = amc_all_data;
+            $scope.amc_data_summary1 = amc_all_data;
+            if(result.data.MESSAGE=="ERROR_OCCURED"){
+                alert(JSON.stringify(result.data.DATA));
+                $scope.amc_data_summary = [];
+                $scope.amc_data_summary1 = [];
+            }
             if($scope.currentPage==1){
                 $scope.Total_Row=$scope.amc_data_summary[0].Total_Row;
             }
-            $scope.amc_data_summary1 = amc_all_data;
+
+
             console.log($scope.amc_data_summary1);
             },
             function(err) {
@@ -165,28 +188,33 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
         $scope.amc_assets=amc_assets.asset_detail;
     };
 
-
     $scope.approv_data = function(amc,e) {
-        var amc_data = {
-           amcheader_gid: amc.amcheader_gid,
-           view:e
-        };
-        sessionStorage.setItem('amcs', JSON.stringify(amc_data));
-        $window.location.href = "ServiceManagement/SM_AMC_Approval/";
+        var datas={"action":"SET","type":"SMS",
+        "filter":{"SMS_AMC_Header_Gid":amc.amcheader_gid,
+        "View": e}};
+        var asset = Service_amc.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
+                     $window.location.href = "ServiceManagement/SM_AMC_Approval/";
+               }
+            }).finally($scope.endloading);
     }
 
 
    }]);
 
- myApp.service("Service_amc", function ($http) {
 
+myApp.service("Service_amc", function ($http) {
     this.get_amc_data=function (data) {
         var response=$http.post(Appname+"/Get_AMC_Details/",data);
         return response;
     }
-
     this.amc_activate_inactivate=function (data) {
         var response=$http.post(Appname+"/Set_AMC_Details/",data);
+        return response;
+    }
+    this.set_session_sms = function (data) {
+        var response=$http.post(Appname+"/Session_Set_SMS_Data/",data);
         return response;
     }
 

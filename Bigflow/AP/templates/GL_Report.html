@@ -8,21 +8,33 @@
 <div class="maincontent">
     <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
         <div class="row">
-            <div class="row-header col-lg-12 col-sm-12">
-                <h4>GL Report</h4>
+            <div class="col-md-9">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>GL Report</h4>
+                </div>
             </div>
         </div>
         <br>
-        <h5 style="color:blue">Transaction Report</h5>
+        <div class="row">
+            <div class="col-md-10">
+                <h5 style="color:blue">Transaction Report</h5>
+            </div>
+
+            <div class="col-md-1" style="margin-top:-20px;">
+                <span class="material-icons" ng-show="generate_show==1" ng-click="generate()">autorenew</span>
+                Generate
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-12">
-                <div class="col-md-3 col-lg-3 col-sm-3">
+                <div class="col-md-2">
                     <md-input-container class="md-block inputcontainer">
                         <label>GL Number</label>
                         <input ng-model="gl_number"/>
                     </md-input-container>
                 </div>
-                <div class="col-lg-3 col-md-3 col-sm-3">
+                <div class="col-md-3">
                     <md-autocomplete
                             md-clear-button="true" md-floating-label="Branch"
                             md-input-maxlength=126
@@ -42,9 +54,9 @@
                         </md-not-found>
                     </md-autocomplete>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <md-input-container class="md-block inputcontainer">
-                        <label> Transaction From Date</label>
+                        <label>From Date</label>
                         <md-datepicker md-hide-icons="calendar"
                                        ng-model="from_date"
                                        md-hide-icons="calendar" ng-click="date"
@@ -52,9 +64,9 @@
                                        formatDate></md-datepicker>
                     </md-input-container>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <md-input-container class="md-block inputcontainer">
-                        <label>Transaction To Date</label>
+                        <label>To Date</label>
                         <md-datepicker md-hide-icons="calendar"
                                        ng-model="to_date"
                                        md-hide-icons="calendar" ng-click="date"
@@ -64,17 +76,11 @@
                                        formatDate></md-datepicker>
                     </md-input-container>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="col-md-9"></div>
-                <div class="col-md-2">
-                    <md-button class="md-fab md-mini md-info custbutton"
-                               ng-disabled="!gl_number || !from_date || !to_date"
-                               href="get_Accounting_Entry_Data?action=GET&type=AP_TRANSACTION_GL_REPORT&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&gl_number={{gl_number}}&branch_gid={{t_branch_gid}}">
-                        <md-icon>get_app</md-icon>
-                        <md-tooltip>Transaction Report</md-tooltip>
+                <div class="col-md-3" style="margin-top:10px;">
+                    <md-button class="md-fab md-mini custbutton " ng-disabled="!gl_number || !from_date || !to_date"
+                               ng-click="get_transaction_report()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
                     </md-button>
 
                     <md-button class="md-fab md-mini md-warn "
@@ -82,10 +88,85 @@
                         <md-icon>search_off</md-icon>
                         <md-tooltip>Clear Search</md-tooltip>
                     </md-button>
+
+                    <md-button class="md-fab md-mini md-info custbutton"
+                               ng-disabled="!gl_number || !from_date || !to_date"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_TRANSACTION_GL_REPORT&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&gl_number={{gl_number}}&branch_gid={{t_branch_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Transaction Report</md-tooltip>
+                    </md-button>
+
                 </div>
-                <div class="col-md-1" style="margin-top:10px;">
-                    <span class="material-icons" ng-show="generate_show==1" ng-click="generate()">autorenew</span>
-                    Generate
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-9"></div>
+                <div class="col-md-2">
+
+
+                </div>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="row table-responsive">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                               md-progress="deferred">
+                            <thead class="header">
+                            <tr>
+                                <th>S NO</th>
+                                <th>Branch Name</th>
+                                <th>Branch Code</th>
+                                <th>Date</th>
+                                <th>DR/CR</th>
+                                <th>CCY</th>
+                                <th>EQ LCY AmountT</th>
+                                <th>Opening Balance</th>
+                                <th>Running Balance</th>
+
+
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="transaction in transaction_report_data.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict">
+                                <td>
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td>{{transaction.branch_name}}</td>
+                                <td>{{transaction.branch_code}}</td>
+                                <td>{{transaction.entry_transactiondate}}</td>
+                                <td>{{transaction.entry_type}}</td>
+                                <td>INR</td>
+                                <td>{{transaction.entry_amt}}</td>
+                                <td>{{transaction.opening}}</td>
+                                <td>{{transaction.closing}}</td>
+
+                            </tr>
+                            <tr ng-show="transaction_report_data.length ==  0">
+                                <td class="warning" colspan="10">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="8" align="center">
+                                    <ul uib-pagination total-items="transaction_report_data.length"
+                                        ng-model="currentPage"
+                                        max-size="maxSize"
+                                        class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                                </td>
+                                <td colspan="2">
+                                    Total Count:{{transaction_report_data.length}}
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -97,6 +178,7 @@
                     <md-autocomplete
                             md-clear-button="true" md-floating-label="Branch"
                             md-input-maxlength=126
+                            ng-required="true"
                             md-item-text="item.branch_detail"
                             md-items="item in get_branch(searchbrancheName)"
                             md-selected-item-change="branchNameChanged(item)"
@@ -119,14 +201,36 @@
                         <label> Date</label>
                         <md-datepicker md-hide-icons="calendar"
                                        ng-model="daily_from_date"
+                                       ng-required="true"
                                        md-hide-icons="calendar" ng-click="date"
                                        ng-change="change_day_download_from_date(daily_from_date)"
                                        formatDate></md-datepicker>
                     </md-input-container>
                 </div>
-                <div class="col-md-6">
+
+                <div class="col-md-3 col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>GL Type</label>
+                        <md-select ng-model="gl_type_name" multiple="" ng-change="changed_gl_type()">
+                            <md-optgroup label="GL Types">
+                                <md-option ng-value="invoice.gl_name"
+                                           ng-repeat="invoice in gl_list">
+                                    {{invoice.gl_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-button class="md-fab md-mini custbutton " ng-disabled="!daily_from_date"
+                               ng-click="get_daily_report_data()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+
                     <md-button class="md-fab md-mini md-info custbutton" ng-disabled="!daily_from_date"
-                               href="get_Accounting_Entry_Data?action=GET&type=AP_DAILY_GL_REPORT&download_from_date={{download_day_from_date}}&download_to_date={{download_to_date}}&gl_number={{gl_number}}&branch_gid={{branch_gid}}">
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_DAILY_GL_REPORT&download_from_date={{download_day_from_date}}&download_to_date={{download_to_date}}&branch_gid={{branch_gid}}&gl_type_name={{send_gl_type_name}}">
                         <md-icon>get_app</md-icon>
                         <md-tooltip>Daily Report</md-tooltip>
                     </md-button>
@@ -139,6 +243,65 @@
                     </md-button>
                 </div>
 
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="row table-responsive">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                               md-progress="deferred">
+                            <thead class="header">
+                            <tr>
+                                <th>S NO</th>
+                                <th>Branch Name</th>
+                                <th>Branch Code</th>
+                                <th>GL Number</th>
+                                <th>Date</th>
+                                <th>Debit Amount</th>
+                                <th>Credit Amount</th>
+                                <th>Opening  Balance</th>
+                                <th>Closing Balance</th>
+
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="daily in daily_report_data.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict">
+                                <td>
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td>{{daily.branch_name}}</td>
+                                <td>{{daily.branch_code}}</td>
+                                <td>{{daily.dayentry_gl}}</td>
+                                <td>{{daily.dayentry_transactiondate | date:'dd-MMM-yyyy'}}</td>
+                                <td>{{daily.dayentry_debitamt}}</td>
+                                <td>{{daily.dayentry_creditamt}}</td>
+                                <td>{{daily.dayentry_openingbalc}}</td>
+                                <td>{{daily.dayentry_closingbalc}}</td>
+                            </tr>
+                            <tr ng-show="daily_report_data.length ==  0">
+                                <td class="warning" colspan="10">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="8" align="center">
+                                    <ul uib-pagination total-items="daily_report_data.length"
+                                        ng-model="currentPage"
+                                        max-size="maxSize"
+                                        class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                                </td>
+                                <td colspan="2">
+                                    Total Count:{{daily_report_data.length}}
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -161,6 +324,26 @@
 
 .btn-default.btn-on-4.active{background-color: #006FFC;color: #5BB75B;}
 .btn-default.btn-off-4.active{background-color: #DA4F49;color: #DA4F49;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -205,6 +388,9 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'ap_report'
         $scope.download_from_date="";
         $scope.download_to_date="";
 
+        $scope.gl_list=[{"gl_name":"EXPENSE"},{"gl_name":"INCOME"},{"gl_name":"ASSET"},
+        {"gl_name":"LIABILITY"},{"gl_name":"OTHERS"}];
+
         $scope.loading = function() {
             $mdDialog.show({
                 templateUrl: 'loaderSpinner',
@@ -248,13 +434,16 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'ap_report'
             $scope.gl_number="";
             $scope.t_branch_gid="";
             $scope.t_selected_branch="";
-
-
+            $scope.transaction_report_data=[];
         }
+
         $scope.day_clear_seach=function(){
             $scope.daily_from_date="";
             $scope.selected_branch="";
             $scope.branch_gid="";
+            $scope.gl_type_name="";
+            $scope.selected_gl_type="";
+            $scope.daily_report_data=[];
         }
         $scope.generate_show=1;
         $scope.generate=function(){
@@ -282,18 +471,63 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'ap_report'
         }
         $scope.branch_gid="";
         $scope.branchNameChanged=function(data){
-            $scope.branch_gid=data.branch_gid;
+            $scope.branch_gid=(data.branch_gid).toString();
         }
 
         $scope.t_branch_gid="0";
         $scope.t_branchNameChanged=function(data){
             if(data!=undefined){
-                 $scope.t_branch_gid=data.branch_gid;
+                 $scope.t_branch_gid=(data.branch_gid).toString();
             }
             else{
                  $scope.t_branch_gid="0";
             }
 
+        }
+
+
+        $scope.gl_type_name=[];
+        $scope.send_gl_type_name="";
+        $scope.changed_gl_type=function(){
+            $scope.send_gl_type_name=$scope.gl_type_name.join();
+        }
+
+        $scope.transaction_report_data=[];
+        $scope.get_transaction_report=function(){
+            debugger;
+            var data={"action":"GET","type":"AP_TRANSACTION_GL_REPORT",
+            "filter":{"fromdate": $scope.download_from_date, "todate": $scope.download_to_date,"gl_number": $scope.gl_number,
+             "branch_gid": $scope.t_branch_gid}};
+            $scope.loading();
+             var ammort = ap_report.get_gl_report_data(data);
+            ammort.then(function(result) {
+                 var res = result.data;
+                 if(result.data.MESSAGE=="ERROR_OCCURED"){
+                    alert(JSON.stringify(result.data.DATA));
+                }
+                $scope.transaction_report_data=result.data;
+                 }, function(err) {
+                  alert("No Data");
+            }).finally($scope.endloading);
+
+        }
+        $scope.daily_report_data=[];
+        $scope.get_daily_report_data=function(){
+            debugger;
+             var data={"action":"GET","type":"AP_DAILY_GL_REPORT",
+                       "filter":{"fromdate": $scope.download_day_from_date, "todate": "",
+                       "branch_gid":$scope.branch_gid,"gl_type_name":$scope.send_gl_type_name}};
+            $scope.loading();
+             var daily = ap_report.get_gl_report_data(data);
+            daily.then(function(result) {
+                 var res = result.data;
+                 if(result.data.MESSAGE=="ERROR_OCCURED"){
+                    alert(JSON.stringify(result.data.DATA));
+                }
+                $scope.daily_report_data=result.data;
+                 }, function(err) {
+                  alert("No Data");
+            }).finally($scope.endloading);
         }
 
 
@@ -306,8 +540,33 @@ app.service("ap_report", function ($http) {
         return respons;
     }
 
+     this.get_gl_report_data = function(data){
+        var respons = $http.post(Appname + "/get_GL_Report/", data);
+        return respons;
+    }
+
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -354,6 +613,26 @@ app.service("ap_report", function ($http) {
 .D{
  background-color: #FFBDF3 !important;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -80,8 +80,13 @@ urlpatterns = [
     path('pmd_branch_summary/', views.pmd_branch_summary, name='pmd_branch_summary'),
     path('pmd_create/', views.pmd_create, name='pmd_create'),
     path('AP_Failed_Transaction/', views.AP_Failed_Transaction, name='AP_Failed_Transaction'),
+    path('AP_Advance_Summary/', views.AP_Advance_Summary, name='AP_Advance_Summary'),
+    path('AP_Entry_Update_Summary/', views.AP_Entry_Update_Summary, name='AP_Entry_Update_Summary'),
     path('get_pmd_data/', views.get_pmd_data, name='get_pmd_data'),
     path('set_pmd_data/', views.set_pmd_data, name='set_pmd_data'),
+    path('advance_get/', views.advance_get, name='advance_get'),
+    path('entry_update_get/', views.entry_update_get, name='entry_update_get'),
+    path('entry_update_set/', views.entry_update_set, name='entry_update_set'),
 
 
     path('bill/', views.bill, name='billentry'),
@@ -156,5 +161,8 @@ urlpatterns = [
     path('AP_to_FA_API/', views.fa_accounging_entry, name='fa_accounting_entry'),
     path('Session_Get_AP_Data/', views.Session_Get_AP_Data, name='Session_Get_AP_Data'),
     path('set_file_details/', views.set_file_details, name='set_file_details'),
+    path('get_GL_Report/', views.get_GL_Report, name='get_GL_Report'),
+    path('ECF_Claim_Status_Report/', views.ECF_Claim_Status_Report, name='ECF_Claim_Status_Report'),
+    path('ecf_common_report/', views.ecf_common_report, name='ecf_common_report'),
 
 ]

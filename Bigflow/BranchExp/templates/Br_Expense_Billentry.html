@@ -778,7 +778,7 @@
                                 <md-input-container class="md-block inputcontainer" ng-show="dtl.TDS_Click"
                                                     ng-disabled="commodity_name==1">
                                     <label>TYPE</label>
-                                    <md-select ng-model="dtl.Tax_Type" ng-disabled="commodity_name==1"
+                                    <md-select ng-model="dtl.Tax_Type"
                                                required>
                                         <md-option ng-repeat="x in Tax_Type" ng-click="Tax_click($parent.$index,x)"
                                                    ng-disabled="commodity_name==1"
@@ -1615,7 +1615,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
             if (index > 0) {
                 if (Paymode_name == "TDS") {
                        $scope.Creditdetail[index].taxable_amt= $scope.Amount_todb_sum;
-                    $scope.Creditdetail[index].Ref_No = $scope.panno;
+                    $scope.Creditdetail[index].Ref_No = "no ref";
                     $scope.Creditdetail[index].TDS_Click = true;
                 } else {
                     $scope.Creditdetail[index].Ref_No = "N";
@@ -2534,7 +2534,7 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                         $scope.invoicetaxamount = result.data[0].invoiceheader_taxableamt;
                         $scope.gstno = result.data[0].gst_no;
                         $scope.ppx_present = result.data[0].invoiceheader_ppx;
-                        $scope.supplier_name_ = result.data[0].supplier_name;
+                        $scope.supplier_name_ = result.data[0].supplier_branchname;
 <!--                        $scope.commodity_name = result.data[0].invoiceheader_commoditygid;-->
                         $scope.commodity_name =0;
 
@@ -2824,7 +2824,11 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
         var ppx_rejectdata = [];
 
         function credit_data_checker(id, type, check_value) {
-
+            if(check_value.length > 1){
+                    var a = check_value[0];
+                    var b = check_value[1];
+                    var check_value = [b,a];
+             }
             var credit = invoiceService.creditget_bank(id, type,$scope.selectedsource)
             credit.then(function(result) {
             debugger;
@@ -2838,6 +2842,22 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                     angular.forEach($scope.Credit, function(value, key) {
 
                         if (key == 0) {
+                                 angular.forEach(JSON.parse(value.tds_data), function(tdsvalue, key) {
+                                       if(tdsvalue.tds_tax_type != null){
+                                           $scope.Tax_Type.push({
+                                                "Type": tdsvalue.tds_tax_type,
+                                                "Subtax_glno": tdsvalue.subtax_glno,
+                                                "Rate": tdsvalue.tax_rate,
+                                                "Rate_type": tdsvalue.tds_tax_type.concat(tdsvalue.tax_rate),
+                                                "Exempt_Rate": tdsvalue.exempt_rate,
+                                                "Exempt_Threshold_Amount": tdsvalue.exempt_threshold_amount,
+                                                "ISEXEMPT": tdsvalue.ISEXEMPT,
+                                                "subtax_categorygid": tdsvalue.subtax_categorygid,
+                                                "subtax_subcategorygid": tdsvalue.subtax_subcategorygid,
+                                            });
+                                        }
+                                  })
+
                             angular.forEach(check_value, function(check_value, ecf_key) {
 
                                 if (check_value.Paymode_name == 'CHEQUE' || check_value.Paymode_name === "NEFT" || check_value.Paymode_name === "CRD" || check_value.Paymode_name === "AMORT" || check_value.Paymode_name === "KVBAC") {
@@ -2889,16 +2909,19 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                                         "bankbranch_ifsccode": "",
                                         "bankdetails_beneficiaryname": "",
                                         "bankbranch_name": "",
-                                        "GL_No": "",
+                                        "GL_No": check_value.credit_glno,
                                         "Bank_Gid": 0,
                                         "Ref_No": check_value.credit_refno,
                                         "Tax_Gid": "",
                                         "Tax_Type": check_value.credit_suppliertaxtype,
                                         "Tax_Rate": check_value.credit_suppliertaxtrate,
-                                        "TDS_Exempt": "",
+                                        "TDS_Exempt": "N",
                                         "Credit_Amount": check_value.credit_amount,
+                                        "taxable_amt": check_value.credit_taxableamount,
+                                        "Credit_catgid": check_value.credit_categorygid,
+                                        "Credit_subcatgid": check_value.credit_subcategorygid,
                                         "Credit_Gid": "",
-                                        "TDS_Click": false,
+                                        "TDS_Click": true,
                                         "paymode_dropdwn": [],
                                         "ppx_headergid": check_value.ppxheadergid,
                                         "Check": true
@@ -2946,12 +2969,12 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                             })
 
                         }
-                        $scope.Tax_Type.push({
-                            "Type": value.tds_tax_type,
-                            "Rate": value.tax_rate,
-                            "Exempt_Rate": value.exempt_rate,
-                            "Exempt_Threshold_Amount": value.exempt_threshold_amount,
-                        });
+<!--                        $scope.Tax_Type.push({-->
+<!--                            "Type": value.tds_tax_type,-->
+<!--                            "Rate": value.tax_rate,-->
+<!--                            "Exempt_Rate": value.exempt_rate,-->
+<!--                            "Exempt_Threshold_Amount": value.exempt_threshold_amount,-->
+<!--                        });-->
                         key++;
                     })
                 },
@@ -3235,10 +3258,12 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                 "TDS_Exempt": value.TDS_Exempt,
                 "Credit_Amount": Credit_Amoun,
                 "Credit_Gid": "0",
-                "taxable_amt": $scope.taxable_amt,
+                "taxable_amt": value.taxable_amt,
                 "ppx_headergid": value.ppx_headergid,
                 "Is_due" : $scope.checkbox_due.value,
-                "supplier_gid" : $scope.supplier_gid
+                "supplier_gid" : $scope.supplier_gid,
+                "Credit_catgid" : value.Credit_catgid,
+                "Credit_subcatgid" : value.Credit_subcatgid
             });
         }
 
@@ -4168,7 +4193,7 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
 
             var checker = invoiceService.checkersummary($scope.statusdtl.invoiceheader_crno, $scope.statusdtl.type);
             checker.then(function(result) {
-
+debugger;
                     $scope.count = 1;
                 angular.forEach(result.data.invoice, function(value, key) {
 

@@ -5,7 +5,15 @@ from Bigflow.Transaction.Model import mFET
 
 class BranchExp_model(mFET.FET_model):
     def print_parameters(sp_name, parameters):
-        pass
+        message_tuple = ("@message",)
+        listx = list(parameters)
+        listx.remove("")
+        tuplex = tuple(listx)
+        parameters3 = tuplex + message_tuple
+        print("set @message=0;")
+        print("call galley." + sp_name, parameters3, end="")
+        print(";")
+        print("select @message;")
 
     def get_expensedetails(self):
         cursor = connection.cursor()

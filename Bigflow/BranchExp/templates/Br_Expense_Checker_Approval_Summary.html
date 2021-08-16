@@ -88,7 +88,13 @@
                                 </md-button>
                             </div>
                         </div>
-
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-warn"
+                                       ng-click="clear_seach()">
+                                <md-icon>search_off</md-icon>
+                                <md-tooltip>Clear Search</md-tooltip>
+                            </md-button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -122,7 +128,7 @@
                         </td>
                         <td>{{sum.branchexpense_type}}</td>
                         <td>{{sum.branchexpense_amount}}</td>
-                        <td>{{sum.supplier_name}}</td>
+                        <td>{{sum.supplier_branchname}}</td>
                         <td>{{sum.branchexpense_recurringdate}}</td>
                         <td>{{sum.branchexpense_fromdate | date:'dd-MMM-yyyy'}}</td>
                         <td>{{sum.branchexpense_todate | date:'dd-MMM-yyyy'}}</td>
@@ -134,6 +140,11 @@
                             </i></a>
                         </td>
                     </tr>
+                    <tr ng-show="Expensesummary.length ==  0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
                     </tbody>
                     <tfoot>
                     <tr>
@@ -143,8 +154,7 @@
                                 class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
                         </td>
                         <td colspan="2" style="padding: 34px">
-                            <strong>Total Count:{{Total_Row}}</strong>
-
+                            <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
                         </td>
                     </tr>
                     </tfoot>
@@ -250,6 +260,9 @@
 
 
 
+
+
+
 </style>
 
 
@@ -270,7 +283,9 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
         $scope.currentPage = 1;
         $scope.maxSize = 3;
         $scope.itemsPerPage = 10;
+        $scope.Expensesummary=[];
         sessionStorage.removeItem('expense');
+
 
         $scope.loading = function() {
             $mdDialog.show({
@@ -284,20 +299,27 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
             $mdDialog.hide();
         };
 
-        $scope.pageChanged = function(){
+        $scope.total_row_execute=0;
+         $scope.pageChanged = function(){
+            debugger;
              if($scope.Expensesummary.length==0){
                 $scope.currentPage=1;
              }
-             expensesummary();
-        }
+              if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.get_total_row_expensesummary();
+              }
+             $scope.expensesummary_f();
+         }
 
          $scope.search_expense_summary=function(){
             $scope.currentPage=1;
             $scope.Total_Row=0;
-            expensesummary();
+            $scope.expensesummary_f();
+            $scope.total_row_execute=0;
         }
 
-        function expensesummary(){
+        $scope.expensesummary_f=function(){
             $scope.fdate = $filter('date')($scope.fromdate, 'yyyy-MM-dd');
             $scope.tdate = $filter('date')($scope.todate, 'yyyy-MM-dd');
             var datas = {
@@ -317,8 +339,13 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
                 $scope.Expensesummary = result.data.DATA;
                 console.log($scope.Expensesummary);
                 $scope.maker_summary_filter = result.data.DATA;
-                if($scope.currentPage==1){
-                        $scope.Total_Row=$scope.Expensesummary[0].Total_Row;
+                if($scope.total_row_execute==0){
+                        $scope.Total_Row=($scope.Expensesummary.length)+($scope.currentPage*10);
+                }
+                if($scope.Expensesummary.MESSAGE=="NOT_FOUND"){
+                    $scope.Expensesummary =[];
+                    $scope.maker_summary_filter =[];
+                    return false;
                 }
                 if(result.data.MESSAGE=="ERROR_OCCURED"){
                     alert(JSON.stringify(result.data.DATA));
@@ -330,7 +357,37 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
                 alert(JSON.stringify(result.data));
            }).finally($scope.endloading);
         }
-        expensesummary();
+        $scope.expensesummary_f();
+        $scope.get_total_row_expensesummary=function(){
+            debugger;
+             $scope.fdate = $filter('date')($scope.fromdate, 'yyyy-MM-dd');
+            $scope.tdate = $filter('date')($scope.todate, 'yyyy-MM-dd');
+            var datas = {
+                "Params": {"FILTER":{"branchexpense_type":$scope.expense_type,
+                    "branchexpense_amount":$scope.expense_amount,"branchexpense_fromdate":$scope.fdate,
+                    "branchexpense_todate":$scope.tdate,"supplier_name":$scope.expense_supplier_name,
+                    "branchexpense_status":$scope.expense_recurring_status,
+                    "branchexpense_recurringperiod":$scope.expense_recurring_peroid,
+                    "Page_Index":0,"Page_Size":$scope.itemsPerPage}},
+                "Group": "EXPENSE_DATA",
+                "Type": "EXPENSE",
+                "Sub_Type": "COMMODITY_LEVEL_COUNT"
+            }
+            $scope.loading();
+            var columndata = summary.get_expensesummary(datas);
+            columndata.then(function(result) {
+                $scope.Expensesummary_Count = result.data.DATA;
+                console.log($scope.Expensesummary);
+                $scope.Total_Row=$scope.Expensesummary_Count[0].count;
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                    alert(JSON.stringify(result.data.DATA));
+
+                }
+            },
+           function(err) {
+                alert(JSON.stringify(result.data));
+           }).finally($scope.endloading);
+        }
 
         $scope.myfun = function() {
                 $scope.fdate = $filter('date')($scope.fromdate, 'dd-MMM-yy');
@@ -380,6 +437,13 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
             $scope.expense_types=result.data.DATA;
             console.log(result.data.DATA);
        });
+       $scope.clear_seach=function(){
+            $scope.expense_recurring_status="";
+            $scope.expense_recurring_peroid="";
+            $scope.expense_supplier_name="";
+            $scope.expense_amount="";
+            $scope.expense_type="";
+        }
 
 
        $scope.go_to_approval = function(expense) {
@@ -419,6 +483,9 @@ app.service("summary", function ($http) {
     }
 
 });
+
+
+
 
 
 

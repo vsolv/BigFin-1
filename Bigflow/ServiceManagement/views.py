@@ -27,6 +27,8 @@ def Service_Management_Template(request,template_name):
 
 
 def get_Service_Management(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         type=jsondata.get('params').get('type')
@@ -61,6 +63,8 @@ def get_Service_Management(request):
             return JsonResponse(json.loads(results), safe=False)
 
 def set_Service_Management(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         jsondata1= json.loads(request.body.decode('utf-8'))
@@ -99,6 +103,8 @@ def set_Service_Management(request):
             return HttpResponse(results)
 
 def sms_File_Upload(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST' or request.FILES['file']:
         dd = base64.b64encode(request.FILES['file'].read())
         file = dd.decode("utf-8")
@@ -107,13 +113,15 @@ def sms_File_Upload(request):
         return JsonResponse(base)
 
 def category_data(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action = jsondata.get('params').get('action')
         type=jsondata.get('params').get('type')
         sub_type = jsondata.get('params').get('sub_type')
-        entity_gid = int(decry_data(request.session['Entity_gid']))
-        create_by = int(decry_data(request.session['Emp_gid']))
+        entity_gid = request.session['Entity_gid']
+        create_by = request.session['Emp_gid']
         if type=="Mode" and sub_type=="Summary":
             table_data ={
                 "Table_name":"fa_mst_tassetcat",
@@ -149,6 +157,8 @@ def category_data(request):
         return HttpResponse(response)
 
 def Get_All_Table_Metadata(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action = jsondata.get('params').get('action')
@@ -233,6 +243,8 @@ def Get_All_Table_Metadata(request):
         return HttpResponse(response)
 
 def set_AMC_Details(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action=jsondata.get('params').get('action')
@@ -249,6 +261,8 @@ def set_AMC_Details(request):
         return JsonResponse((results), safe=False)
 
 def get_AMC_Details(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action=jsondata.get('params').get('action')
@@ -266,17 +280,48 @@ def get_AMC_Details(request):
 
 def Get_Employee_Data(request):
         utl.check_pointaccess(request)
+        utl.check_authorization(request)
         if request.method == 'GET':
-            table_name = 'employee'
-            entity_gid = int(decry_data(request.session['Entity_gid']))
-            create_by = int(decry_data(request.session['Emp_gid']))
-            gid = 0
-            params = {'table_name': table_name, 'entity_gid': entity_gid, 'gid': gid}
-            token = jwt.token(request)
-            headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-            result = requests.post("" + ip + "/All_Tables_Values_Get_Data", params=params, headers=headers,
-                                   verify=False)
-            results = result.content.decode("utf-8")
-            return JsonResponse(json.loads(results), safe=False)
+            try:
+                table_name = 'employee'
+                entity_gid = int(decry_data(request.session['Entity_gid']))
+                create_by = int(decry_data(request.session['Emp_gid']))
+                gid = 0
+                params = {'table_name': table_name, 'entity_gid': entity_gid, 'gid': gid}
+                token = jwt.token(request)
+                datas = json.dumps({"Entity_Gid":entity_gid})
+                headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+                result = requests.post("" + ip + "/All_Tables_Values_Get_Data", params=params, headers=headers,data=datas,verify=False)
+                results = result.content.decode("utf-8")
+                return JsonResponse(json.loads(results), safe=False)
+            except Exception as e:
+                return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
+def Session_Set_SMS_Data(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        jsondata = json.loads(request.body.decode('utf-8'))
+        action = jsondata.get('action')
+        type = jsondata.get('type')
+        session_key_values=jsondata.get("filter")
+        if action == "SET":
+            for (k, v) in session_key_values.items():
+                request.session[k] = v
+                print(k,v)
+            return HttpResponse("SUCCESS")
 
+def Session_Get_SMS_Data(request):
+        utl.check_pointaccess(request)
+        utl.check_authorization(request)
+        if request.method == 'POST':
+            jsondata = json.loads(request.body.decode('utf-8'))
+            action = jsondata.get('action')
+            type = jsondata.get('type')
+            session_keys=jsondata.get("filter")
+            data={}
+            if action == "GET":
+                for (k, v) in session_keys.items():
+                    data[k]=request.session[k]
+                    print(k,v)
+            return JsonResponse(data, safe=False)

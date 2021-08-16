@@ -390,11 +390,12 @@
                                                             items-per-page="credit_itemsPerPage"></ul>
                                                     </td>
                                                     <td colspan="3">
-                                                        <h3><span class="editlink material-icons"
-                                                                  style="color:green;"
-                                                                  ng-click="view_payment_ins()">arrow_upward
-                                                            </span>
-                                                        </h3>View Payment Instruction
+                                                        TDS Applicability :{{checker_data[0].invoiceheader_tds}}
+                                                        <h5>
+                                                            <a href="" style="color:green;"
+                                                               ng-click="view_payment_ins()"> View Payment / TDS
+                                                                Instruction</a>
+                                                        </h5>
                                                     </td>
                                                     <td colspan="2">
                                                         Total Records:{{credit_summary_new.length}}
@@ -1106,7 +1107,7 @@
                                             <thead class="header">
                                             <tr>
                                                 <th>S.No</th>
-                                                <th>Fine Name</th>
+                                                <th>File Name</th>
                                                 <th>View File</th>
                                                 <th>Download File</th>
                                             </tr>
@@ -1117,14 +1118,26 @@
                                                 <td>{{((currentPages-1)*itemsPerPages)+$index+1}}
                                                 </td>
                                                 <td align="left">{{file.file_name}}</td>
-                                                <td><span class="editlink material-icons"
+                                                <td>
+                                                    <span class="editlink material-icons"
+                                                          ng-hide="file.file_path=='RENT'"
                                                           ng-click="view_file(file)">insert_photo
-                                                        </span>
+                                                    </span>
+
                                                 </td>
                                                 <td>
                                                     <md-button class="md-icon-button md-primary"
                                                                aria-label="Settings"
+                                                               ng-hide="file.file_path=='RENT'"
                                                                href="common_s3_file_download?filename={{file.file_name}}">
+                                                        <md-icon>get_app</md-icon>
+                                                        <md-tooltip>Download File</md-tooltip>
+                                                    </md-button>
+
+                                                    <md-button class="md-icon-button md-primary"
+                                                               aria-label="Settings"
+                                                               ng-click="download_rent_file(file)"
+                                                               ng-show="file.file_path=='RENT'">
                                                         <md-icon>get_app</md-icon>
                                                         <md-tooltip>Download File</md-tooltip>
                                                     </md-button>
@@ -1244,7 +1257,9 @@
                                                 1
                                             </td>
                                             <td>{{other_datas.invoicedetails_invoiceno}}</td>
-                                            <td>{{other_datas.invoicedetails_invoicedate}}</td>
+                                             <td align="center">{{other_datas.invoicedetails_invoicedate | date:"dd-MMM-yyyy"}}
+                                                <p style="color:red;">{{six_month_date_alert}}</p>
+                                            </td>
                                             <td>{{other_datas.invoicedetails_branchgstno}}</td>
                                             <td>{{other_datas.invoicedetails_suppliername}}</td>
                                             <td>{{other_datas.invoicedetails_suppliercode}}</td>
@@ -1687,6 +1702,9 @@
     .title-color{
     color:#2159A6;
     }
+
+
+
 
 
 
@@ -2589,8 +2607,24 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
       return $sce.trustAsHtml(html);
     }
 
+    $scope.today_date = new Date();
+    $scope.maxDates = new Date(
+            $scope.today_date.getFullYear(),
+            $scope.today_date.getMonth() - 6,
+            $scope.today_date.getDate() - 1
+    );
+
+    $scope.six_month_date_alert="";
     $scope.view_other_details=function(invoice){
+        debugger;
             $scope.other_datas=invoice;
+            $scope.other_date=new Date(invoice.invoicedetails_invoicedate)
+            if( $scope.other_date<$scope.maxDates){
+                $scope.six_month_date_alert="Date is greater than six months";
+            }
+            else{
+                $scope.six_month_date_alert="";
+            }
     };
 
     $scope.view_mail_details=function(){
@@ -2756,6 +2790,31 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
             }).finally($scope.endloading);
 
      }
+    $scope.download_rent_file=function(file){
+        debugger;
+        var file_gid=file.file_gid;
+        var file_name=file.file_name;
+        var token="";
+        debugger;
+        var datas={params:{"Action":"TOKEN"}};
+         $scope.loading_view_attached_file();
+            var summarys_branch = invoice_service.get_memo_details(datas);
+            summarys_branch.then(function(result) {
+                $scope.endloading();
+                token=result.data.token;
+                memo_ip=result.data.memo_ip;
+                if(token!=undefined){
+                    $window.open(memo_ip+"/prserv/file/"+file_name+'?token='+token,'_blank');
+                }
+                else{
+                    alert(JSON.stringify(result.data));
+                }
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+     }
+
 
 
 
@@ -2838,9 +2897,17 @@ app.service("invoice_service", function ($http) {
             var response = $http.post(Appname + "/common_read_file/", data);
             return response;
     }
+    this.get_memo_details = function (data) {
+            var response = $http.post(Appname + "/memo_details/", data,
+            );
+            return response;
+    }
 
 
 });
+
+
+
 
 
 

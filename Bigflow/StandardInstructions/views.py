@@ -24,6 +24,8 @@ def StandardInstructions_Templates(request,template_name):
 
 
 def Get_All_Table_Metadata_Value(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action = jsondata.get('params').get('action')
@@ -53,6 +55,8 @@ def Get_All_Table_Metadata_Value(request):
         return HttpResponse(response)
 
 def Set_SI_Details(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action=jsondata.get('params').get('action')
@@ -69,6 +73,8 @@ def Set_SI_Details(request):
         return JsonResponse((results), safe=False)
 
 def Get_SI_Details(request):
+    utl.check_pointaccess(request)
+    utl.check_authorization(request)
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         action=jsondata.get('params').get('action')

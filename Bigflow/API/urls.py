@@ -1,6 +1,7 @@
 from django.urls import path
 
 # import Bigflow.Core.models
+import Bigflow
 from Bigflow.API import views as view, view_atma
 from Bigflow.API import view_service as view_service
 from Bigflow.API import view_master as view_master
@@ -12,7 +13,7 @@ from django.conf.urls import url, include
 from Bigflow.API import view_purchase as view_purchase
 from Bigflow.API import view_fa as view_fa
 # from Bigflow.API import view_user as view_user
-from Bigflow.API import  view_branchexp as view_branchexp
+from Bigflow.API import view_branchexp as view_branchexp
 from Bigflow.API import view_ap as view_ap
 from rest_framework_simplejwt import views as jwt_views
 # from Bigflow.API import view_ap as ap_api_view
@@ -23,7 +24,7 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     path('login/', view.login.as_view()),
-    path('login_AD',view.LoginBigflow.as_view()),
+    path('login_AD', view.LoginBigflow.as_view()),
     path('Change_Password', view.Change_Password.as_view()),
     path('user_rights', view.UM_RightsMenu.as_view()),
     path('FET_Schedule', view.FET_Schedule.as_view()),
@@ -103,11 +104,11 @@ urlpatterns = [
 
     # purchase
     path('PurchaseRequest_Set', view.Purchase_request_API.as_view()),
-    path('Get_Grn_Details',view_purchase.Grn_Details.as_view()),
-    path('Expense_Line_API',view_purchase.Expense_Line_API.as_view()),
-    path('Get_allreport',view_purchase.Get_allreport.as_view()),
-    path('Agaentsmry',view_report.Agaentsmry.as_view()),
-   # path('Set_Poterms', view_purchase.Set_Poterms.as_view()),
+    path('Get_Grn_Details', view_purchase.Grn_Details.as_view()),
+    path('Expense_Line_API', view_purchase.Expense_Line_API.as_view()),
+    path('Get_allreport', view_purchase.Get_allreport.as_view()),
+    path('Agaentsmry', view_report.Agaentsmry.as_view()),
+    # path('Set_Poterms', view_purchase.Set_Poterms.as_view()),
     # path('Alltable_ccbs', view.Purchase_request_API.as_view()),
 
     ### Report_Customer_Performance
@@ -124,7 +125,6 @@ urlpatterns = [
     # Carton
     path('All_product_get', view_master.All_Product_Get.as_view()),
 
-
     ## TA - claim
     path('Claim_Initial', view_Claim.TA_Initial.as_view()),
     path('Scanning', view_Claim.ScanModule.as_view()),
@@ -140,7 +140,7 @@ urlpatterns = [
     path('File_Upload_Barcode', view.File_Save.as_view()),
 
     ### PR PO Query
-    path('PRPO_Query',view_report.PRPO_Query.as_view()),
+    path('PRPO_Query', view_report.PRPO_Query.as_view()),
 
     ### HSN master
     path('HSN_MASTER', view_master.Hsn_Master.as_view()),
@@ -148,12 +148,8 @@ urlpatterns = [
     ### Tax master
     path('TAX_MASTER', view_master.Tax_Master.as_view()),
 
-
-
-
-
     ### BUSINESS_SEGMENT
-     path('BUSINESS_SEG', view_master.Business_Segment.as_view()),
+    path('BUSINESS_SEG', view_master.Business_Segment.as_view()),
 
     ### BUSINESS_SEGMENT
     path('COURIER_MST', view_master.Courier_Master.as_view()),
@@ -171,11 +167,8 @@ urlpatterns = [
     path('FA_SALE', view_fa.FA_Sale.as_view()),
     path('FA_DEPRECIATION', view_fa.FA_Depreciation.as_view()),
     path('FIN_YEAR', view_fa.FinYear.as_view()),
-    path('ENTITY_DETAILS',view_fa.Entity_Details.as_view()),
+    path('ENTITY_DETAILS', view_fa.Entity_Details.as_view()),
     # path('FA_CLEARANCE',view_fa.FA_ClearanceLock.as_view()),
-
-
-
 
     ##Atma
     path('GET_ATMA_Data', view_atma.GET_ATMA_Data.as_view()),
@@ -200,24 +193,23 @@ urlpatterns = [
     path('atmaCatalog_Getapi', view_atma.atmaCatalog_Getapi.as_view()),
     path('atma_main_insert', view_atma.atma_main_setapi.as_view()),
     path('Prmaker_Setapi', view_atma.Prmaker_Set.as_view()),
-    path('PRMAKERapi',view_atma.PRMAKER.as_view()),
+    path('PRMAKERapi', view_atma.PRMAKER.as_view()),
     path('atma_profileproduct_getapi', view_atma.Partnerproductapi_get.as_view()),
     path('atma_profileproduct_setapi', view_atma.Partnerproductapi_set.as_view()),
     path('PartnerdeactivateSet_api', view_atma.Partnerdeactivateapi_Set.as_view()),
     path('approval_stagesapi', view_atma.approval_stagesapi.as_view()),
     path('approval_paartnergetapi', view_atma.approval_paartnergetapi.as_view()),
-    path('Partnerapproval',view_atma.Partnerapproval.as_view()),
-    path('Partnerdisapproval',view_atma.Partnerdisapproval.as_view()),
-    path('Update_changerequest_API',view_atma.Update_changerequest_API.as_view()),
+    path('Partnerapproval', view_atma.Partnerapproval.as_view()),
+    path('Partnerdisapproval', view_atma.Partnerdisapproval.as_view()),
+    path('Update_changerequest_API', view_atma.Update_changerequest_API.as_view()),
     path('atma_ProductCatSubCat_getAPI', view_atma.atma_ProductCatSubCat_getAPI.as_view()),
     # path('MasterSyncData', view.MasterSyncData.as_view()),
 
-# User
+    # User
     # path('User_App_Set', view_user.Master_user_App_Set.as_view()),
     # path('User_App_Get', view_user.Master_user_App_Get.as_view()),
 
-
-#BranchExp
+    # BranchExp
 
     # path('Br_Property_Proccess_Get', view_branchexp.Property_Process.as_view()),
     # path('Br_Property_Proccess_Set',view_branchexp.Property_Process_Set.as_view()),
@@ -225,33 +217,37 @@ urlpatterns = [
     # path('Expense_Process',view_branchexp.Expense_Process.as_view()),
     # path('Expense_ProcessSet',view_branchexp.Expense_Process_Set.as_view()),
 
-    #Master
-     path('Master_State_Details',view.State_Process_Set.as_view()),
+    # Master
+    path('Master_State_Details', view.State_Process_Set.as_view()),
 
-     path('Product_spec',view.prod_spec.as_view()),
+    path('Product_spec', view.prod_spec.as_view()),
 
-    #Mep
+    # Mep
 
     # AP
-     #path('EMP_BANK_DATA', view_ap.Emp_Bank_Details.as_view())
+    # path('EMP_BANK_DATA', view_ap.Emp_Bank_Details.as_view())
 
-#masterSyncData
+    # masterSyncData
     path('Master_Sync_Data_API', view_report.MasterSync_Data_.as_view()),
     ### MAster Sync Orm
-    path('MasterSyncORM',view_master.MasterSyncORM.as_view()),
+    path('MasterSyncORM', view_master.MasterSyncORM.as_view()),
     ## Token
     # path('api/token/', jwt_views.TokenObtainPairView.a    s_view(), name='token_obtain_pair'),
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
 
     path('token', view.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('insert_ap_frm_memo',view_master.new_data_insert.as_view()),
-    path('insert_ecf_frm_memo',view_master.new_ecf_data_insert.as_view()),
-    path('get_ecfpdf_fr_memo',view_master.new_ecf_pdf_get.as_view()),
-    path('PPR_Data_Get',view_report.PPR_Data_Get.as_view()),
-    path('AllTableValues_Get',view_report.AllTableValues_Get.as_view()),
-    path('update_personal_infonum',view_master.update_pesonal_number.as_view()),
+    path('insert_ap_frm_memo', view_master.new_data_insert.as_view()),
+    path('insert_ecf_frm_memo', view_master.new_ecf_data_insert.as_view()),
+    path('get_ecfpdf_fr_memo', view_master.new_ecf_pdf_get.as_view()),
+    path('PPR_Data_Get', view_report.PPR_Data_Get.as_view()),
+    path('PPR_Data_Set', view_report.PPR_Data_Set.as_view()),
+    path('AllTableValues_Get', view_report.AllTableValues_Get.as_view()),
+    path('PPR_Budget_Get', view_report.PPR_Budget_Get.as_view()),
+    path('PPR_Budget_Set', view_report.PPR_Budget_Set.as_view()),
+    path('update_personal_infonum', view_master.update_pesonal_number.as_view()),
 
     # path('verify_token', view.verifyToken.as_view(), name='token_verify'),
     #  path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    # path('GeolocationSDCP_Set',Bigflow.Core.views.geolocation_micro_to_mono.as_view()),
+
+    path('GeolocationSDCP_Set', view.geolocation_micro_to_mono.as_view()),
 ]

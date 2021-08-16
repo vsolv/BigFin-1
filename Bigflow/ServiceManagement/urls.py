@@ -14,4 +14,6 @@ urlpatterns = [
     path('Get_All_Table_Metadata/',views.Get_All_Table_Metadata,name="Get_All_Table_Metadata"),
     path('Get_Employee/',views.Get_Employee_Data,name="Get_All_Table_Metadata"),
     path('SMS_Followup_File_Upload/',views.sms_File_Upload,name="Get_All_Table_Metadata"),
+    path('Session_Set_SMS_Data/', views.Session_Set_SMS_Data, name='Session_Set_Expense_Data'),
+    path('Session_Get_SMS_Data/', views.Session_Get_SMS_Data, name='Session_Get_Expnese_Data'),
     ]

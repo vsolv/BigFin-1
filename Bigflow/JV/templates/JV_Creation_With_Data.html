@@ -1,0 +1,792 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} JV Creation {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>JV Creation </h4>
+            </div>
+        </div>
+        <form name="jv_form" novalidate>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label> Type</label>
+                            <md-select ng-model="selectedtype" ng-required="true">
+                                <md-option ng-repeat="x in jv_types"
+                                           ng-value="x.metadata_gid"
+                                           ng-click="typeclick(x.metadata_value)">{{ x.metadata_value }}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3" ng-show="show_status=='R'">
+                        <md-input-container class="md-block inputcontainer" md-no-float>
+                            <input maxlength="256" ng-model="jv_cr_number"
+                                   placeholder="JV Number">
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-1" ng-show="show_status=='R'">
+                        <md-button class="md-fab md-mini md-primary custbutton"
+                                   ng-click="find_cr_number('FIND_JV_CR_NUMBER',jv_cr_number)">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+
+
+                    <div class="col-md-3" ng-show="show_status=='R'">
+                        <md-input-container class="md-block inputcontainer" md-no-float>
+                            <input maxlength="256" ng-model="ap_cr_number"
+                                   placeholder="CR Number">
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-1" ng-show="show_status=='R'">
+                        <md-button class="md-fab md-mini md-primary custbutton"
+                                   ng-click="find_cr_number('FIND_AP_CR_NUMBER',ap_cr_number)">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Txn Date</label>
+                            <md-datepicker md-hide-icons="calendar" ng-model="txn_date"
+                                           md-hide-icons="calendar"
+                                           ng-required="true"
+                                           ng-click="date" md-min-date="maxDate"
+                                           md-max-date="minDate" formatDate></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-4">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Branch"
+                                         md-item-text="item.branch_detail"
+                                         md-items="item in getBranch(search_branch)"
+                                         md-menu-class="md-virtual-repeat-container"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         ng-required="true"
+                                         md-search-text="search_branch"
+                                         md-selected-item="selected_branch"
+                                         md-selected-item-change="Branch_Change(item)">
+                            <md-item-template>
+                                <span md-highlight-text="search_branch"> {{item.branch_detail}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch matching "{{search_branch}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-2" style="margin-top: 35px;">
+                        <input class="ng-isolate-scope" file-model="files" fileinput="file" id="file"
+                               multiple type="file"/>
+                    </div>
+                    <div class="col-md-1">
+                        <md-button ng-click="upload_data()" class="md-raised">Upload Data
+                            <md-tooltip>Upload Data</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed md-primary"
+                           md-progress="deferred">
+                        <thead class="header">
+                        <tr>
+                            <th>S NO</th>
+                            <th>Entry Type</th>
+                            <th>Branch</th>
+                            <th>AP Category</th>
+                            <th>AP Subcategory</th>
+                            <th>BS</th>
+                            <th>CC</th>
+                            <th>CBS GL</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-class="jv.details_type_name"
+                            ng-repeat="jv in jv_details.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage))">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td align="center">{{jv.details_type_name}}</td>
+                            <td align="center">{{jv.details_branch_code}}</td>
+                            <td align="center">{{jv.category_name}}</td>
+                            <td align="center">{{jv.subcategory_name}}</td>
+                            <td align="center">{{jv.bs_name}}</td>
+                            <td align="center">{{jv.cc_name}}</td>
+                            <td align="center">{{jv.gl_no}}</td>
+                            <td align="center">{{jv.details_description}}</td>
+                            <td align="right">{{jv.details_amount}}</td>
+                        </tr>
+                        <!--                        <tr ng-show="jv_details.length ==  0">-->
+                        <!--                            <td class="warning" colspan="10">-->
+                        <!--                                ADD Records-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        </tbody>
+                        <tfoot>
+                        <tr align="center">
+                            <td colspan="3">
+                                <ul uib-pagination total-items="jv_details.length" ng-model="currentPage"
+                                    max-size="maxSize"
+                                    class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="2" align="center"><h5>Sum Of Debits:{{sum_of_debits}}</h5></td>
+                            <td colspan="2" align="center"><h5>Sum Of Credits:{{sum_of_credits}}</h5></td>
+                            <td colspan="3">
+                                Total Count:{{jv_details.length}}
+                            </td>
+
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <br/>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-7">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Description</label>
+                            <input ng-model="header_description" no-special-char maxlength="80" ng-required="true">
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3" style="margin-top: 20px;">
+                        <input class="ng-isolate-scope" file-model="files"
+                               fileinput="file" id="upload_file" multiple type="file"
+                               onchange="angular.element(this).scope().imageUpload(event)"/>
+                    </div>
+
+                    <div class="col-md-2" style="margin-top: 35px;" ng-show="image_visible=='true'">
+                        <button type="button" class="btn btn-info" ng-click="view_images_popup()">View Images
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-offset-5">
+                        <md-button class="md-raised custbutton"
+                                   value="submit"
+                                   ng-click="create_jv()"
+                                   ng-disabled="jv_form.$invalid || jv_details.length=='0' || sum_of_debits!=sum_of_credits">
+                            SUBMIT
+                        </md-button>
+                        <a href="JV/JV_Maker_Summary/">
+                            <md-button class="md-raised" value="close"
+                                       aria-label="Close">Cancel
+                            </md-button>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!--            <pre>{{jv_details | json}}</pre>-->
+            <div class="modal fade" id="view_images" tabindex="-1" role="dialog" data-backdrop="static"
+                 data-keyboard="false"
+                 aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                    <div class="modal-content">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabels2">
+                                ALL IMAGES
+                                <button type="button" class="close" data-dismiss="modal"
+                                        ng-click="close_pr_popup()"
+                                        aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                        <div class="body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="center" ng-show="file_path.length=='0'">
+                                        <h3>No Attached File</h3>
+                                    </div>
+                                    <div class="col-md-offset-10" ng-show="file_path.length!='0'">
+
+                                    <span class="editlink" ng-click="remove_all_files()">
+                               <span class="material-icons removelink">delete</span>
+                                <md-tooltip>Remove All</md-tooltip>
+                                </span>
+                                        <span>Remove All</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div ng-repeat="files in file_path">
+                                        <div class="col-md-10">
+                                            <h5 style="color:blue">{{files.file_name}}</h5>
+                                            <img src="{{files.file}}" alt="{{files}}" ng-hide="files.extension=='pdf'"
+                                                 class="myimage img-responsive thumbnail">
+
+                                            <object width="870px" height="500px" ng-show="files.extension=='pdf'"
+                                                    data="{{files.file}}" class="internal">
+                                                <embed src="{{files.file}}"/>
+                                                <br/>
+                                            </object>
+                                            <hr/>
+                                        </div>
+                                        <div class="col-md-1" style="margin-top:200px;">
+                                        <span class="editlink" ng-click="delete_one_file($index,files.file_name)">
+                                        <span class="material-icons removelink">delete</span>
+                                        </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-offset-6">
+                                    <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                               aria-label="Close">OK
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','jv_service','$mdDialog','$window','$filter','$http','$q','$sce',
+function($scope,jv_service,$mdDialog,$window,$filter,$http,$q,$sce) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.maintable = [];
+    $scope.amc_assets=[];
+    $scope.models = {};
+    $scope.sum_of_credits=0;
+    $scope.sum_of_debits=0;
+    $scope.jv_header_gid=0;
+    $scope.cr_number="";
+
+    $scope.minDate=new Date();
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.entry_type=[{"name":"C","entry_gid":2},{"name":"D","entry_gid":1}];
+
+    $scope.show_status="";
+    $scope.typeclick = function(type) {
+        if (type == "Rectification-Entry"){
+            $scope.show_status="R";
+        }
+        else if(type=="New-Entry"){
+            $scope.show_status="N";
+
+        }
+    }
+    $scope.jv_details=[];
+    $scope.upload_data = function() {
+        debugger;
+        $scope.data_is=1;
+        var file_img = document.getElementById('file').files[0];
+        var file_name=file_img.name;
+        var imgs = new FormData();
+        imgs.append('file', file_img);
+        imgs.append('name', file_name);
+            if(file_img!=undefined){
+              $scope.loading();
+                 var upload_datas = jv_service.upload_data(imgs);
+                 upload_datas.then(function(result) {
+                    var res= result.data;
+                    $scope.jv_details=res;
+                    if($scope.jv_details.length==1){
+                         $scope.data_is=0;
+                        alert(JSON.stringify(res));
+                        $scope.jv_details=[];
+                    }
+
+                    for(var k=0;k<$scope.jv_details.length;k++){
+                        if($scope.jv_details[k].details_type_name=="C")
+                        {
+                            $scope.sum_of_credits+=parseFloat($scope.jv_details[k].details_amount)
+                        }
+                        else if($scope.jv_details[k].details_type_name=="D"){
+                            $scope.sum_of_debits+=parseFloat($scope.jv_details[k].details_amount)
+                        }
+                    }
+                    $scope.sum_of_credits = $scope.sum_of_credits.toFixed(2);
+                    $scope.sum_of_debits = $scope.sum_of_debits.toFixed(2);
+
+                    console.log(res);
+                    if(res.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(res));
+                    }
+
+                }).finally($scope.endloading);
+            }else{
+             alert("Choose File");
+            }
+    }
+
+   $scope.getBranch = function(query) {
+
+        var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                       "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                    "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+
+                 return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+
+                    var final_values=data.data.DATA;
+                    console.log(final_values);
+                    return final_values;
+                  });
+   }
+
+
+   var get_jv_types = jv_service.get_all_table_metadata_values();
+        get_jv_types.then(function(result) {
+            $scope.jv_types = result.data.DATA;
+            console.log($scope.jv_types);
+
+        }, function() {
+           alert("Some Interanal Error");
+   });
+
+   $scope.stepsModel=[];
+    $scope.image_visible="false";
+    $scope.imageUpload = function(event){
+    debugger;
+    $scope.stepsModel=[];
+    $scope.filenames = [];
+    $scope.image_visible ="true";
+         var files = event.target.files; //FileList object
+         for (var i = 0; i < files.length; i++) {
+             var file = files[i];
+                 var reader = new FileReader();
+                 reader.onload = $scope.imageIsLoaded;
+                 reader.readAsDataURL(file);
+                 $scope.filenames.push(file.name);
+         }
+    }
+    $scope.sttepsModel_Last=[];
+    $scope.imageIsLoaded = function(e){
+        $scope.$apply(function() {
+            $scope.stepsModel.push(e.target.result);
+        });
+        $scope.sttepsModel_Last=[];
+        for(var k=0;k<$scope.filenames.length;k++){
+           $scope.extension_1=$scope.filenames[k].substr($scope.filenames[k].lastIndexOf('.')+1);
+            $scope.sttepsModel_Last.push({"file":$scope.stepsModel[k],"file_name":$scope.filenames[k],"extension":$scope.extension_1});
+        }
+    }
+
+
+    $scope.view_images_popup=function(){
+
+<!--            $scope.file_path = $scope.stepsModel;-->
+        $scope.file_path = $scope.sttepsModel_Last;
+        console.log($scope.file_path);
+        console.log($scope.sttepsModel_Last);
+        modalshow('view_images');
+
+    }
+
+    $scope.deleted_files=[];
+    $scope.delete_one_file=function(index,file_name){
+        debugger;
+        $scope.file_imglength = document.getElementById('upload_file').files.length;
+        for(i=0;i<$scope.file_imglength;i++){
+            if(i==index){
+                $scope.file_path.splice(i, 1);
+<!--                    var file_img = document.getElementById('upload_file').files[i];-->
+<!--                    var file_name=file_img.name;-->
+                $scope.deleted_files.push({"file_names":file_name});
+            }
+        }
+        if($scope.file_path.length==0){
+            $scope.remove_all_files();
+        }
+    }
+
+
+    $scope.remove_all_files=function(){
+        $scope.file_path=[];
+        $scope.deleted_files=[];
+        elmn = angular.element( document.getElementById( 'upload_file' ).files);
+        elmn.remove();
+        angular.element("input[type='file']").val(null);
+        $scope.image_visible="false";
+    }
+
+    $scope.file_path="";
+    $scope.file_count=0;
+    $scope.file_stored_data=[];
+    $scope.number_of_message=1;
+    $scope.loaddata = function(file_img,img, callback) {
+        debugger;
+            var deferred = $q.defer();
+            var promise = deferred.promise;
+            promise.then(function() {
+                var file_img_length = document.getElementById('upload_file').files.length;
+                if(file_img_length!=0){
+                    for(l=0;l<file_img_length;l++){
+                        var file_img = document.getElementById('upload_file').files[l];
+                        var file_name=file_img.name;
+                        $scope.new_file_name=file_img.name;
+                        $scope.duplicate_images=1;
+                        var imgs = new FormData();
+                        imgs.append('file', file_img);
+                        imgs.append('name', file_name);
+                        for(var p=0;p<$scope.deleted_files.length;p++){
+                            $scope.temp_file_names=$scope.deleted_files[p].file_names;
+                            if($scope.new_file_name==$scope.temp_file_names){
+                                $scope.duplicate_images=0;
+                                $scope.file_count=$scope.file_count+1;
+                            }
+                        }
+                        if(file_img!=undefined&&$scope.duplicate_images==1){
+                          $scope.loading();
+                             var upload = jv_service.save_files(imgs);
+                             upload.then(function(result) {
+                                $scope.all_datas= result.data;
+                                if($scope.all_datas.status=="SUCCESS"){
+                                $scope.file_count=$scope.file_count+1;
+                                $scope.file_status=1;
+                                $scope.file_stored_data.push($scope.all_datas);
+                                }
+                                else{
+                                    $scope.file_status=2;
+                                }
+                                callback();
+                            }).finally($scope.endloading);
+                        }
+                        else{
+                            $scope.file_status=0;
+                            callback();
+                        }
+                    }
+                }
+                 else{
+                       if($scope.invoiceheader_gid!=0){
+                            $scope.file_status=1;
+                            $scope.endloading();
+                            callback();
+                            $scope.endloading();
+                        }
+                        else{
+                            alert("Please Attache File...");
+                            $scope.endloading();
+                    }
+
+                 }
+            }).then(function() {
+                // callback();
+            });
+            deferred.resolve();
+
+    };
+    $scope.file_status=0;
+   $scope.create_jv=function(){
+        debugger;
+        $scope.execute=1;
+        $scope.error_code=0;
+        var details_data=[];
+
+        if($scope.sum_of_debits==$scope.sum_of_credits){
+            if($scope.sum_of_debits!=0 && $scope.sum_of_credits!=0){
+                $scope.header_amount=$scope.sum_of_credits;
+            }
+            else{
+                $scope.execute=0;
+                $scope.error_code=1;
+            }
+        }
+        else{
+            $scope.execute=0;
+            $scope.error_code=1;
+
+        }
+
+        if($scope.jv_details.length!=0){
+
+
+        }
+        else{
+            alert("Add Records!");
+            $scope.execute=0;
+        }
+        if($scope.show_status=="R"){
+            if($scope.jv_header_gid==0 || $scope.cr_number==""){
+                $scope.execute=0;
+                $scope.error_code=3;
+            }
+        }
+        else{
+            $scope.cr_number="";
+        }
+
+
+        if($scope.execute==1){
+            var file_img = document.getElementById('upload_file').files[0];
+            $scope.list_of_files= document.getElementById('upload_file').files.length;
+            var img = new FormData();
+            var UPLOAD_FILE="";
+
+            if(file_img!=undefined){
+                $scope.file_status=0;
+                var file_name=file_img.name;
+
+                var filename = file_img.name;
+                var index = filename.lastIndexOf(".");
+                $scope.strsubstring = filename.substring(index, filename.length);
+
+                img.append('file', file_img);
+                img.append('name', filename);
+            }
+            debugger;
+            $scope.loaddata(file_img,img, function() {
+                if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
+
+                    $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+                    var datas={"action":"INSERT","type":"JV_CREATION",
+                    "filter":{"entry_type":$scope.selectedtype,"transaction_date":$scope.transaction_date,
+                    "ref_no":$scope.cr_number,"description":$scope.header_description,"jv_status":"MAKER",
+                    "branch_gid":$scope.selected_branch.branch_gid,"amount":$scope.header_amount,"mode":"CBS",
+                    "detail":$scope.jv_details,"file_data":$scope.file_stored_data}};
+                    $scope.loading();
+                    var jv_createions = jv_service.jv_process_set(datas);
+                        jv_createions.then(function(result) {
+                            var res=JSON.parse(result.data);
+                             if (res.MESSAGE[0]=== "SUCCESS") {
+                            alert("JV Creation Successfully...");
+                            $window.location.href = "JV/JV_Maker_Summary/";
+                            } else {
+                          alert(JSON.stringify(res));
+                          }
+                        }, function(err) {
+                          alert('Data Not Inserted');
+                        }).finally($scope.endloading);
+                }
+                else if($scope.file_status==2){
+                    alert("File Upload Failed");
+                }
+                else if($scope.file_status==0 && $scope.file_path.length==0 && $scope.number_of_message==1){
+                    alert("Please Attach File");
+                    $scope.deleted_files=[];
+                    $scope.number_of_message=$scope.number_of_message+1;
+                    $scope.endloading();
+                }
+            });
+        }
+        else{
+            if($scope.error_code==1){
+                alert("Credit and Debits Amount Not Equal Or Given Input is 0");
+            }
+            else if($scope.error_code==2){
+                alert("Missing Category Or Subcategory OR BC Or CC or Entry Type");
+            }
+            else if($scope.error_code==3){
+                alert("Invalid CR Number");
+            }
+            else{
+                alert("Invalid Input!");
+            }
+        }
+   }
+
+   $scope.cr_number="";
+   $scope.find_cr_number=function(type,cr_number){
+        debugger;
+        $scope.execute=1;
+        $scope.error_code=0;
+        $scope.jv_header_gid=0;
+        if($scope.txn_date!=undefined){
+            $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+        }
+        if(cr_number==""){
+            $scope.execute=0;
+            alert("Give CR Number");
+        }
+        if($scope.execute==1){
+            var datas={"action":'GET',"type":type,
+             "filter":{"cr_number":cr_number}};
+                $scope.loading();
+                var jv_summary = jv_service.jv_process_get(datas);
+                 jv_summary.then(function(result) {
+                debugger;
+                        $scope.jv_summary_data =result.data;
+                        if($scope.jv_summary_data.length!=0){
+                            $scope.jv_header_gid=$scope.jv_summary_data[0].jventry_gid;
+                            $scope.cr_number=cr_number;
+                        }
+
+                        if($scope.jv_header_gid!=0){
+                            alert("CR Number Found");
+                        }
+                        else{
+                            alert("Invalid CR Number");
+                        }
+
+                    },
+                    function(err) {
+                        alert("No JV Data");
+            }).finally($scope.endloading);
+        }
+   }
+
+
+
+}]);
+myApp.service("jv_service", function ($http) {
+
+   this.getcategory = function(patch){
+        var respons = $http.post(Appname + "/get_tablevalue/", patch);
+        return respons;
+   }
+
+   this.get_subcategory = function(patch){
+        var respons = $http.post(Appname + "/get_subcate_data/", patch);
+        return respons;
+   }
+
+   this.ccbsdata = function (data) {
+        var response = $http.post(Appname+"/tablevalue/",{params:{"tablevalue":data}});
+        return response;
+   }
+
+   this.get_all_table_metadata_values = function () {
+        var response=$http.post(Appname+"/jv_get_all_table_metadata_value/",{"action":"Get","type":"JV_Type","filter":{}});
+        return response;
+   }
+
+   this.jv_process_set=function (data) {
+        var response=$http.post(Appname+"/JV_Process_Set/",data);
+        return response;
+   }
+
+    this.jv_process_get=function (data) {
+        var response=$http.post(Appname+"/JV_Process_Get/",data);
+        return response;
+    }
+
+    this.upload_data=function(img){
+              var response=$http.post(Appname+"/JV_Upload_Data/",img,
+                   {
+                     transformRequest: angular.identity,
+                     headers: {
+                        'Content-Type': undefined
+                     }
+                   }
+              );
+              return response;
+    }
+
+    this.save_files=function(img){
+              var response=$http.post(Appname+"/fileUploadS3/",img,
+                   {
+                     transformRequest: angular.identity,
+                     headers: {
+                        'Content-Type': undefined
+                     }
+                   }
+              );
+              return response;
+    }
+
+ });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+.C{
+ background-color: #B3FFC1 !important;
+}
+
+.D{
+ background-color: #FFBDF3 !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

@@ -1,0 +1,392 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} JV View Details {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>JV View Details </h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <label>CR Number</label>
+                        <input maxlength="256" ng-model="jv_header_data.jventry_crno" disabled>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <label>Ref Number</label>
+                        <input maxlength="256" ng-model="jv_header_data.jventry_refno" disabled>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <label>Txn Date</label>
+                        <input maxlength="256" ng-model="jv_header_data.jventry_transactiondate |date:'dd-MMM-yyyy' "
+                               disabled>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <label>Branch</label>
+                        <input maxlength="256" ng-model="branch_name_and_code" disabled
+                               placeholder="">
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>Branch Name</th>
+                        <th>Entry type</th>
+                        <th>Category</th>
+                        <th>Sub Category</th>
+                        <th>BS</th>
+                        <th>CC</th>
+                        <th>CBS GL Number</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="jv in jv_details.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict"
+                        align="center">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{jv.jventrydetails_branch_name }}</td>
+                        <td>
+                            <span ng-if="jv.jventrydetails_type=='1'">D</span>
+                            <span ng-if="jv.jventrydetails_type=='2'">C</span>
+                        </td>
+
+                        <td>{{jv.category_name }}</td>
+                        <td>{{jv.subcategory_name}}</td>
+                        <td>{{jv.tbs_name}}</td>
+                        <td>{{jv.tcc_name}}</td>
+                        <td>{{jv.jventrydetails_glno}}</td>
+                        <td>{{jv.jventrydetails_description}}</td>
+                        <td align="right">{{jv.jventrydetails_amount}}</td>
+                    </tr>
+                    <tr ng-show="jv_details.length ==  0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr class="center">
+                        <td colspan="6" align="center">
+                            <ul uib-pagination total-items="jv_details.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td align="center"><h5 style="color:blue;">Sum Of Debits:</h5>{{sum_of_debits}}</td>
+                        <td align="center"><h5 style="color:blue;">Sum Of Credits:</h5>{{sum_of_credits}}</td>
+                        <td colspan="2" align="center">
+                            Total Count:{{jv_details.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-6">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Remarks</label>
+                        <input ng-model="remarks" no-special-char maxlength="80" ng-required="true">
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-raised custbutton"
+                               value="submit"
+                               ng-disabled="!remarks || jv_approve_disabled==0"
+                               ng-click="jv_approve('APPROVED')">
+                        Approve
+                    </md-button>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-raised md-warn" value="submit"
+                               ng-click="jv_approve('REJECTED')"
+                               ng-disabled="!remarks">REJECT
+                    </md-button>
+                </div>
+                <div class="col-md-1">
+                    <a href="JV/JV_Checker_Summary/">
+                        <md-button class="md-raised" value="close"
+                                   aria-label="Close">Cancel
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.controller('Ctrl_amc_maker', ['$scope','jv_service','$mdDialog','$window','$filter', function($scope,jv_service,$mdDialog,$window,$filter) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.maintable = [];
+    $scope.JV_Entry_Gid=0;
+    $scope.JV_Page_Name="";
+    $scope.jv_execute=0;
+    $scope.sum_of_debits=0;
+    $scope.sum_of_credits=0;
+    $scope.create_by=0;
+    $scope.Emp_gid=0;
+    $scope.jv_approve_disabled=1;
+
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.get_jv_session_value = function(){
+        var datas = {"action":"GET","type":"JV_DATA",
+        "filter": {"JV_Entry_Gid":"","JV_Page_Name":"","Emp_gid":""}}
+        $scope.loading();
+        var get_values = jv_service.get_session_jv(datas);
+            get_values.then(function(result) {
+            console.log(result.data);
+            $scope.JV_Entry_Gid=result.data.JV_Entry_Gid;
+            $scope.JV_Page_Name=result.data.JV_Page_Name;
+            $scope.Emp_gid=result.data.Emp_gid;
+            if($scope.JV_Entry_Gid=="" || $scope.JV_Entry_Gid==undefined || $scope.JV_Entry_Gid==0){
+                alert("JV Entry Gid Not Found!");
+            }
+            else if($scope.JV_Page_Name==""){
+                alert("JV Status Missing!");
+            }
+            else if($scope.Emp_gid==0){
+                alert("Employee Gid Missing");
+            }
+            else{
+                $scope.jv_execute=1;
+                $scope.Get_JV_Details();
+            }
+        },
+       function(err) {
+            alert(JSON.stringify(result.data));
+       }).finally($scope.endloading);
+    }
+    $scope.get_jv_session_value();
+    $scope.jventry_crno="";
+    $scope.Get_JV_Details=function(){
+        var datas={"action":'GET',"type":"JV_DETAILS", "filter":{"JVentry_Gid":$scope.JV_Entry_Gid}};
+            $scope.loading();
+            var jv_summary = jv_service.jv_process_get(datas);
+             jv_summary.then(function(result) {
+            debugger;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data));
+                    }
+                    $scope.jv_header_data =result.data[0];
+                    $scope.jventry_crno=$scope.jv_header_data.jventry_crno;
+                    $scope.create_by=$scope.jv_header_data.create_by;
+                    $scope.jv_details=JSON.parse($scope.jv_header_data.jv_details);
+                    $scope.branch_name_and_code=$scope.jv_header_data.branch_name+"["+$scope.jv_header_data.branch_code+"]";
+                    console.log($scope.jv_header_data);
+                    console.log($scope.jv_details);
+                    for(var k=0;k<$scope.jv_details.length;k++){
+                        if($scope.jv_details[k].jventrydetails_type==1){
+                            $scope.sum_of_debits=$scope.sum_of_debits+parseFloat($scope.jv_details[k].jventrydetails_amount);
+                        }
+                        else if($scope.jv_details[k].jventrydetails_type==2){
+                            $scope.sum_of_credits=$scope.sum_of_credits+parseFloat($scope.jv_details[k].jventrydetails_amount);
+                        }
+                    }
+                    $scope.sum_of_credits = $scope.sum_of_credits.toFixed(2);
+                    $scope.sum_of_debits = $scope.sum_of_debits.toFixed(2);
+
+                },
+                function(err) {
+                    alert("No JV Data");
+        }).finally($scope.endloading);
+    }
+
+    $scope.jv_approve=function(status){
+        debugger;
+
+        $scope.execute=1;
+        $scope.error_code=0;
+        if($scope.jventry_crno=="" && $scope.JV_Entry_Gid==0){
+            $scope.execute=0;
+            $scope.error_code=1;
+        }
+
+        if($scope.Emp_gid==0 || $scope.create_by==0){
+            $scope.execute=0;
+            $scope.error_code=2;
+        }
+        if($scope.Emp_gid!=0 && $scope.create_by!=0){
+            if($scope.Emp_gid==$scope.create_by){
+                $scope.execute=0;
+                alert("JV Maker and Checker Cannot Be Same");
+            }
+        }
+        if($scope.sum_of_credits!=$scope.sum_of_debits){
+            alert("Debit Amout and Credit Amout Not Equal");
+            $scope.execute=0;
+        }
+        if($scope.execute==1){
+            $scope.jv_approve_disabled=0;
+            $scope.execute=1;
+            if(status=="APPROVED"){
+                $scope.jventry_type=$scope.jv_header_data.metadata_value;
+                $scope.jventry_refno=$scope.jv_header_data.jventry_refno;
+                $scope.jventry_amount=$scope.jv_header_data.jventry_amount;
+
+                if($scope.jventry_amount==0 || $scope.jventry_amount==null || $scope.jventry_amount=="" || $scope.jventry_amount==undefined) {
+                    alert("JV Header Amount is Need!");
+                    $scope.execute=0;
+                }
+                if($scope.jventry_type==null || $scope.jventry_type=="" || $scope.jventry_type==undefined){
+                    alert("JV Entry Type is Need!");
+                    $scope.execute=0;
+                }
+                if($scope.execute==1){
+                    var datas={"action":"UPDATE","type":"APPROVE",
+                    "filter":{"jventry_gid":$scope.JV_Entry_Gid,"remark":$scope.remarks,"status_":status,
+                    "JV_CR_Number":$scope.jventry_crno,"jventry_type":$scope.jventry_type,"jventry_refno":$scope.jventry_refno,
+                    "jventry_amount":$scope.jventry_amount}};
+                    $scope.loading();
+                    var jv_approve = jv_service.jv_approve(datas);
+                        jv_approve.then(function(result) {
+                            if (result.data=== "SUCCESS") {
+                                alert("JV Approve Successfully...");
+                                $window.location.href = "JV/JV_Checker_Summary/";
+                            }
+                            else if(result.data=="ALREADY PROCESSED"){
+                                alert("ALREADY PROCESSED");
+                                $window.location.href = "JV/JV_Checker_Summary/";
+                            }
+                            else {
+                          alert(JSON.stringify(result.data));
+                        }
+                    }, function(err) {
+                      alert('Data Not Inserted');
+                    }).finally($scope.endloading);
+                }
+            }
+            else if(status=="REJECTED"){
+                var datas={"action":"INSERT","type":"JV_ENTRY_UPDATE",
+                "filter":{"jventry_gid":$scope.JV_Entry_Gid,"status_":status,"remark":$scope.remarks}};
+                $scope.loading();
+                var jv_status_update = jv_service.jv_process_set(datas);
+                    jv_status_update.then(function(result) {
+                        if(status=="REJECTED"){
+                            var res=JSON.parse(result.data);
+                            if (res.MESSAGE[0]=== "SUCCESS") {
+                                alert("JV Rejcted Successfully...");
+                                $window.location.href = "JV/JV_Checker_Summary/";
+                            }
+                            else if(res.MESSAGE[0]=== "ALREADY PROCESSED"){
+                                alert("ALREADY PROCESSED");
+                                $window.location.href = "JV/JV_Checker_Summary/";
+                            }
+                        }
+                        else {
+                            alert(res);
+                        }
+                }, function(err) {
+                  alert('Data Not Inserted');
+                }).finally($scope.endloading);
+
+            }
+        }
+        else if($scope.error_code==1){
+            alert("No CR Number or Entry Gid");
+        }
+        else if($scope.error_code==2){
+            alert("Missing Employee Gid");
+        }
+
+    }
+
+
+   }]);
+
+myApp.service("jv_service", function ($http) {
+
+    this.get_session_jv = function (data) {
+        var response=$http.post(Appname+"/JV_Session_Get/",data);
+        return response;
+    }
+
+    this.jv_process_get=function (data) {
+        var response=$http.post(Appname+"/JV_Process_Get/",data);
+        return response;
+    }
+
+    this.jv_approve=function (data) {
+        var response=$http.post(Appname+"/JV_Approve/",data);
+        return response;
+    }
+
+    this.jv_process_set=function (data) {
+        var response=$http.post(Appname+"/JV_Process_Set/",data);
+        return response;
+    }
+
+
+
+ });
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

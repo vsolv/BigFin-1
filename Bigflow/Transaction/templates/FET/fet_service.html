@@ -1,0 +1,194 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} service{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appservice" ng-controller="Ctrlservice as ctrl" class="container container1">
+        <div class="row">
+            <div class="col-lg-12 col-sm-12 col-xs-12">
+                <h4><strong> Service  {{name}}</strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8 col-xs-9">
+                <md-autocomplete
+                        ng-disabled="ctrl.isDisabled"
+                        md-no-cache="ctrl.noCache"
+                        md-selected-item="ctrl.selectedItem"
+                        md-search-text-change="ctrl.searchTextChange(ctrl.searchText)"
+                         md-search-text="ctrl.searchText"
+                        md-selected-item-change="ACselectchange(item)"
+                        md-items="item in ctrl.querySearch(ctrl.searchText)"
+                        md-item-text="item.product_displayname"
+                        md-min-length="0"
+                        placeholder="Product"
+                            md-menu-class="autocomplete-custom-template">
+                    <md-item-template>
+                                         <span class="item">
+                                            <md-icon md-svg-icon="img/icons/octicon-repo.svg"></md-icon>
+                                             <span md-highlight-text="ctrl.searchText" md-highlight-flags="^i"> {{item.product_displayname}} </span>
+                                         </span>
+                            </md-item-template>
+                            <md-not-found>
+          No product matching "{{searchText}}" were found.
+        </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-4 col-xs-3 text-center">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="add()">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+
+        <div class="row " ng-show="show_servicelist">
+            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S No</th>
+                        <th>Product Name</th>
+                        <th>Stock Code</th>
+                        <th style="text-align:center">Remark</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="m in service_details">
+
+                        <td class="text-right">{{$index + 1}}</td>
+                        <td>{{m.product_name}}</td>
+                        <td ng-show="false">{{m.product_gid}}</td>
+                        <td>
+                            <input type="text" maxlength="32" ng-patten="let_numValidation"
+                                   ng-model="m.product_stock_code" class="form-control" required/>
+                        </td>
+                        <td>
+                            <input type="text"  maxlength="256" ng-model="m.remarks" class="form-control" required/>
+
+                        </td>
+
+                    </tr>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <button type="button" class="btn btn-info custbutton" ng-click="Save()">Save
+                </button>
+            </div>
+            <ng-letter-avatar data="uttesh"></ng-letter-avatar>
+
+        </div>
+
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+
+var app= angular.module('Appservice', ['ngMaterial']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+ app.controller("Ctrlservice",['testService','$scope','$http','$timeout', function (testService,$scope,$http,$timeout) {
+
+  var custiomer_details = JSON.parse(sessionStorage.getItem('cus_details'));
+ var cust_gid = custiomer_details.cus_gid;
+ var name = custiomer_details.cus_name
+ $scope.name = name;
+var d = new Date();
+    var curr_date = d.getDate();
+    var curr_month = d.getMonth();
+    curr_month++;
+    var curr_year = d.getFullYear();
+    $scope.date= curr_year+ "-" + curr_month + "-" +curr_date ;
+
+
+            this.querySearch = function (query) {
+                    return $http.get(Appname+"/Productjson/")
+                        .then(function (response) {
+                         var res = JSON.parse(response.data).filter(function(obj){
+
+                            return obj.name.toLowerCase().indexOf(query) != -1;
+                         });
+                           function transformChip(chip) {
+      // If it is an object, it's already a known chip
+      if (angular.isObject(chip)) {
+        return chip;
+      }
+
+      // Otherwise, create a new one
+      return { name: chip }
+    }
+ function querySearch (query) {
+      var results = query ? self.item.filter(createFilterFor(query)) : [];
+      return results;
+    }
+     function createFilterFor(query) {
+      var lowercaseQuery = angular.lowercase(query);
+
+      return function filterFn(item) {
+        return (item._lowername.indexOf(lowercaseQuery) === 0)
+      };
+
+    }
+                        return res.map(function (veg) {
+        veg._lowername = veg.name.toLowerCase();
+         return veg;
+      });
+                    })
+             }
+            $scope.ACselectchange=function(query){
+
+             $scope.productdetail=[];
+               $scope.productdetail=query;
+            }
+
+            $scope.service_details=[];
+            $scope.add  = function (){
+            $scope.show_servicelist=true;
+            <!--alert($scope.productdetail.product_name);-->
+                 $scope.service_details.push({product_name:$scope.productdetail.product_name,product_gid:$scope.productdetail.product_gid});
+            }
+            var d = sessionStorage.emp_gid;
+            $scope.Save=function(d){
+
+
+            var in_data =$scope.service_details;
+                    var data=$http.post(Appname+"/serviceFET_set/",{parms:{"custid":cust_gid,"data":in_data}});
+                    data.then(function (result){
+                    var schedule_gid = sessionStorage.schedule_gid;
+
+                    var followupreason_gid =27;
+                        var sechedule_ref = result.data;
+                var sechedule_ref=JSON.parse(sechedule_ref.replace(",", '","'));
+                       var date = $scope.date;
+                        var resechedule_date = '';
+                        if(sechedule_ref[1]=='SUCCESS'){
+                        
+                testService.setschedule(schedule_gid,date,cust_gid,followupreason_gid,sechedule_ref[0],resechedule_date);
+                    alert("Inserted Succesfully");}
+                         else{alert("Data Not Inserted");
+                         }
+
+                      })
+            }
+        }]);
+
+
+ app.service("testService", function ($http) {
+      this.setschedule = function (schedule_gid,date,cust_gid,followupreason_gid,sechedule_ref,resechedule_date) {
+       var response = $http.post(Appname+"/add_schedule/",{parms:{"schedule_type_gid":3,"TYPE":"UPDATE","schedule_gid":schedule_gid,"Date":date,"cust_gid":cust_gid,"followupreason_gid":followupreason_gid,"sechedule_ref":sechedule_ref,"resechedule_date":resechedule_date}});
+        return response;
+    }
+    });
+
+</script>
+
+{% endblock %}

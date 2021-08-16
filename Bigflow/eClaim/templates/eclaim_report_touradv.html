@@ -1,0 +1,632 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Advance{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Advance</h4>
+            </div>
+        </div>
+        <form name="tour_valid"  role="form">
+            <div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <md-subheader class="md-accent">Tour Expense</md-subheader>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer" ng-show="tour.gid != 0">
+                                <input disabled maxlength="30" ng-model="tour_no"
+                                       placeholder="Tour No"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Request Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_requestdate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-2" ng-show="paystatus">
+                            <h5>Payment Status :</h5>
+                        </div>
+                        <div class="col-md-1" ng-show="paystatus">
+                            <h5 style="color:blue;">{{invoiceheader_status}}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <md-subheader class="md-accent">Tour Details</md-subheader>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container>
+                                <label>Tour Reason</label>
+                                <input maxlength="30"
+                                       disabled
+                                       ng-model="tour_reason"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour Start Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_startdate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour End Date </label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_enddate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-1">
+                        </div>
+<!--                        <div class="col-md-2" ng-show="adv_status =='APPROVED'">-->
+<!--                            <md-button class="btn btn-info custbutton"-->
+<!--                                       ng-click="paymentstatus()">Status-->
+<!--                                <md-tooltip>Payment Status</md-tooltip>-->
+<!--                            </md-button>-->
+<!--                        </div>-->
+                    </div>
+                </div>
+                <div class="row table-responsive ">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Reason</th>
+                            <th class="text-center" scope="col">Advance Amount</th>
+                            <th class="text-center" scope="col">Approve Amount</th>
+                            <th class="text-center" scope="col">CRN No</th>
+                            <th class="text-center" scope="col">Status</th>
+                            <th class="text-center" scope="col">PDF</th>
+                            <th class="text-center" scope="col">Action</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="adv in advance_details.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="30"
+                                           class="form-control"
+                                           disabled
+                                           ng-model="adv.reason"
+                                           ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                           placeholder="Reason"
+                                           name="reason{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.reason{{$index}}.$error.pattern">Special char Error</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="10"
+                                           class="form-control"
+                                           disabled
+                                           ng-pattern="/^[0-9,.]/"
+                                           ng-blur="adv_amtchange(adv)"
+                                           ng-model="adv.advanceamount"
+                                           placeholder="Advance Amount"
+                                           name="advanceamount{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.advanceamount{{$index}}.$error.pattern">Only numbers</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="10"
+                                           class="form-control"
+                                           ng-model="adv.appamount"
+                                           numbers-only
+                                           disabled
+                                           ng-blur="app_amtchange(adv)"
+                                           placeholder="Approved Amount"
+                                           type="text"/>
+                                </td>
+                                <td class="text-center">
+                                   {{adv.crnno}}
+                                </td>
+                                <td class="text-center">
+                                    <p ng-show="adv.status == '0'">
+                                        Tour Advance Pending</p>
+                                    <p ng-show="adv.status == '1'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="adv.status == '2'">
+                                        Tour Advance Rejected</p>
+                                </td>
+                                <td class="text-center">
+                                    <md-button ng-show="adv.status == '1'" class="md-fab md-mini md-primary custbutton"
+                                               ng-click="get_pdf(adv.invoiceheadergid)">
+                                        <md-icon>insert_drive_file</md-icon>
+                                        <md-tooltip>Add Tour Details</md-tooltip>
+                                    </md-button>
+                                </td>
+                                <td class="text-center">
+                                    <!--                                    <a ng-click="remove_travel(tourdtl)"><i-->
+                                    <!--                                            ng-disabled="applevel == 1"-->
+                                    <!--                                            class="material-icons">-->
+                                    <!--                                        close-->
+                                    <!--                                    </i></a>-->
+                                    <a ng-click="adv.gid != 0 || applevel == 1 || adv.status == '1' || adv_status == 'REJECTED' ? empty() : remove_travel(tourdtl)"><i
+                                            class="material-icons">
+                                        close
+                                    </i></a>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="2">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="advance_details.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <td class="text-left" colspan="1">
+                                    <span>Total Advance Amount:<br/> <b class="text-centre"> {{totaladvance}}</b></span>
+                                </td>
+                                <td class="text-left" colspan="1" ng-show="applevel == 1 || adv_status =='APPROVED'|| adv_status =='CANCEL' || ">
+                                    <span>Total Approved Amount:<br/> <b
+                                            class="text-centre"> {{totaladvanceapp}}</b></span>
+                                </td>
+                                <td class="text-left" colspan="4">
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" ng-show="applevel == 0" class="col-md-12">
+                    <md-subheader class="md-accent">To Approve</md-subheader>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <md-input-container>
+                                    <label>Branch</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="searchbr"
+                                           placeholder="Branch"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3">
+                                <md-input-container>
+                                    <label>Employee</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="searchemp"
+                                           placeholder="Employee"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3">
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" ng-href="eClaim/eclaim_report_tourdtl"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div ng-show="approvaldata" class="row">
+            <div class="col-md-12">
+                <md-subheader class="md-accent">Approval Flow</md-subheader>
+                <div class="row table-responsive ">
+                    <div class="col-md-8 col-lg-8 col-sm-8">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Employee</th>
+                            <th class="text-center" scope="col">Raisedby</th>
+                            <th class="text-center" scope="col">Type</th>
+                            <th class="text-center" scope="col">Date</th>
+                            <th class="text-center" scope="col">Comment</th>
+                            <th class="text-center" scope="col">Status</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="apprl in get_approval_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-left">{{apprl.employee_name}} - {{apprl.employee_code}}</td>
+                                <td class="text-left" ng-show="apprl.onbehalof == '0'">{{apprl.employee_name}} -
+                                    {{apprl.employee_code}}
+                                </td>
+                                <td class="text-left" ng-show="apprl.onbehalof != '0'">{{apprl.onbehalof_employeename}}
+                                    - {{apprl.onbehalof_employeecode}}
+                                </td>
+                                <td class="text-left">Tour Advance</td>
+                                <td class="text-left">{{apprl.approveddate}}</td>
+                                <td class="text-left">{{apprl.appcomment}}</td>
+                                <td class="text-left">
+                                    <p ng-show="apprl.status == 'REJECTED'">
+                                        Tour Advance Rejected</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'TOURADV'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'ADVANCECANCEL'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.apptype == 'TOURADV' ">
+                                        Tour Advance Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.apptype == 'ADVANCECANCEL' ">
+                                        Tour Advance Cancel Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'RETURN'">
+                                        Tour Advance Returned From Approver</p>
+                                    <p ng-show="apprl.status == 'TOUR ADVANCE REQUESTED'">
+                                        Tour Advance Submitted</p>
+                                    <p ng-show="apprl.status == 'CANCEL REQUEST'">
+                                        Tour Advance Cancel Submitted</p>
+                                </td>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="7">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="eClaim_tavels.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                        <td class="text-left" colspan="1">-->
+                                <!--                            <span>Total Count:<br/> <b class="text-centre"> {{eClaim_tavels.length}}</b></span>-->
+                                <!--                        </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope, eclaimService,$http, $window, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var employee_data=JSON.parse(sessionStorage.getItem('eClaim_advance'));
+    console.log(employee_data);
+    var date = new Date(detail.date);
+    $scope.today_date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    $scope.tour_gid = employee_data.tour_gid;
+    $scope.emp_gid = employee_data.emp_gid;
+    $scope.tour_no = employee_data.tour_no;
+    $scope.tour_requestdate = employee_data.tour_requestdate;
+    $scope.tour_startdate = employee_data.tour_startdate;
+    $scope.tour_enddate = employee_data.tour_enddate;
+    var enddate = employee_data.tour_enddate;
+    var enddate = new Date(enddate);
+    $scope.emp_name = employee_data.emp_name;
+    $scope.onbehalf_emp = employee_data.onbehalf_emp;
+    $scope.designation = employee_data.designation;
+    $scope.emp_grade = employee_data.emp_grade;
+    $scope.applevel = employee_data.applevel;
+    $scope.gid = employee_data.gid;
+    $scope.adv_status = employee_data.Status;
+    $scope.adv_type = employee_data.type;
+    $scope.approvalgid = employee_data.approvalgid;
+    $scope.totaladvance = 0;
+    $scope.totaladvanceapp = 0;
+    $scope.comments = "";
+    $scope.tour_reason = employee_data.reason;
+    $scope.tourend_date = new Date(enddate.getFullYear(), enddate.getMonth(), enddate.getDate());
+
+    loadadvance();
+    function loadadvance(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "TOUR_ADVANCE_GET",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Tour_gid":$scope.tour_gid
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.advance_details = [];
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "FOUND"){
+                $scope.searchemp = $scope.main[0].approval_empname;
+                $scope.searchbr = $scope.main[0].approval_branch;
+                $scope.tour_reason = $scope.main[0].tourreason;
+                $scope.approvedby = $scope.main[0].approvedby;
+                $scope.remarks = $scope.main[0].appcomment;
+                 angular.forEach($scope.main, function(item1) {
+                    data = {
+                        "gid": item1.gid,
+                        "tourgid": item1.tourgid,
+                        "advanceamount" : item1.reqamount,
+                        "appamount" : item1.appamount,
+                        "reason" : item1.reason,
+                        "status" : item1.status,
+                        "invoiceheadergid" : item1.invoiceheadergid,
+                        "crnno" : item1.crnno
+                    }
+                    $scope.totaladvance = $scope.totaladvance + item1.reqamount;
+                    if(item1.status == 1){
+                        $scope.totaladvanceapp = $scope.totaladvanceapp + item1.appamount;
+                    }
+                    $scope.advance_details.push(data)
+
+                });
+
+            }
+
+        }).finally($scope.endloading);
+        if($scope.adv_status == "APPROVED" || $scope.adv_status =="REJECTED"|| $scope.adv_status == "RETURN"){
+            $scope.enable_update = true;
+            $scope.enable_reject = true;
+            $scope.enable_return = true;
+            $scope.enable_submit = true;
+        }
+        if($scope.adv_status == "APPROVED" || $scope.adv_status =="REJECTED"){
+            $scope.enable_submit = true;
+        }
+        else if($scope.adv_status == "RETURN"){
+            $scope.enable_submit = false;
+        }
+    }
+
+<!--    loadbranch();-->
+    function loadbranch(){
+        var data = {
+            params: {
+                "Type": "GET_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Limit_Start":0,
+                            "Limit_End":30,
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_branch_data = $scope.main;
+        });
+    }
+
+
+    $scope.paystatus = false;
+    $scope.paymentstatus = function(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "PAYMENT_STATUS",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Invoice_Header_Gid":$scope.invoiceheadergid
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.invoiceheader_status = $scope.main[0].invoiceheader_status;
+            $scope.paystatus = true;
+         }).finally($scope.endloading);
+    }
+    $scope.empsearch = gotoemp;
+        function gotoemp(query) {
+            var result = $filter('filter')($scope.get_employee_data, {
+                'employee_name': query
+            });
+            return result;
+    }
+
+    $scope.empchange = function(e){
+        $scope.approvedby = e.employee_gid
+    }
+
+    $scope.update_data = function(){
+    $scope.loading();
+    angular.forEach($scope.advance_details, function(item1) {
+        item1.approval = $scope.approvedby;
+        item1.reqamount = item1.advanceamount;
+        item1.remarks = $scope.remarks;
+        item1.tourgid = $scope.tour_gid;
+        });
+        var data = {
+            params: {
+                "Type": "TOUR_ADVANCE",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                            "DATA":$scope.advance_details
+                        },
+                    }
+                }
+            }
+        }
+        var eclaim_daily = eclaimService.ecalim_data(data);
+        eclaim_daily.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                $window.location.reload();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+
+    $scope.tour_service = function(data){
+        var eclaim_daily = eclaimService.ecalim_data(data);
+        eclaim_daily.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                if($scope.tourtype == 'CANCEL'){
+                    $window.location.href = "eClaim/eclaim_cancel_approval";
+                }
+                else{
+                    $window.location.href = "eClaim/eclaim_advance_approval";
+                }
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+
+    $scope.get_approval_data = [];
+    loadapprovalflow();
+    function loadapprovalflow(){
+        if($scope.tourtype == "CANCEL"){
+            $scope.appr_flow = "ADVANCECANCEL";
+        }
+        else{
+            $scope.appr_flow = "TOURADV";
+        }
+        var data = {
+            params: {
+                "Type": "APPROVAL_FLOW",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "TourGid":$scope.tour_gid,
+                            "AppType":$scope.appr_flow
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE != "NOT_FOUND" ){
+                $scope.get_approval_data = $scope.main;
+                $scope.approvaldata = true;
+            }
+            else {
+                $scope.approvaldata = false;
+            }
+        });
+    }
+    $scope.get_pdf = function(e){
+     $scope.loading();
+        var datas={"params":{
+                        "filter":{
+                            "action":"GET",
+                            "type":"BARCODE_GENERATION",
+                            "InvoiceHeader_Gid": e
+                        }
+                    }
+                };
+        var summary = eclaimService.get_ecf_data(datas);
+        summary.then(function(result) {
+            var data = result.data;
+            var file = new Blob([data], { type: 'application/pdf' });
+            saveAs(file, 'Claims.pdf');
+        }).finally($scope.endloading);
+     }
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalim_data = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+    this.get_ecf_data = function(data) {
+        var response = $http.post(Appname + "/ecf_data_get/",data);
+        return response;
+    }
+    this.html_gen = function(data) {
+        var response = $http.post(Appname + "/tcf_to_pdf/",data);
+        return response;
+    }
+    this.ecalim_expense_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_summary/",data);
+        return response;
+    }
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    }
+    this.ecalim_session_get = function(data) {
+        var response = $http.post(Appname + "/session_get_expnese/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,719 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} delmat {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="delmatsummary" ng-controller="ctrdelmatsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Delmat Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Employee Name</label>
+                        <input ng-model="emp_name" letter-Only  />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Commodity Name</label>
+                        <input ng-model="cmd_name"  letter-Only />
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Delmat Type</label>
+                        <input ng-model="del_status"  letter-Only />
+                    </md-input-container>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top: 16px;"
+                        ng-click="delmat_active_inactive('search')" ng-disabled="">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-2 ">
+                    <md-input-container class="md-block inputcontainer">
+                        <md-checkbox ng-model="InAct" ng-click="delmat_active_inactive('search')">
+                            InActive / Records
+                        </md-checkbox>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-right ">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="Adddelmat()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <!--Delmat Summary-->
+        <div class="row table-responsive" ng-hide="IsHidden1">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table  table-striped table-bordered table-condensed table-hover">
+                    <thead class="header">
+                        <tr>
+                            <th class="text-right">S.No</th>
+                            <th>Employee Name</th>
+                            <th>Commodity Name</th>
+                            <th>Delmat Type</th>
+                            <th>Limit</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="pr in delmatddlget">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{pr.employee_name +" - "+ pr.employee_code}}</td>
+                            <td>{{pr.commodity_name}}</td>
+                            <td>{{pr.metadata_value }}</td>
+                            <td align="right">{{pr.delmat_limit}}</td>
+                            <td class="text-center" ng-class="pr.delmat_status == 'Approved' ||
+                                 pr.delmat_status == 'APPROVED'
+                                 ? 'text-success':'danger'">
+                                {{pr.delmat_status}}
+                            </td>
+                            <td class="text-center">
+                            <span class="material-icons" ng-class="pr.delmat_isactive=='Y'? 'editlink':''"
+                                  ng-click="activeDeactive_click(pr.delmat_isactive,pr.delmat_gid)"
+                                  title="{{pr.delmat_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny</span>
+                        </td>
+                        </tr>
+                        <tr ng-show="delmatddlget.length ==  0">
+                            <td class="warning" colspan="8">
+                                No Records Found.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="7">
+                                <ul uib-pagination total-items="Total_Length" ng-model="currentPage" max-size="maxSize"
+                                    ng-change="delmat_active_inactive()" class="pagination-sm" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--Add popup-->
+        <div ng-include="'adddelmat'"></div>
+    </div>
+</div>
+
+{% endverbatim %}
+
+<script>
+    var app = angular.module('delmatsummary', ['ngMaterial', 'ui.bootstrap']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+    });
+    app.run(function ($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function (date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    });
+    app.directive('letterOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z. ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+
+
+
+    app.controller('ctrdelmatsummary', ['$scope', '$http', '$filter', '$mdDateLocale', 'delmatservice', '$window',
+        '$mdDialog',
+        function ($scope, $http, $filter, $mdDateLocale, delmatservice, $window, $mdDialog) {
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.submit = true;
+            $scope.save = false;
+            $scope.employee = [];
+            $scope.pr = [];
+            $scope.delmat = [];
+            $scope.app = [];
+            //var x=false;
+
+            //loading
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+
+
+            $scope.close = function (delmat) {
+
+                canc(delmat);
+
+            }
+
+            function canc(delmat) {
+                $scope.delmat.empddl = '';
+                $scope.delmat.commoddl = '';
+                $scope.delmat.delmattype = '';
+                $scope.delmat.amount = '';
+            }
+
+
+
+
+
+   $scope.activeDeactive_click = function(is_active, gid) {
+            if (is_active == 'Y') {
+                $scope.inactive(gid)
+            } else {
+                $scope.activ(gid)
+            }
+        }
+
+
+        $scope.inactive = function(gid) {
+
+               data = {
+                    "array": {
+                        "delmat_gid": gid
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid,
+                        "Create_By": $scope.employgid
+                    }
+                }
+
+               var data_int={
+            "Action":"INACTIVE",
+            "Type":"UPDATE",
+            "data":data
+            }
+
+
+            var emp_inact = delmatservice.delmatsavedata(data_int);
+            emp_inact.then(function(result) {
+
+
+                    if (result.data.MESSAGE === "SUCCESS") {
+                        alert("InActivated Succesfully");
+                        $window.location.href = "delmat";
+                    } else {
+                        alert("Not InActivated");
+                        $window.location.href = "delmat";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+
+
+$scope.activ = function(gid) {
+
+          data = {
+                    "array": {
+                        "delmat_gid": gid
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid,
+                        "Create_By": $scope.employgid
+                    }
+                }
+
+               var data_int={
+            "Action":"ACTIVE",
+            "Type":"UPDATE",
+            "data":data
+            }
+
+            var emp_inact = delmatservice.delmatsavedata(data_int);
+            emp_inact.then(function(result) {
+
+
+                    if (result.data.MESSAGE === "SUCCESS") {
+                        alert("Activated Succesfully");
+                        $window.location.href = "delmat";
+                    } else {
+                        alert("Not Activated");
+                        $window.location.href = "delmat";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+
+            $scope.employee1 = function (query) {
+
+                var datas={"Params":{"Group":"GET_EMP_DATA","Type":"EMPLOYEE","Sub_Type":"EMPLOYEE_ALL",
+                 "FILTER":{"Employee_name" :query},"Limit": 0 + "," + 30,}};
+
+                 return $http.post(Appname + '/employee_search/' , datas).then(function(data) {
+
+                    var final_values=data.data.DATA;
+                    console.log(final_values);
+                    if(query==undefined){
+                        $scope.toggled();
+                    }
+                    if(data.data.MESSAGE=="NOT_FOUND"){
+                        final_values=[];
+                    }
+                    return final_values;
+                  });
+
+
+
+            }
+
+            $scope.prtype = function (query) {
+
+    
+
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            "metadata_value":query,
+                            "Page_Index": $scope.currentPage - 1,
+                            "Page_Size": $scope.itemsPerPage
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+                    }
+                }
+
+                var data_int = {
+                    "Type": "get_meta",
+                    "Group": "DETAILS",
+                    "data": data
+                }
+
+                return $http.post(Appname + "/Newdelmat/", data_int)
+                    .then(function (result) {
+
+                        if (result.data.length>0) {
+                            $scope.data = result.data;
+                        } else {
+                            $scope.data = [];
+                        }
+                        return $scope.data;
+                    });
+            }
+
+
+            $scope.commodity = function (query) {
+
+
+                var data = {
+
+                    "Table_name": "ap_mst_tcommodity",
+                    "Column_1": "commodity_name,commodity_gid",
+                    "Column_2": "",
+                    "Where_Common": "commodity",
+                    "Where_Primary": "name",
+                    "Primary_Value": query,
+                    "Limits": 0 + "," + 30,
+                    "Order_by": "gid"
+                }
+
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.data = result.data.DATA;
+                        } else {
+                            $scope.data = [];
+                        }
+                        return $scope.data;
+                    });
+            }
+
+
+       
+
+            $scope.active = [{
+                Active: "YES"
+            }, {
+                Active: "N0"
+            }];
+            //alert(JSON.stringify($scope.active[0].Active));
+
+
+
+
+
+
+            //Session Details
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+
+            //Add commodity
+            $scope.Adddelmat = function () {
+                modalshow('mdl_present');
+                //window.location.href = "adddelmat";
+
+            }
+            //delmatsave
+            $scope.deltable = [];
+            $scope.delmatsave = function (data) {
+
+
+                $scope.app = $filter('filter')($scope.delmatddlget, {
+                    "delmat_status": "Approved"
+                }, true);
+
+                $scope.check = $filter('filter')($scope.app, {
+                    "commodity_name": data.commoddl.commodity_name,
+                    "employee_name": data.empddl.employee_name,
+                    "metadata_value": data.delmattype.metadata_value,
+                }, true);
+
+
+
+                if ($scope.check.length > 0) {
+                    if (confirm(
+                            "Data is Already Exists.Did You Like to Inactive the Previous Record")) {
+                        var dta = {
+                            "delmat": data.delmattype,
+                            "empdd": data.empddl,
+                            "commod": data.commoddl,
+                            "amoun": data.amount,
+                            "Active": 'YES'
+                        }
+                        $scope.deltable.push(dta);
+
+                    }
+                    return false;
+                }
+
+                $scope.pp = $filter('filter')($scope.delmatddlget, {
+                    "commodity_name": data.commoddl.commodity_name,
+                    "employee_name": data.empddl.employee_name,
+                    "metadata_value": data.delmattype.metadata_value,
+                    "delmat_status": "PENDING"
+                }, true);
+
+                if ($scope.pp.length > 0) {
+                    alert('Data is Already Exists in List Summary.!!');
+                    return false;
+                }
+
+                $scope.pp = $filter('filter')($scope.delmatddlget, {
+                    "commodity_name": data.commoddl.commodity_name,
+                    "employee_name": data.empddl.employee_name,
+                    "metadata_value": data.delmattype.metadata_value,
+                    "delmat_status": "PENDING"
+                }, true);
+
+                if ($scope.pp.length > 0) {
+                    alert('Data is Already Exists in List Summary.!!');
+                    return false;
+                }
+
+                $scope.p = $filter('filter')($scope.deltable, {
+                    "delmat": data.delmattype,
+                    "empdd": data.empddl,
+                    "commod": data.commoddl,
+                }, true);
+                if ($scope.p.length > 0) {
+                    alert('Same Data is not Allowed.!!');
+                    return false;
+                } else {
+                    var dta = {
+                        "delmat": data.delmattype,
+                        "empdd": data.empddl,
+                        "commod": data.commoddl,
+                        "amoun": data.amount,
+                        "Active": 'YES'
+                    }
+
+                    $scope.deltable.push(dta)
+                    // $scope.p=[];
+                }
+
+
+
+
+
+
+                $scope.removeddl = function (a) {
+
+                    for (var i = 0; i < $scope.deltable.length; i++) {
+                        if ($scope.deltable[i] == a) {
+                            $scope.deltable.splice(i, 1); // removes the matched element
+                            i = $scope.deltable.length;
+
+                        }
+                    }
+                }
+            }
+
+            //check box
+            $scope.deltable2 = [];
+            $scope.checkbox = function (status, array) {
+
+
+                if (status == true) {
+
+                    var dta = {
+                        "delmat": array.delmat,
+                        "empdd": array.empdd,
+                        "commod": array.commod,
+                        "amoun": array.amoun
+                    }
+                    $scope.deltable2.push(dta)
+
+
+
+
+
+                } else {
+
+                    var index = $scope.deltable2.indexOf(array);
+                    $scope.deltable2.splice(index, 1);
+
+                }
+
+            }
+            $scope.details = [];
+
+            $scope.delmatsubmit = function () {
+                $scope.delform=true;
+                $scope.loading();
+                if ($scope.deltable.length > 0) {
+
+                    for (var i = 0; i < $scope.deltable.length; i++) {
+                        var master = {
+                            "delmat_tran": $scope.deltable[i].delmat.metadata_gid,
+                            "delmat_commoditygid": $scope.deltable[i].commod.commodity_gid,
+                            "delmat_employeegid": $scope.deltable[i].empdd.employee_gid,
+                            "delmat_limit": parseInt($scope.deltable[i].amoun),
+                            "delmat_isactive": $scope.deltable[i].Active == 'YES' ? 'Y' : 'N',
+                            "delmat_status": "PENDING"
+                        }
+
+                        $scope.details.push(master);
+                    }
+                } else {
+                    alert("Kindly Fill the Required Fields (or) Click the Add rows button.!!");
+                    $scope.delform=false;
+                    $scope.endloading();
+                    return false;
+                }
+
+
+
+                for (var i = 0; i < $scope.delmatddlget.length; i++) {
+                    for (var j = 0; j < $scope.details.length; j++) {
+
+                        if (($scope.delmatddlget[i].commodity_gid == $scope.details[j]
+                                .delmat_commoditygid) && ($scope.delmatddlget[i].employee_gid == $scope
+                                .details[
+                                    j].delmat_employeegid) && ($scope.delmatddlget[i].delmat_limit ==
+                                $scope
+                                .details[j].delmat_limit) && ($scope.delmatddlget[i].metadata_gid ==
+                                $scope
+                                .details[j].delmat_tran)) {
+                            alert("this record already there");
+                            $scope.delform=false;
+                            $scope.endloading();
+                            //var index =$scope.details[i].indexOf(array);
+                            $scope.details.splice(i, 1);
+                            return false
+                        }
+                    }
+                }
+
+                data = {
+                    "array": {
+                        "filtervalue": $scope.details
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid,
+                        "Create_By": $scope.employgid
+                    }
+                }
+
+             var data_int={
+                    "Action":"insert",
+                    "Type":"pr_multi",
+                    "data":data
+                    }
+
+
+                //delmatsave Details
+                var delma = delmatservice.delmatsavedata(data_int);
+
+                delma.then(function (delma) {
+                        alert(delma.data.MESSAGE)
+                        $scope.load();
+
+                    },
+                    function (err) {
+                        alert('No data!.');
+                        $scope.delform=false;
+                    }).finally($scope.endloading);
+            }
+
+
+
+
+
+
+
+            //load
+            $scope.load = function () {
+                //$scope.loading()
+                $window.location.href = "delmat";
+            }
+
+
+            //Delmat Details
+            $scope.delmatdata = function (active) {
+                $scope.loading();
+                $scope.pagect = $scope.currentPage - 1
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            "delmat_isactive": active,
+                            "employee_name": $scope.emp_name,
+                            "delmat_status":"",
+                            "meta_status": $scope.del_status,
+                            "commodity_name": $scope.cmd_name,
+                            "Page_Index": $scope.currentPage - 1,
+                            "Page_Size": $scope.itemsPerPage
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+                    }
+                }
+
+                var data_int = {
+                    "Type": "get",
+                    "Group": "DETAILS",
+                    "data": data
+                }
+                var search_inactive = delmatservice.getsearch_inactive(data_int)
+                search_inactive.then(function (result) {
+
+                        $scope.maintable = result.data;
+                        $scope.delmatddlget = result.data;
+                        if ($scope.pagect == 0) {
+                            $scope.Total_Length = $scope.delmatddlget[0].Total_Row;
+                        }
+
+                    },
+                    function (err) {
+                        alert('No data!.');
+                    }).finally($scope.endloading);
+            }
+
+            $scope.delmatdata("Y");
+            $scope.delmat_active_inactive = function (a) {
+                if ($scope.InAct == false) {
+                    $scope.delmatdata("N");
+                } else {
+                    $scope.delmatdata("Y");
+                }
+
+                if(a=='search'){$scope.currentPage=1}
+            }
+
+
+        }
+
+    ]);
+
+
+    app.service("delmatservice", function ($http) {
+
+
+
+        //Delmat Inactive
+        this.getsearch_inactive = function (x) {
+            var response = $http.post(Appname + "/Newdelmat/", x);
+            return response;
+        }
+        //Delmatsave
+        this.delmatsavedata = function (data) {
+            var response = $http.post(Appname + "/delmatsavedatas/", data);
+            return response;
+        }
+
+      
+
+    });
+</script>
+<style>
+    .md-select-menu-container.md-active {
+        z-index: 1060;
+    }
+
+    .md-autocomplete-suggestions-container {
+        z-index: 100000 !important;
+
+    }
+
+    .md-dialog-container {
+        z-index: 100000 !important;
+    }
+
+    .aa {
+        border-radius: 6px 6px 0px 0px;
+        background-color: #009688 !important;
+        color: white;
+        font-weight: bold;
+        border-bottom: 1px solid #009688 !important;
+        text-align: center;
+    }
+</style>
+
+{% endblock %}

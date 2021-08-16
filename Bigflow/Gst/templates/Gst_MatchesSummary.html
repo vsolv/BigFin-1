@@ -1,0 +1,375 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}  GST Recon Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="GST_APP" ng-controller="ctrlsummary" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>GST Recon Summary</h4>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>supplier Name</th>
+                        <th>Invoice Number</th>
+                        <th>
+                            Tax Number
+                        </th>
+                        <th>
+                            Invoice Date
+                        </th>
+
+                        <th>Amount
+                        </th>
+                        <th>Status
+                        </th>
+                        <th>View
+                        </th>
+
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sum in gst_summary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <td><a href="">
+                            {{sum.gstupload_Supplier_Name}}</a>
+                        </td>
+                        <td>
+                            {{sum.gstupload_Invoice_Number}}
+                        </td>
+                        <td>
+                            {{sum.gstupload_Total}}
+                        </td>
+
+                        <td>
+                            {{sum.gstupload_Invoice_Date | date:'dd-MMM-yyyy'}}
+                        </td>
+                        <td>
+                            {{sum.gstupload_Supplier_GSTIN}}
+                        </td>
+                        <td>
+                            {{sum.gstmatch_status}}
+                        </td>
+                        <td align="center">
+                            <a title="View" ng-click="showview(sum)" align="center"
+                               class="editlink">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul uib-pagination total-items="gst_summary.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2" style="padding: 20px;">
+                            <strong>Total Count:{{gst_summary.length}}</strong>
+
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="mdl_gst" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+
+
+                    <div class="modal-header popup-header">
+
+                        <h5 class="modal-title" id="s">
+                            GST Details
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="row table-responsive">
+
+
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <!--<h5><b>Total Debit Amount:</b> {{quantity * price}}</h5>-->
+
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                           md-progress="deferred">
+                                        <thead class="header">
+                                        <tr style="text-align:center">
+                                            <th>Details</th>
+
+
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="GST in GST_DETAILS.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | filter :name">
+
+                                            <td align="center">
+                                                {{GST.value}}
+                                            </td>
+
+
+                                        </tr>
+                                        </tbody>
+
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app=angular.module('GST_APP',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+app.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+app.directive("fileinput", [function() {
+    return {
+        scope: {
+            fileinput: "=",
+            filepreview: "="
+        },
+        link: function(scope, element, attributes) {
+            element.bind("change", function(changeEvent) {
+                scope.fileinput = changeEvent.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    scope.$apply(function() {
+                        scope.filepreview = loadEvent.target.result;
+                    });
+                }
+                reader.readAsDataURL(scope.fileinput);
+            });
+        }
+    }
+}]);
+
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog, $element) {
+
+
+        function filegstname(item) {
+            var fileExtension = '.' + item.name.split('.').pop();
+            $scope.gstfile_name = "RECON" + new Date().getTime() + fileExtension;
+        };
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+        $scope.uploadFile = function() {
+
+            if ($scope.files == undefined) {
+                alert("Fill the File field!.");
+                return false;
+            }
+            $scope.name = $scope.files[0].name;
+            if ($scope.files !== undefined) {
+                var excl = new FormData();
+                angular.forEach($scope.files, function(file) {
+                    filegstname(file)
+                    excl.append('file', file);
+                    excl.append('name', $scope.gstfile_name);
+                    excl.append('Action', 'Insert');
+                    //   excl.append('Group', 'BANK_UPLOAD_AR');
+                    loadexcl(excl);
+
+                });
+            }
+
+        }
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.showview = function(data){
+console.log(data)
+            $scope.GST_DETAILS = []
+
+           if(data.INVOICE_VALID == 1){
+              $scope.GST_DETAILS.push({"value":"Invoice Number Present"})
+           }else{
+                         $scope.GST_DETAILS.push({"value":"Invoice Number Is Absent"})
+
+           }
+           if(data.INVOICEWITH_DATE == 1){
+              $scope.GST_DETAILS.push({"value":"Invoice Number with Date Is Present"})
+           }else{
+                         $scope.GST_DETAILS.push({"value":"Invoice Number with Date  Is Absent"})
+
+           }
+           if(data.GST_VALID == 1){
+              $scope.GST_DETAILS.push({"value":"Valid Gst Number"})
+           }else{
+                         $scope.GST_DETAILS.push({"value":"InValid Gst Number"})
+
+           }
+
+            if(data.AMOUNT_VALID == 1){
+              $scope.GST_DETAILS.push({"value":"Amount Matched"})
+           }else{
+                         $scope.GST_DETAILS.push({"value":"Amount Mismatched"})
+
+           }
+            modalshow('mdl_gst');
+
+
+        }
+
+        var summary = servicesummary.getgstsummary();
+        summary.then(function(result) {
+                //alert(JSON.stringify(result.data))
+                $scope.gst_summary = JSON.parse(result.data);
+                $scope.maintable = result.data;
+
+
+
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+
+        function loadexcl(excl) {
+            $scope.loading();
+            var overalldtl = servicesummary.excelgen(excl);
+            overalldtl.then(function(res) {
+
+                var hosmr = [];
+                $scope.hosmr = res.data.MESSAGE;
+                if ($scope.hosmr == "SUCCESS") {
+                    alert("File Saved Successfully!.")
+
+                } else {
+                    alert(res.data);
+
+                }
+            }).finally($scope.endloading);
+        }
+
+       function selecteddate(date) {
+          var d = date;
+          var curr_date = d.getDate();
+          var curr_month = d.getMonth();
+          curr_month++;
+          var curr_year = d.getFullYear();
+          var date = curr_year + "-" + curr_month + "-" + curr_date;
+          return date;
+       }
+
+
+         $scope.checkgst = [];
+        $scope.toggleCheck = function (data) {
+            if ($scope.checkgst.indexOf(data) === -1) {
+                 date = new Date(data.gstupload_Invoice_Date);
+                 data.gstupload_Invoice_Date =  selecteddate(date);
+                $scope.checkgst.push(data);
+                console.log(data)
+            } else {
+                $scope.checkgst.splice($scope.checkgst.indexOf(data), 1);
+            }
+              //  alert( JSON.stringify($scope.checkgst))
+        };
+
+
+
+        $scope.Send_gstdata = function(){
+
+           var json_gst = {  "GSTRECON":$scope.checkgst
+                              }
+
+
+            var setgst = servicesummary.setgstsummary(json_gst);
+             setgst.then(function(result) {
+
+
+             })
+
+        }
+
+    }
+]);
+
+
+app.service("servicesummary", function ($http) {
+
+    this.excelgen = function(excl) {
+        var respons = $http.post(Appname + "/gstexcel_set/",
+            excl, {
+                transformRequest: angular.identity,
+                headers: {
+                    'Content-Type': undefined
+                }
+            }
+        );
+        return respons;
+    }
+
+    this.getgstsummary = function () {
+        var response=$http.post(Appname+"/gstsummary_get/",{params:{"sub_type":"OVERALL","type":"SUMMARY"}});
+        return response;
+    }
+
+    this.setgstsummary = function (data) {
+        var response=$http.post(Appname+"/Gstvalidate_set/",{params:{"filter":data,"action":"Insert"}});
+        return response;
+    }
+});
+
+
+
+
+
+
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Employee Attendance {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+<div ng-app="App" ng-controller="Ctrl" class="container container1">
+    <div class="row">
+        <div class="row-header col-lg-12 col-sm-12">
+            <h4>Employee Attendance on {{date}}</h4>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="col-md-4">
+                <md-input-container ng-show="!selected.length" md-no-float="" class="md-block left">
+                    <md-icon>
+                        <i class="material-icons">search</i>
+                    </md-icon>
+                    <input type="text" ng-model="searchquery" placeholder="Search by code,name..."/>
+                </md-input-container>
+            </div>
+
+        <div class="col-md-6">
+         <md-input-container  class="md-block inputcontainer">
+                                    <label>Promised to buy on</label>
+                                    <md-datepicker md-hide-icons="calendar" ng-model="ls_followup_date"
+                                                   ng-required="true"
+                                                   md-min-date="minDate" md-max-date="maxDate" ng-click="date"
+                                                   formatDate></md-datepicker>
+         </md-input-container></div>
+
+<div layout="row">
+     <div ng-repeat="v in attndnc" id="radio-{{v.val}}">
+        <label>
+            <input type="radio" name="v"
+            ng-checked="v.checked"
+            ng-change="handleRadioClick(v)"
+            ng-model="selectedValue.val" value="{{v.val}}">
+            {{v.name}}
+        </label>
+    </div>
+
+</div>
+
+    </div>
+    </div>
+    <div class="row table-responsive">
+        <div class="col-md-12 col-lg-12 col-sm-12">
+            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                    md-progress="deferred">
+                <thead class="header">
+                <tr>
+                    <th rowspan="2">S.No</th>
+                    <th rowspan="2">Employee Code</th>
+                    <th rowspan="2">Employee Name</th>
+                    <th colspan="2">{{ls_followup_date}}</th>
+                </tr>
+                <tr>
+                    <th>Morning</th>
+                <th>AfterNoon</th></tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="emp in empsmry  | filter:searchquery ">
+                    <td>{{$index+1}}</td>
+                    <td><a href="empview">{{emp.employee_code }}</a></td>
+                    <td>{{emp.employee_name}}</td>
+
+                    <td> <input type="checkbox" id="myCheck"  onclick="myFunction()">
+                        <p id="text" style="display:none">present</p>
+                    </td><td></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App', ['ngMaterial']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+myApp.controller('Ctrl', ['$scope','testService','$mdDialog','$mdDateLocale','$filter',
+function($scope,testService,$mdDialog,$mdDateLocale,$filter) {
+$scope.date= formatDate(new Date());
+   $scope.ls_followup_date = formatDate(new Date());
+     $mdDateLocale.formatDate = function(date) {
+        return $filter('date')($scope.ls_followup_date, "dd-MMM-yyyy");
+    };
+var get_employ=testService.getcusomter()
+    get_employ.then(function (result){
+   $scope.empsmry=JSON.parse(result.data);
+    }),function(){
+    alert('no data');
+    };
+
+  $scope.attndnc = [{
+                val: 'P',
+                checked: false,
+                name: "Present"
+            }, {
+                val: 'A',
+                checked: false,
+                name: "Absent"
+            }];
+
+             $scope.handleRadioClick = function (v) {
+                alert(v.name);
+            };
+}]);
+
+
+function myFunction() {
+    var checkBox = document.getElementById("myCheck");
+    var text = document.getElementById("text");
+    if (checkBox.checked == true){
+        text.style.display = "block";
+    } else {
+       text.style.display = "none";
+    }
+}
+ myApp.service("testService", function ($http) {
+     this.getcusomter = function (d) {
+        var response = $http.get("/employee_get/");
+         return response;
+    }
+    });
+</script>
+{% endblock %}

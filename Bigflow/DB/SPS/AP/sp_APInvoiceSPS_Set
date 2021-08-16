@@ -1,0 +1,417 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APInvoiceSPS_Set`(in `Action` varchar(64),in `Type` varchar(64),
+in `lj_Header` json,in `lj_Details` json,in `lj_Amount` json,in `lj_Debit` json,
+in `lj_Credit` json,in `lj_Status` json,in `li_entity_gid` int, in `li_create_by` int,
+ out `Message` varchar(10000)
+)
+sp_APInvoiceSPS_Set:BEGIN
+
+declare errno int;
+declare msg varchar(1000);
+declare lj_inv_details json;
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;   
+
+SET autocommit = 0; 
+start transaction;
+
+
+if Action = 'Insert' then
+    # multiuser support
+		select JSON_LENGTH(lj_Status,'$') into @li_jsonStatu_count;  
+        
+        if @li_jsonStatu_count = 0 then
+			set Message = 'Status Data Is Needed.';
+            leave sp_APInvoiceSPS_Set;
+        End if;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Invoice_Header_Gid[0]'))) into @Header_Gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Status[0]'))) into @ls_Status;
+          select fn_AP_Data('MULTIUSER',@Header_Gid,'AP_Invoice',@ls_Status,li_entity_gid,'{}')  into @check_multiuser; 
+        if  @check_multiuser = 'FAIL' then
+			 set Message = 'ALREADY PROCESSED';
+             leave sp_APInvoiceSPS_Set;
+
+		end if;
+       
+        
+        ### To Insert Invoice and Debit
+			call sp_APInvoice_Set('INSERT','INVOICE_DETAILS','{}',lj_Details,lj_Debit,lj_Status,li_create_by,li_entity_gid,@Message);
+			select @Message into @Out_Message_InvDebit;
+	
+    
+			if  @Out_Message_InvDebit <> 'SUCCESS' then
+					#set Message = @Out_Message_InvDebit;
+					set Message = @Out_Message_InvDebit;
+					rollback;
+					leave sp_APInvoiceSPS_Set;
+                    
+			End if;
+      
+  
+			###      To Update The Other Amount If Exits.
+			select JSON_LENGTH(lj_Amount,'$.HEADER') into @li_json_Amount_count;
+	
+			if @li_json_Amount_count is not null or @li_json_Amount_count <> 0 then
+						call sp_APInvoice_Set('UPDATE','AMOUNT',lj_Amount,'{}','{}','{}',li_create_by,li_entity_gid,@Message);
+						select @Message into @Out_Message_Amount;
+
+						if  @Out_Message_Amount <> 'SUCCESS' then
+									set Message = @Out_Message_Amount;
+									rollback;
+									leave sp_APInvoiceSPS_Set;
+						End if;
+       
+       
+						set @Invoice_Other_Amount = 0;
+						set @Invoice_Header_Gid = 0 ;
+             
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+   
+        
+						set lj_inv_details = concat('{
+							"DETAIL":[
+							{
+							"Item_Name":"Other Amount",
+							"Description":"Amount",
+							"HSN_Code":"Other",
+							"Unit_Price":"0",
+							"Quantity":"0",
+							"Amount":',@Invoice_Other_Amount,',
+							"IGST":"0",
+							"CGST":"0",
+								"SGST":"0",
+							"Total_Amount":',@Invoice_Other_Amount,',
+							"PO_Header_Gid":"0",
+							"Discount":"0",
+							"PO_Detail_Gid":"0",
+							"GRN_Header_Gid":"0",
+							"GRN_Detail_Gid":"0",
+							"Invoice_Header_gid":',@Invoice_Header_Gid,',
+							"Invoice_Sno":"999"
+							}
+							]
+							}') ;
+        
+       
+						call sp_APInvoice_Set('INSERT','INVOICE_DETAILS',
+								'{}',lj_inv_details,lj_Debit,'{}',
+								li_create_by,li_entity_gid,@Messages
+								);
+							select @Messages into @Out_Message_OtherAmount_Inv;
+
+
+							if @Out_Message_OtherAmount_Inv <> 'SUCCESS' then
+										set Message = concat(@Out_Message_OtherAmount_Inv,'INV OTHER AMOUNT');
+										rollback;
+										leave sp_APInvoiceSPS_Set;
+						End if;
+			End if;
+						### Other Amount Ends.
+       
+        
+						### To Insert Credit.alter
+			call sp_APCredit_Set('Insert','',lj_Credit,'N',li_create_by,li_entity_gid,@Message);
+				select @Message into @Out_Message_Credit;
+				select @Out_Message_Credit;
+				
+				if  @Out_Message_Credit <> 'SUCCESS' then
+						#set Message = @Out_Message_Credit;
+					set Message = @Out_Message_Credit;
+					rollback;
+					leave sp_APInvoiceSPS_Set;
+				End if;
+      
+						# select @Out_Message_Credit;
+						#commit;
+					    
+					## To Update The Status
+			call sp_APInvoice_Set('UPDATE','STATUS','{}',lj_Details,lj_Debit,lj_Status,li_create_by,li_entity_gid,@Message);
+				select @Message into @Out_Message_Status;
+        
+				if  @Out_Message_Status <> 'SUCCESS' then
+								#set Message = Out_Message_Status;
+								set Message = @Out_Message_Status;
+								rollback;
+								leave sp_APInvoiceSPS_Set;
+				End if;
+      
+	
+					set Message = 'SUCCESS';
+					commit;	
+
+							#set Message = 'DONE';
+
+elseif Action = 'Update'  and Type = 'HEADER_FRESH_PO' then
+							### The PO Having :: Deleted ALL Record Before.
+                            ## It Again Insert a New Record.
+                             ### To Insert Invoice and Debit
+                             
+                             ### To Edit The Invoice Header. 
+                             
+								select JSON_LENGTH(lj_Header,'$.HEADER') into @li_jsonHeader_count;
+										if @li_jsonHeader_count > 0 or @li_jsonHeader_count is not null  then
+												
+														call sp_APInvoice_Set('UPDATE','INVOICE_HEADER',lj_Header,'{}','{}','{}',li_create_by,li_entity_gid,@Message);
+															select @Message into @Out_Message_Header_Edit;
+                                                            
+																if  @Out_Message_Header_Edit <> 'SUCCESS' then																		
+																			set Message = @Out_Message_Header_Edit;
+																			rollback;
+																			leave sp_APInvoiceSPS_Set;
+																End if;                                   
+										End if;   
+												###  The Code Same as Insert
+												call sp_APInvoice_Set('INSERT','INVOICE_DETAILS','{}',lj_Details,lj_Debit,lj_Status,li_create_by,li_entity_gid,@Message);
+														select @Message into @Out_Message_InvDebit;
+       
+													if  @Out_Message_InvDebit <> 'SUCCESS' then
+														#set Message = @Out_Message_InvDebit;
+														set Message = @Out_Message_InvDebit;
+														rollback;
+														leave sp_APInvoiceSPS_Set;
+													End if;
+											###      To Update The Other Amount If Exits.
+														select JSON_LENGTH(lj_Amount,'$.HEADER') into @li_json_Amount_count;
+	
+															if @li_json_Amount_count is not null or @li_json_Amount_count <> 0 then
+																		call sp_APInvoice_Set('UPDATE','AMOUNT',lj_Amount,'{}','{}','{}',li_create_by,li_entity_gid,@Message);
+																		select @Message into @Out_Message_Amount;
+
+																	if  @Out_Message_Amount <> 'SUCCESS' then
+																			set Message = @Out_Message_Amount;
+																			rollback;
+																			leave sp_APInvoiceSPS_Set;
+																	End if;       
+       
+															set @Invoice_Other_Amount = 0;
+															set @Invoice_Header_Gid = 0 ;
+             
+											select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+											select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+   
+        
+								set lj_inv_details = concat('{
+									"DETAIL":[
+									{
+									"Item_Name":"Other Amount",
+									"Description":"Amount",
+									"HSN_Code":"Other",
+									"Unit_Price":"0",
+									"Quantity":"0",
+									"Amount":',@Invoice_Other_Amount,',
+									"IGST":"0",
+									"CGST":"0",
+										"SGST":"0",
+									"Total_Amount":',@Invoice_Other_Amount,',
+									"PO_Header_Gid":"0",
+									"PO_Detail_Gid":"0",
+									"GRN_Header_Gid":"0",
+									"GRN_Detail_Gid":"0",
+									"Invoice_Header_gid":',@Invoice_Header_Gid,',
+									"Invoice_Sno":"999"
+									}
+									]
+									}') ;
+        
+       
+								call sp_APInvoice_Set('INSERT','INVOICE_DETAILS',
+										'{}',lj_inv_details,lj_Debit,'{}',
+										li_create_by,li_entity_gid,@Messages
+										);
+									select @Messages into @Out_Message_OtherAmount_Inv;
+ 
+ 
+									if @Out_Message_OtherAmount_Inv <> 'SUCCESS' then
+												set Message = concat(@Out_Message_OtherAmount_Inv,'INV OTHER AMOUNT');
+												rollback;
+												leave sp_APInvoiceSPS_Set;
+								End if;
+						End if;
+						### Other Amount Ends.      
+        
+						### To Insert Credit.alter
+						call sp_APCredit_Set('Insert','',lj_Credit,'N',li_create_by,li_entity_gid,@Message);
+						select @Message into @Out_Message_Credit;
+							select @Out_Message_Credit;
+                            
+						if  @Out_Message_Credit <> 'SUCCESS' then
+									#set Message = @Out_Message_Credit;
+								set Message = @Out_Message_Credit;
+								rollback;
+								leave sp_APInvoiceSPS_Set;
+						End if;
+      
+						# select @Out_Message_Credit;
+						#commit;
+						#leave sp_APInvoiceSPS_Set; ## remove it      
+					## To Update The Status
+						call sp_APInvoice_Set('UPDATE','STATUS','{}',lj_Details,lj_Debit,lj_Status,li_create_by,li_entity_gid,@Message);
+							select @Message into @Out_Message_Status;
+        
+				if  @Out_Message_Status <> 'SUCCESS' then
+								#set Message = Out_Message_Status;
+								set Message = @Out_Message_Status;
+								rollback;
+								leave sp_APInvoiceSPS_Set;
+				End if;      
+	
+					set Message = 'SUCCESS';
+					commit;	
+
+
+elseif Action = 'Update'  and Type = 'HEADER_UPDATE_NONPO' then
+									## For NON PO Data
+                                    ### To Edit The Invoice Header.          
+                                    ###  TO DO Conflicts
+								select JSON_LENGTH(lj_Header,'$.HEADER') into @li_jsonHeader_count;
+										if @li_jsonHeader_count > 0 or @li_jsonHeader_count is not null  then
+												
+														call sp_APInvoice_Set('UPDATE','INVOICE_HEADER',lj_Header,'{}','{}','{}',li_create_by,li_entity_gid,@Message);
+															select @Message into @Out_Message_Header_Edit;
+																if  @Out_Message_Header_Edit <> 'SUCCESS' then																		
+																			set Message = @Out_Message_Header_Edit;                                                                            
+																			rollback;
+																			leave sp_APInvoiceSPS_Set;
+																End if;                                   
+										End if;                    
+                                        
+                                        ### To Edit the Invoice Details.
+												select JSON_LENGTH(lj_Details,'$.DETAIL') into @li_jsonDetail_count;      
+															if  @li_jsonDetail_count is null or @li_jsonDetail_count = 0 then
+																set Message = 'No Data In Json For Invoice Process In Details Data To Update.';            
+                                                                rollback;
+																leave sp_APInvoiceSPS_Set;
+															End if;  
+                                                            
+													call sp_APInvoice_Set('UPDATE','INVOICE_DETAILS','{}',lj_Details,lj_Debit,'{}',li_create_by,li_entity_gid,@Message);
+															select @Message into @Out_Message_Header_Details_Edit; 
+                                                            
+																if  @Out_Message_Header_Details_Edit <> 'SUCCESS' then																		
+																			set Message = @Out_Message_Header_Details_Edit;                                                                            
+																			rollback;
+																			leave sp_APInvoiceSPS_Set;
+																End if;
+                                                                
+                                                                ##### Other Amount Edit.  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4
+                                                                ###      To Update The Other Amount If Exits.
+														select JSON_LENGTH(lj_Amount,'$.HEADER') into @li_json_Amount_count;
+	
+																	if @li_json_Amount_count is not null or @li_json_Amount_count <> 0 then
+																		
+																						select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+																							select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+                                                                                        
+																						Select ifnull(sum(invoiceheader_otheramount),0) into @INVHeaderOtherAmountDB
+																						from ap_trn_tinvoiceheader where invoiceheader_gid = @Invoice_Header_Gid ;
+                                                                        
+																				if  @Invoice_Other_Amount <> @INVHeaderOtherAmountDB then
+																											### Don't Update if Same or Other Amount Not Exists
+																									call sp_APInvoice_Set('UPDATE','AMOUNT',lj_Amount,'{}','{}','{}',li_create_by,li_entity_gid,@Message);
+																									select @Message into @Out_Message_Amount;																													
+																									if  @Out_Message_Amount <> 'SUCCESS' then
+																												set Message = @Out_Message_Amount;
+																												rollback;
+																												leave sp_APInvoiceSPS_Set;
+																									End if;
+       
+       
+																									set @Invoice_Other_Amount = 0;
+																									set @Invoice_Header_Gid = 0 ;
+             
+																									select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+																									select JSON_UNQUOTE(JSON_EXTRACT(lj_Amount, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+   
+        
+																								set lj_inv_details = concat('{
+																													"DETAIL":[
+																											{
+																											"Item_Name":"Other Amount",
+																											"Description":"Amount",
+																											"HSN_Code":"Other",
+																											"Unit_Price":"0",
+																											"Quantity":"0",
+																											"Amount":',@Invoice_Other_Amount,',
+																											"IGST":"0",
+																											"CGST":"0",
+																											"SGST":"0",
+																											"Total_Amount":',@Invoice_Other_Amount,',
+																											"PO_Header_Gid":"0",
+																											"PO_Detail_Gid":"0",
+																											"GRN_Header_Gid":"0",
+																											"GRN_Detail_Gid":"0",
+																											"Invoice_Header_gid":',@Invoice_Header_Gid,',
+																											"Invoice_Sno":"999"
+																												}
+																													]
+																												}') ;
+                                                                                                                
+                                                                                                                if @INVHeaderOtherAmountDB <> 0 then
+																														set @ls_Action_Inv = 'UPDATE';
+                                                                                                                  elseif @INVHeaderOtherAmountDB = 0 then
+																														set @ls_Action_Inv = 'INSERT';
+                                                                                                                   else
+                                                                                                                        set Message = 'Error On Invoice Details Other Amount Processing.';
+                                                                                                                        rollback;
+																														leave sp_APInvoiceSPS_Set;
+                                                                                                                End if;
+       
+																											call sp_APInvoice_Set(@ls_Action_Inv,'INVOICE_DETAILS',
+																												'{}',lj_inv_details,lj_Debit,'{}',
+																												li_create_by,li_entity_gid,@Messages
+																												);
+																												select @Messages into @Out_Message_OtherAmount_Inv;
+																														
+																													if @Out_Message_OtherAmount_Inv <> 'SUCCESS' then
+																																	set Message = concat(@Out_Message_OtherAmount_Inv,'INV OTHER AMOUNT');
+                                                                                                                                    
+																																	rollback;
+																																	leave sp_APInvoiceSPS_Set;
+																														End if;
+																					elseif @INVHeaderOtherAmountDB =  0 then
+																							set @TODo = @TODO;
+																					End if; ### Checking of Other Amount Exists or Not and Changed
+                                                                        
+						End if;
+						### Other Amount Ends.      ...........
+                                        
+                            #### Debit Edit. Starts.
+                            set @Invoice_Sno = '999';
+                            call sp_APDebit_Set('Update','',lj_Debit,'N',@Invoice_Sno,li_create_by,li_entity_gid,@Message);
+						Select @Message;                        
+                        select @Message into @Out_message_debits_edit;
+                        
+                        if @Out_message_debits_edit <> 'SUCCESS' then
+							set Message = 'FAIL IN DEBIT.';
+                            rollback;
+                            leave sp_APInvoiceSPS_Set;
+                        End if;
+						
+                    #### To Edit Debit Ends                           
+                    
+                    ####  Credit Edit Starts.
+										call sp_APCredit_Set('Update','',lj_Credit,'N',li_create_by,li_entity_gid,@Message);
+                                        Select @Message;
+												select @Message into @Out_message_debits_edit;                        
+                                                
+											if @Out_message_debits_edit <> 'SUCCESS' or @Out_message_debits_edit is null  then
+															set Message = 'FAIL IN CREDIT.';
+                                                            rollback;
+															leave sp_APInvoiceSPS_Set;
+                                             End if;               
+                        
+                    #### Credit Edit Ends.
+                    
+            set Message = 'SUCCESS';
+            commit;
+            leave sp_APInvoiceSPS_Set;
+                                        
+End if; ### If of Action and Type
+   
+
+END

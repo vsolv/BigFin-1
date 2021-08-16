@@ -1,0 +1,160 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APSIprocess_Get`(IN ls_action varchar(64),IN ls_type varchar(64),
+IN lj_Filters json,IN lj_Classification json, OUT Message varchar(1024))
+sp_APSIprocess_Get:BEGIN
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(6144);
+declare ls_count int;
+ #SELECT 1;
+ SET SESSION group_concat_max_len=4294967295;
+
+if ls_action='GET' and ls_type='STANDARD_INSTRUCTION_HEADER_DETAIL' then  
+     #SELECT 11;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.StandardInstruction_Gid'))) into @StandardInstruction_Gid;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+             
+             #SELECT @StandardInstruction_Gid,@Entity_Gid;
+             
+            set Query_Search='';
+            
+            if @StandardInstruction_Gid<>'' or @StandardInstruction_Gid is not null then  
+				 set Query_Search=concat('and a.standardinstruction_gid in (',@StandardInstruction_Gid,')');
+            end if;  
+           
+            #select Query_Search,@Entity_Gid,@StandardInstruction_Gid;
+             
+             set Query_Select='';
+             set Query_Select=concat('select a.standardinstruction_gid,a.standardinstruction_name,a.standardinstruction_code,date_format(a.standardinstruction_fromdate,''%Y-%m-%d'') as standardinstruction_fromdate,
+												date_format(a.standardinstruction_todate,''%Y-%m-%d'') as standardinstruction_todate,
+												a.standardinstruction_recurringdate,a.standardinstruction_amount,a.standardinstruction_recurringperiod,
+												a.standardinstruction_status,a.standardinstruction_Isgst,metadata_value as recuring_period,
+												a.standardinstruction_hsngid,a.standardinstruction_suppliertaxid,a.standardinstruction_remark,d.tbs_name,e.tcc_name,
+                                                date_format(b.standardinstructiondetails_ondate,''%Y-%m-%d'') as standardinstructiondetails_ondate,
+												concat(''['' ,group_concat( JSON_OBJECT(''standardinstructiondetails_gid'',b.standardinstructiondetails_gid,
+																					''standardinstruction_supplierid'',a.standardinstruction_supplierid,
+																					''standardinstruction_fromdate'',date_format(a.standardinstruction_fromdate,''%Y-%m-%d''),
+																					 ''standardinstruction_todate'',date_format(a.standardinstruction_todate,''%Y-%m-%d''),
+																					 ''standardinstructiondetails_ondate'',date_format(b.standardinstructiondetails_ondate,''%Y-%m-%d''),
+																					 ''standardinstruction_amount'',a.standardinstruction_amount,
+																					 ''standardinstructiondetails_status'',b.standardinstructiondetails_status,
+                                                                                     ''standardinstructiondetails_ishold'',b.standardinstructiondetails_ishold)),'']'') as si_detail
+												from ap_trn_tstandardinstruction a
+                                                
+												inner join ap_trn_tstandardinstructiondetails b on a.standardinstruction_gid=b.standardinstructiondetails_standardinstructiongid and
+															a.standardinstruction_isactive=''Y'' and a.standardinstruction_isremoved=''N'' and
+															b.standardinstructiondetails_isactive=''Y'' and b.standardinstructiondetails_isremoved=''N'' 
+												left join gal_mst_tmetadata c on a.standardinstruction_recurringperiod=c.metadata_gid and 
+															c.metadata_isactive=''Y'' and c.metadata_isremoved=''N''
+												inner join ap_mst_tbs d on a.standardinstruction_bsgid=d.tbs_gid and
+															d.tbs_isactive=''Y'' and d.tbs_isremoved=''N''
+												inner join ap_mst_tcc e on a.standardinstruction_ccgid=e.tcc_gid and 
+															e.tcc_isactive=''Y'' and e.tcc_isremoved=''N''
+												
+												where   a.entity_gid in (',@Entity_Gid,') ',Query_Search,'
+												group by a.standardinstruction_gid');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APSIprocess_Get.';
+				   end if;
+                   
+ELSEif ls_action='GET' and ls_type='STANDARD_INSTRUCTION_CCBS_DETAIL' then
+   #SELECT 1;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.standardinstruction_gid'))) into @standardinstruction_gid;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+             
+             
+             
+             set Query_Select='';
+             set Query_Select=concat('
+										select  a.standardinstructionccbs_gid,a1.standardinstruction_name,a.standardinstructionccbs_percent,a1.standardinstruction_remark,
+												b.category_code,b.category_no,b.category_name,c.subcategory_code,c.subcategory_no,c.subcategory_name,
+												d.tbs_code,d.tbs_name,e.tcc_code,e.tcc_name
+										from ap_trn_tstandardinstruction a1
+                                        inner join ap_trn_tstandardinstructionccbs a on a1.standardinstruction_gid=a.standardinstructionccbs_standardinstructiongid and
+													a.standardinstructionccbs_isactive=''Y'' and a.standardinstructionccbs_isremoved=''N'' 
+										inner join ap_mst_tcategory b on a.standardinstructionccbs_categorygid=b.category_gid and
+													b.category_isactive=''Y'' and b.category_isremoved=''N''
+										inner join ap_mst_tsubcategory c on a.standardinstructionccbs_subcategorygid=c.subcategory_gid AND
+													c.subcategory_isactive=''Y'' and c.subcategory_isremoved=''N''
+										inner join ap_mst_tbs d on a.standardinstructionccbs_bsgid=d.tbs_gid and 
+													d.tbs_isactive=''Y'' and d.tbs_isremoved=''N''
+										inner join ap_mst_tcc e on a.standardinstructionccbs_ccgid=e.tcc_gid and 
+													e.tcc_isactive=''Y'' and e.tcc_isremoved=''N''
+										
+										where a.entity_gid in(',@Entity_Gid,') AND 
+                                             a1.standardinstruction_gid in (',@standardinstruction_gid,')
+                                             ');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APSIprocess_Get';
+				   end if;
+   
+
+elseif ls_action='GET' and ls_type='SI_PENDING_FOR_APPROVAL' then  
+    # SELECT 11;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+             
+             set Query_Select='';
+             set Query_Select=concat('select a1.standardinstruction_gid,a1.standardinstruction_name,a1.standardinstruction_code,a1.standardinstruction_supplierid,
+										a1.standardinstruction_fromdate,a1.standardinstruction_todate,a1.standardinstruction_amount,
+										a1.standardinstruction_recurringdate,a1.standardinstruction_recurringperiod,a1.standardinstruction_remark,a2.standardinstructiondetails_ishold
+										from ap_trn_tstandardinstruction a1
+                                        inner join ap_trn_tstandardinstructiondetails a2 on a1.standardinstruction_gid=a2.standardinstructiondetails_standardinstructiongid and 
+													a1.standardinstruction_isactive=''Y'' and a1.standardinstruction_isremoved=''N'' and
+                                                    a2.standardinstructiondetails_isactive=''Y'' and a2.standardinstructiondetails_isremoved=''N''
+										where a1.entity_gid in(',@Entity_Gid,') AND
+											 a1.standardinstruction_status=''PENDING FOR APPROVAL'' group by standardinstruction_gid
+                                             ');
+			 #select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APSIprocess_Get';
+				   end if;
+
+elseif ls_action='GET' and ls_type='SI_GID' then  
+    # SELECT 11;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+             
+             set Query_Select='';
+             set Query_Select=concat('select standardinstructiondetails_gid,standardinstruction_name,standardinstruction_remark  from
+				ap_trn_tstandardinstructiondetails
+                inner join ap_trn_tstandardinstruction 
+                 on standardinstructiondetails_standardinstructiongid = standardinstruction_gid
+                where standardinstructiondetails_ondate = CURDATE()  and standardinstructiondetails_status = ''PENDING'' 
+                and 
+                standardinstructiondetails_ishold = ''N''   and standardinstructiondetails_isactive = ''Y'' and standardinstructiondetails_isremoved = ''N'' 
+                                           and standardinstruction_isactive = ''Y'' and standardinstruction_isremoved = ''N''
+                and standardinstruction_status = ''APPROVED''');
+			 #select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APSIprocess_Get';
+				   end if;
+             
+    end if;
+END

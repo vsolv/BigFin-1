@@ -1,0 +1,118 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_ECFCCBS_Set`(IN `ls_Action` varchar(32),IN `ls_Type` varchar(32),
+                                  IN `lj_Data` json,IN `lj_Classification` json,
+                                  IN `ls_create_by` varchar(16),OUT `Message` varchar(1024))
+sp_ECFCCBS_Set:BEGIN
+#Prakash 02-feb-2019
+	Declare Query_Insert varchar(2048);
+	Declare Query_Update varchar(1024);
+	Declare Query_Column varchar(1024);
+	Declare Query_Value varchar(1024);
+	Declare errno int;
+	Declare msg varchar(1000);
+	Declare countRow int;
+	Declare i int;
+    
+	 DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    
+     BEGIN
+	
+     GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+     set Message = concat(errno , msg);
+     ROLLBACK;
+     END;
+     
+     select JSON_LENGTH(lj_Classification,'$')into @li_json_class_count;
+					  if @li_json_class_count is null or @li_json_class_count =0 then
+						   set message ='no classification In Json - classification';
+						   rollback;
+						   leave sp_ECFCCBS_Set;
+					  end if;  
+                      
+		 select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid;	
+		 if @Entity_Gid = 0 and  @Debit_Gid = '' then
+		   set Message = 'Entity Gid Is Needed';
+		 end if;
+      if  ls_Action = 'INSERT' and  ls_Type = 'INITIAL_SET'  then	
+        
+            select JSON_LENGTH(lj_Data,'$.DATA') into @li_json_count;
+					if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json - Receipt.';							
+                            leave sp_ECFCCBS_Set;
+					end if;
+             set i=0;       
+		     while i <= @li_json_count -1 do
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Debit_Gid[0]'))) into @Debit_Gid;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Ccbsdtl_Cc[0]'))) into @Ccbsdtl_Cc;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Ccbsdtl_Bs[0]'))) into @Ccbsdtl_Bs;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Code[0]'))) into @ls_Code;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Percent[0]'))) into @Percent;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Gl_no[0]'))) into @Gl_no;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Amount[0]'))) into @Amount;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DATA[',i,'].Remarks[0]'))) into @Remarks;
+						
+                        set @Amount = ROUND(@Amount,2);
+                        
+                        
+						if @Debit_Gid = 0 and  @Debit_Gid = '' then
+							set Message = 'Debit Gid Is Needed';
+						end if;
+						
+						if @Ccbsdtl_Cc ='' then
+							set Message = 'Ccbsdtl Cc Is Needed';
+						end if;
+						
+						if @Ccbsdtl_Bs ='' then
+							set Message = 'Ccbsdtl Bs Is Needed';
+						end if;
+						
+						if @ls_Code ='' then
+							set Message = 'Code Is Needed';
+						end if;
+						
+						if @Percent ='' then
+							set Message = 'Percent Is Needed';
+						end if;
+						
+						if @Gl_no ='' then
+							set Message = 'Gl No Is Needed';
+						end if;
+								   
+						if @Amount ='' and @Amount= '' then
+							set Message = 'Amount Is Needed';
+						end if;
+						set Query_Column='';
+                        set Query_Value ='';
+						if @Remarks <> '' then
+							set Query_Column = concat(Query_Column, ' ccbsdtl_remarks,');
+							set Query_Value = concat(Query_Value, '''',@Remarks,''',');
+						
+						end if; 
+                        
+                        #select @Debit_Gid,@Ccbsdtl_Cc,@Ccbsdtl_Bs,@ls_Code,@Percent,@Gl_no,@Amount,@Remarks,@Entity_Gid;
+                        
+						set Query_Insert = '';
+						Set Query_Insert = Concat('Insert into ecf_trn_tccbsdtl (ccbsdtl_ecfdebitgid,ccbsdtl_cc,ccbsdtl_bs,
+												ccbsdtl_code,ccbsdtl_percent,ccbsdtl_glno,ccbsdtl_amount,'
+												,Query_Column,'entity_gid, create_by)
+												Values(''',@Debit_Gid,''',''',@Ccbsdtl_Cc,''',''',@Ccbsdtl_Bs,''',''',@ls_Code,''' 
+												,''',@Percent,''',''',@Gl_no,''',''',@Amount,''','
+												,Query_Value,'',@Entity_Gid, ',' ,ls_Create_By, ')'
+												);
+												
+						set @Insert_query = Query_Insert;
+					   # select @Insert_query;
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt; 
+			set i= i+1;
+        end while;
+				if countRow >  0 then			
+					set Message = 'SUCCESS';
+				else
+					set Message = 'FAIL';
+					rollback;
+				end if;
+      end if;
+   # commit;         
+END

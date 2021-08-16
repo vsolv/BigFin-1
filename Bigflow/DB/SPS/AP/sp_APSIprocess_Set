@@ -1,0 +1,455 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APSIprocess_Set`(in ls_action varchar(2000),in ls_type varchar(2000),
+in ls_filter json,in ls_classification json,in ls_created_by varchar(2000),out message varchar(2000))
+sp_APSIprocess_Set:BEGIN
+##Tamiloli
+declare query_store varchar(2000);
+declare query_column varchar(2000);
+declare query_value varchar(2000);
+declare query_update varchar(2000);
+declare ls_count varchar(2000);
+declare i,j varchar(200);
+declare errno varchar(200);
+declare msg varchar(200);
+
+               DECLARE done INT DEFAULT 0;
+         DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+         DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+		 BEGIN
+                  GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+                      set Message = concat(errno , msg);
+                 ROLLBACK;
+         END;
+#select 1;
+start transaction;   
+
+if ls_action='INSERT' and ls_type='INSERT_STANDARD_INSTRUCTION' then
+#select 12;
+					 select json_length(ls_filter,'$')into @ls_filter;
+					 select json_length(ls_classification,'$')into @ls_classification;
+		  
+					  if @ls_filter='' or @ls_filter is null then
+						 set message='NO DATA IN JSON-sp_APSIprocess_Set.';
+						 rollback;
+						 leave sp_APSIprocess_Set;
+					  end if;
+		  
+					  if @ls_classification='' or @ls_classification is null then
+						 set message='NO DATA IN JSON-sp_APSIprocess_Set.';
+						 rollback;
+						 leave sp_APSIprocess_Set;
+					  end if;
+
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Name'))) into @StandardInstruction_Name ;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_SupplierId'))) into @StandardInstruction_SupplierId ;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_FromDate'))) into @StandardInstruction_FromDate ;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_ToDate'))) into @StandardInstruction_ToDate ;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Recurring'))) into @StandardInstruction_Recurring ;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Amount'))) into @StandardInstruction_Amount;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_RecurringDate'))) into @StandardInstruction_RecurringDate;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_RecurringPeriod'))) into @StandardInstruction_RecurringPeriod;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Isgst'))) into @StandardInstruction_Isgst;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_hsngid'))) into @StandardInstruction_hsngid;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Istds'))) into @StandardInstruction_Istds;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_SupplierTaxId'))) into @StandardInstruction_SupplierTaxId;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_CCGid'))) into @StandardInstruction_CCGid;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_BSGid'))) into @StandardInstruction_BSGid;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Status'))) into @StandardInstruction_Status;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Branchid'))) into @StandardInstruction_Branchid;    	
+					 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Remark'))) into @StandardInstruction_Remark;    	
+                     Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid ;    
+                     
+                     set query_column='' ;
+					 set query_value='' ;
+
+						   if @StandardInstruction_Recurring<>'' or @StandardInstruction_Recurring is not null then 
+								set query_column=concat(query_column,',standardinstruction_recurring');
+								set query_value=concat(query_value,',',@StandardInstruction_Recurring,' ');
+						   end if;
+                     
+						   if @StandardInstruction_Isgst<>'' or @StandardInstruction_Isgst is not null then 
+							  set query_column=concat(query_column,',standardinstruction_Isgst');
+							  set query_value=concat(query_value,',''',@StandardInstruction_Isgst,''' ');
+						   end if;
+                           
+                           if @StandardInstruction_hsngid<>'' or @StandardInstruction_hsngid is not null then 
+							  set query_column=concat(query_column,',standardinstruction_hsngid');
+							  set query_value=concat(query_value,',',@StandardInstruction_hsngid,' ');
+						   end if;
+                           
+						  if @StandardInstruction_Istds<>'' or @StandardInstruction_Istds is not null then 
+							  set query_column=concat(query_column,',standardinstruction_istds');
+							  set query_value=concat(query_value,',''',@StandardInstruction_Istds,''' ');
+						   end if;
+                           
+                           if @StandardInstruction_Rename<>'' or @StandardInstruction_Rename is not null then 
+							  set query_column=concat(query_column,',standardinstruction_remark');
+							  set query_value=concat(query_value,',''',@StandardInstruction_Remark,''' ');
+						   end if;
+                           
+                           
+                           set @standardinstruction_code=0;
+		
+						   select ifnull(max(standardinstruction_code),0) into @standardinstruction_code from ap_trn_tstandardinstruction where date_format(create_date,'%Y-%m-%d') = curdate();
+							#SELECT @ammort_code;
+							 
+								call sp_Generatecode_Get('WITH_DATE','SI','000',@standardinstruction_code,@Message);
+								select @Message into @standardinstruction_code from dual;  
+                    /*       
+                     select @standardinstruction_code;      
+                   
+                     select query_column,query_value;
+                     
+                     select @standardinstruction_code,@StandardInstruction_SupplierId,@StandardInstruction_FromDate,@StandardInstruction_ToDate,
+                     @StandardInstruction_Amount,@StandardInstruction_RecurringDate,@StandardInstruction_RecurringPeriod,
+                    @StandardInstruction_SupplierTaxId,@StandardInstruction_CCGid,@StandardInstruction_BSGid,@StandardInstruction_Status,@StandardInstruction_Branchid,@Entity_Gid,
+                    ls_created_by;
+		
+        SELECT @StandardInstruction_Invoiceheader_Gid;
+        
+        
+        */
+                     set query_store=' ';
+					 set query_store=concat('insert into ap_trn_tstandardinstruction
+											 (standardinstruction_name,standardinstruction_code,standardinstruction_supplierid,standardinstruction_fromdate,
+											 standardinstruction_todate,
+                                             standardinstruction_amount,standardinstruction_recurringdate,
+                                             standardinstruction_recurringperiod,
+                                             standardinstruction_suppliertaxid,standardinstruction_bsgid,
+                                             standardinstruction_ccgid, standardinstruction_status,
+                                             standardinstruction_branchid,entity_gid,create_by ',query_column,' )
+											value
+											(''',@StandardInstruction_Name,''',''',@standardinstruction_code,''',
+                                            ',@StandardInstruction_SupplierId,',''',@StandardInstruction_FromDate,''',
+											''',@StandardInstruction_ToDate,''',
+											''',@StandardInstruction_Amount,''', ',@StandardInstruction_RecurringDate,',
+										   ',@StandardInstruction_RecurringPeriod,',
+                                           ',@StandardInstruction_SupplierTaxId,',',@StandardInstruction_CCGid,',
+                                           ',@StandardInstruction_BSGid,',''',@StandardInstruction_Status,''',
+                                           ',@StandardInstruction_Branchid,',',@Entity_Gid,',',ls_created_by,' ',query_value,' )');
+					 #select query_store;
+					set @p=query_store;
+					prepare stmt from @p;
+					execute stmt;
+					select row_count() into ls_count;
+					  
+						  #select ls_count;
+						  if ls_count>0 then
+								  set message='SUCCESS';
+								  select LAST_INSERT_ID() into @StandardInstruction_Gid; 
+								  
+                                  call sp_Trans_Set('Insert','SI',@StandardInstruction_Gid,
+										 @StandardInstruction_Status,'G','SI_CHECKER',
+                                         '',@Entity_Gid,ls_created_by, @Message);
+									select @Message into @out_msg_tran ;
+									#select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_APSIprocess_Set;
+											End if;
+						  else
+								  set message='NOT SUCCESS';
+							rollback;
+							leave sp_APSIprocess_Set;
+						  end if;
+				    #select @StandardInstruction_Gid;
+                    select json_length(ls_filter,'$.ccbs')into @ls_filter;
+				  
+						   if @ls_filter='' or @ls_filter is null then
+								 set message='no data in json.';
+							  rollback;
+							  leave sp_APSIprocess_Set;
+						   end if;
+				   #select  @ls_filter; 
+					set i=0;
+				    while i<@ls_filter do
+
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_CategoryGid')))into @StandardInstructionCCBS_CategoryGid;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_SubcategoryGid')))into @StandardInstructionCCBS_SubcategoryGid;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_CCGid')))into @StandardInstructionCCBS_CCGid;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_BSGid')))into @StandardInstructionCCBS_BSGid;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_Percent')))into @StandardInstructionCCBS_Percent;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_Amount')))into @StandardInstructionCCBS_Amount;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ccbs[',i,'].StandardInstructionCCBS_Remarks')))into @StandardInstructionCCBS_Remarks;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+
+								set query_column=' ' ;
+							    set query_value=' ' ;
+
+									   if @StandardInstructionCCBS_Remarks<>'' or @StandardInstructionCCBS_Remarks is not null then 
+										 set query_column=concat(query_column,',standardinstructionccbs_remarks');
+										 set query_value=concat(query_value,',''',@StandardInstructionCCBS_Remarks,'''');
+									   end if;
+								#select query_column,query_value,@StandardInstructionCCBS_Remarks;
+								
+                                set query_store=' ';
+								set query_store=concat('insert into ap_trn_tstandardinstructionccbs
+														 (standardinstructionccbs_standardinstructiongid,standardinstructionccbs_categorygid,
+                                                         standardinstructionccbs_subcategorygid,standardinstructionccbs_ccgid,
+                                                         standardinstructionccbs_bsgid,standardinstructionccbs_percent,
+                                                         entity_gid,create_by ',query_column,')
+														value
+														(',@StandardInstruction_Gid,',',@StandardInstructionCCBS_CategoryGid,',
+														',@StandardInstructionCCBS_SubcategoryGid,',',@StandardInstructionCCBS_CCGid,'
+														,',@StandardInstructionCCBS_BSGid,', ''',@StandardInstructionCCBS_Percent,''',
+													   ',@Entity_Gid,',',ls_created_by,' ',query_value,')');
+								#select query_store;
+								set @p=query_store;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+                                
+                                set i=i+1;
+                                end while;
+								  
+									  #select ls_count;
+									  if ls_count>0 then
+											  set message='SUCCESS';
+									  else
+											  set message='NOT SUCCESS';
+										rollback;
+										leave sp_APSIprocess_Set;
+									  end if;
+                    
+                    select json_length(ls_filter,'$.detail')into @ls_filter;
+				  
+						   if @ls_filter='' or @ls_filter is null then
+								 set message='no data in json.';
+							  rollback;
+							  leave sp_APSIprocess_Set;
+						   end if;
+				    #select @ls_filter;
+					set j=0;
+				    while j<@ls_filter do
+
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',j,'].StandardInstructionDetails_ondate')))into @StandardInstructionDetails_ondate;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',j,'].StandardInstructionDetails_Status')))into @StandardInstructionDetails_Status;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',j,'].StandardInstructionDetails_Amount')))into @StandardInstructionDetails_Amount;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',j,'].StandardInstructionDetails_Remark')))into @StandardInstructionDetails_Remark;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',j,'].StandardInstructionDetails_IsHold')))into @StandardInstructionDetails_IsHold;
+								Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+
+								set query_column=' ' ;
+							    set query_value=' ' ;
+
+									   if @StandardInstructionDetails_Remark<>'' or @StandardInstructionDetails_Remark is not null then 
+										 set query_column=concat(query_column,',standardinstructiondetails_remark');
+										 set query_value=concat(query_value,',''',@StandardInstructionDetails_Remark,'''');
+									   end if;
+                                       
+                                       if @StandardInstructionDetails_IsHold<>'' or @StandardInstructionDetails_IsHold is not null then 
+										 set query_column=concat(query_column,',standardinstructiondetails_ishold');
+										 set query_value=concat(query_value,',''',@StandardInstructionDetails_IsHold,'''');
+									   end if;
+								#select query_column,query_value;
+
+								set query_store=' ';
+								set query_store=concat('insert into ap_trn_tstandardinstructiondetails
+														 (standardinstructiondetails_standardinstructiongid,standardinstructiondetails_ondate,
+                                                         standardinstructiondetails_status,standardinstructiondetails_amount,
+                                                         entity_gid,create_by ',query_column,')
+														value
+														(',@StandardInstruction_Gid,',''',@StandardInstructionDetails_ondate,''',
+														''PENDING'',''',@StandardInstructionDetails_Amount,''',
+														',@Entity_Gid,',',ls_created_by,' ',query_value,' )');
+								#select query_store;
+								set @p=query_store;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+                                
+                                set j=j+1;
+                                end while;
+								  
+									  #select ls_count;
+									  if ls_count>0 then
+											  set message='SUCCESS';
+                                              commit;
+									  else
+											  set message='NOT SUCCESS';
+										rollback;
+										leave sp_APSIprocess_Set;
+									  end if;
+                                      
+ elseif ls_action='UPDATE' and ls_type='UPDATE_STANDARD_INSTRUCTION_STATUS' then
+# select 5;
+				 select JSON_LENGTH(ls_filter,'$') into @ls_filter;
+				 select JSON_LENGTH(ls_classification,'$') into @ls_classification;
+                 
+                 if  @ls_filter <=0  then
+					  set Message = 'No filters in Json Object';
+					rollback;
+					leave sp_APSIprocess_Set;
+				 end if;
+                 
+                 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Gid')))into @StandardInstruction_Gid;
+				 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstruction_Status')))into @StandardInstruction_Status;
+				 Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+                 
+                 
+                 
+              #   select @StandardInstruction_Status,@StandardInstruction_Gid,@Entity_Gid,ls_created_by;
+                 
+                 
+                 set Query_Update='';
+                 set Query_Update=concat('UPDATE ap_trn_tstandardinstruction SET   standardinstruction_status=''',@StandardInstruction_Status,''',
+																			update_by=',ls_created_by,',
+                                                                            update_date=now()
+									  	  WHERE standardinstruction_gid in (',@StandardInstruction_Gid,') and 
+												entity_gid in (',@Entity_Gid,')');
+                # select Query_Update;
+				 set @p =Query_Update;
+				 prepare stmt from @p;
+				 execute stmt;
+				 select row_count() into ls_count;
+					  if ls_count>0 then
+						 set message='SUCCESS';
+						 COMMIT;
+                         
+                          call sp_Trans_Set('update','SI',@StandardInstruction_Gid,
+										 'APPROVED','C','SI_MAKER',
+                                         '',@Entity_Gid,ls_created_by, @Message);
+								select @Message into @out_msg_tran ;
+								#select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_APSIprocess_Set;
+											End if;
+                         
+					  else
+						 set message='NOT SUCCESS- sp_APSIprocess_Set';
+						rollback;
+						leave sp_APSIprocess_Set;
+					  end if;
+      
+elseif ls_action='UPDATE' and ls_type='UPDATE_STANDARD_INSTRUCTION_DETAIL_HOLD' then
+ 
+				 select JSON_LENGTH(ls_filter,'$') into @ls_filter;
+				 select JSON_LENGTH(ls_classification,'$') into @ls_classification;
+                 
+                 if  @ls_filter <=0  then
+					  set Message = 'No filters in Json Object';
+					rollback;
+					leave sp_APSIprocess_Set;
+				 end if;
+                 
+                 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstructionDetails_Gid')))into @StandardInstructionDetails_Gid;
+				 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.StandardInstructionDetails_ISHold')))into @StandardInstructionDetails_ISHold;
+				 Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+                 
+                 set Query_Update='';
+                 set Query_Update=concat('UPDATE ap_trn_tstandardinstructiondetails SET   standardinstructiondetails_ishold=''',@StandardInstructionDetails_ISHold,''',
+																			update_by=',ls_created_by,',
+                                                                            update_date=now()
+									  	  WHERE standardinstructiondetails_gid in (',@StandardInstructionDetails_Gid,') and 
+												entity_gid in (',@Entity_Gid,')');
+                 #select Query_Update;
+				 set @p =Query_Update;
+				 prepare stmt from @p;
+				 execute stmt;
+				 select row_count() into ls_count;
+					  if ls_count>0 then
+						 set message='SUCCESS';
+						 COMMIT;
+					  else
+						 set message='NOT SUCCESS- sp_APSIprocess_Set';
+						rollback;
+						leave sp_APSIprocess_Set;
+					  end if;
+      
+ elseif ls_action='SI' and ls_type='SI_SCHEDULE' then   
+			select JSON_LENGTH(ls_filter,'$') into @ls_filter_count;
+			select JSON_LENGTH(ls_classification,'$') into @ls_classification_count;
+			select JSON_UNQUOTE(JSON_EXTRACT(ls_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+			if  @li_filters_count <=0  then
+				 set Message = 'No filters in Json Object';
+				rollback;
+				leave sp_APSIprocess_Set;
+			end if;
+			if  @li_classification_count <=0  then
+				 set Message = 'No classification in Json Object';
+				rollback;
+				leave sp_APSIprocess_Set;
+			end if;
+			if ls_created_by = '' or ls_created_by is null or ls_created_by=0  then
+				 set Message = 'No create_by in data';
+				rollback;
+				leave sp_APSIprocess_Set;
+			end if;         
+            
+			select JSON_LENGTH(ls_filter, CONCAT('$.DETAILS[0].standardinstructiondetails_gid')) into @standardinstructiondetails_gid_ln;
+            
+            select @standardinstructiondetails_gid_ln;
+					if @standardinstructiondetails_gid_ln is null or @standardinstructiondetails_gid_ln = 0 or @standardinstructiondetails_gid_ln = '' then
+						set Message = ' standardinstructiondetails_gid Gid Is Needed.';
+					   leave sp_APSIprocess_Set;
+					end if;
+			
+            set i = 0 ;
+			While i <= @standardinstructiondetails_gid_ln - 1 DO
+					select  JSON_UNQUOTE(JSON_EXTRACT(ls_filter, CONCAT('$.DETAILS[0].standardinstructiondetails_gid[',i,']'))) into @standardinstructiondetails_gid;
+  
+			
+            select fn_SIProcess('HEADER_INSERT',@standardinstructiondetails_gid,0,'{}','{}') into @ls_Header ;
+                    select @ls_Header;
+					set @ls_Header =  JSON_UNQUOTE(JSON_EXTRACT(@ls_Header, CONCAT('$.DATA'))); 
+			call sp_ECFInvoice_Set('INSERT','INVOICE_HEADER',@ls_Header,'{}','{}','{}',ls_created_by,@Entity_Gid,@Message);
+                                                  select @Message into @Out_Msg_invHeader;
+                                                  select @Out_Msg_invHeader;
+                                                  
+			if @Out_Msg_invHeader <> ''  and substring_index(@Out_Msg_invHeader,",",-1) = 'SUCCESS' then
+					  set @Inv_Header_GidMax = substring_index(@Out_Msg_invHeader,",",1) ;                                                          
+			else
+					  set Message = 'Error Occured On ECF Header Insert';
+					  leave sp_APSIprocess_Set;
+			End if; 
+            
+            select fn_SIProcess('ECF_INVOICE_INSERT',@standardinstructiondetails_gid,@Inv_Header_GidMax,'{}','{}') into @ls_invdetails ;
+
+			if @ls_invdetails <> '' then
+					 set @Inv_Details = JSON_UNQUOTE(JSON_EXTRACT(@ls_invdetails, CONCAT('$.DETAILS')));
+					 set @Debit_Details = JSON_UNQUOTE(JSON_EXTRACT(@ls_invdetails, CONCAT('$.DEBIT')));
+					 set @Credit_Details = JSON_UNQUOTE(JSON_EXTRACT(@ls_invdetails, CONCAT('$.CREDIT')));                                                     
+					 set @Status_Details = concat('{"Invoice_Header_Gid": ',@Inv_Header_GidMax,', "Status": "MAKER"}');
+			else
+					set Message = 'Error On Invoice Details Data.';
+					leave sp_APSIprocess_Set;
+		    End if;
+
+			call  sp_ECFInvoiceSPS_Set('INSERT', 
+				'INVOICE_DETAILS', '{}',@Inv_Details,'{}',@Debit_Details,@Credit_Details,@Status_Details,
+				@Entity_Gid,ls_created_by,@Message);                                                        
+			select @Message into @Out_Msg_InvDetails;
+			
+            if @Out_Msg_InvDetails = 'SUCCESS' then
+				set Message = 'SUCCESS';
+				SET SQL_SAFE_UPDATES = 0;
+					update ap_trn_tstandardinstructiondetails set  standardinstructiondetails_status = 'ECF PROCESS' where standardinstructiondetails_gid =@standardinstructiondetails_gid ;
+				#SET SQL_SAFE_UPDATES = 1;
+			else
+				 set Message = @Out_Msg_InvDetails;
+			End if;
+            
+            set i = i+1;       
+						  
+            end while;
+			#SELECT  @ammort_gid,@Ammort_Status;
+ 
+				  if i>0 then
+					 set message='SUCCESS';
+					COMMIT;
+				  else
+					 set message='NOT SUCCESS- sp_APSIprocess_Set';
+					rollback;
+					leave sp_APSIprocess_Set;
+				  end if;
+
+
+
+end if;
+
+END

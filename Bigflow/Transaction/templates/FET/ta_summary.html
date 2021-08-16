@@ -1,0 +1,455 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} TA SUMMARY {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appexemapp" ng-controller="Ctrlexemapp">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>TA SUMMARY</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <md-radio-group layout="row" ng-change="check_radio()" ng-model="data"
+                                    ng-init="data = 'APPROVED'">
+                        <md-radio-button ng-selected="true" value="APPROVED" checked>Approved</md-radio-button>
+                        <md-radio-button value="REJECTED">Rejected</md-radio-button>
+                    </md-radio-group>
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                   ng-model="fr_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>To Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-min-date="fr_date"
+                                   md-open-on-focus ng-model="to_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Amount Min</label>
+                    <input type="text" ng-model="amt_min" numbers-only maxlength="5" autocomplete="off">
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Amount Max</label>
+                    <input type="text" ng-model="amt_max" numbers-only maxlength="5" autocomplete="off">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Employee Name</label>
+                    <md-select ng-model="receivedby"
+                               ng-disabled="disable" md-on-close="clearSearchTerm()"
+                               data-md-container-class="selectdemoSelectHeader">
+                        <md-select-header class="demo-select-header">
+                            <input ng-model="searchTermemp" type="search"
+                                   placeholder="Search for a Employee Name.."
+                                   class="demo-header-searchbox md-text"
+                                   onkeydown="mdSelectOnKeyDownOverride(event)">
+                        </md-select-header>
+                        <md-optgroup label="Employee Name">
+                            <md-option ng-value="emp.employee_gid"
+
+                                       ng-repeat="emp in employee |
+              filter:searchTermemp">{{emp.employee_name}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-1">
+                <md-button aria-label="Search" class="md-fab md-mini md-primary custbutton" ng-click="search(data)">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <div ng-show="groups">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>From Date</th>
+                            <th>To Date</th>
+                            <th>Claim Status</th>
+                            <th>Claim Type</th>
+                            <th>Employee Name</th>
+                            <th>Amount Min</th>
+                            <th>Amount Max</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="summary in lst_summary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{summary.tadetails_fromdate}}</td>
+                            <td class="text-center">{{summary.tadetails_todate}}</td>
+                            <td class="text-left">{{summary.tadetails_status}}</td>
+                            <td class="text-left">{{summary.ta_type}}</td>
+                            <td class="text-left">{{summary.employee_name}}</td>
+                            <td class="text-right">{{summary.tadetails_otheramount}}</td>
+                            <td class="text-right">{{summary.tadetails_totalamount}}</td>
+                        </tr>
+                        <tr ng-show="lst_summary.length == undefined ||0">
+                            <td class="warning" colspan="11">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="5">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="lst_summary.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <td colspan="4">
+                                Total Count:{{lst_summary.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div ng-show="nongroup">
+            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                <thead class="header">
+                <tr>
+                    <th>S.No</th>
+                    <th>From Date</th>
+                    <th>To Date</th>
+                    <th>Claim Status</th>
+                    <th>Claim Type</th>
+                    <th>Employee Name</th>
+                    <th>Amount Min</th>
+                    <th>Amount Max</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="summary in mst_summary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                    <td>
+                        <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                    </td>
+                    <td class="text-center">{{summary.tadetails_fromdate}}</td>
+                    <td class="text-center">{{summary.tadetails_todate}}</td>
+                    <td class="text-left">{{summary.tadetails_status}}</td>
+                    <td class="text-left">{{summary.ta_type}}</td>
+                    <td class="text-left">{{summary.employee_name}}</td>
+                    <td class="text-right">{{summary.tadetails_otheramount}}</td>
+                    <td class="text-right">{{summary.tadetails_totalamount}}</td>
+                </tr>
+                <tr ng-show="mst_summary.length == undefined ||0">
+                    <td class="warning" colspan="11">
+                        No Records Found.
+                    </td>
+                </tr>
+                </tbody>
+                <tfoot>
+                <tr>
+                    <td colspan="5">
+                        <ul boundary-links="true" class="pagination-sm cust_pagination"
+                            items-per-page="itemsPerPage"
+                            max-size="maxSize"
+                            ng-model="currentPage" total-items="mst_summary.length"
+                            uib-pagination></ul>
+                    </td>
+                    <td colspan="4">
+                        Total Count:{{mst_summary.length}}
+
+                    </td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appexemapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+myApp.controller('Ctrlexemapp', ['$scope', '$filter', 'Serviceexemapp', '$mdDateLocale', '$mdDialog', '$window', '$element',
+    function($scope, $filter, Serviceexemapp, $mdDateLocale, $mdDialog, $window, $element) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.exemapping = [];
+        $scope.rejected = [];
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.lastdate = detail.date;
+        var d = new Date($scope.lastdate);
+       var lastdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+        window.mdSelectOnKeyDownOverride = function(event) {
+            event.stopPropagation();
+        };
+        var employee = Serviceexemapp.getemployee();
+        employee.then(function(result) {
+                var employee_data = JSON.parse(result.data)
+                $scope.employee = employee_data;
+                $scope.exemapping = employee_data;
+           },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+      $scope.search = function(data) {
+      var d = new Date($scope.lastdate);
+    var lastdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+            if ($scope.amt_min >= 0) {
+                $scope.amt_min = $scope.amt_min;
+            } else {
+                $scope.amt_min = "";
+            }
+            if ($scope.amt_max >= 0) {
+                $scope.amt_max = $scope.amt_max;
+            } else {
+                $scope.amt_max = "";
+            }
+            if ($scope.receivedby) {
+                $scope.receivedby = $scope.receivedby;
+            }
+            if ($scope.to_date == "" && $scope.fr_date != "") {
+                $scope.to_date = lastdate;
+            }
+            if ($scope.fr_date == undefined && $scope.to_date != undefined) {
+                $scope.fr_date = $scope.to_date;
+            }
+            if ($scope.fr_date == "" && $scope.to_date != undefined) {
+                $scope.fr_date = $scope.to_date;
+            }
+
+
+             if ($scope.fr_date == undefined && $scope.to_date == undefined) {
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                            "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                            "Claim_Status": data,
+                            "Employee_Gid": $scope.receivedby,
+                            "Claim_Type": "",
+                            "Amount_Min": $scope.amt_min,
+                            "Amount_Max": $scope.amt_max
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        },
+                        Group: "CLAIM_INITIAL_SUMMARY",
+                        Type: "INITIAL_SUMMARY",
+                        Sub_Type: "TEMP"
+                    }
+                }
+            } else if ($scope.fr_date != undefined && $scope.to_date == undefined) {
+                $scope.to_date = lastdate;
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                            "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                            "Claim_Status": data,
+                            "Employee_Gid": $scope.receivedby,
+                            "Claim_Type": "",
+                            "Amount_Min": $scope.amt_min,
+                            "Amount_Max": $scope.amt_max
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        },
+                        Group: "CLAIM_INITIAL_SUMMARY",
+                        Type: "INITIAL_SUMMARY",
+                        Sub_Type: "TEMP"
+                    }
+                }
+            } else if ($scope.fr_date != undefined && $scope.to_date != undefined) {
+               var data = {
+                    "Params": {
+                        "FILTER": {
+                            "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                            "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                            "Claim_Status": data,
+                            "Employee_Gid": $scope.receivedby,
+                            "Claim_Type": "",
+                            "Amount_Min": $scope.amt_min,
+                            "Amount_Max": $scope.amt_max
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        },
+                        Group: "CLAIM_INITIAL_SUMMARY",
+                        Type: "INITIAL_SUMMARY",
+                        Sub_Type: "TEMP"
+                    }
+                }
+            } else if ($scope.fr_date == undefined && $scope.to_date != undefined) {
+                $scope.fr_date = $scope.to_date;
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                            "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                            "Claim_Status": data,
+                            "Employee_Gid": $scope.receivedby,
+                            "Claim_Type": "",
+                            "Amount_Min": $scope.amt_min,
+                            "Amount_Max": $scope.amt_max
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        },
+                        Group: "CLAIM_INITIAL_SUMMARY",
+                        Type: "INITIAL_SUMMARY",
+                        Sub_Type: "TEMP"
+                    }
+                }
+            }
+            var summary = Serviceexemapp.getapproveddetail(data);
+            summary.then(function(result) {
+                    $scope.lst_summary = result.data.DATA
+                    $scope.mst_summary = result.data.DATA
+                },
+                function() {
+                    alert('no data');
+                }).finally();
+        }
+        $scope.check_radio = function() {
+            if ($scope.data == "APPROVED") {
+                if ($scope.fr_date) {
+                    $scope.fr_date = "";
+                }
+                if ($scope.to_date) {
+                    $scope.to_date = "";
+                }
+                $scope.amt_min = "";
+                $scope.amt_max = "";
+                $scope.receivedby = "";
+                loaddata();
+                return false;
+            } else if ($scope.data == "REJECTED") {
+                if ($scope.fr_date) {
+                    $scope.fr_date = "";
+                }
+                if ($scope.to_date) {
+                    $scope.to_date = "";
+                }
+                $scope.amt_min = "";
+                $scope.amt_max = "";
+                $scope.receivedby = "";
+                loadSODetails();
+                return false;
+            }
+        };
+        loaddata();
+        function loaddata() {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                        "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                        "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                        "Claim_Status": "APPROVED",
+                        "Employee_Gid": $scope.receivedby,
+                        "Claim_Type": "",
+                        "Amount_Min": $scope.amt_min,
+                        "Amount_Max": $scope.amt_max
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    },
+                    Group: "CLAIM_INITIAL_SUMMARY",
+                    Type: "INITIAL_SUMMARY",
+                    Sub_Type: "TEMP"
+                }
+            }
+            var summary = Serviceexemapp.getapproveddetail(data);
+            summary.then(function(result) {
+                    $scope.loading();
+                    $scope.lst_summary = result.data.DATA
+                    $scope.groups = true;
+                    $scope.nongroup = false;
+                 },
+                function() {
+                    alert('no data');
+                }).finally($scope.endloading);
+        }
+        function loadSODetails() {
+            var datatype = {
+                "Params": {
+                    "FILTER": {
+                        "From_Date": $filter('date')($scope.fr_date, "yyyy-MM-dd"),
+                        "TO_Date": $filter('date')($scope.to_date, "yyyy-MM-dd"),
+                        "Claim_Status": "REJECTED",
+                        "Employee_Gid": $scope.receivedby,
+                        "Claim_Type": "",
+                        "Amount_Min": $scope.amt_min,
+                        "Amount_Max": $scope.amt_max
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    },
+                    Group: "CLAIM_INITIAL_SUMMARY",
+                    Type: "INITIAL_SUMMARY",
+                    Sub_Type: "TEMP"
+                }
+            }
+            var rejectsummary = Serviceexemapp.getapproveddetail(datatype);
+            rejectsummary.then(function(result) {
+                    $scope.loading();
+                    $scope.mst_summary = result.data.DATA
+                    $scope.nongroup = true;
+                    $scope.groups = false;
+                },
+                function() {
+                    alert('no data');
+                }).finally($scope.endloading);
+        }
+    }
+]);
+myApp.service("Serviceexemapp", function($http) {
+    this.getapproveddetail = function(data) {
+        var response = $http.post(Appname + "/taview/", data);
+        return response;
+    }
+    this.getemployee = function() {
+        var response = $http.get(Appname + "/empddl/");
+        return response;
+    }
+
+});
+</script>
+{% endblock %}

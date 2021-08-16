@@ -1,0 +1,377 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Recovery{% endblock %}
+{% block content %}
+<style>
+.modal {
+  text-align: center;
+  padding: 0!important;
+}
+
+.modal:before {
+  content: '';
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+  margin-right: -4px; /* Adjusts for spacing */
+}
+
+.modal-dialog {
+  display: inline-block;
+  text-align: left;
+  vertical-align: middle;
+}
+
+</style>
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1"
+         ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <md-subheader ng-show="onbehalf_emp_heder" class="md-accent">On BeHalf Employee - {{onbehalf_emp}}
+        </md-subheader>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Advance Recovery</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th class="text-center" scope="col">S.No</th>
+                    <th class="text-center" scope="col">CRN NO</th>
+                    <th class="text-center" scope="col">ECF CRN NO</th>
+                    <th class="text-center" scope="col">Date</th>
+                    <th class="text-center" scope="col">Advance By</th>
+                    <th class="text-center" scope="col">Amount</th>
+                    <th class="text-center" scope="col">Balance</th>
+                    <th class="text-center" scope="col">Action</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="eclaim in eClaim_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{eclaim.ppxheader_crno}}</td>
+                        <td class="text-center">{{eclaim.invoiceheader_crno}}</td>
+                        <td class="text-center">{{eclaim.ppxheader_date}}</td>
+                        <td class="text-center">{{eclaim.Advance_By}}</td>
+                        <td class="text-center">{{eclaim.ppxheader_amount}}</td>
+                        <td class="text-left">{{eclaim.ppxheader_balance}}</td>
+                        <td class="text-center">
+                            <a ng-click="submit_data(eclaim)"><i class="material-icons">
+                                done
+                            </i></a>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="17">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage"
+                                ng-change="fn_pagination()"
+                                total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <label>Page Count:</label>
+                            <select type="text" style="width:100px;"
+                                    class="form-control"
+                                    placeholder="count"
+                                    ng-change="fn_pagination()"
+                                    ng-model="itemsPerPage">
+                                <option ng-value="10">10</option>
+                                <option ng-value="20">20</option>
+                                <option ng-value="40">40</option>
+                                <option ng-value="60">60</option>
+                                <option ng-value="80">80</option>
+                                <option ng-value="100">100</option>
+                            </select>
+                        </td>
+                        <!--                        <td class="text-left" colspan="1">-->
+                        <!--                            <span>Total Count:<br/> <b class="text-centre"> {{pageLength}}</b></span>-->
+                        <!--                        </td>-->
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="onbehalf" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-md modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>On Behalf of</strong>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                    </div>
+                    <br/>
+                    <form name="onbehalf_valid" novalidate role="form">
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-6">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <md-radio-group layout="row" ng-change="mode_choose()"
+                                                                ng-model="option_employee">
+                                                    <md-radio-button ng-selected="true"
+                                                                     value="self">
+                                                        Self
+                                                    </md-radio-button>
+                                                    <md-radio-button value="onbehalfof">On BeHalf</md-radio-button>
+                                                </md-radio-group>
+                                            </md-input-container>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br/>
+                                <div ng-show="other_emp" class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-6">
+                                            <label>Branch</label>
+                                            <md-autocomplete
+                                                    md-item-text="item.branch_name"
+                                                    md-items="item in brsearch(searchbr)"
+                                                    md-min-length=0
+                                                    ng-disabled="status_check"
+                                                    md-no-cache="true"
+                                                    md-search-text="searchbr"
+                                                    md-selected-item="selectedbr"
+                                                    md-selected-item-change="branchchange(item)"
+                                                    ng-required="true"
+                                                    placeholder="Branch">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.branch_code}} {{item.branch_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Branch matching "{{searchbr}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Employee</label>
+                                            <md-autocomplete
+                                                    md-item-text="item.employee_name"
+                                                    md-items="item in empsearch(searchemp)"
+                                                    md-min-length=0
+                                                    ng-disabled="status_check"
+                                                    md-no-cache="true"
+                                                    md-search-text="searchemp"
+                                                    md-selected-item="selectedemp"
+                                                    md-selected-item-change="selectempchange(item)"
+                                                    ng-required="true"
+                                                    placeholder="Employee">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.employee_name}} {{item.employee_code}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Employee matching "{{searchemp}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <md-button class="btn btn-info custbutton" ng-click="onbehalf_choose()"
+                                           ng-disabled="onbehalf_valid.$invalid">Submit
+                                    <md-tooltip>Submit</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope, eclaimService, $window, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.eclaim = [];
+    $scope.eClaim_data =[];
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_onbehalf = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('onbehalf')),
+            clickOutsideToClose: false
+        });
+    };
+
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.date_chg = function(){
+        $scope.reqdate = $filter('date')(new Date($scope.tourreqdate),'yyyy-MM-dd');
+    }
+
+    $scope.search = function(){
+        $scope.mode_choose();
+    }
+    $scope.fn_pagination = function(){
+        $scope.mode_choose();
+    }
+
+
+
+    $scope.search_feild = function(){
+        if($scope.tourno == ""){
+            $scope.tourno ="";
+            loadeclaim();
+        }
+    }
+
+    $scope.clearsearch = function(){
+        $scope.tourno ="";
+        $scope.reqdate ="";
+        loadeclaim();
+    }
+
+    $scope.submit_data = function(e){
+        var data = {
+            params: {
+                "Type": "ADVANCE_RECOVERY",
+                "json" : {
+                    "Params": {
+                        "DETAILS": e,
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.expense_process_set(data)
+        get_drop.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+                if($scope.set_msg == 'SUCCESS' ){
+                    success_toast();
+                    $window.location.reload();
+                }
+                else{
+                    alert($scope.set_msg);
+                }
+        });
+    }
+
+    $scope.tourno ="";
+    $scope.reqdate ="";
+    loadeclaim();
+    function loadeclaim(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "RECOVERY",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_expense(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+<!--            session_dataset("SELF",0);-->
+            $scope.eClaim_data = $scope.main;
+            $scope.pageLength = $scope.eClaim_data.length;
+            $scope.Totalpages = Math.ceil($scope.eClaim_data.length / $scope.itemsPerPage);
+
+        }).finally($scope.endloading);
+    }
+    $scope.myfun = function() {
+        $scope.eClaim_data = $filter('filter')($scope.main, {
+            "tourrequestreason_name": $scope.purpose_name,
+            "tourrequestreason_code": $scope.purpose_code,
+        });
+    }
+
+
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalim_expense = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    }
+    this.expense_process_set = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

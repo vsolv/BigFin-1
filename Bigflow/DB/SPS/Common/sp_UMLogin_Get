@@ -1,0 +1,53 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_UMLogin_Get`(IN `li_user_gid` int,IN `ls_user_code` varchar(64),
+IN `ls_user_pswd` varchar(64),OUT `Message` varchar(128))
+begin
+
+#Vigneshwari 20-12-2017
+
+declare Query_search varchar(1000);
+declare Login_search varchar(1000);
+declare ls_count varchar(10);
+declare ls_error varchar(128);
+declare countrows int;
+
+set Query_search = '';
+set ls_error = '';
+
+	if ls_user_code <> '' then
+		set Query_search = concat(' and employee_code = ''' , ls_user_code , '''');
+	else 
+		set Query_search = '';
+	end if;
+    
+    if li_user_gid <> 0 then
+		set Query_search = concat(' and employee_gid = ' , li_user_gid );
+	else 
+		set Query_search = concat(Query_search , '');
+	end if;
+
+	if ls_user_pswd <> '' then
+		set Query_search = concat(Query_search,' and employee_pwd = ''' , ls_user_pswd , '''');
+	else 
+		set ls_error = 'Employee Password not Given';
+	end if;
+
+	if ls_error = '' then
+		set Login_search = ' select branch_gid,employee_gid , employee_code , employee_name , employee_pwd , DATE_FORMAT(employee_pwdchangedate,''%d-%b-%Y'') as employee_pwdchangedate ,entity_gid,DATE_FORMAT(curdate(),''%d-%b-%Y'') as date
+							from gal_mst_temployee where employee_isremoved = ''N'' and employee_isactive = ''Y'' ';
+		set @q = concat(Login_search , Query_search);
+		PREPARE stmt FROM @q;
+        
+		EXECUTE stmt;
+        set countrows = (select found_rows());
+		DEALLOCATE PREPARE stmt;
+        if countrows > 0 then
+			set Message = 'SUCCESS';
+		else 
+			set Message = 'FAIL';
+		end if;
+	else
+			set Message = ls_error;
+	end if;
+
+
+END

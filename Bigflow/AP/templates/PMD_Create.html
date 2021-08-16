@@ -1,0 +1,326 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PMD Creation {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="pmd_ctrl" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PMD Creation </h4>
+            </div>
+        </div>
+        <br>
+        <form name="pmd_form" novalidate>
+            <div class="row">
+                <div class="col-md-12">
+                    <md-subheader class="md-accent"> Branch Details</md-subheader>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-4">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Branch Name"
+                                         md-item-text="item8.branch_detail"
+                                         md-items="item8 in soourcedata(search_branch_name)"
+                                         md-menu-class="md-virtual-repeat-container"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         ng-required="true"
+                                         md-search-text="search_branch_name"
+                                         md-selected-item="branch"
+                                         md-selected-item-change="branchNameChanged(item8.branch_gid)">
+                            <md-item-template>
+                                <span md-highlight-text="search_repairs_name"> {{item8.branch_detail}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No DATA matching "{{search_branch_name}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <md-subheader class="md-accent"> Location</md-subheader>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Location Name</label>
+                            <input ng-model="location" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>GST Number</label>
+                            <input ng-model="gst_number" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-1">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Is Active</label>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <md-radio-group layout="row" ng-change="check_radio()" ng-required="true"
+                                            ng-model="pmd_is_active">
+                                <md-radio-button value="Y">Y</md-radio-button>
+                                <md-radio-button value="N">N</md-radio-button>
+                                </md-radio-button>
+                            </md-radio-group>
+                        </md-input-container>
+                    </div>
+
+<!--                    <div class="col-md-4">-->
+<!--                        <md-input-container class="md-block inputcontainer">-->
+<!--                            <label>IGST Account Number</label>-->
+<!--                            <input ng-model="igst_acc_no" ng-required="true" valid-number-->
+<!--                                   maxlength="20"/>-->
+<!--                        </md-input-container>-->
+<!--                    </div>-->
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+<!--                    <div class="col-md-4">-->
+<!--                        <md-input-container class="md-block inputcontainer">-->
+<!--                            <label>SGST Account Number</label>-->
+<!--                            <input ng-model="sgst_acc_no" ng-required="true" valid-number-->
+<!--                                   maxlength="20"/>-->
+<!--                        </md-input-container>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-4">-->
+<!--                        <md-input-container class="md-block inputcontainer">-->
+<!--                            <label>CGST Account Number</label>-->
+<!--                            <input ng-model="cgst_acc_no" ng-required="true" valid-number-->
+<!--                                   maxlength="20"/>-->
+<!--                        </md-input-container>-->
+<!--                    </div>-->
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-12">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Remarks</label>
+                            <input ng-model="remarks" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <md-button class="md-raised custbutton"
+                               ng-show="update!='edit'"
+                               value="submit"
+                               ng-disabled="pmd_form.$invalid"
+                               ng-click="save_pmd_data('NEW')">
+                        Save
+                    </md-button>
+                    <md-button class="md-raised "
+                               value="submit"
+                               ng-show="update=='edit'"
+                               ng-disabled="pmd_form.$invalid"
+                               ng-click="save_pmd_data('UPDATE')">
+                        Update
+                    </md-button>
+                    <md-button class="md-raised" value="close"
+                               aria-label="Close" href="pmd_branch_summary/">Cancel
+                    </md-button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('pmd_ctrl', ['$scope','pmd_service','$mdDialog','$window','$filter','$http',
+function($scope,pmd_service,$mdDialog,$window,$filter,$http) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.branch_gid=0;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+     if (sessionStorage.getItem('pmd') != null)
+     {
+     debugger;
+        var pmd_values = JSON.parse(sessionStorage.getItem('pmd'));
+        console.log(pmd_values);
+        $scope.update = pmd_values.view;
+        $scope.pmd_gid=pmd_values.pmd.pmdbranch_gid
+        get_pmd_details($scope.pmd_gid);
+
+     }
+
+    $scope.soourcedata = function(query) {
+
+            var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                               "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                            "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+
+                         return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+
+                            var final_values=data.data.DATA;
+                            console.log(final_values);
+                            return final_values;
+                          });
+    }
+    $scope.branchNameChanged=function(gid){
+        if(gid!=undefined){
+            $scope.branch_gid=gid;
+
+        }
+    }
+
+    function get_pmd_details(pmd_gid){
+
+        var datas={"action":'GET',"type":"PMD_DETAILS","filter":{"pmd_gid":pmd_gid}};
+        $scope.loading();
+            var pmd_summary = pmd_service.pmd_get(datas);
+             pmd_summary.then(function(result) {
+            debugger;
+                    $scope.pmd_data =result.data;
+                    console.log($scope.pmd_data);
+                    $scope.pmd_gid=$scope.pmd_data[0].pmdbranch_gid;
+                    $scope.branch=$scope.pmd_data[0].branch_name;
+                    $scope.location=$scope.pmd_data[0].pmdbranch_location;
+                    $scope.gst_number=$scope.pmd_data[0].pmdbranch_gstno;
+                    $scope.igst_acc_no=$scope.pmd_data[0].pmdbranch_igst_accountno;
+                    $scope.sgst_acc_no=$scope.pmd_data[0].pmdbranch_sgst_accountno;
+                    $scope.cgst_acc_no=$scope.pmd_data[0].pmdbranch_cgst_accountno;
+                    $scope.pmd_is_active=$scope.pmd_data[0].pmdbranch_isactive;
+                    $scope.remarks=$scope.pmd_data[0].pmdbranch_remark;
+                    $scope.branch_gid=$scope.pmd_data[0].pmdbranch_branchgid;
+
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data));
+                    }
+
+                },
+                function(err) {
+                    alert("No Data");
+        }).finally($scope.endloading);
+
+    }
+
+
+    $scope.save_pmd_data=function(type){
+        $scope.execute=1;
+        if($scope.branch_gid==0 || $scope.branch_gid==undefined){
+            $scope.execute==0;
+            alert("Select Branch");
+        }
+        if(type=="NEW"){
+            var datas={"action":"INSERT","type":"PMD_SET",
+            "filter":{"branchgid":$scope.branch_gid,"location":$scope.location,
+            "igst_acc_no":"12345","sgst_acc_no":"12345","cgst_acc_no":"12345",
+            "gstno":$scope.gst_number,"remark":$scope.remarks,"isactive":$scope.pmd_is_active}};
+        }
+        else if(type=="UPDATE"){
+            if($scope.pmd_gid!=0){
+                var datas={"action":"INSERT","type":"PMD_SET",
+                "filter":{"pmd_gid":$scope.pmd_gid,"branchgid":$scope.branch_gid,"location":$scope.location,
+                "igst_acc_no":"12345", "sgst_acc_no":"12345","cgst_acc_no":"12345",
+                "gstno":$scope.gst_number,"remark":$scope.remarks,"isactive":$scope.pmd_is_active}};
+            }
+            else{
+                $scope.execute=0;
+                alert("PMD Gid Missing...");
+
+            }
+        }
+
+        if($scope.execute==1){
+            $scope.loading();
+            var pmd_creations = pmd_service.set_pmd(datas);
+                pmd_creations.then(function(result) {
+                    var res=result.data;
+                     if (res=== "SUCCESS") {
+                    alert("SUCCESS");
+                    $window.location.href = "pmd_branch_summary";
+                    } else {
+                  alert(res);
+                  }
+                }, function(err) {
+                  alert('Data Not Inserted');
+                }).finally($scope.endloading);
+        }
+    }
+
+
+
+}]);
+myApp.service("pmd_service", function ($http) {
+    this.set_pmd=function (data) {
+        var response=$http.post(Appname+"/set_pmd_data/",data);
+        debugger;
+        return response;
+   }
+   this.pmd_get=function(data){
+        var response=$http.post(Appname+"/get_pmd_data/",data);
+        return response;
+    }
+
+
+ });
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

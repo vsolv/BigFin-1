@@ -1,0 +1,978 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APAmmort_Set`(IN Action varchar(200),
+IN Type varchar(200),
+IN lj_filters json,
+IN lj_classification json,
+IN create_by int,
+OUT Message varchar(1000))
+sp_APAmmort_Set:BEGIN
+declare Query_Insert varchar(2000);
+declare Query_Update varchar(2000);
+declare query_column varchar(2000);
+declare query_value varchar(2000);
+declare errno int;
+declare msg varchar(1000);
+declare max_value varchar(100);
+declare ls_count int;
+declare i,j int;
+	DECLARE done INT UNSIGNED DEFAULT 0;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+	BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+	END;
+    
+    start transaction;
+    
+    if Action='INSERT' and Type='AMMORT_SCHEDULE_SET' then
+    #select 1;
+		select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+		select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+        
+		if  @li_filters_count <=0  then
+			 set Message = 'No filters in Json Object';
+			rollback;
+			leave sp_APAmmort_Set;
+		end if;
+		if  @li_classification_count <=0  then
+			 set Message = 'No classification in Json Object';
+            rollback;
+			leave sp_APAmmort_Set;
+		end if;
+		if create_by = '' or create_by is null or create_by=0  then
+			 set Message = 'No create_by in data';
+            rollback;
+			leave sp_APAmmort_Set;
+		end if;
+
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_InvoiceHeaderGid'))) into @Ammort_InvoiceHeaderGid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_SupplierGid'))) into @Ammort_SupplierGid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_Amount_Branch'))) into @Ammort_Amount_Branch;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_FromDate'))) into @Ammort_FromDate;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_ToDate'))) into @Ammort_ToDate;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_Split'))) into @Ammort_Split;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+        /*
+        select @Ammort_InvoiceHeaderGid,@Ammort_SupplierGid,@Ammort_Amount_Branch,@Ammort_FromDate,@Ammort_ToDate,
+				@Ammort_Split,@Entity_Gid;
+        */
+        
+        if @Ammort_InvoiceHeaderGid='' or @Ammort_InvoiceHeaderGid is null then
+			set message='Ammort_InvoiceHeaderGid Is Not Given';
+        leave sp_APAmmort_Set;
+        rollback;
+        end if;
+        
+        if @Ammort_SupplierGid='' or @Ammort_SupplierGid is null then
+			set message='Ammort_SupplierGid Is Not Given';
+        leave sp_APAmmort_Set;
+        rollback;
+        end if;
+        
+        if @Ammort_Amount_Branch='' or @Ammort_Amount_Branch is null then
+			set message='Ammort_Amount_Branch Is Not Given';
+        leave sp_APAmmort_Set;
+        rollback;
+        end if;
+        
+        set  @Ammort_FromDate=DATE_FORMAT(@Ammort_FromDate, '%Y-%m-%d');
+        set  @Ammort_ToDate=DATE_FORMAT(@Ammort_ToDate, '%Y-%m-%d');
+        
+        if @Entity_Gid='' or @Entity_Gid is null then
+			set message='Entity_Gid Is Not Given';
+        leave sp_APAmmort_Set;
+        rollback;
+        end if;
+        
+	 	
+            
+		set query_column=' ' ;
+		set query_value=' ' ;
+
+		   if @Ammort_Split<>'' or @Ammort_Split is not null then 
+			 set query_column=concat(',ammort_split');
+			 set query_value=concat(',''',@Ammort_Split,'''');
+		   end if;
+           
+           
+           
+          #select 11;
+           set @ammort_code=0;
+		
+          select ifnull(max(ammort_code),0) into @ammort_code from ap_trn_tammort where date_format(create_date,'%Y-%m-%d') = curdate();
+			#SELECT @ammort_code;
+			 
+				call sp_Generatecode_Get('WITH_DATE','AM','000',@ammort_code,@Message);
+				select @Message into @ammort_code from dual;   
+			
+        #select @ammort_code; 
+		set Query_Insert='';
+        set Query_Insert=concat('insert into ap_trn_tammort 
+											 (ammort_invoiceheadergid,ammort_code,
+                                              ammort_suppliergid,ammort_amount,
+											  ammort_balance,ammort_status,
+                                              ammort_fromdate,ammort_todate,
+                                              ammort_cycle,entity_gid,create_by ',query_column,')
+                                              value
+                                              (',@Ammort_InvoiceHeaderGid,',''',@ammort_code,''',
+                                              ',@Ammort_SupplierGid,',',@Ammort_Amount_Branch,',
+                                              ',@Ammort_Amount_Branch,',''PENDING FOR APPROVAL'',
+                                              ''',@Ammort_FromDate,''',''',@Ammort_ToDate,''',
+                                              ''MONTH'',',@Entity_Gid,',',create_by,' ',query_value,')');
+		 #select Query_Insert;
+         set @p=Query_Insert;
+	     prepare stmt from @p;
+	     execute stmt;
+	     select row_count() into ls_count;
+			 # select ls_count;
+		   if ls_count>0 then
+				set message='SUCCESS';
+                select LAST_INSERT_ID() into @ammort_gid;
+               # select @ammort_gid;
+               
+					call sp_Trans_Set('Insert','AM',@ammort_gid,
+										 'PENDING FOR APPROVAL','G','AM_CHECKER',
+                                         '',@Entity_Gid,create_by, @Message);
+									select @Message into @out_msg_tran ;
+									#select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_APAmmort_Set;
+											End if;
+		   else
+				set message='FAIL';	
+				 rollback;
+				leave sp_APAmmort_Set;
+		   end if;
+          
+          
+          select json_length(lj_filters,'$.ccbs')into @lj_filters;
+			#select 12;	  
+			   if @lj_filters='' or @lj_filters is null then
+					 set message='no data in json.';
+				  rollback;
+				  leave sp_APAmmort_Set;
+			   end if;
+               
+          set j=0;
+		  while j<@lj_filters do
+          
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_CategoryGid')))into @Ammortccbs_CategoryGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_SubcategoryGid')))into @Ammortccbs_SubcategoryGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_bsGid')))into @Ammortccbs_bsGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_ccGid')))into @Ammortccbs_ccGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_Percent')))into @Ammortccbs_Percent;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.ccbs[',j,'].Ammortccbs_Remarks')))into @Ammortccbs_Remarks;
+          
+				set query_column='' ;
+				set query_value='' ;
+
+				   if @Ammortccbs_Remarks<>'' or @Ammortccbs_Remarks is not null then 
+					  set query_column=concat(',ammortccbs_remarks');
+					  set query_value=concat(',''',@Ammortccbs_Remarks,'''');
+				   end if;
+              /*
+              select @ammort_gid,@Ammortccbs_CategoryGid
+                                                       ,@Ammortccbs_SubcategoryGid,@Ammortccbs_bsGid,
+                                                       @ammortccbs_ccgid,@ammortccbs_percent,
+                                                         @Entity_Gid,create_by;
+               select  query_column,query_value;                                         
+               */
+               
+               set Query_Insert='';
+			   set Query_Insert=concat('insert into ap_trn_tammortccbs
+													  (ammortccbs_ammortgid,ammortccbs_categorygid,
+                                                      ammortccbs_subcategorygid,ammortccbs_bsgid,
+                                                      ammortccbs_ccgid,ammortccbs_percent,
+                                                      entity_gid,create_by ',query_column,') value
+                                                       (',@ammort_gid,',',@Ammortccbs_CategoryGid,',
+                                                       ',@Ammortccbs_SubcategoryGid,',',@Ammortccbs_bsGid,',
+                                                       ',@ammortccbs_ccgid,',''',@ammortccbs_percent,''',
+                                                       ',@Entity_Gid,',',create_by,'
+                                                       ',query_value,')');
+                #select Query_Insert;
+				set @p=Query_Insert;
+				prepare stmt from @p;
+				execute stmt;
+				select row_count() into ls_count;   
+          
+			set j=j+1;
+          end while;
+					# select ls_count;
+					   if ls_count>0 then
+							set message='SUCCESS';
+                            commit;
+					   else
+							set message='NOT SUCCESS';	
+						rollback;
+						leave sp_APAmmort_Set;
+					   end if; 
+          
+          select json_length(lj_filters,'$.detail')into @lj_filters;
+			#select 12;	  
+			   if @lj_filters='' or @lj_filters is null then
+					 set message='no data in json.';
+				  rollback;
+				  leave sp_APAmmort_Set;
+			   end if;
+           #select 121; 
+           
+           set i=0;
+		   while i<@lj_filters do
+     
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetail_FromDate')))into @AmmortDetail_FromDate;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetail_ToDate')))into @AmmortDetail_ToDate;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_ecfHeaderGid')))into @AmmortDetails_ecfHeaderGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_InvoiceNo')))into @AmmortDetails_InvoiceNo;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_SupplierGid')))into @AmmortDetails_SupplierGid;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_ecfAmount')))into @AmmortDetails_ecfAmount;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_Completed')))into @AmmortDetails_Completed;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_Remarks')))into @AmmortDetails_Remarks;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetails_Hold')))into @AmmortDetails_Hold;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmmortDetail_Status')))into @AmmortDetail_Status;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+				set query_column='' ;
+				set query_value='' ;
+
+				   if @AmmortDetails_Hold<>'' or @AmmortDetails_Hold is not null then 
+					 set query_column=concat(',ammortdetails_hold');
+					 set query_value=concat(',''',@AmmortDetails_Hold,'''');
+				   end if;
+                   
+			       if @AmmortDetails_Completed<>'' or @AmmortDetails_Completed is not null then 
+					 set query_column=concat(query_column,',ammortdetails_completed');
+					 set query_value=concat(query_value,',''',@AmmortDetails_Completed,'''');
+				   end if;
+                   
+                   if @AmmortDetails_Remarks<>'' or @AmmortDetails_Remarks is not null then 
+					 set query_column=concat(query_column,',ammortdetails_remarks');
+					 set query_value=concat(query_value,',''',@AmmortDetails_Remarks,'''');
+				   end if;
+                   
+                   
+                   /*
+                   select query_column,query_value,@AmmortDetails_Remarks;
+                   
+                   
+                   select @ammort_gid,@AmmortDetail_FromDate,@AmmortDetail_ToDate,@AmmortDetails_ecfHeaderGid,@AmmortDetails_InvoiceNo,
+                   @AmmortDetails_SupplierGid,@AmmortDetail_Status,@AmmortDetails_ecfAmount,@AmmortDetails_Remarks,@Entity_Gid,create_by;
+                   */
+                   
+				set ls_count=0;
+                set Query_Insert='';
+				set Query_Insert=concat('insert into ap_trn_tammortdetails
+													  (ammortdetail_amortheadergid,ammortdetail_fromdate,ammortdetail_todate,
+                                                       ammortdetails_ecfheadergid,ammortdetails_invoiceno,
+                                                       ammortdetails_suppliergid,ammortdetail_status,
+                                                       ammortdetails_ecfamount,entity_gid,create_by
+                                                        ',query_column,') value
+                                                       (',@ammort_gid,',''',@AmmortDetail_FromDate,''',''',@AmmortDetail_ToDate,''',
+                                                         ',@AmmortDetails_ecfHeaderGid,',''',@AmmortDetails_InvoiceNo,''',
+                                                         ''',@AmmortDetails_SupplierGid,''',''',@AmmortDetail_Status,''',',@AmmortDetails_ecfAmount,',
+                                                        ',@Entity_Gid,',',create_by,'
+                                                          ',query_value,')');
+                #select Query_Insert;
+				 set @p=Query_Insert;
+				 prepare stmt from @p;
+				 execute stmt;
+				 select row_count() into ls_count;
+            
+            set i=i+1;
+		  end while;      
+					 # select ls_count;
+					   if ls_count>0 then
+							set message='SUCCESS';
+                            commit;
+					   else
+							set message='NOT SUCCESS';	
+						rollback;
+						leave sp_APAmmort_Set;
+					   end if;   
+    
+    elseif Action='UPDATE' and Type='AMMORT_STATUS_UPDATE' then
+		#SELECT 1;
+			select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+			select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+			
+			if  @li_filters_count <=0  then
+				 set Message = 'No filters in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if  @li_classification_count <=0  then
+				 set Message = 'No classification in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if create_by = '' or create_by is null or create_by=0  then
+				 set Message = 'No create_by in data';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+		   #SELECT 23;
+            
+            Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.Ammort_Gid')))into @ammort_gid;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.Ammort_Status')))into @Ammort_Status;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+			#SELECT  @ammort_gid,@Ammort_Status;
+            
+            set Query_Update='';
+			set Query_Update=concat('UPDATE ap_trn_tammort SET   ammort_status=''',@Ammort_Status,''',
+																 update_by=',create_by,',
+																 Update_date=now()
+									  	  WHERE ammort_gid in (',@Ammort_Gid,') and entity_gid in (',@Entity_Gid,') ');
+		     #select Query_Update;
+			 set @p =Query_Update;
+			 prepare stmt from @p;
+			 execute stmt;
+			 select row_count() into ls_count;
+				  
+                  if ls_count>0 then
+					 set message='SUCCESS';
+					COMMIT;
+                    
+                    call sp_Trans_Set('update','AM',@Ammort_Gid,
+										 @Ammort_Status,'C','AM_MAKER',
+                                         '',@Entity_Gid,create_by, @Message);
+								select @Message into @out_msg_tran ;
+								#select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_APAmmort_Set;
+											End if;
+				 
+                  
+                  
+                  
+                  
+                  else
+					 set message='NOT SUCCESS- sp_APAmmort_Set';
+					rollback;
+					leave sp_APAmmort_Set;
+				  end if;
+                  
+                  
+    
+   elseif Action='AMOMRT' and Type='AMMORT_AMOUNT' then
+					
+                    
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_Date'))) into @Ammort_Date;
+					select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+					#select @Ammort_Date;
+					
+                    set @ammortdetail_amortheadergid='';
+                    set @ammortdetail_gid='';
+                    ##find a record
+                    SELECT ammortdetail_amortheadergid,ammortdetail_gid into @ammortdetail_amortheadergid,@ammortdetail_gid
+						FROM ap_trn_tammortdetails
+						WHERE  ammortdetail_fromdate<=@Ammort_Date AND ammortdetail_todate>=@Ammort_Date;
+                        
+                    set @total_days='';
+                    ## total days
+				    select datediff(ammortdetail_todate,ammortdetail_fromdate) into @total_days
+						from ap_trn_tammortdetails
+						where ammortdetail_amortheadergid=@ammortdetail_amortheadergid;
+					#select @ammortdetail_amortheadergid ;
+                    
+					set @processing_date='';
+                    ##processing date is there or not
+					select ammort_processingdate into @processing_date
+						from ap_trn_tammort a
+						inner join ap_trn_tammortdetails b on a.ammort_gid=b.ammortdetail_amortheadergid
+						where a.ammort_gid= @ammortdetail_amortheadergid;
+                    ##from_date,to_date,amount
+                    select ammortdetail_fromdate,ammortdetail_todate,ammortdetails_ecfamount 
+						into @from_date,@to_date,@total_amount
+						from ap_trn_tammortdetails
+						where ammortdetail_amortheadergid=@ammortdetail_amortheadergid;
+					
+                    set @processing_date=date_format(@processing_date,'%Y-%m-%d');
+					
+                   # select @processing_date;
+					
+								   if @Ammort_Date=@processing_date or @Ammort_Date=@from_date or @Ammort_Date=@to_date then
+											set message='DATE NOT MATCH';
+											rollback;
+											leave sp_APAmmort_Set;
+								   end if;
+                                   
+                                   if @processing_date <>'' or @processing_date is not null then
+													##above record
+                                                    select group_concat(ammortdetail_gid) into @ecf_balance
+														from ap_trn_tammortdetails 
+														where ammortdetail_gid < @ammortdetail_gid and ammortdetails_balance>0;
+													
+                                                    select datediff( @Ammort_Date,@processing_date) into @days;
+													
+                                                    #select @days;
+													#select @from_date,@to_date,@total_amount;
+													#select @total_days,@per_day_amount,@ammort_amount,@balance_amount,@Entity_Gid;
+													
+                                                    set @per_day_amount= @total_amount/ @total_days;
+													set @ammort_amount= @per_day_amount * @days;
+													set @balance_amount=@total_amount-@ammort_amount;
+													
+                                                     
+                                                    
+                                                    if @balance_amount=0 and @ecf_balance =0 and @ecf_balance is null then 
+														set message='ZERO BALANCE';
+                                                        rollback;
+                                                        leave sp_APAmmort_Set;
+													end if;
+                                                    
+                                                    #select @balance_amount,@create_by,@ammortdetail_amortheadergid,@Entity_Gid;
+                                                    SET SQL_SAFE_UPDATES = 0;
+													set Query_Update='';
+													set Query_Update=concat('UPDATE ap_trn_tammortdetails SET ammortdetails_balance=',@balance_amount,',
+																											  update_by=',create_by,',
+																											  Update_date=now()
+																			 WHERE ammortdetail_amortheadergid in (',@ammortdetail_amortheadergid,') and
+																					entity_gid in (',@Entity_Gid,') ');
+													#select Query_Update;
+													set @p=Query_Update;
+													prepare stmt from @p;
+													execute stmt;
+													select row_count() into ls_count;
+														if ls_count >0 then
+															set message='SUCCESS';
+														else
+															set message='NOT SUCCESS';
+														rollback;
+														leave sp_APAmmort_Set;
+														end if;
+													
+                                                    if  @ecf_balance <>'' or  @ecf_balance is not null then
+															
+                                                            #SET @ammort_amount= truncate(ammortdetails_ecfamount,2);
+															set Query_Insert='';
+															set Query_Insert=concat('insert into ap_trn_tammorttran
+																						  (ammorttran_amortdetailgid,ammorttran_ecfheadergid,
+																						  ammorttran_fromdate,ammorttran_todate,
+																						  ammorttran_date,ammorttran_ecfamount,
+																						  ammorttran_status,entity_gid,create_by)
+                                                                                           (select 1,10,
+																							 0000-00-00,0000-00-00,
+																							current_date(),ammortdetails_balance,''HOLD'',
+                                                                                            1,56
+																							from ap_trn_tammortdetails
+																							where ammortdetail_gid <',@ammortdetail_gid,'  and ammortdetails_balance>0)');
+                                                           # select Query_Insert;
+															set @p=Query_Insert;
+															prepare stmt from @p;
+															execute stmt;
+															select row_count() into ls_count;
+																	if ls_count >0 then
+																		set message='SUCCESS ';
+																	else
+																		set message='NOT SUCCESS';
+																	rollback;
+																	leave sp_APAmmort_Set;
+																	end if;   
+                                                                    
+                                                            set Query_Update='';
+															set Query_Update=concat('UPDATE ap_trn_tammortdetails SET ammortdetails_balance=0,
+																														  update_by=',create_by,',
+																														  Update_date=now()
+																						WHERE ammortdetail_gid in (',@ecf_balance,')');
+															#select Query_Update;
+															set @p=Query_Update;
+															prepare stmt from @p;
+															execute stmt;
+															select row_count() into ls_count;
+																	
+																	if ls_count >0 then
+																		set message='SUCCESS';
+																		COMMIT;
+																	else
+																		set message='NOT SUCCESS ';
+																		rollback;
+																		leave sp_APAmmort_Set;
+																	end if;
+															                             
+                                                    end if;
+                                                    
+                                                    SET @ammort_amount= truncate(@ammort_amount,2);
+													set Query_Insert='';
+													set Query_Insert=concat('insert into ap_trn_tammorttran
+																						  (ammorttran_amortdetailgid,ammorttran_ecfheadergid,
+																						  ammorttran_fromdate,ammorttran_todate,
+																						  ammorttran_date,ammorttran_ecfamount,
+																						  ammorttran_status,entity_gid,create_by) value
+
+																						   (',@ammortdetail_gid,',0,
+																							 0000-00-00,0000-00-00,
+																							''',current_date(),''',''',@ammort_amount,''',
+																							''PENDING FOR APPROVAL'',
+																							',@Entity_Gid,',',create_by,' )');
+													#select Query_Insert;
+													set @p=Query_Insert;
+													prepare stmt from @p;
+													execute stmt;
+													select row_count() into ls_count;
+															if ls_count >0 then
+																set message='SUCCESS ammort';
+															else
+																set message='NOT SUCCESS';
+															rollback;
+															leave sp_APAmmort_Set;
+													    	end if;
+												   
+                                                   set Query_Update='';
+												   set Query_Update=concat('UPDATE ap_trn_tammort SET ammort_processingdate=''',@Ammort_Date,''',
+																											  update_by=',create_by,',
+																											  Update_date=now()
+																			WHERE ammort_gid in (',@ammortdetail_amortheadergid,')');
+												   #select Query_Update;
+												   set @p=Query_Update;
+												   prepare stmt from @p;
+												   execute stmt;
+												   select row_count() into ls_count;
+														if ls_count >0 then
+															set message='SUCCESS';
+														else
+															set message='NOT SUCCESS';
+														  rollback;
+														  leave sp_APAmmort_Set;
+														end if;
+                                                        
+									elseif @processing_date ='' or @processing_date is null then 		
+													
+                                                    #select  @ammortdetail_gid;
+													select group_concat(ammortdetail_gid) into @ecf_balance
+														from ap_trn_tammortdetails 
+														where ammortdetail_gid < @ammortdetail_gid and ammortdetails_balance>0;
+													
+													
+                                                    #select 12,@ecf_balance;
+													select datediff( @Ammort_Date,@from_date) into @days;
+													
+                                                    #select @days;
+													#select @from_date,@to_date,@total_amount;
+													
+                                                    select datediff(ammortdetail_todate,ammortdetail_fromdate) into @total_days
+														from ap_trn_tammortdetails
+														where ammortdetail_amortheadergid=@ammortdetail_amortheadergid;
+													
+                                                    set @per_day_amount= @total_amount/ @total_days;
+													set @ammort_amount= @per_day_amount * @days;
+													set @balance_amount=@total_amount-@ammort_amount;
+													
+                                                    #select @total_days,@per_day_amount,@ammort_amount,@balance_amount;
+                                                    
+                                                    if @balance_amount=0 and @ecf_balance =0 and @ecf_balance is null then 
+														set message='ZERO BALANCE';
+                                                        rollback;
+                                                        leave sp_APAmmort_Set;
+													end if;
+													
+                                                    #select @balance_amount,@create_by,@ammortdetail_amortheadergid,@Entity_Gid;
+                                                    
+                                                    SET SQL_SAFE_UPDATES = 0;
+													set Query_Update='';
+													set Query_Update=concat('UPDATE ap_trn_tammortdetails SET ammortdetails_balance=',@balance_amount,',
+																											  update_by=',create_by,',
+																											  Update_date=now()
+																			WHERE ammortdetail_amortheadergid in (',@ammortdetail_amortheadergid,') and
+																				  entity_gid in (',@Entity_Gid,') ');
+													#select Query_Update;
+													set @p=Query_Update;
+													prepare stmt from @p;
+													execute stmt;
+													select row_count() into ls_count;
+														if ls_count >0 then
+															set message='SUCCESS  ';
+														else
+															set message='NOT SUCCESS';
+														  rollback;
+														  leave sp_APAmmort_Set;
+														end if;
+                                                   
+                                                   if  @ecf_balance <>'' or  @ecf_balance is not null then
+														   
+                                                           
+                                                           set Query_Insert='';
+															set Query_Insert=concat('insert into ap_trn_tammorttran
+																						  (ammorttran_amortdetailgid,ammorttran_ecfheadergid,
+																						  ammorttran_fromdate,ammorttran_todate,
+																						  ammorttran_date,ammorttran_ecfamount,
+																						  ammorttran_status,entity_gid,create_by)
+                                                                                           (select 1,10,
+																							 ''0000-00-00'',''0000-00-00'',
+																							current_date(),78,''HOLD'',
+                                                                                            ',@Entity_Gid,',',create_by,'
+																							from ap_trn_tammortdetails
+																							where ammortdetail_gid <',@ammortdetail_gid,'  and ammortdetails_balance>0)');
+																							
+                                                            #select Query_Insert;			
+															set @p=Query_Insert;
+															prepare stmt from @p;
+															execute stmt;
+															select row_count() into ls_count;
+                                                            select ls_count;
+																	if ls_count>0 then
+																		set message='SUCCESS';
+																	else
+																		set message='NOT SUCCESS';
+																	rollback;
+																	leave sp_APAmmort_Set;
+																	end if;  
+                                                                    
+                                                           set Query_Update='';
+														   set Query_Update=concat('UPDATE ap_trn_tammortdetails SET ammortdetails_balance=0,
+																													  update_by=',create_by,',
+																													  Update_date=now()
+																					WHERE ammortdetail_gid in (',@ecf_balance,')');
+														   #select Query_Update;
+														   set @p=Query_Update;
+														   prepare stmt from @p;
+														   execute stmt;
+														   select row_count() into ls_count;
+																
+																if ls_count >0 then
+																	set message='SUCCESS.';
+																	
+																else
+																	set message='NOT SUCCESS';
+																	rollback;
+																	leave sp_APAmmort_Set;
+																end if;
+                                                                select @ammortdetail_gid;
+															#SET @ammort_amount= truncate(ammortdetails_ecfamount,2);
+                                                                   
+                                                    end if;
+                                                    #SELECT 4;
+                                                   
+													SET @ammort_amount=TRUNCATE(@ammort_amount,2);
+													set Query_Insert='';
+													set Query_Insert=concat('insert into ap_trn_tammorttran
+																						  (ammorttran_amortdetailgid,ammorttran_ecfheadergid,
+																						  ammorttran_fromdate,ammorttran_todate,
+																						  ammorttran_date,ammorttran_ecfamount,
+																						  ammorttran_status,entity_gid,create_by) value
+																						   (',@ammortdetail_gid,',0,
+																							 0000-00-00,0000-00-00,
+																							''',current_date(),''',',@ammort_amount,',
+																							''PENDING FOR APPROVAL'',
+																							',@Entity_Gid,',',create_by,' )');
+													#select Query_Insert;
+													set @p=Query_Insert;
+													prepare stmt from @p;
+													execute stmt;
+													select row_count() into ls_count;
+															if ls_count >0 then
+																set message='SUCCESS';
+															else
+																set message='NOT SUCCESS';
+															   rollback;
+															   leave sp_APAmmort_Set;
+															end if;
+												   
+                                                   set Query_Update='';
+												   set Query_Update=concat('UPDATE ap_trn_tammort SET ammort_processingdate=''',@Ammort_Date,''',
+																											  update_by=',create_by,',
+																											  Update_date=now()
+																			WHERE ammort_gid in (',@ammortdetail_amortheadergid,')');
+												   #select Query_Update;
+												   set @p=Query_Update;
+												   prepare stmt from @p;
+												   execute stmt;
+												   select row_count() into ls_count;
+														
+                                                        if ls_count >0 then
+															set message='SUCCESS ';
+															COMMIT;
+														else
+															set message='NOT SUCCESS';
+															rollback;
+															leave sp_APAmmort_Set;
+														end if;
+							       end if;
+                            
+                            
+       elseif Action='UPDATE' and Type='AMMORT_STATUS' then   
+       
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.AmmortDetail_Gid'))) into @AmmortDetail_Gid;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.AmmortDetail_Status'))) into @AmmortDetail_Status;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_Gid'))) into @Ammort_Gid;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Ammort_Status'))) into @Ammort_Status;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+						#select @AmmortDetail_Gid,@AmmortDetail_Status,@Ammort_Gid,@Ammort_Status,@Entity_Gid,create_by;
+                        
+                  if @AmmortDetail_Gid<>'' or @AmmortDetail_Gid is not null then      
+						
+                        SET SQL_SAFE_UPDATES = 0;
+						set Query_Update='';
+						set Query_Update=concat('UPDATE ap_trn_tammortdetails SET ammortdetail_status=''',@AmmortDetail_Status,''',
+																				  update_by=',create_by,',
+																				  Update_date=now()
+												WHERE ammortdetail_gid in (',@AmmortDetail_Gid,') and 
+													  entity_gid in (',@Entity_Gid,') ');
+						#select Query_Update;
+						set @p=Query_Update;
+						prepare stmt from @p;
+						execute stmt;
+						
+						select row_count() into ls_count;
+							
+							if ls_count >0 then 
+								set message='SUCCESS';
+                                commit;
+							else 
+								set message='NOT SUCCESS';
+							  rollback;
+							  leave sp_APAmmort_Set;
+							end if;
+            
+				elseif	 @Ammort_Gid<>'' or  @Ammort_Gid is not null then
+                
+						SET SQL_SAFE_UPDATES = 0;
+						set Query_Update='';
+						set Query_Update=concat('UPDATE ap_trn_tammort SET ammort_status=''',@Ammort_Status,''',
+																				  update_by=',create_by,',
+																				  Update_date=now()
+												WHERE ammort_gid in (',@Ammort_Gid,') and 
+													  entity_gid in (',@Entity_Gid,') ');
+						#select Query_Update;
+						set @p=Query_Update;
+						prepare stmt from @p;
+						execute stmt;
+						
+						select row_count() into ls_count;
+							
+							if ls_count >0 then 
+								set message='SUCCESS';
+                                commit;
+                               
+                               call sp_Trans_Set('update','AM',@StandardInstruction_Gid,
+										 'APPROVED','C','AM_MAKER',
+                                         '',@Entity_Gid,create_by, @Message);
+								select @Message into @out_msg_tran ;
+								#select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_APAmmort_Set;
+											End if;
+							else 
+								set message='NOT SUCCESS';
+							  rollback;
+							  leave sp_APAmmort_Set;
+							end if;
+                 end if;           
+    
+ elseif Action='ECF_APPROVAL' and Type='AP_AMORT' then   
+			select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+			select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+			if  @li_filters_count <=0  then
+				 set Message = 'No filters in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if  @li_classification_count <=0  then
+				 set Message = 'No classification in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if create_by = '' or create_by is null or create_by=0  then
+				 set Message = 'No create_by in data';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+		   #SELECT 23;
+			select  JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.ECF_ID'))) into @ECF_ID;
+
+			if @ECF_ID is null  then
+					set Message = ' ECF Gid Is Needed.';
+					leave sp_APAmmort_Set;
+			End if;
+			# set i = 0 ;
+			#While i <= @AmortDetails_Gid_count - 1 DO
+                   set @lj_Header = '';
+					select fn_APProcess('HEADER_INSERT',@ECF_ID,0) into @lj_Header ;
+                    select @lj_Header;
+					set @lj_Header =  JSON_UNQUOTE(JSON_EXTRACT(@lj_Header, CONCAT('$.DATA')));                                        
+                    call sp_APInvoice_Set('INSERT','INVOICE_HEADER',@lj_Header,'{}','{}','{}',create_by,@Entity_Gid,@Message);
+                                                  select @Message into @Out_Msg_invHeader;
+                                                  select @Out_Msg_invHeader;
+                    if @Out_Msg_invHeader <> ''  and substring_index(@Out_Msg_invHeader,",",-1) = 'SUCCESS' then
+							  set @Inv_Header_GidMax = substring_index(@Out_Msg_invHeader,",",1) ;                                                          
+					else
+							  set Message = 'ERROR ON  ECF Header Insert';
+							  leave sp_APAmmort_Set;
+					End if;         
+                    
+					select fn_APProcess('ECF_INVOICE_INSERT',@ECF_ID,@Inv_Header_GidMax) into @lj_invdetails ;
+					
+                    if @lj_invdetails <> '' then
+							 set @Inv_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DETAILS')));
+							 set @Debit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DEBIT')));
+							 set @Credit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.CREDIT')));                                                     
+							 set @Status_Details = concat('{"Invoice_Header_Gid": ',@Inv_Header_GidMax,', "Status": "MAKER"}');
+						else
+							set Message = 'Error On Invoice Details Data.';
+							leave sp_APAmmort_Set;
+					 End if;
+                                             
+					 call  sp_APInvoiceSPS_Set('INSERT', 
+								'INVOICE_DETAILS', '{}',@Inv_Details,'{}',@Debit_Details,@Credit_Details,@Status_Details,
+								@Entity_Gid,create_by,@Message);                                                        
+							select @Message into @Out_Msg_InvDetails;   
+                    if @Out_Msg_InvDetails = 'SUCCESS' then
+								set Message = 'SUCCESS';
+                                SET SQL_SAFE_UPDATES = 0;
+									update ap_trn_tammortdetails set  ammortdetail_status = 'AP PROCESS' where ammortdetail_gid =@AmortDetails_Gid ;
+								#SET SQL_SAFE_UPDATES = 1;
+							else
+								 set Message = @Out_Msg_InvDetails;
+							End if;
+					#set i = i+1;       
+						  
+            #end while;
+			#SELECT  @ammort_gid,@Ammort_Status;
+ 
+				  if Message = 'SUCCESS' then
+					 set message='SUCCESS';
+					COMMIT;
+				  else
+					 set message='NOT SUCCESS- sp_APAmmort_Set';
+					rollback;
+					leave sp_APAmmort_Set;
+				  end if;
+        
+ elseif Action='AMMORT_RUN' and Type='AMMORT_SCHEDULE' then   
+			select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+			select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+			if  @li_filters_count <=0  then
+				 set Message = 'No filters in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if  @li_classification_count <=0  then
+				 set Message = 'No classification in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if create_by = '' or create_by is null or create_by=0  then
+				 set Message = 'No create_by in data';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+		   #SELECT 23;
+			select JSON_LENGTH(lj_filters, CONCAT('$.DETAILS[0].AmortDetails_Gid')) into @AmortDetails_Gid_count;
+
+			if @AmortDetails_Gid_count is null or @AmortDetails_Gid_count = 0 or @AmortDetails_Gid_count = '' then
+					set Message = ' AmortDetails_Gid Gid Is Needed.';
+					leave sp_APAmmort_Set;
+			End if;
+			 set i = 0 ;
+			While i <= @AmortDetails_Gid_count - 1 DO
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.DETAILS[0].AmortDetails_Gid[',i,']'))) into @AmortDetails_Gid;
+
+					select fn_AmortProcess('HEADER_INSERT',@AmortDetails_Gid,0,'{}','{}') into @lj_Header ;
+                    select @lj_Header;
+					set @lj_Header =  JSON_UNQUOTE(JSON_EXTRACT(@lj_Header, CONCAT('$.DATA')));                                        
+                    call sp_ECFInvoice_Set('INSERT','INVOICE_HEADER',@lj_Header,'{}','{}','{}',create_by,@Entity_Gid,@Message);
+                                                  select @Message into @Out_Msg_invHeader;
+                                                  select @Out_Msg_invHeader;
+                    if @Out_Msg_invHeader <> ''  and substring_index(@Out_Msg_invHeader,",",-1) = 'SUCCESS' then
+							  set @Inv_Header_GidMax = substring_index(@Out_Msg_invHeader,",",1) ;                                                          
+					else
+							  set Message = 'Error Occured On ECF Header Insert';
+							  leave sp_APAmmort_Set;
+					End if;               
+					select fn_AmortProcess('ECF_INVOICE_INSERT',@AmortDetails_Gid,@Inv_Header_GidMax,'{}','{}') into @lj_invdetails ;
+					
+                    if @lj_invdetails <> '' then
+							 set @Inv_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DETAILS')));
+							 set @Debit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DEBIT')));
+							 set @Credit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.CREDIT')));                                                     
+							 set @Status_Details = concat('{"Invoice_Header_Gid": ',@Inv_Header_GidMax,', "Status": "MAKER"}');
+						else
+							set Message = 'Error On Invoice Details Data.';
+							leave sp_APAmmort_Set;
+					 End if;
+                                             
+
+					 call  sp_ECFInvoiceSPS_Set('INSERT', 
+								'INVOICE_DETAILS', '{}',@Inv_Details,'{}',@Debit_Details,@Credit_Details,@Status_Details,
+								@Entity_Gid,create_by,@Message);                                                        
+							select @Message into @Out_Msg_InvDetails;   
+                    if @Out_Msg_InvDetails = 'SUCCESS' then
+								set Message = 'SUCCESS';
+                                SET SQL_SAFE_UPDATES = 0;
+									update ap_trn_tammortdetails set  ammortdetail_status = 'ECF PROCESS' where ammortdetail_gid =@AmortDetails_Gid ;
+								#SET SQL_SAFE_UPDATES = 1;
+							else
+								 set Message = @Out_Msg_InvDetails;
+							End if;
+					set i = i+1;       
+						  
+            end while;
+			#SELECT  @ammort_gid,@Ammort_Status;
+ 
+				  if i>0 then
+					 set message='SUCCESS';
+					COMMIT;
+				  else
+					 set message='NOT SUCCESS- sp_APAmmort_Set';
+					rollback;
+					leave sp_APAmmort_Set;
+				  end if;
+                   
+    elseif Action='UPDATE' and Type='AMMORT_HOLD_UPDATE' then
+		#SELECT 1;
+			select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+			select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+			if  @li_filters_count <=0  then
+				 set Message = 'No filters in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if  @li_classification_count <=0  then
+				 set Message = 'No classification in Json Object';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+			if create_by = '' or create_by is null or create_by=0  then
+				 set Message = 'No create_by in data';
+				rollback;
+				leave sp_APAmmort_Set;
+			end if;
+		   #SELECT 23;
+            Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmmortDetail_Gid')))into @AmmortDetail_Gid;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmmortDetails_Hold')))into @AmmortDetails_Hold;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+			#SELECT  @ammort_gid,@Ammort_Status;
+            set Query_Update='';
+			set Query_Update=concat('UPDATE ap_trn_tammortdetails SET   ammortdetails_hold=''',@AmmortDetails_Hold,''',
+																 update_by=',create_by,',
+																 Update_date=now()
+									  	  WHERE ammortdetail_gid in (',@AmmortDetail_Gid,') and entity_gid in (',@Entity_Gid,') ');
+		     #select Query_Update;
+			 set @p =Query_Update;
+			 prepare stmt from @p;
+			 execute stmt;
+			 select row_count() into ls_count;
+				  if ls_count>0 then
+					 set message='SUCCESS';
+					COMMIT;
+				  else
+					 set message='NOT SUCCESS- sp_APAmmort_Set';
+					rollback;
+					leave sp_APAmmort_Set;
+				  end if;
+         
+    
+    end if;
+END

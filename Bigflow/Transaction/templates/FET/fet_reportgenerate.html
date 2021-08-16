@@ -1,0 +1,338 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} FET Report{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="Appreport" ng-controller="Ctrlreview">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>FET Report</h4>
+            </div>
+        </div>
+        <md-radio-group ng-model="report" ng-change="type(report,$index)">
+            <md-radio-button value="one">Day Wise</md-radio-button>
+            <div class="row" ng-show="show_one">
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Employee</label>
+                        <md-select ng-model="ddlemp_gid">
+                            <md-option ng-repeat="emp in followups" ng-value="emp">
+                                {{ emp.employee_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-4">
+                    <label>Customer Name</label>
+                    <md-autocomplete md-no-cache="true"
+                                     md-selected-item="ddlcus_gid"
+                                     md-search-text="searchcust"
+                                     md-selected-item-change="ddlcust_change(y.customer_gid)"
+                                     md-items="y in custsearch(searchcust)"
+                                     md-item-text="y.customer_name"
+                                     md-min-length=0
+                                     md-clear-button="!Customer_disable"
+                                     placeholder="Select Customer">
+                        <md-item-template>
+                            <span md-highlight-text="searchcust"> {{y.customer_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Customer Name Not Matching "{{searchcust}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>From Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-open-on-focus md-max-date="maxDate"
+                                       ng-model="from_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>To Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-open-on-focus md-min-date="from_date"
+                                       md-max-date="maxDate" ng-model="to_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-raised custbutton" ng-click="Excelexport()">
+                        Report
+                    </md-button>
+                </div>
+            </div>
+            <md-radio-button value="two">Month Wise
+            </md-radio-button>
+            <div class="row" ng-show="show_two">
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Employee</label>
+                        <md-select ng-model="ddlemp_gid">
+                            <md-option ng-repeat="emp in followups" ng-value="emp">
+                                {{ emp.employee_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-4">
+                    <label>Customer Name</label>
+                    <md-autocomplete md-no-cache="true"
+                                     md-selected-item="ddlcus_gid"
+                                     md-search-text="searchcust"
+                                     md-selected-item-change="ddlcust_change(y.customer_gid)"
+                                     md-items="y in custsearch(searchcust)"
+                                     md-item-text="y.customer_name"
+                                     md-min-length=0
+                                     md-clear-button="!Customer_disable"
+                                     placeholder="Select Customer">
+                        <md-item-template>
+                            <span md-highlight-text="searchcust"> {{y.customer_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Customer Name Not Matching "{{searchcust}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>From Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-open-on-focus md-max-date="maxDate"
+                                       ng-model="from_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>To Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-open-on-focus md-min-date="from_date"
+                                       md-max-date="maxDate" ng-model="to_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-raised custbutton" ng-click="multidataexcel()">
+                        Report generate
+                    </md-button>
+                </div>
+            </div>
+        </md-radio-group>
+    </div>
+</div>
+{% endverbatim %}
+<script type="text/javascript">
+    var app_report = angular.module('Appreport', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+app_report.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+app_report.controller('Ctrlreview', function($scope, $rootScope, $filter, $mdDialog, Serreport, SerCommon, $window) {
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.salesSchedule = [];
+    $scope.custgrp = [];
+    $scope.from_date = '';
+    $scope.to_date = '';
+    $scope.followups =[];
+    $scope.showat = function(refno) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.login_emp_gid = detail.employee_gid;
+    }
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.testt = function(ev) {
+        ev.stopPropagation();
+    }
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+        loadcustomer_all()
+
+    function loadcustomer_all() {
+        var jsonData = {
+            "isactive": "Y"
+        }
+        var get_customer = SerCommon.getcustomer(jsonData)
+        get_customer.then(function(result) {
+            $scope.customers = result.data;
+
+        }, function(err) {
+            alert('No data!.');
+        });
+    }
+
+    $scope.custsearch = function(query) {
+        var te = $filter('filter')($scope.customers, {
+            'display_name': query
+        });
+        return te;
+    };
+
+ $scope.type = function(report) {
+            if (report == "one") {
+                $scope.show_one = true
+                $scope.show_tobuy = false
+            } else if (report == "two") {
+                $scope.show_one = false
+                $scope.show_two = true
+}
+        };
+
+    function loadMain(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid) {
+        $scope.loading()
+        var overalldtl = Serreport.getschedulelist(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid);
+        overalldtl.then(function(res) {
+            overallSchedule = res.data;
+            $scope.salesSchedule = overallSchedule;
+            $scope.salesSchedule = $filter('filter')(overallSchedule, {
+                'schedulereview_reviewstatus': $scope.ddlstatus
+            });
+            if ($scope.salesSchedule[0].admin == 'Y') {
+                var get_employ = SerCommon.getemployee(0, '', 0, 'ALL')
+                get_employ.then(function(result) {
+                    $scope.empsmry = result.data;
+                $scope.followups = $filter('filter')($scope.empsmry, function(item) {
+                     return (item.employee_dept_gid == '2' || item.employee_dept_gid == '7')
+                })
+                }, function(err) {
+                    alert('No data!.');
+                })
+
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.followups, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+
+            } else {
+                login_emp_gid = $scope.salesSchedule[0].login_gid
+                var get_employ = SerCommon.getemployee(login_emp_gid, '', 0, 'HIERARCHY')
+                get_employ.then(function(result) {
+                    $scope.followups = result.data;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.followups, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+            }
+        }, function(err) {
+            <!--alert(err);-->
+        }).finally($scope.endloading);
+    }
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    loadMain(detail.employee_gid, '', '', '', '', '', '', 0, 0, 0, 0, detail.employee_gid);
+    $scope.maxDate = new Date();
+    var login_emp_gid = 0;
+
+    $scope.Excelexport = function(){
+        var data = [];
+        var param1 = 0;
+        var param3 = '';
+        var param4 = '';
+        var param2 = '';
+        var type_gid = '';
+        var custgrp = 0;
+
+        if ($scope.ddlemp_gid) {
+            param1 = $scope.ddlemp_gid.employee_name
+        };
+        if ($scope.ddlcus_gid) {
+            param2 = $scope.ddlcus_gid.customer_name
+        };
+        if ($scope.from_date) {
+            param3 = $filter('date')($scope.from_date, "yyyy-MM-dd")
+        };
+        if ($scope.to_date) {
+            param4 = $filter('date')($scope.to_date, "yyyy-MM-dd")
+        };
+
+ window.location.href = " http://192.168.1.25:8081/pentaho/content/reporting/execute/steel-wheels/dashboards/newpages.pdf?solution=steel-wheels&path=/dashboards&name=reportovr.prpt&userid=joe&password=password&param1="+param1+"&param2="+param2+"&param3="+param3+"&param4="+param4;
+    }
+    $scope.multidataexcel = function(){
+        var data = [];
+        var employee_gid = 0;
+        var todate = '';
+        var fromdate = '';
+        var customer_gid = '';
+        var type = '';
+
+        if ($scope.ddlemp_gid) {
+            employee_gid = $scope.ddlemp_gid.employee_gid
+        };
+        if ($scope.ddlcus_gid) {
+            customer_gid = $scope.ddlcus_gid.customer_gid
+        };
+        if ($scope.from_date) {
+            fromdate = $filter('date')($scope.from_date, "yyyy-MM-dd")
+        };
+        if ($scope.to_date) {
+            todate = $filter('date')($scope.to_date, "yyyy-MM-dd")
+        };
+
+    a = "excelreport/?action=SCHEDULE_SUMMARY&customer_gid="+customer_gid+"&type="+type+"&employee_gid="+employee_gid+"&fromdate="+fromdate+"&todate="+todate;
+        window.location.href=a;
+    }
+});
+
+app_report.service("Serreport", function($http) {
+    this.getschedulelist = function(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp, loc_gid, login_emp_gid) {
+        var response = $http.get(Appname + "/emp_schedule_get", {
+            params: {
+                "action": "SCHEDULE_SUMMARY",
+                "f_date": f_date,
+                "t_date": t_date,
+                "fu_f_date": fu_f_date,
+                "fu_t_date": fu_t_date,
+                "rs_f_date": rs_f_date,
+                "rs_t_date": rs_t_date,
+                "emp_gid": emp_gid,
+                "cus_gid": cus_gid,
+                "scheduletype_gid": type_gid,
+                "custgrp": custgrp,
+                "loc_gid": loc_gid,
+                "login_emp_gid": login_emp_gid
+            }
+        });
+        return response;
+    };
+
+    this.getexcel = function(action, type, customer_gid, employee_gid, fromdate, todate) {
+        var response = $http.get(Appname + "/excelreport/", {
+            params: {
+                "action": action,
+                "type":type,
+                "customer_gid":customer_gid,
+                "employee_gid":employee_gid,
+                "fromdate":fromdate,
+                "todate":todate,
+            }
+        });
+        return response;
+    };
+     this.customerget = function(cus_gid) {
+        var response = $http.get(Appname + "/customeredt_get/", {
+            params: {
+                "cust_gid": cus_gid
+            }
+        });
+        return response;
+    };
+});
+
+
+</script>
+{% endblock %}

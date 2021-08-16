@@ -1,0 +1,200 @@
+CREATE DEFINER=`developer`@`%` FUNCTION `fn_SIProcess`(ls_Type varchar(64),li_Gid int,li_InvHeader_Gid int,lj_JsonData json,lj_Classification json
+) RETURNS varchar(9000) CHARSET utf8mb4
+fn_SIProcess:BEGIN
+
+Declare Out_Message varchar(9000); 
+
+
+if ls_Type = 'ECF_INVOICE_INSERT' then
+              			
+                            
+							set @igst_value = 0;  
+							set @cgst_value = 0; 
+							set @sgst_value = 0;				
+							set @brtotalamount = 0;				
+                                     
+							  select standardinstruction_Isgst,ifnull(c.hsn_code,1),ifnull(SUBSTRING(d.supplier_gstno,1,2),0),hsn_cgstrate,hsn_sgstrate,hsn_igstrate,standardinstructiondetails_amount 
+															into @isgst,@hsncode,@gstno,@cgst,@sgst,@igst,@bramt  from ap_trn_tstandardinstructiondetails as a inner join ap_trn_tstandardinstruction 
+                                                     as b on a.standardinstructiondetails_standardinstructiongid = b.standardinstruction_gid 
+                                                       left join gal_mst_thsn as c on c.hsn_gid = b.standardinstruction_hsngid 
+                                                       left join gal_mst_tsupplier as d on d.supplier_gid = b.standardinstruction_supplierid
+                                                        where standardinstructiondetails_gid =    li_Gid;        
+                                        
+                            if @isgst = 'N' then
+                                    set @hsncode = 1;
+                                    set @brtotalamount = @bramt;
+                             else 
+                                  select SUBSTRING(branch_metadatavalue, 1, 2)  into @branchgst from ap_trn_tstandardinstructiondetails as a inner join ap_trn_tstandardinstruction 
+										 as b on a.standardinstructiondetails_standardinstructiongid = b.standardinstruction_gid
+											 inner  join gal_mst_tbranch as br on br.branch_gid = b.standardinstruction_branchid
+											 inner join gal_mst_tbranchinfo as i on i.branchinfo_branchgid = br.branch_gid 
+																and branchinfo_metadatagid = (select metadata_gid from gal_mst_tmetadata where metadata_value ='GSTNO' and 
+																				 metadata_tablename =  'gal_mst_tbranchinfo')
+												where standardinstructiondetails_gid =  li_Gid;
+                                   if @gstno = @branchgst then
+                                       set @igst_value = 0; 
+                                       set @cgst_value =  ROUND((@bramt  * @cgst )/ 100, 2); 
+                                       set @sgst_value = ROUND((@bramt  * @sgst )/ 100, 2); 
+                                       set @brtotalamount = @cgst_value + @sgst_value +@bramt;
+                                   else 
+										set @igst_value =ROUND((@bramt  * @igst )/ 100, 2);
+                                       set @cgst_value = 0; 
+                                       set @sgst_value = 0;
+										set @brtotalamount = @igst_value +@bramt;
+                                   end if;
+                            end if;
+                            
+								##### For Inv details
+							select concat(' { "DETAIL": [', group_concat(JSON_OBJECT('Item_Name','SI','Description','SI',
+							'HSN_Code',@hsncode,'Unit_Price',standardinstructiondetails_amount,'Quantity',1,'Amount',standardinstructiondetails_amount,'Discount',0,'IGST',@igst_value,'CGST',@cgst_value,'SGST',@sgst_value,
+							'Total_Amount',@brtotalamount,'PO_Header_Gid',0,'PO_Detail_Gid',0,'GRN_Header_Gid',0,'GRN_Detail_Gid',0,
+                            'Invoice_Header_gid',li_InvHeader_Gid,
+								'Invoice_Sno',standardinstructiondetails_gid
+                                
+							  )),'] }')  into @lj_Details
+							    from ap_trn_tstandardinstructiondetails as a inner join ap_trn_tstandardinstruction 
+								 as b on a.standardinstructiondetails_standardinstructiongid = b.standardinstruction_gid 
+							where a.standardinstructiondetails_gid  =   li_Gid;
+							
+                            if @lj_Details = '' then
+									set Out_Message = 'No Details Data.';
+                                    return Out_Message;
+                            End if;
+                            
+                           
+                            #### For Debit details
+							
+                              select  group_concat(JSON_OBJECT('Invoice_Header_Gid',li_InvHeader_Gid,'Invoice_Details_Gid','9999',
+                            'Category_Gid',standardinstructionccbs_categorygid,
+                            'Sub_Category_Gid',standardinstructionccbs_subcategorygid,'GL_No',subcategory_glno,'cc_id',standardinstructionccbs_ccgid,'bs_id',standardinstructionccbs_bsgid,'Debit_percentage',standardinstructionccbs_percent,
+							'Debit_Amount',ROUND(((standardinstructiondetails_amount /100)*standardinstructionccbs_percent),2) ,'Debit_Gid','0','Invoice_Sno',standardinstructiondetails_gid,
+                            'CCBS',concat('[',JSON_OBJECT('cc',standardinstructionccbs_ccgid,'bs',standardinstructionccbs_bsgid,'percentage',standardinstructionccbs_percent,'Amount',
+                           ROUND(((standardinstructiondetails_amount /100)*standardinstructionccbs_percent),2) ),']')
+							  ))  into @lj_Debit from ap_trn_tstandardinstructiondetails as a inner join ap_trn_tstandardinstruction 
+						       as b on a.standardinstructiondetails_standardinstructiongid = b.standardinstruction_gid 
+									inner join  ap_trn_tstandardinstructionccbs as c 
+															  on b.standardinstruction_gid = c.standardinstructionccbs_standardinstructiongid
+								inner join 	ap_mst_tsubcategory as  sub on sub.subcategory_gid = c.standardinstructionccbs_subcategorygid  
+ 
+		
+                            where standardinstructiondetails_gid  =  li_Gid;
+							
+                            set @subcatname = ('');
+							set @lj_ccbs = '';
+							set @lj_ccbs = '';
+							set @comma = '';
+                            if @isgst = 'Y' then
+                               set @comma = ',';
+                               if @igst_value=0 then
+									set @subcatname = ('CGST','SGST');
+                                    set @taxamt =@cgst_value;
+                                else 
+									set @subcatname = ('IGST');  
+									set @taxamt =@igst_value;
+
+                               end if;
+                            end if;
+                                       
+                            if @isgst = 'Y' then  
+                              select  group_concat(JSON_OBJECT('Invoice_Header_Gid',li_InvHeader_Gid,'Invoice_Details_Gid','9999',
+									'Category_Gid',category_gid,
+									'Sub_Category_Gid',subcategory_gid,'GL_No',subcategory_glno,'cc_id',tcc_gid,'bs_id',tbs_gid,'Debit_percentage',100,
+									'Debit_Amount',@taxamt,'Debit_Gid','0','Invoice_Sno',standardinstructiondetails_gid,
+									'CCBS',concat('[',JSON_OBJECT('cc',tcc_gid,'bs',tbs_gid,'percentage',100,'Amount',
+								   @taxamt),']')
+									  )) into  @lj_ccbs from ap_mst_tcategory as cat inner join 
+															ap_mst_tsubcategory as  sub on sub.subcategory_categorygid = cat.category_gid and 
+															subcategory_name in (@subcatname)
+													inner join  ap_trn_tstandardinstructiondetails as a inner join ap_trn_tstandardinstruction 
+						       as b on a.standardinstructiondetails_standardinstructiongid = b.standardinstruction_gid 											
+										
+  
+										   inner join ap_mst_tbs as bs on bs.entity_gid = a.entity_gid and tbs_name in('GST')
+										   inner join ap_mst_tcc as cc on cc.tcc_bsgid = bs.tbs_gid 
+									where standardinstructiondetails_gid  = li_Gid;
+                                    
+                        
+                            end if;
+                            
+                            set @final_debit = '';
+                            
+                            select  concat(' { "DEBIT": [',@lj_Debit,@comma,@lj_ccbs,'] }')  into @final_debit;
+                            
+                            if @final_debit = '' then
+									set Out_Message = 'No Debit Data.';
+                                    return Out_Message;
+                            End if;
+                            
+                            #### For Credit details
+								select concat(' { "CREDIT": [', group_concat(JSON_OBJECT('Invoice_Header_Gid',li_InvHeader_Gid,'Paymode_Gid','1','Bank_Gid','9',
+                                'Ref_No',8,'GL_No','1','Credit_Amount',CASE
+											WHEN standardinstruction_Isgst = 'Y' THEN ROUND((standardinstructiondetails_amount  * hsn_igstrate )/ 100, 2)+standardinstructiondetails_amount
+											
+											ELSE standardinstructiondetails_amount
+										END,'Debit_Gid','0','Tax_Type','','Tax_Rate','','TDS_Exempt','N','Credit_Gid',0
+								  )),'] }')  into @lj_Credit
+								 from ap_trn_tstandardinstructiondetails as a
+							  inner join ap_trn_tstandardinstruction as b on a.standardinstructiondetails_standardinstructiongid =b.standardinstruction_gid
+							left join gal_mst_thsn as h on h.hsn_gid = b.standardinstruction_hsngid 
+
+                              where standardinstructiondetails_gid  = li_Gid;
+											
+                                if @lj_Credit = '' then
+									set Out_Message = 'No Credit Data.';
+                                    return Out_Message;
+                                End if;
+                            
+                            
+                            set @lf_full_data = concat('{
+									
+										"DETAILS": ',@lj_Details,' ,
+										"DEBIT": ',@final_debit,',
+										"CREDIT": ',@lj_Credit,'
+									
+
+								}');
+                                 
+                                set Out_Message = @lf_full_data;
+                               # set Out_Message = @lj_ccbs;
+                                
+                            
+
+
+elseif ls_Type = 'HEADER_INSERT' then
+
+					select concat(' { "HEADER": [', group_concat(JSON_OBJECT('Invoice_Type','SI',
+                 'Supplier_gid',standardinstruction_supplierid,
+				 'Sup_state_gid',ifnull(d.address_state_gid,0),
+				  'Inwarddetails_gid',1,
+                  'Is_GST',standardinstruction_Isgst, 
+				  'Invoice_Date',current_date(),
+				  'Invoice_No',0,
+				  'Advance_incr',' ',
+				  'Invoice_Other_Amount',0,
+				  'Invoice_Tot_Amount',CASE
+											WHEN standardinstruction_Isgst = 'Y' THEN ROUND((standardinstructiondetails_amount  * hsn_igstrate )/ 100, 2)+standardinstructiondetails_amount
+											
+											ELSE standardinstructiondetails_amount
+										END,
+				  'Supplier_GST_No',ifnull(c.supplier_gstno,''),
+				  'Header_Status','NEW',
+                  'Employee_gid',a.create_by,
+				  'branch_gid',standardinstruction_branchid
+                  )),'] }')  into  @lj_Header
+				  from ap_trn_tstandardinstructiondetails as a
+				  inner join ap_trn_tstandardinstruction as b on a.standardinstructiondetails_standardinstructiongid =  b.standardinstruction_gid
+                  inner join gal_mst_tsupplier as c on c.supplier_gid = b.standardinstruction_supplierid
+                  left join gal_mst_taddress as d on c.supplier_add_gid = d.address_gid
+                  left join gal_mst_thsn as h on h.hsn_gid = b.standardinstruction_hsngid 
+
+                  where a.standardinstructiondetails_gid  = li_Gid group by standardinstructiondetails_gid;
+				  if @lj_Header = '' then
+					set Out_Message = '{"MESSAGE":"ERROR","DATA":"No Header Data."}';
+                    return Out_Message;
+                  else
+                      set Out_Message = concat('{"MESSAGE":"SUCCESS","DATA":',@lj_Header,'}');
+                  End if;
+end if;
+
+RETURN Out_Message;
+END

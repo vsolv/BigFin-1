@@ -1,0 +1,433 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Tour{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Tour</h4>
+            </div>
+        </div>
+        <form name="tour_valid" role="form">
+            <div>
+                <div class="row">
+                    <md-subheader class="md-accent">Tour</md-subheader>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <input disabled maxlength="30" ng-model="tour.requestno"
+                                       placeholder="Tour No"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-2" style="bottom:0px;color:#7621A6" ng-hide="ppx_hide">
+                            <h3><span class="editlink material-icons" style="color:#D64CB4;"
+                                      ng-click="view_advance()">arrow_upward
+                                </span>
+                            </h3>View Advance
+                        </div>
+                        <div class="col-md-2" style="bottom:0px;color:#7621A6" ng-hide="ppx_hide">
+                            <h3><span class="editlink material-icons" style="color:#D64CB4;"
+                                      ng-click="view_expense()">arrow_upward
+                                </span>
+                            </h3>View Expense
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       href="tour_gen_xl?Type=TOUR_DETAIL&tourgid={{tour.gid}}">
+                                <md-icon>get_app</md-icon>
+                                <md-tooltip>Download XL</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+                <br/>
+                <div class="row table-responsive ">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Employee</th>
+                            <th class="text-center" scope="col">Designation</th>
+                            <th class="text-center" scope="col">Branch</th>
+                            <th class="text-center" scope="col">Tour NO</th>
+                            <th class="text-center" scope="col">Start Date</th>
+                            <th class="text-center" scope="col">End Date</th>
+                            <th class="text-center" scope="col">Starting Point</th>
+                            <th class="text-center" scope="col">Place of Visit</th>
+                            <th class="text-center" scope="col">Purpose of Visit</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="tourdtl in tour_details.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                 <td class="text-center">
+                                    {{tour.employee_code}} - {{tour.employee_name}}
+                                 </td>
+                                 <td class="text-center">
+                                    {{tour.employee_designation}}
+                                </td>
+                                <td class="text-center">
+                                    {{tour.employee_branch}}
+                                </td>
+                                <td class="text-center">
+                                    {{tour.requestno}}
+                                </td>
+                                <td class="text-center">
+                                    {{tourdtl.startdate}}
+                                </td>
+                                <td class="text-center">
+                                    {{tourdtl.enddate}}
+                                </td>
+                                <td class="text-center">
+                                    {{tourdtl.startingpoint}}
+                                </td>
+                                <td class="text-center">
+                                    {{tourdtl.placeofvisit}}
+                                </td>
+                                <td class="text-center">
+                                    {{tourdtl.purposeofvisit}}
+                                </td>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="10">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="tour_details.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                                <td class="text-left" colspan="1">-->
+                                <!--                                    <span>Total Count:<br/> <b class="text-centre"> {{tour_details.length}}</b></span>-->
+                                <!--                                </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" ng-show="applevel == 0" class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" ng-href="eClaim/eclaim_report_tour"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+
+
+
+
+
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope,$sce, eclaimService, $window,$http, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.tour = [];
+    $scope.tour_details =[];
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_popup_img = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('attach_view')),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.db_file = false;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.tour.gid = 0;
+    var min = new Date(detail.date);
+    $scope.tour.requestdate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.tour.startdate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.tour.enddate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.minstart = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.maxend = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.start_max = new Date(min.getFullYear(), min.getMonth()+3, min.getDate());
+    $scope.start_min = new Date(min.getFullYear(), min.getMonth()-1, min.getDate());
+    $scope.end_max = new Date(min.getFullYear(), min.getMonth()+3, min.getDate());
+    $scope.approvaldata = false;
+    $scope.applevel = 0;
+    $scope.comments = "";
+    $scope.forward_btn = false;
+    $scope.tourstatus = "PENDING";
+    if(sessionStorage.getItem('eClaim_tour_aprl')){
+        var tour_data=JSON.parse(sessionStorage.getItem('eClaim_tour_aprl'));
+        console.log(tour_data);
+        $scope.tour.gid = tour_data.tour_gid;
+        $scope.emp_gid = tour_data.empgid;
+        $scope.applevel = tour_data.applevel;
+        $scope.approvalgid = tour_data.approvalgid;
+        $scope.tourstatus = tour_data.tourstatus;
+        $scope.tourtype = tour_data.type;
+            $scope.loading();
+            var data = {
+                params: {
+                    "Type": "TOUR_DETAILS",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "Tour_Gid" : $scope.tour.gid
+                            }
+                        }
+                    }
+                }
+            }
+            var get_drop = eclaimService.ecalim_drop_get(data)
+            get_drop.then(function(result) {
+                var item1 = result.data.DATA;
+                $scope.files = result.data.FILE;
+                if($scope.files.length != 0){
+                    $scope.db_file = true;
+                    $scope.file_required = false;
+                    $scope.view_image = false;
+                }
+                else{
+                    $scope.db_file = false;
+                    $scope.view_image = true;
+                }
+                    $scope.tour.requestno = item1.requestno;
+                    $scope.tour.requestdate = item1.requestdate;
+                    $scope.tour.srchreason = item1.tourreason;
+                    $scope.tour.reason = item1.reason;
+                    $scope.tour.permitemp = item1.permit_empname;
+                    $scope.tour.searchemp = item1.approval_empname;
+                    $scope.tour.permittedby = item1.permittedby;
+                    $scope.tour.approval = item1.approvedby;
+                    $scope.tour.searchbr = item1.approval_branch;
+                    $scope.tour.startdate = item1.startdate;
+                    $scope.tour.enddate = item1.enddate;
+                    $scope.tour.durationdays = item1.durationdays;
+                    $scope.tour.eligiblemodeoftravel = item1.eligiblemodeoftravel;
+                    $scope.tour.ordernoremarks = item1.ordernoremarks;
+                    $scope.tour.empgid = item1.empgid;
+                    $scope.tour.empdesignation = item1.empdesignation;
+                    $scope.tour.empdepartmentgid = item1.empdepartmentgid;
+                    $scope.tour.empgrade = item1.empgrade;
+                    $scope.tour.empbranchgid = item1.empbranchgid;
+                    $scope.tour.stategid = item1.stategid;
+                    $scope.tour.employee_code = item1.employee_code;
+                    $scope.tour.designation = item1.designation;
+                    $scope.tour.employee_name = item1.employee_name;
+
+                    if (item1.quantum_offunds == null){
+                        $scope.tour.quantum_offunds = 0
+                    }
+                    else{
+                        $scope.tour.quantum_offunds = item1.quantum_offunds;
+                    }
+
+                    if (item1.opening_balance == null){
+                        $scope.tour.opening_balance = 0
+                    }
+                    else{
+                        $scope.tour.opening_balance = item1.opening_balance;
+                    }
+
+                    $scope.onbehalf_emp = item1.onbehalf_emp;
+                    $scope.maxenddate = new Date(item1.enddate);
+                    $scope.maxend = new Date($scope.maxenddate.getFullYear(), $scope.maxenddate.getMonth(), $scope.maxenddate.getDate());
+                    $scope.detail = item1.tourdetails;
+                    if($scope.detail.length != 0){
+                        angular.forEach($scope.detail, function(item2) {
+                            $scope.tour_details.push(item2);
+                            $scope.startdate = new Date(item2.startdate);
+                            $scope.end_date = new Date(item2.enddate);
+                            item2.minstart = new Date($scope.startdate.getFullYear(), $scope.startdate.getMonth(), $scope.startdate.getDate());
+                            item2.maxend = $scope.maxend;
+                            var ends_date  = new Date($scope.end_date.getFullYear(), $scope.end_date.getMonth(), $scope.end_date.getDate());
+                            $scope.minstart = ends_date;
+                           });
+                        item1.tourdetails = [];
+                    }
+
+                    if(item1.tourreason == "Funds Transfer" ){
+                        $scope.fit_enable = true;
+                    }
+            }).finally($scope.endloading);
+
+            if($scope.tourstatus == "APPROVED" || $scope.tourstatus == "REJECTED" || $scope.tourstatus == "RETURN" || $scope.tourstatus =="FORWARD"){
+                 $scope.enable_update = true;
+                 $scope.enable_reject = true;
+                 $scope.enable_return = true;
+                 $scope.enable_forward = true;
+            }
+            if($scope.applevel == 2){
+                 $scope.forward_btn = true;
+            }
+    }
+    else{
+        loademployee();
+        $scope.tour.gid = 0;
+        $scope.applevel = 0;
+        if($scope.tour_details.length == 0){
+            data = {
+                "gid":"0",
+                "startdate":"",
+                "enddate":"",
+                "startingpoint":"",
+                "placeofvisit":"",
+                "purposeofvisit":"",
+                "minstart":$scope.minstart,
+                "maxend":$scope.maxend
+            }
+            $scope.tour_details.push(data);
+            $scope.data_len = $scope.tour_details.length;
+        }
+        inbetween();
+    }
+
+       $scope.view_advance=function(detail){
+            var eClaim_session = {
+                tour_gid: $scope.tour.gid,
+                tour_no: $scope.tour.requestno,
+                tour_requestdate: $scope.tour.requestdate,
+                tour_startdate: $scope.tour.startdate,
+                tour_enddate: $scope.tour.enddate,
+                emp_name: $scope.tour.employee_name,
+                emp_gid: $scope.tour.empgid,
+                designation: $scope.tour.empdesignation,
+                emp_grade: $scope.tour.empgrade,
+                Status: "APPROVED",
+                reason: $scope.tour.reason,
+                applevel:0 ,
+                gid:0,
+                onbehalf_emp:0,
+                type:"ADVANCE"
+            };
+            sessionStorage.setItem('eClaim_advance', JSON.stringify(eClaim_session));
+            $window.location.href = "eClaim/eclaim_report_touradv";
+        }
+        $scope.view_expense=function(){
+            var eClaim_session = {
+                tour_gid: $scope.tour.gid,
+                approvalgid:0,
+                appcomment: "",
+                empgid: $scope.tour.empgid,
+                applevel: 2,
+                claimstatus:"APPROVED",
+                onbehalf_emp:0
+            };
+            sessionStorage.setItem('eClaim_exp_aprl', JSON.stringify(eClaim_session));
+            var eClaim_session = {
+                tour_gid: $scope.tour.gid,
+                tour_no: $scope.tour.requestno,
+                emp_name: $scope.tour.employee_name,
+                emp_gid: $scope.tour.gid,
+                designation:$scope.tour.empdesignation,
+                emp_grade:$scope.tour.empgrade,
+                Status:"APPROVED",
+            };
+            sessionStorage.setItem('eClaim', JSON.stringify(eClaim_session));
+            $window.location.href = "eClaim/eclaim_report_tourexp";
+        }
+
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalim_expense = function(data) {
+        var response = $http.post(Appname + "/eclaim_summary/",data);
+        return response;
+    },
+    this.ecalim_expense_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    },
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    },
+    this.ecalim_data = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+    this.ecalim_data_file = function(data) {
+        var response = $http.post(Appname + "/tour_set_file/",data,{
+            transformRequest: angular.identity,
+            headers: {
+                'Content-Type': undefined
+            }
+        });
+        return response;
+    }
+
+    this.ecalim_session_get = function(data) {
+        var response = $http.post(Appname + "/session_get_expnese/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+{% endblock %}

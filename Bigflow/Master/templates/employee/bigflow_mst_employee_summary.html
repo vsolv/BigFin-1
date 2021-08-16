@@ -1,0 +1,296 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Employee {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appemployee" ng-controller="Ctrlemployee" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Employee Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Employee Code</label>
+                    <input type="text" ng-model="searchquery_code" ng-change="filtersearch()">
+
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Employee Name</label>
+                    <input type="text" ng-model="searchquery_name" autocomplete="off" ng-change="filtersearch()">
+                    <md-icon>search</md-icon>
+                </md-input-container>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-href="employee">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-fab md-mini md-primary md-warn" ng-href="Mst_Emp_Bank">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Employee Bank Details</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-raised" href="employee_getexcel">
+                    excel
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Employee Code</th>
+                        <th>State Name</th>
+                        <th>Employee Name</th>
+                        <th>Date Of Joining</th>
+                        <th>Gender</th>
+                        <th>Mobile No</th>
+                        <th>E-Mail ID</th>
+                        <th>Branch Name</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in empsmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.employee_code }}</td>
+                        <td class="text-left">{{emp.state_name}}</td>
+                        <td class="text-left">{{emp.employee_name}}</td>
+                        <td class="text-right">{{emp.employee_doj}}</td>
+                        <td class="text-center">{{emp.employee_gender}}</td>
+                        <td class="text-right">{{emp.employee_mobileno}}</td>
+                        <td class="text-left">{{emp.employee_emailid}}</td>
+                        <td class="text-left">{{emp.brname}}</td>
+                        <td align="center">
+                            <a title="View" ng-click="showview(emp)" align="center"
+                               class="editlink">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                            <span title="Edit" ng-hide="emp.employee_isactive=='N'"
+                                  ng-click="edit_data(emp.employee_gid,'edit')" align="center"
+                                  class="editlink">
+                                    <i class="material-icons">edit</i>
+                            </span>
+                            <span class="material-icons" ng-class="emp.employee_isactive=='Y'? 'editlink':''"
+                                  ng-click="activeDeactive_click(emp.employee_isactive,emp.employee_gid)"
+                                  title="{{emp.employee_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="3">
+                            Total Count:{{empsmry.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    myApp.controller('Ctrlemployee', ['$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter',
+        function($scope, testService, $mdDialog, $rootScope, $window, $filter) {
+            $scope.empsmry = [];
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+            $scope.endloading = function() {
+                $mdDialog.hide();
+            };
+
+            $scope.filtersearch = function() {
+                $scope.empsmry = $filter('filter')($scope.maintable, {
+                    "employee_name": $scope.searchquery_name,
+                    "employee_code": $scope.searchquery_code,
+                });
+                $scope.userTotalItems = $scope.empsmry.length;
+                $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                $scope.pageLength = $scope.empsmry.length;
+            }
+
+            $rootScope.showview = function(ev) {
+                $scope.loading();
+                var dialogData = {
+                    action: 'employee',
+                    emp_gid: ev.employee_gid
+                }
+                $rootScope.gid = ev.employee_gid;
+                $mdDialog.show({
+                        controller: 'DialogController',
+                        templateUrl: 'empview',
+                        parent: angular.element(document.body),
+                        targetEvent: ev,
+                        locals: {
+                            dialogData: dialogData
+                        },
+                        clickOutsideToClose: false,
+                        fullscreen: false
+                    })
+                    .then(function(res) {
+
+                    }, function(err) {
+
+                    })
+                    .finally($scope.endloading);
+            };
+            $scope.loading();
+            loaddata();
+            $scope.endloading()
+
+            function loaddata() {
+                var get_employ = testService.getcusomter(0, '', 0, 'ALL')
+                get_employ.then(function(result) {
+                        $scope.maintable = result.data
+                        $scope.empsmry = $scope.maintable
+                        $scope.pageLength = $scope.empsmry.length;
+                        $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                        $scope.pageLength = $scope.empsmry.length;
+                        angular.forEach($scope.empsmry, function(value, key) {
+                            $scope.exportData.push([value.employee_code, value.state_name, value.employee_name, value.employee_doj, value.employee_gender, value.employee_mobileno, value.employee_emailid]);
+                        });
+                    }, function(err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            };
+
+            $scope.fileName = "report";
+            $scope.exportData = [];
+            // Headers:
+            $scope.exportData.push(["Employee Code", "State Code", "Employee Name", "DOJ", "Gender", "Mobile No", "Mail-ID", ""]);
+            $scope.edit_data = function(empl_gid, e) {
+                var employee = {
+                    empp_gid: empl_gid,
+                    view: e
+                };
+                sessionStorage.setItem('emp_details', JSON.stringify(employee));
+                $window.location.href = "employee";
+            }
+
+
+            $scope.activeDeactive_click = function(is_active, employee_gid) {
+            if (is_active == 'Y') {
+                $scope.inactive(employee_gid)
+            } else {
+                $scope.active(employee_gid)
+            }
+        }
+
+        $scope.active = function(employee_gid) {
+            var emp_act = testService.emp_activate_inactivate(employee_gid, 'active');
+            emp_act.then(function(result) {
+                    if (result.data === "SUCCESS") {
+                        alert("Activated Succesfully");
+                        $window.location.href = "emp_summary";
+                    } else {
+                        alert("Not Activated");
+                        $window.location.href = "emp_summary";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+        $scope.inactive = function(employee_gid) {
+            var emp_inact = testService.emp_activate_inactivate(employee_gid, 'Inactive');
+            emp_inact.then(function(result) {
+                    if (result.data === "SUCCESS") {
+                        alert("InActivated Succesfully");
+                        $window.location.href = "emp_summary";
+                    } else {
+                        alert("Not InActivated");
+                        $window.location.href = "emp_summary";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+
+
+        }
+    ]);
+
+    myApp.service("testService", function($http) {
+        this.getcusomter = function(gid, name, clusgid, cluster) {
+            var response = $http.get(Appname + "/employee_get/", {
+                params: {
+                    "emp_gid": gid,
+                    "emp_name": name,
+                    "li_cluster_gid": clusgid,
+                    "cluster": cluster
+
+                }
+            });
+            return response;
+        }
+        this.getexcel = function(gid, name, clusgid, cluster) {
+            var response = $http.get(Appname + "/employee_getexcel/", {
+                params: {
+                    "emp_gid": gid,
+                    "emp_name": name,
+                    "li_cluster_gid": clusgid,
+                    "cluster": cluster
+
+                }
+            });
+            return response;
+        }
+
+         this.emp_activate_inactivate = function(employee_gid, action) {
+         debugger;
+            var response = $http.post(Appname + "/empactinact/", {
+                params: {
+                    'Emp_gid': employee_gid,
+                    'Action': action
+                }
+            });
+            return response;
+        }
+
+    });
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} EMPLOYEE PERSONAL INFO  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_Mepadd" ng-controller="Ctrl_Mepadd" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+              <h4><strong>EMPLOYEE PERSONAL INFO</strong></h4>
+            </div>
+        </div>
+
+        <form name="par_add_form">
+            <div class="row" ng-disabled="enable_all">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Name</label>
+                            <input type="text" ng-model="employee_name" ng-disabled="true">
+                        </md-input-container>
+                    </div>
+                   <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Code</label>
+                            <input type="text" autocomplete="off" no-Special-Char maxlength="128"
+                                   ng-model="employee_code" ng-disabled="true" required>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Branch Code</label>
+                            <input type="text" autocomplete="off" no-Special-Char maxlength="128"
+                                   ng-model="branch_code" ng-disabled="true" required>
+                        </md-input-container>
+                    </div>
+                  <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Mobile</label>
+                            <input type="text" autocomplete="off" numbers-only maxlength="128"
+                                   ng-model="employee_mobileno"  required>
+                        </md-input-container>
+                    </div>
+                  <md-button class="md-raised custbutton" ng-click="update(add)"
+                                   value="submit">
+                            update
+                        </md-button>
+
+        {% endverbatim %}
+
+        <script>
+var myApp = angular.module('App_Mepadd', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+var myApp = angular.module('App_Mepadd', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+myApp.directive('numbersOnly', function(){
+   return {
+     require: 'ngModel',
+     link: function(scope, element, attrs, modelCtrl) {
+       modelCtrl.$parsers.push(function (inputValue) {
+           // this next if is necessary for when using ng-required on your input.
+           // In such cases, when a letter is typed first, this parser will be called
+           // again, and the 2nd time, the value will be undefined
+           if (inputValue == undefined) return ''
+           var transformedInput = inputValue.replace(/^[^1-9]*|[^0-9]/g, '');
+           if (transformedInput!=inputValue) {
+              modelCtrl.$setViewValue(transformedInput);
+              modelCtrl.$render();
+           }
+
+           return transformedInput;
+       });
+     }
+   };
+});
+myApp.controller('Ctrl_Mepadd', ['$scope', 'Mepadd_Service', '$window', '$filter', '$mdDialog', '$mdDateLocale', '$timeout', '$q','$mdToast','$http',
+    function($scope, Mepadd_Service, $window, $filter, $mdDialog, $mdDateLocale, $timeout, $q,$mdToast,$http) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.invoicedetails = [];
+        debugger;
+var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.branch_code = detail.branch_code;
+        $scope.employee_code = detail.employee_code;
+        $scope.employee_mobileno = detail.employee_mobileno;
+        $scope.employee_name = detail.employee_name;
+
+
+$scope.update = function()
+{
+var data = {
+                "Params": {
+                    "Filter":{"code":$scope.employee_code,
+                    "mobile_number":$scope.employee_mobileno},
+                    "Group": "EMPLOYEE_MOBILENO",
+                    "Action": "EMPLOYEE_MOBILENO",
+                    "Endpoint": $scope.user_endpoint
+                }
+         }
+         var get_data = Mepadd_Service.getpar_service(data)
+            get_data.then(function(result) {
+            $scope.invoicedetails=result.data.MESSAGE;
+            alert($scope.invoicedetails);
+            }),
+            function(err) {
+                alert('no data');
+            }
+        }
+
+}
+]);
+    myApp.service("Mepadd_Service", function ($http,$filter) {
+
+        this.getpar_service = function(get_data) {
+        var response = $http.post(Appname + "/update_personal_num/", get_data);
+        return response;
+    }
+
+
+
+    });
+
+
+
+        </script>
+        {% endblock %}

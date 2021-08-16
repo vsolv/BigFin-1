@@ -1,0 +1,112 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Atma_partnerproduct_Map_Get`(in ls_Action  varchar(20),
+in lj_filter json,in lj_classification json,out Message varchar(1000))
+sp_Atma_partnerproduct_Map_Get:BEGIN
+
+Declare Query_Table varchar(1000);
+Declare Query_Table1 varchar(1000);
+Declare Query_Select varchar(5000);
+Declare Query_Search varchar(5000);
+Declare countRow varchar(5000);
+Declare ls_count int;
+
+
+IF ls_Action='partnerproduct_Map' then
+
+		select JSON_LENGTH(lj_classification,'$') into @lj_classification_json_count;
+		select JSON_LENGTH(lj_filter,'$') into @json_count;
+
+			if @lj_classification_json_count is null or  @lj_classification_json_count = 0
+            or @lj_classification_json_count =''  then
+				set Message = 'No Data In Json. ';
+				leave sp_Atma_partnerproduct_Map_Get;
+			End if;
+
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid')))
+		into @Entity_Gid;
+
+
+			if @Entity_Gid = 0 or @Entity_Gid = '' or @Entity_Gid is null  then
+				set Message = 'Entity_Gid Is Not Given In classification Json. ';
+				leave sp_Atma_partnerproduct_Map_Get;
+			end if;
+
+		set Query_Select = '';
+
+		set Query_Select =concat('select pa.partner_gid,mp.mpartnerproduct_gid,
+        mp.mpartnerproduct_partner_gid,
+		pr.product_gid,mp.mpartnerproduct_product_gid,
+        pr.product_name,pa.partner_name,
+        mp.mpartnerproduct_unitprice,mp.mpartnerproduct_packingprice,
+        mp.mpartnerproduct_validfrom,mp.mpartnerproduct_validto,
+        mp.mpartnerproduct_deliverydays,mp.mpartnerproduct_capacitypw,
+        mp.mpartnerproduct_dts,mp.mpartnerproduct_status,
+        em.employee_name
+        from  atma_tmp_map_tpartnerproduct mp
+        left join atma_mst_tpartner pa on pa.partner_gid=mp.mpartnerproduct_partner_gid
+        inner join gal_mst_tproduct pr on pr.product_gid=mp.mpartnerproduct_product_gid
+        inner join gal_mst_temployee em on em.employee_gid=mp.mpartnerproduct_product_gid
+        where mp.mpartnerproduct_isactive=''Y'' and mp.mpartnerproduct_isremoved=''N''
+        and mp.entity_gid=',@Entity_Gid ,' and pa.partner_isactive=''Y''
+        and pa.partner_isremoved=''N'' and pa.entity_gid=',@Entity_Gid ,' and
+        pr.product_isactive=''Y'' and pr.product_isremoved=''N''
+        and pr.entity_gid=',@Entity_Gid ,' and em.employee_isactive=''Y''
+        and em.employee_isremoved=''N''
+        and em.entity_gid=',@Entity_Gid ,'
+
+
+                                    ');
+
+     set @p = Query_Select;
+     #select Query_Select;  ## Remove It
+     PREPARE stmt FROM @p;
+	 EXECUTE stmt;
+	 DEALLOCATE PREPARE stmt;
+     Select found_rows() into ls_count;
+
+	if ls_count > 0 then
+		 set Message = 'FOUND';
+	else
+		 set Message = 'NOT_FOUND';
+	end if;
+End if;
+
+IF ls_Action='catalog_productget' then
+select JSON_LENGTH(lj_filter,'$') into @json_count;
+select JSON_LENGTH(lj_classification,'$') into @lj_classification_json_count;
+if @json_count is null or @json_count=0 or @json_count='' then
+set Message = 'No Data In Json. ';
+leave sp_Atma_partnerproduct_Map_Get;
+end if;
+select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid')))
+		into @Entity_Gid;
+
+
+			if @Entity_Gid = 0 or @Entity_Gid = '' or @Entity_Gid is null  then
+				set Message = 'Entity_Gid Is Not Given In classification Json. ';
+				leave sp_Atma_partnerproduct_Map_Get;
+			end if;
+select  JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.PartnerBranch_Gid')))
+		into @PartnerBranch_Gid;
+set Query_Select = '';
+set Query_Select =concat('select product.product_gid,product.product_name from atma_map_tpartnerproduct as mproduct inner join gal_mst_tproduct as product
+on mproduct.mpartnerproduct_product_gid=product.product_gid
+inner join atma_mst_tpartnerbranch as branch on mproduct.mpartnerproduct_partnerbranch_gid=branch.partnerbranch_gid
+where mproduct.mpartnerproduct_partnerbranch_gid=',@PartnerBranch_Gid,' and branch.partnerbranch_isactive=''Y'' and branch.partnerbranch_isremoved=''N''
+and product.product_isactive=''Y'' and product.product_isremoved=''N'' and mproduct.mpartnerproduct_isactive=''Y''
+and mproduct.mpartnerproduct_isremoved=''N''
+                                    ');
+set @p = Query_Select;
+     #select Query_Select;  ## Remove It
+     PREPARE stmt FROM @p;
+	 EXECUTE stmt;
+	 DEALLOCATE PREPARE stmt;
+     Select found_rows() into ls_count;
+
+	if ls_count > 0 then
+		 set Message = 'FOUND';
+	else
+		 set Message = 'NOT_FOUND';
+	end if;
+end if;#catalog_productget
+
+END

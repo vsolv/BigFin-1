@@ -1,0 +1,1005 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Collection{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appcoll" ng-controller="Ctrlcoll">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong> Collection </strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12 col-xs-12">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Select Customer</label>
+                    <md-select data-md-container-class="selectSelectHeader" md-on-close="clearSearchTerm()"
+                               ng-model="selectedmullti">
+                        <md-select-header  class="select-header">
+                            <input class="header-searchbox md-text" ng-model="searchTerm"
+                                   placeholder="Search for a Cusomer.."
+                                   type="search">
+                        </md-select-header>
+                        <md-option ng-disabled="disb_cust" md-search-text="ctrl.searchText" ng-repeat="c in mullti | filter:searchTerm"
+                                   value="{{c.customer_gid}}">{{c.customer_name}} - {{c.location_name}}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+                </br>
+                <md-radio-group ng-change="toggled();type_Selected(selected,$index)" ng-model="selected">
+                    <!--case-->
+                    <md-radio-button ng-disabled="cashdis" value="Cash">Cash</md-radio-button>
+                    <div class="row" ng-show="showcash">
+                        <div class="col-md-12">
+                            <form name="form_amount">
+                            <div class="col-md-6">
+                                <md-input-container class="md-block inputcontainer">
+
+                                        <label>Amount</label>
+                                        <input id="amount" maxlength="11" ng-model="cashAmount"
+                                               ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                               ng-required="true"
+                                               placeholder="Enter Amount" valid-number/>
+
+                                </md-input-container>
+                            </div>
+                              <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Date</label>
+                                        <md-datepicker autocomplete="off" formatDate md-hide-icons="calendar"
+                                                       md-max-date="maxDat1"
+                                                       md-min-date="minDat1"
+                                                       md-open-on-focus ng-click="date" ng-model="cashdate"
+                                                       required></md-datepicker>
+                                    </md-input-container>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <!--Cheque-->
+                    <md-radio-button ng-disabled="cheqdis" value="Cheque">Cheque</md-radio-button>
+                    <div class="row" ng-show="showcheque">
+                        <form name="form_cheque">
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <md-autocomplete md-item-text="item.bank_name"
+                                                         md-items="item in getbankdetails(searchText)"
+                                                         md-min-length=0
+                                                         md-no-cache="false"
+                                                         md-search-text="searchText"
+                                                         md-selected-item="selectedItem"
+                                                         placeholder="Bank Name"
+                                                         required>
+                                            <md-item-template>
+                                                <span md-highlight-text="searchText"> {{item.bank_name}} </span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Bank Name matching "{{searchText}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Cheque No</label>
+                                            <input autocomplete="off" id="cheque_no"
+                                                   maxlength="6" minlength="6" name="number" ng-model="cheque_no"
+                                                   numbers-only placeholder="Cheque No"
+                                                   required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Cheque Date</label>
+                                            <md-datepicker autocomplete="off" md-hide-icons="calendar"
+                                                           md-max-date="maxDate" md-min-date="minDate" md-open-on-focus
+                                                           ng-model="cheque_date" ng-required="true"></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-9 col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Cheque Amount</label>
+                                            <input autocomplete="off" id="chqamt" maxlength="11" name="number"
+                                                   ng-model="cheque_amt"
+                                                   ng-pattern="/^[123456789][.0-9]{0,10}$/" placeholder="Enter Amount"
+                                                   required valid-number/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-xs-3 col-md-6 pull-center">
+                                        <md-button aria-label="Search" class="md-fab md-mini md-primary custbutton"
+                                                   ng-click="addCheque()">
+                                            <md-icon ng-bind="is_edit?'done':'add'"></md-icon>
+                                            <md-tooltip>Add</md-tooltip>
+                                        </md-button>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12 table-responsive">
+                                        <table class="table" ng-if="cheques.length>0">
+                                            <thead>
+                                            <th>S.No</th>
+                                            <th>Cheque No</th>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>B Name</th>
+                                            <th>Remove</th>
+                                            </thead>
+                                            <tbody>
+                                            <tr ng-click="editCheque($index)" ng-repeat="che in cheques">
+                                                <td>{{$index +1}}</td>
+                                                <td>{{che.Cheque_No}}</td>
+                                                <td>{{che.disply_date | date:'dd/MMM/yyyy'}}</td>
+                                                <td>{{che.Cheque_Amount}}</td>
+                                                <td>{{che.Bank_Name}}</td>
+                                                <td><span ng-click="removeCheque($index)" style="color:red;"><i
+                                                        class="material-icons" style="font-size:16px !important;">remove_circle_outline</i></span>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <!--Promised to buy-->
+                    <md-radio-button ng-disabled="ptpdis" value="Promised To Pay">Promised To Pay</md-radio-button>
+                    <div class="row" ng-show="showpromised">
+                        <div class="col-md-12">
+                            <form name="form_pay">
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Promised to pay </label>
+                                        <input id="prmspay" maxlength="11" name="number" ng-model="promisedamt"
+                                               ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                               placeholder="Enter Amount"
+                                               required valid-number/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Pay On</label>
+                                        <md-datepicker autocomplete="off" formatDate md-hide-icons="calendar"
+                                                       md-max-date="maxDate"
+                                                       md-min-date="minDate"
+                                                       md-open-on-focus ng-click="date" ng-model="payed"
+                                                       required></md-datepicker>
+                                    </md-input-container>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <!--Transfer-->
+                    <md-radio-button ng-disabled="trandis" value="Transfer">Transfer</md-radio-button>
+                    <div class="row" ng-show="showresch">
+                        <div class="col-md-12">
+                            <form name="form_transfer">
+                                <div class="col-md-4">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Amount</label>
+                                        <input id="tamount" maxlength="11" name="number" ng-model="neft_amt"
+                                               ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                               placeholder="Enter Amount" required
+                                               step="0.01" valid-number/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-4">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Reference Number</label>
+                                        <input id="refnum" maxlength="11" name="number"
+                                               ng-model="ref_num"
+                                               ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                               placeholder="Enter Reference Number" required
+                                               step="0.01" valid-number/>
+                                    </md-input-container>
+                                </div>
+                              <div class="col-md-4">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Date</label>
+                                        <md-datepicker autocomplete="off" formatDate md-hide-icons="calendar"
+                                                       md-max-date="maxDat"
+                                                       md-min-date="minDat"
+                                                       md-open-on-focus ng-click="date" ng-model="transferdate"
+                                                       required></md-datepicker>
+                                    </md-input-container>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-6">
+                                            <a ng-click="bank_details()" ng-show="showresch">Bank Details</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </md-radio-group>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right" ng-show="show_submit">
+                <md-button class="md-raised" ng-click="close()">Back
+                    <md-tooltip>close</md-tooltip>
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="save()">Submit</md-button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right" ng-show="show_updte">
+                <md-button class="md-raised" ng-click="close()">Back
+                    <md-tooltip>close</md-tooltip>
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="update()">Update</md-button>
+            </div>
+        </div>
+
+        <!--modal Bank details -->
+        <div aria-hidden="true" aria-labelledby="exampleModal" class="modal fade" data-backdrop="static"
+             data-keyboard="false" id="Bank_view"
+             role="dialog" tabindex="-1">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModal">
+                                    Vsolv Account Detail
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="modal-body" style="height:350px;overflow-y:auto">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <div class="modal-body" style="overflow-y: auto;height: 250px">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred" ng-repeat="bank in bank_detail">
+                                            <tr>
+                                                <th class="header">Account Name</th>
+                                                <td class="align_center">{{bank.bankbranch_name}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="header">Account Number</th>
+                                                <td class="align_center">{{bank.bankdetails_accountno}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="header">IFSC code</th>
+                                                <td class="align_center">{{bank.bankbranch_ifsccode}}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Appcoll', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    app.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    });
+
+    app.controller('Ctrlcoll', function($scope, Servicecoll,$rootScope, SerCommon,$element, $timeout, $window, $mdDateLocale, $filter, $mdDialog) {
+     $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+        $scope.selected = false;
+        $scope.disb_cust = false;
+        $scope.salesproduct = [];
+        $scope.cheques = [];
+        $scope.banklist = [];
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.dbdate = convertdate(detail.date);
+        $scope.entity_gid = detail.entity_gid;
+        var td = detail.date
+        $scope.transferdate = convertdate(td);
+        $scope.cashdate = convertdate(td);
+
+           $scope.minDat1 = new Date(
+               $scope.cashdate.getFullYear(),
+               $scope.cashdate.getMonth() - 3,
+               $scope.cashdate.getDate()
+           );
+
+           $scope.minDat = new Date(
+               $scope.transferdate.getFullYear(),
+               $scope.transferdate.getMonth() - 3,
+               $scope.transferdate.getDate()
+           );
+           $scope.loading = function () {
+               $mdDialog.show({
+                   templateUrl: 'loaderSpinner',
+                   parent: angular.element(document.body),
+                   clickOutsideToClose: false
+               });
+           };
+           $scope.endloading = function () {
+               $mdDialog.hide();
+           };
+
+            $scope.cheque_date = convertdate(td);
+           $scope.minDate = new Date(
+               $scope.cheque_date.getFullYear(),
+               $scope.cheque_date.getMonth()-3,
+               $scope.cheque_date.getDate()
+           );
+           $scope.maxDate = new Date(
+               $scope.cheque_date.getFullYear(),
+               $scope.cheque_date.getMonth() + 3,
+               $scope.cheque_date.getDate()
+           );
+
+        $scope.loading();
+        loaddata();
+        $scope.endloading()
+
+        $scope.mullti = [];
+        var product = Servicecoll.getMappedCustomer('customer', $scope.customer_gid)
+         product.then(function(result) {
+          $scope.mullti = result.data.DATA;
+<!--                if (myvalue != "") {-->
+<!--                    $scope.selectedmullti = myvalue;-->
+<!--                }-->
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+
+        var d = new Date();
+        var curr_date = d.getDate();
+        var curr_month = d.getMonth();
+        curr_month++;
+        var curr_year = d.getFullYear();
+        $scope.date = curr_year + "-" + curr_month + "-" + curr_date;
+
+        $scope.fullcol = [];
+
+        function loadforedit(ref_gid) {
+            var followup = Servicecoll.getfollew(ref_gid)
+            followup.then(function(result) {
+                    $scope.fullcol = JSON.parse(result.data);
+                    var mode = $scope.fullcol[0].fetcollectionheader_mode;
+                    if (mode == "Cash") {
+                        $scope.selected = "Cash";
+                        typecash();
+                    } else if (mode == "Transfer") {
+                        $scope.selected = "Transfer";
+                        typetransfer();
+                    } else if (mode == 'Cheque') {
+                        $scope.selected = 'Cheque';
+                        typecheque();
+                    }
+                }, function(err) {
+                    <!--alert('No data!.');-->
+                })
+                .finally();
+        }
+
+           function loaddata() {
+            var followup = Servicecoll.getfollewup()
+            followup.then(function(result) {
+                    $scope.type = result.data;
+                }, function(err) {
+                    <!--alert('No data!.');-->
+                })
+                .finally();
+        };
+           $scope.bank_details = function() {
+            var get_bankdetail = Servicecoll.get_bankdetails()
+            get_bankdetail.then(function(result) {
+                $scope.bank_detail = result.data;
+                modalshow('Bank_view');
+            })
+        }
+         $scope.toggled = function() {
+            console.debug('toggled');
+            $timeout(function() {
+                $('#chqno')
+                    .focus();
+                $('#prmspay')
+                    .focus();
+                $('#tamount')
+                    .focus();
+                $('#amount')
+                    .focus();
+            }, 50);
+        }
+if ($rootScope.schedule_edit) {
+        $rootScope.$emit('loading');
+        Servicecoll.getEditSchedule($rootScope.schedule_gid)
+            .then(function(res) {
+                var details = [];
+                details = res.data;
+                if (details.length > 0) {
+                    $scope.selectedmullti = $rootScope.schedule_customer_gid;
+                    $scope.auto_Selected(details[0].fetcollectionheader_mode);
+                } else {
+                    alert(res.data)
+                }
+            }, function(err) {
+                alert(err)
+            })
+            .finally($rootScope.$emit('endloading'))
+    }
+        $scope.addCheque = function() {
+            if (!$scope.form_cheque.$valid) {
+                alert("Please fill required input field!.");
+                return false;
+            } else if ($scope.cheque_gid > 0) {
+                if ($scope.selectedItem.bank_name == undefined) {
+                    var Bankname = $scope.selectedItem
+                    var flagg = 'y'
+                } else {
+                    var Bankname = $scope.selectedItem.bank_name
+                    var flagg = 'n'
+                }
+                var data = {
+                    Cheque_No: $scope.cheque_no,
+                    Cheque_Date: $filter('date')($scope.cheque_date, "yyyy/MM/dd"),
+                    disply_date: $filter('date')($scope.cheque_date, "yyyy/MM/dd"),
+                    Cheque_Amount: $scope.cheque_amt,
+                    Bank_Name: Bankname,
+                    Cheque_gid: $scope.chqgid,
+                    flag: flagg
+                };
+                if ($scope.is_edit) {
+                    $scope.cheques[$scope.edit_index] = data;
+                } else {
+                    $scope.cheques.push(data);
+                }
+                $scope.cheque_no = '';
+                $scope.cheque_date = '';
+                $scope.cheque_amt = '';
+                $scope.is_edit = false;
+                $scope.form_cheque.$setPristine();
+                $scope.form_cheque.$setUntouched();
+            } else {
+                var data = {
+                    Cheque_No: $scope.cheque_no,
+                    Cheque_Date: formatStringDate($scope.cheque_date, 'yyyy/mm/dd'),
+                    disply_date:  formatStringDate($scope.cheque_date, 'yyyy/mm/dd'),
+                    Cheque_Amount: $scope.cheque_amt,
+                    Bank_Name: $scope.selectedItem.bank_name,
+                    bank_details: $scope.selectedItem
+                };
+
+                if ($scope.is_edit) {
+                    $scope.cheques[$scope.edit_index] = data;
+                } else {
+                    $scope.cheques.push(data);
+                }
+                $scope.cheque_no = '';
+                $scope.cheque_date = '';
+                $scope.cheque_amt = '';
+                $scope.is_edit = false;
+                $scope.form_cheque.$setPristine();
+                $scope.form_cheque.$setUntouched();
+            }
+        }
+
+        $scope.editCheque = function(index) {
+            $scope.cheque_no = $scope.cheques[index].Cheque_No;
+            $scope.cheque_date = $scope.cheques[index].disply_date;
+            $scope.cheque_amt = $scope.cheques[index].Cheque_Amount;
+            $scope.selectedItem = $scope.cheques[index].Bank_Name;
+            $scope.chqgid = $scope.cheques[index].Cheque_gid;
+            $scope.is_edit = true;
+            $scope.edit_index = index;
+        }
+
+        $scope.removeCheque = function(index) {
+            $scope.cheques.splice(index, 1)
+        }
+
+        $scope.close = function() {
+            $window.location.href = "collectioncrea";
+        }
+
+        $scope.save = function() {
+            if ($scope.selected == "Cash") {
+                if (!$scope.form_amount.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                } else {
+                    goto_cash();
+                }
+            } else if ($scope.selected == "Cheque") {
+                if ($scope.cheques.length == 0) {
+                    alert("Please enter any one cheque!.");
+                    return false;
+                } else {
+                    goto_cheque();
+                }
+            } else if ($scope.selected == "Promised To Pay") {
+                if (!$scope.form_pay.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                } else {
+                    goto_PtoP();
+                }
+            } else if ($scope.selected == "Transfer") {
+
+                if (!$scope.form_transfer.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                } else {
+                    goto_transfer();
+                }
+            }
+        }
+       function goto_transfer() {
+          var data = {
+        "Params":{
+        "CHEQUE":{
+            Bank_Gid: "0",
+            "Ref_No": $scope.ref_num,
+            "Collection_Status": 'RECEIVED'},
+            "File":[]
+            }
+         }
+            var data_int = {
+                Action: 'Insert',
+                Type: 'INITIAL',
+                Group: 'SET_INITIAL',
+                Customer_Gid: parseInt($scope.selectedmullti),
+                Employee_Gid: $scope.employgid,
+                leadref_gid: 2,
+                Collection_Mode: "Transfer",
+                Collection_Amount: parseInt($scope.neft_amt),
+               Collection_Date: $filter('date')($scope.transferdate, "yyyy-MM-dd"),
+                Collection_Description: '',
+                Entity_Gid: $scope.entity_gid,
+                Collection_Gid: 0,
+                Params: data
+            };
+            savedata(data_int, 26, '');
+        }
+
+        function goto_cash() {
+             var data = {
+        "Params":{
+        "CHEQUE":{
+            Bank_Gid: "0",
+            "Ref_No": '',
+            "Collection_Status": 'RECEIVED'},
+            "File":[]
+            }
+
+        }
+                var data_int = {
+                Action: 'Insert',
+                Type: 'INITIAL',
+                Group: 'SET_INITIAL',
+                Customer_Gid: parseInt($scope.selectedmullti),
+                Employee_Gid: $scope.employgid,
+                leadref_gid: 2,
+                Collection_Mode: "CASH",
+                Collection_Amount: parseInt($scope.cashAmount),
+                Collection_Date: $filter('date')($scope.cashdate, "yyyy-MM-dd"),
+                Collection_Description: '',
+                Entity_Gid: $scope.entity_gid,
+                Collection_Gid: 0,
+                Params: data
+            };
+
+            savedata(data_int, 24, '');
+        }
+
+        function calamount() {
+            var amt = 0;
+            angular.forEach($scope.cheques, function(user) {
+                amt += parseInt(user.Cheque_Amount);
+            });
+            return amt;
+        }
+
+        function goto_cheque() {
+              var data = {
+        "Params":{
+        "CHEQUE":{
+            Bank_Gid: $scope.selectedItem.bank_gid,
+            CHEQUE: $scope.cheques,
+            "Collection_Status": "RECEIVED"},
+             "Ref_No": "",
+             "File":[]
+
+}
+}
+            var data_int = {
+                Action: 'Insert',
+                Type: 'INITIAL',
+                Group: 'SET_INITIAL',
+                Customer_Gid: parseInt($scope.selectedmullti),
+                Employee_Gid: $scope.employgid,
+                leadref_gid: 2,
+                Collection_Mode: "Cheque",
+                Collection_Amount: calamount(),
+                Collection_Date: formatStringDate($scope.dbdate, 'yyyy-mm-dd'),
+                Collection_Description: '',
+                Entity_Gid: $scope.entity_gid,
+                Collection_Gid: 0,
+                Params: data
+            };
+
+            savedata(data_int, 25, '');
+        }
+
+        function goto_PtoP() {
+
+                var data_int = {
+                cust_gid:  $scope.selectedmullti,
+                collection_mode: "p_toPay",
+                collection_amount: $scope.promisedamt,
+                cheque_no: '',
+                date: $scope.date
+            };
+            sch_update(0, 23, formatDate($scope.payed));
+        }
+
+        function savedata(data_int, followupreason_gid, resechedule_date) {
+             if ($scope.selectedmullti==undefined) {
+                    alert("Please Choose Customer required input field!.");
+          }
+              else{
+            var collection_save = Servicecoll.setcollection(data_int)
+            collection_save.then(function(result) {
+                    var sechedule_ref = result.data.MESSAGE;
+                    if (sechedule_ref == 'SUCCESS') {
+                        alert("Inserted Successfully")
+                        $window.location.href = "Payment_HO_Summary";
+
+                    } else {
+                        var sechedule_ref = result.data.DATA;
+                        alert(sechedule_ref);
+                    }
+                },
+                function() {
+                    alert("Data Not Inserted!.");
+                });
+              }
+
+        }
+
+        function sch_update(sechedule_ref, followupreason_gid, resechedule_date) {
+           var set_schedule = Servicecoll.setschedule(schedule_gid, $scope.date,  $scope.selectedmullti, followupreason_gid, sechedule_ref, resechedule_date, resechedule_date);
+            set_schedule.then(function(res) {
+                    if (res.data == 'SUCCESS') {
+                        alert("Inserted Succesfully!.");
+                        $window.location.href = "collectioncrea";
+                    } else {
+                        alert("Data Not Inserted!.(Schedule)");
+                    }
+                }, function(err) {
+                    alert("Data Not Inserted!.(Schedule)");
+                })
+                .finally();
+        }
+
+        $scope.update = function() {
+            if ($scope.selected == "Cash") {
+                if (!$scope.form_amount.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                }
+              else {
+                    update_cash();
+                }
+            } else if ($scope.selected == "Cheque") {
+                if ($scope.cheques.length == 0) {
+                    alert("Please enter any one cheque!.");
+                    return false;
+                } else {
+                    update_cheque();
+                }
+            } else if ($scope.selected == "Promised To Pay") {
+                if (!$scope.form_pay.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                } else {
+                    goto_PtoP();
+                }
+            } else if ($scope.selected == "Transfer") {
+                if (!$scope.form_transfer.$valid) {
+                    alert("Please fill required input field!.");
+                    return false;
+                } else {
+
+                    update_transfer();
+                }
+            } else {}
+        }
+
+        function update_cash() {
+            var data_int = {
+                action: 'Update',
+                cust_gid: cus_gidd,
+                leadref_gid: $scope.ref_gid,
+                collection_mode: "Cash",
+                collection_amount: $scope.cashAmount,
+                cheque_no: '',
+                date: $scope.date
+            };
+            savedata(data_int, 24, '');
+        }
+
+        function update_transfer() {
+            var data_int = {
+                action: 'Update',
+                cust_gid: cus_gidd,
+                leadref_gid: $scope.ref_gid,
+                collection_mode: "Transfer",
+                collection_amount: $scope.neft_amt,
+                cheque_no: '',
+                date: $scope.date
+            };
+            savedata(data_int, 26, '');
+        }
+
+        function update_cheque() {
+            var data = {
+                CHEQUE: $scope.cheques
+            }
+            var data_int = {
+                action: 'Update',
+                cust_gid: cus_gidd,
+                leadref_gid: $scope.ref_gid,
+                collection_mode: "Cheque",
+                collection_amount: calamount(),
+                cheque_no: 0, //dummy values
+                date: $scope.date,
+                cheque_data: data
+            };
+            savedata(data_int, 25, '');
+        }
+
+        $scope.add_chque = function() {
+            $scope.salesproduct.push({
+                chqno: $scope.Chqno,
+                chqdate: $scope.Chqdate,
+                amt: $scope.Chqamt
+            });
+            $scope.Chqno = "";
+            $scope.Chqdate = "";
+            $scope.Chqamt = "";
+        }
+
+        $scope.getbankdetails = function(searchtext) {
+            var result = $filter('filter')($scope.banklist, {
+                'bank_name': searchtext
+            });
+            return result;
+        }
+
+        function bankdetails() {
+            var getbank = SerCommon.getdropdown('bank', 0, '')
+            getbank.then(function(result) {
+                $scope.banklist = JSON.parse(result.data);
+            }, function(err) {
+                alert("Bank details not loaded!.");
+            }).finally();
+        }
+
+        $scope.type_Selected = function(e) {
+        //$scope.disb_cust = true;
+            if (e == "Cash") {
+                typecash();
+            } else if (e == "Cheque") {
+                typecheque();
+            } else if (e == "Promised To Pay") {
+                $scope.showcash = false;
+                $scope.showpromised = true;
+                $scope.show_submit = true;
+                $scope.promisedamt = "";
+                $scope.payed = "";
+                $scope.selectedItem = "";
+                $scope.cheques = "";
+                $scope.form_pay.$setPristine();
+                $scope.form_pay.$setUntouched();
+                $scope.showcheque = false;
+                $scope.showresch = false;
+            } else if (e == "Transfer") {
+                typetransfer();
+            } else {
+                $scope.showcash = false;
+                $scope.showpromised = false;
+                $scope.showcheque = false;
+                $scope.showresch = false;
+            };
+        }
+
+        function typecash() {
+            $scope.showcash = true;
+            $scope.show_submit = true;
+            $scope.cashAmount = "";
+            $scope.selectedItem = "";
+            $scope.cheques = "";
+            $scope.form_amount.$setPristine();
+            $scope.form_amount.$setUntouched();
+            $scope.showpromised = false;
+            $scope.showcheque = false;
+            $scope.showresch = false;
+            var ref_gid = $scope.ref_gid;
+            var followup = Servicecoll.getfollew(ref_gid)
+            followup.then(function(result) {
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cheqdis = true;
+                    $scope.ptpdis = true;
+                    $scope.trandis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    $scope.cashAmount = $scope.fullcollection[0].fetcollectionheader_amount;
+                }
+            }, function(err) {
+
+            })
+        }
+
+        function typetransfer() {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = false;
+            $scope.showresch = true;
+            $scope.form_transfer.$setPristine();
+            $scope.form_transfer.$setUntouched();
+            $scope.show_submit = true;
+            $scope.neft_amt = "";
+            $scope.selectedItem = "";
+            $scope.cheques = "";
+            var ref_gid = $scope.ref_gid;
+            var followup = Servicecoll.getfollew(ref_gid)
+            followup.then(function(result) {
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cashdis = true;
+                    $scope.cheqdis = true;
+                    $scope.ptpdis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    $scope.neft_amt = $scope.fullcollection[0].fetcollectionheader_amount;
+                }
+            }, function(err) {
+
+            })
+        }
+
+        function typecheque() {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = true;
+            $scope.show_submit = true;
+            $scope.cheque_no = "";
+            $scope.cheque_amt = "";
+            $scope.form_cheque.$setPristine();
+            $scope.form_cheque.$setUntouched();
+            $scope.showresch = false;
+            bankdetails();
+            var ref_gid = $scope.ref_gid;
+            var followup = Servicecoll.getfollew(ref_gid)
+            followup.then(function(result) {
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cashdis = true;
+                    $scope.ptpdis = true;
+                    $scope.trandis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    for (var i = 0; i < $scope.fullcollection.length; i++) {
+                        $scope.cheque_gid = $scope.fullcollection[i].fetcollectionchq_gid;
+                        var data = {
+                            Cheque_gid: $scope.fullcollection[i].fetcollectionchq_gid,
+                            Cheque_No: $scope.fullcollection[i].fetcollectionchq_chqno,
+                            Cheque_Date: $scope.fullcollection[i].fetcollectionchq_chqdate,
+                            disply_date: $scope.fullcollection[i].fetcollectionchq_chqdate,
+                            Cheque_Amount: $scope.fullcollection[i].fetcollectionchq_chqamt,
+                            Bank_Name: $scope.fullcollection[i].fetcollectionchq_bankname,
+                            bank_details: $scope.selectedItem
+                        };
+                        $scope.cheques.push(data);
+                    }
+                }
+            }, function(err) {
+
+            })
+        }
+    });
+
+    app.service("Servicecoll", function($http) {
+        this.getfollewup = function(d) {
+            var response = $http.get(Appname + "/followup_reason/", {
+                params: {
+                    'schType_gid': 2
+                }
+            });
+            return response;
+        }
+        this.getfollew = function(ref_gid) {
+            var response = $http.get(Appname + "/collection_get/", {
+                params: {
+                    'collectionheader_gid': ref_gid
+                }
+            });
+            return response;
+        }
+        this.setcollection = function(data) {
+            var response = $http.post(Appname + "/setcoll/", data);
+            return response;
+        }
+
+        this.getcollection = function(data) {
+            var response = $http.post(Appname + "/collection_history_fet/", data);
+            return response;
+        }
+
+        this.setschedule = function(schedule_gid, date, cust_gid, followupreason_gid, sechedule_ref, resechedule_date, followup_date) {
+
+            var response = $http.post(Appname + "/add_schedule/", {
+                parms: {
+                    "schedule_type_gid": 2,
+                    "TYPE": "UPDATE",
+                    "schedule_gid": schedule_gid,
+                    "Date": date,
+                    "ls_followup_date": followup_date,
+                     "ls_Remarks":"None",
+                    "cust_gid": cust_gid,
+                    "followupreason_gid": followupreason_gid,
+                    "sechedule_ref": sechedule_ref,
+                    "resechedule_date": resechedule_date
+                }
+            });
+            return response;
+        }
+        this.getMappedCustomer = function(action) {
+            var response = $http.get(Appname + "/getcustemp/", {
+                params: {
+                    'action': action
+                }
+            });
+            return response;
+        }
+        this.get_bankdetails = function(d) {
+            var response = $http.get(Appname + "/bank_detail/");
+            return response;
+        }
+        this.getstatus = function(e) {
+            var respons = $http.post(Appname + "/status_qty/", {
+                parms: {
+                    "custid": e
+                }
+            });
+            return respons;
+        }
+
+           this.getEditSchedule = function(schedule_gid) {
+        var respons = $http.get(Appname + "/getEditSchedule/", {
+            params: {
+                "schedule_gid": schedule_gid
+            }
+        });
+        return respons;
+    }
+    });
+
+</script>
+{% endblock %}

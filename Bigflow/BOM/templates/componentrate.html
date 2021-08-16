@@ -1,0 +1,359 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} BOM Rate {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appcmpntrate" ng-controller="Ctrlcmpntrate" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Component Rate</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Supplier Name</label>
+                    <input type="text" ng-model="sel_supplier.supplier_name" ng-change="selectsupplier()">
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Component Name</label>
+                    <input type="text" ng-model="sel_supplier.supplier_name" ng-change="selectsupplier()">
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Component Code</th>
+                        <th>Name</th>
+                        <th>UOM</th>
+                        <th>Supplier Code</th>
+                        <th>Name</th>
+                        <th>Rate</th>
+                        <th>Status</th>
+                        <th>Remark</th>
+                        <th>Valid From</th>
+                        <th>Valid To</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="cr in rateSummary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{cr.employee_code }}</td>
+                        <td>{{cr.component_name}}</td>
+                        <td>{{cr.uom_name}}</td>
+                        <td>{{cr.Supplier_code}}</td>
+                        <td>{{cr.Supplier_name}}</td>
+                        <td>{{cr.rate}}</td>
+                        <td>{{cr.rate_status}}</td>
+                        <td>{{cr.rate_remark}}</td>
+                        <td>{{cr.rate_validfrom}}</td>
+                        <td>{{cr.rate_validto}}</td>
+                        <td align="center">
+                            <a title="View" ng-click="showview(cr)" align="center"
+                               class="editlink">
+                                <i class="material-icons">history</i>
+                            </a>
+                            <span title="Edit" ng-click="editRate_click($event,cr)" align="center"
+                                  class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+                        </td>
+
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul uib-pagination total-items="rateSummary.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="7">
+                            Total Count:{{rateSummary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--Dialog Edit Rate-->
+        <div style="visibility: hidden">
+            <div class="md-dialog-container" id="dialogEditRate">
+                <md-dialog layout-padding>
+                    <div>
+                        <div class="col-md-12">
+                            <md-subheader class="md-primary">Edit Rate Details</md-subheader>
+                        </div>
+                        <div>
+                            <form name="formcomponent">
+                                <div>
+                                    <div class="col-md-12">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Rate</label>
+                                            <input ng-model="txtcmpnt_rate" type="text" name="txtcmpnt_rate"
+                                                   autocomplete="off" required/>
+                                            <div ng-messages="formcomponent.txtcmpnt_rate.$error">
+                                                <div ng-message="required">Please enter a rate.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Valid From</label>
+                                            <md-datepicker md-hide-icons="calendar" md-open-on-focus
+                                                           ng-model="txtfrom_date" autocomplete="off"
+                                                           name="txtfrom_date" formatDate ng-click="date()"
+                                                           required></md-datepicker>
+                                            <div ng-messages="formcomponent.txtfrom_date.$error">
+                                                <div ng-message="required">Please enter a From Date.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Valid To</label>
+                                            <md-datepicker md-hide-icons="calendar" md-open-on-focus name="txtto_date"
+                                                           ng-model="txtto_date" autocomplete="off" formatDate
+                                                           ng-click="date()"
+                                                           required></md-datepicker>
+                                            <div ng-messages="formcomponent.txtto_date.$error">
+                                                <div ng-message="required">Please enter a Todate.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="col-md-12">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Remark</label>
+                                            <input ng-model="txtcmpnt_remark" type="text" name="txtcmpnt_remark"
+                                                   autocomplete="off"
+                                                   required/>
+                                            <div ng-messages="formcomponent.txtcmpnt_remark.$error">
+                                                <div ng-message="required">Please enter a remark.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div>
+                            <div class="col-md-12 text-center rotat">
+                                <md-button ng-hide="hidesubmit" class="md-raised custbutton" ng-click="Save_comp()"
+                                           ng-disabled="!formcomponent.$valid">
+                                    Save
+                                    <md-tooltip>Save</md-tooltip>
+                                </md-button>
+                                <md-button ng-show="updatebutn" class="md-raised custbutton" ng-click="update_click()"
+                                           ng-disabled="!formcomponent.$valid">
+                                    Update
+                                    <md-tooltip>Update</md-tooltip>
+                                </md-button>
+                                <md-button class="md-raised" ng-click="closedialog()">
+                                    Cancel
+                                    <md-tooltip>close</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="col-md-12">
+                                <table class="table">
+                                    <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Rate</th>
+                                        <th>Valid From</th>
+                                        <th>Valid To</th>
+                                        <th>Status</th>
+                                        <th>Remark</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="map in dialogsmry" ng-click="fullclick(map)">
+                                        <td>{{$index+1}}</td>
+                                        <td>{{map.rate}}</td>
+                                        <td>{{map.rate_validfrom}}</td>
+                                        <td>{{map.rate_validto}}</td>
+                                        <td>{{map.rate_remark}}</td>
+                                        <td>
+                                        <span ng-click="removeSupplier(map)" class="removelink">
+                                            <i class="material-icons">remove_circle_outline</i>
+                                    </span></td>
+                                        <td></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </md-dialog>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appcmpntrate', ['ngMessages', 'ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+    myApp.controller('Ctrlcmpntrate', ['$scope', 'Sercmpntrate', '$mdDialog', '$rootScope', '$window', '$filter',
+        function($scope, Sercmpntrate, $mdDialog, $rootScope, $window, $filter) {
+            $scope.rateSummary = [];
+            $scope.mappedsmry = [];
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+$scope.closedialog = function(){
+$mdDialog.hide();
+};
+            $scope.endloading = function() {
+                <!--$mdDialog.hide();-->
+            };
+
+            function loaddata() {
+                var mappedSupplier = Sercmpntrate.getmapped('SUMMARY', 'COMPONENTS_SUPPLIER_MAP', 0)
+                mappedSupplier.then(function(res) {
+                    $scope.maintable = res.data
+                    $scope.rateSummary = $scope.maintable
+                }, function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+            }
+            loaddata();
+
+            $scope.editRate_click = function(ev, details) {
+            debugger;
+                $scope.hidesubmit = false;
+                $scope.updatebutn = false;
+                $scope.txtcmpnt_rate = "";
+                $scope.txtfrom_date = "";
+                $scope.txtto_date = "";
+                $scope.txtcmpnt_remark = "";
+                $scope.formcomponent.$setPristine();
+                $scope.formcomponent.$setUntouched();
+                $scope.compgid = details.compsup_gid;
+                $scope.component_gid = details.component_gid;
+
+                 $scope.dialogsmry = [];
+                 var jsondta = {
+                    "Component_Gid": details.component_gid
+                }
+                var mappedSupplier = Sercmpntrate.getmapped('EACH', 'COMPONENTS_SUPPLIER_MAP',jsondta)
+                mappedSupplier.then(function(res) {
+                debugger;
+                        $scope.dialogsmry = res.data;
+                        showmodal(ev)
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally($scope.endloading);
+
+            };
+
+            function showmodal(ev) {
+                $mdDialog.show({
+                    contentElement: '#dialogEditRate',
+                    parent: angular.element(document.body),
+                    targetEvent: ev,
+                    multiple: true,
+                    clickOutsideToClose: false,
+                    fullscreen: false
+                });
+            };
+
+            $scope.Save_comp = function() {
+                debugger;
+                var action = 'Insert';
+                var jsondata = {
+                    "Component_Supplier_Map_Gid": $scope.compgid,
+                    "Valid_From": $filter('date')($scope.txtfrom_date, "yyyy-MM-dd"),
+                    "Valid_To": $filter('date')($scope.txtto_date, "yyyy-MM-dd"),
+                    "Rate": $scope.txtcmpnt_rate,
+                    "Status": 'PENDING',
+                    "Remark": $scope.txtcmpnt_remark
+                }
+
+                var save_deptdetail = Sercmpntrate.savedetail(action, 'COMPONENT_SUPPLIER_RATE', jsondata);
+                save_deptdetail.then(function(result) {
+                        if (result.data > 0 || result.data == 'SUCCESS') {
+                            alert("Saved Successfully!.");
+                        } else {
+                            alert("Not Saved Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Saved Successfully!.");
+                    })
+
+                $scope.dialogsmry.push({
+                    rate: $scope.txtcmpnt_rate,
+                    rate_validfrom: $filter('date')($scope.txtfrom_date, "yyyy-MM-dd"),
+                    rate_validto: $filter('date')($scope.txtto_date, "yyyy-MM-dd"),
+                    rate_remark: $scope.txtcmpnt_remark
+                })
+            };
+
+            $scope.fullclick = function(map) {
+                $scope.txtcmpnt_rate = map.rate;
+                $scope.txtfrom_date = map.rate_validfrom;
+                $scope.txtto_date = map.rate_validto;
+                $scope.txtcmpnt_remark = map.rate_remark;
+                $scope.updatebutn = true;
+                $scope.hidesubmit = true;
+            }
+        }
+    ]);
+
+    myApp.service("Sercmpntrate", function($http) {
+        this.getmapped = function(group, type, jsondta) {
+            var response = $http.get(Appname + "/mapped_get/", {
+                params: {
+                    "group": group,
+                    "type": type,
+                    "jsondta": jsondta
+                }
+            });
+            return response;
+        }
+
+        this.savedetail = function(action, type, jsond) {
+            var response = $http.post(Appname + "/setcomp/", {
+                parms: {
+                    "action": action,
+                    'type': type,
+                    "jsond": jsond
+                }
+            });
+            return response;
+        }
+
+    });
+</script>
+{% endblock %}

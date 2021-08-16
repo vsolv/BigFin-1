@@ -1,0 +1,766 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Service Direct {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appschedule" ng-controller="Ctrlschedulereport" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Service Direct</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-11">
+                <div class="col-lg-5 col-sm-3 col-md-3">
+                    <label>Customer Name</label>
+                    <md-autocomplete
+                            ng-disabled="Customer_disable"
+                            md-no-cache="true"
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="ACselectchange(item,status,sino,search_emp)"
+                            md-items="item in querySearch(searchText)"
+                            md-item-text="item.display_name"
+                            md-min-length=0
+                    >
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.display_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-lg-3 col-sm-3" ng-show="false">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>SR status</label>
+                        <input type="text" ng-model="status" maxlength="16"
+                               ng-change="ACselectchange(item,status,sino,search_emp)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>SI No</label>
+                        <input type="text"
+                               ng-model="sino" maxlength="16" ng-change="ACselectchange(item,status,sino,search_emp)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Raised By</label>
+                        <md-select ng-model="search_emp" ng-disabled="service_disable" md-on-close="clearSearchTerm()"
+                                   data-md-container-class="selectdemoSelectHeader">
+                            <md-select-header class="demo-select-header">
+                                <input ng-model="searchTerm" type="search" placeholder="Search for a Raised By.."
+                                       class="demo-header-searchbox md-text">
+                            </md-select-header>
+                            <md-optgroup label="Raised By">
+                                <md-option ng-value="c.employee_name" ng-repeat="c in employe |
+              filter:searchTerm">{{c.employee_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="col-lg-11">
+                <!--<div class="col-lg-3 col-sm-3">-->
+                <!--<md-input-container class="md-block inputcontainer">-->
+                <!--<label>Raised By</label>-->
+                <!--<md-select ng-model="search_emp" ng-disabled="service_disable"-->
+                <!--ng-change="ACselectchange(item,status,sino,search_emp)" >-->
+                <!--<md-option ng-value=""><em>&#45;&#45;Select&#45;&#45;</em></md-option>-->
+                <!--<md-option ng-repeat="y in employe" ng-value="y.employee_name">{{-->
+                <!--y.employee_name }}-->
+                <!--</md-option>-->
+                <!--</md-select>-->
+                <!--</md-input-container>-->
+                <!--</div>-->
+            </div>
+            <div class="col-lg-12">
+                <div class="pull-right">
+                    <md-button class="md-fab md-mini md-primary custbutton" type="submit" ng-click="Add_Sr()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New SR</md-tooltip>
+                    </md-button>
+                    <md-button type="submit" class="md-raised md-primary" id="btn_create" ng-click="Dispatch_click()">
+                        Courier
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>SR No</th>
+                        <th>SR Date</th>
+                        <th>SR Raised By</th>
+                        <th>Customer Name</th>
+                        <!--<th>Product Type</th>-->
+                        <th>Product Name</th>
+                        <th>Product SI NO</th>
+                        <th>SR Type</th>
+                        <th>SR Status</th>
+                        <th>Select</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="m in ServiceDetails.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{m.service_code}}</td>
+                        <td>{{m.service_date | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{m.employee_name}}</td>
+                        <!--<td>{{m.producttype_name}}</td>-->
+                        <td>{{m.customer_name}}</td>
+                        <td>{{m.product_name}}</td>
+                        <td>{{m.service_productslno}}</td>
+                        <td>{{m.service_dispatchmode}}</td>
+                        <td>{{m.service_status}}</td>
+                        <td align="center"><label><input type="checkbox" ng-model="m.d"
+                                                         value="" ng-change="selectAll(m)"
+                                                         ng-hide="m.service_status == 'DISPATCHED' || m.service_status ==  'CENTRAL OFFICE' "></label>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="12">
+                            <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="mdl_present" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            Courier Details
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!--Leave details-->
+                            <form name="myform">
+                                <div class="col-xs-12">
+                                    <div class="col-lg-6 col-sm-6 col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Courier Name</label>
+                                            <md-select ng-model="courier" required>
+                                                <md-option><em>--Select--</em></md-option>
+                                                <md-option ng-repeat="cou in courier_dtl"
+                                                           ng-click="producttype_click(pro.producttype_gid)"
+                                                           ng-value="cou"
+                                                >
+                                                    {{ cou.courier_name }}
+                                                </md-option>
+                                            </md-select>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-lg-6 col-sm-4 col-md-4">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Date</label>
+                                            <md-datepicker ng-disabled="service_disable" md-hide-icons="calendar"
+                                                           ng-model="to_date"
+                                                           md-hide-icons="calendar" ng-click="date" formatDate
+                                                           md-min-date="maxDate" md-max-date="minDate"
+                                                           required></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <div class="col-lg-6 col-sm-6 col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>AWB No</label>
+                                            <input type="text" maxlength="16" no-special-char ng-model="AWS_no"
+                                                   required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-lg-6 col-sm-4 col-md-4">
+
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Mode</label>
+                                            <md-select ng-model="mode" name="mod" required>
+
+                                                <md-option ng-repeat="mode in channelddl"
+
+                                                           ng-value="mode.metadata_value"
+                                                >
+                                                    {{ mode.metadata_value }}
+                                                </md-option>
+                                            </md-select>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <div class="col-lg-6 col-sm-6 col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Packets</label>
+                                            <input name="number" numbers-only maxlength="8" ng-model="packets"
+                                                   required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-lg-6 col-sm-4 col-md-4">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Weight</label>
+                                            <input type="text" value="" valid-number
+                                                   ng-pattern="/^[123456789][.0-9]{0,10}$/" step="0.01" maxlength="6"
+                                                   ng-model="weights" required/>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <div class="col-lg-12 col-sm-12 col-md-12">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Received By</label>
+                                            <md-select ng-model="Send_to" ng-disabled="service_disable" required>
+                                                <md-option><em>--Select--</em></md-option>
+                                                <md-option ng-repeat="y in office_dtl" ng-value="y">{{
+                                                    y.office }}
+                                                </md-option>
+                                            </md-select>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </form>
+                            <!--Present details-->
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-info custbutton" ng-click="staus_update()">
+                            Submit
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+    .md-autocomplete-suggestions-container{
+   z-index:100000 !important;
+  }
+    .md-dialog-container{
+    z-index:1060 !important;
+    }
+
+
+
+</style>
+<script>
+var app=angular.module('Appschedule',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+
+    app.directive('numbersOnly', function() {
+        return {
+            require: 'ngModel',
+            link: function(scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9]/g, '');
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+        app.directive('validNumber', function() {
+        return {
+            require: '?ngModel',
+            link: function(scope, element, attrs, ngModelCtrl) {
+                if (!ngModelCtrl) {
+                    return;
+                }
+
+                ngModelCtrl.$parsers.push(function(val) {
+                    if (angular.isUndefined(val)) {
+                        var val = '';
+                    }
+
+                    var clean = val.replace(/[^-0-9\.]/g, '');
+                    var negativeCheck = clean.split('-');
+                    var decimalCheck = clean.split('.');
+                    if (!angular.isUndefined(negativeCheck[1])) {
+                        negativeCheck[1] = negativeCheck[1].slice(0, negativeCheck[1].length);
+                        clean = negativeCheck[0] + '-' + negativeCheck[1];
+                        if (negativeCheck[0].length > 0) {
+                            clean = negativeCheck[0];
+                        }
+
+                    }
+                    if (!angular.isUndefined(decimalCheck[1])) {
+                        decimalCheck[1] = decimalCheck[1].slice(0, 2);
+                        clean = decimalCheck[0] + '.' + decimalCheck[1];
+                    }
+                    if (val !== clean) {
+                        ngModelCtrl.$setViewValue(clean);
+                        ngModelCtrl.$render();
+                    }
+                    return clean;
+                });
+                element.bind('keypress', function(event) {
+                    if (event.keyCode === 32) {
+                        event.preventDefault();
+                    }
+                });
+            }
+        };
+    });
+
+
+
+app.controller('Ctrlschedulereport', ['$scope', '$http', 'requestservice', '$filter', '$window','$mdDialog',
+'$mdDateLocale','$timeout','$element', function($scope, $http, requestservice, $filter, $window,$mdDialog, $mdDateLocale,$timeout,$element) {
+
+      $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.maintable = [];
+
+    $scope.ls_followup_date = new Date();
+
+
+    $scope.minDate = new Date(
+     $scope.ls_followup_date.getFullYear(),
+     $scope.ls_followup_date.getMonth(),
+     $scope.ls_followup_date.getDate()
+    );
+
+    $scope.maxDate = new Date(
+     $scope.ls_followup_date.getFullYear(),
+     $scope.ls_followup_date.getMonth() - 3,
+     $scope.ls_followup_date.getDate()-1
+    );
+
+  $scope.loading = function() {
+    $mdDialog.show({
+        templateUrl: 'loaderSpinner',
+        parent: angular.element(document.body),
+        clickOutsideToClose: false
+    });
+  };
+
+  $scope.to_date = new Date();
+
+  $scope.office_dtl = [{office:"Central Office",office_name:"RECEIVED BY CENTRAL OFFICE"},{office:"Branch Office",office_name:"RECEIVED BY BRANCH OFFICE"}]
+
+  $mdDateLocale.formatDate = function(date) {
+    return $filter('date')($scope.to_date, "dd-MMM-yyyy");
+  };
+
+  function load() {
+
+    var servicedtl = requestservice.getservicedtl()
+    servicedtl.then(function(result) {
+        $scope.maintable =  $filter('orderBy')(result.data,  '-service_gid');
+
+
+        $scope.ServiceDetails = $filter('filter')($scope.maintable, { "service_dispatchmode":"DIRECT" ,"service_status":"INITIATED"  }, );
+
+        $scope.Serdetail =  $scope.ServiceDetails;
+
+        $scope.pageLength = $scope.ServiceDetails.length;
+        $scope.Totalpages = Math.ceil($scope.ServiceDetails.length / $scope.itemsPerPage);
+      angular.forEach($scope.ServiceDetails, function(value, key) {
+        $scope.ServiceDetails[key].checked = false;
+
+      });
+      console.log($scope.ServiceDetails)
+    });
+  }
+
+  load();
+
+
+   var channel = requestservice.ddl('dis_trn_tdispatch', 'dispatch_mode');
+      channel.then(function(result) { console.log(result.data)
+            var channel_data = JSON.parse(result.data)
+            $scope.channelddl = channel_data;
+
+         },
+         function(err) {
+            alert('No data!.');
+      });
+
+  $scope.SRclick = function(ev) {
+  sessionStorage.clear();
+    sessionStorage.setItem('Service_gid', ev);
+    sessionStorage.setItem('Direct_mode','DIRECT');
+      $window.location.href = "Requestexe";
+  }
+
+  $scope.Add_Sr = function (){
+    sessionStorage.clear();
+    sessionStorage.setItem('Direct_mode','DIRECT');
+     $window.location.href =    "Requestexe";
+
+    }
+
+  var cust = requestservice.getCustomername()
+  cust.then(function(result) {
+      $scope.Customer = result.data;
+      //alert(JSON.stringify(result.data))
+    },
+    function() {
+      alert('no data');
+    });
+
+  $scope.querySearch = function(query) {
+    te = $filter('filter')($scope.Customer, {
+      'display_name': query
+    });
+
+    return te;
+  }
+
+  $scope.cussearch = function(query) {
+    te = $filter('filter')($scope.Customer, {
+      'display_name': query
+    });
+
+    return te;
+  }
+
+  $scope.cust_name = "";
+
+  $scope.ACselectchange = function(query,status,sino,empl) {
+
+         if(query !== undefined){
+            $scope.cust_name = query.customer_name;
+         }else if($scope.selectedItem !== null){
+            $scope.cust_name = $scope.selectedItem.customer_name;
+         }else{
+           $scope.cust_name = "";
+         }
+
+
+         $scope.ServiceDetails = $filter('filter')($scope.Serdetail, { "customer_name":$scope.cust_name ,"service_status":status,"service_productslno":sino,"employee_name":empl  }, );
+        $scope.pageLength = $scope.ServiceDetails.length;
+        $scope.search_flag = 1;
+
+  }
+
+
+
+
+  var sttddl = requestservice.getstateddl()
+  sttddl.then(function(result) {
+      $scope.stateddl = [];
+      $scope.stateddl = JSON.parse(result.data);
+      $scope.locstate = JSON.parse(result.data);
+    }),
+    function() {
+      alert('no data');
+    };
+
+  $scope.state_locclk = function(state) {
+  $scope.loading();
+    var state_gid = state.state_gid;
+    var locdist = requestservice.getdistddl(state_gid)
+    locdist.then(function(result) {
+        $scope.locdistrict = [];
+        $scope.locdistrict = JSON.parse(result.data);
+      },
+      function() {
+        alert('no data');
+      }).finally($scope.endloading);
+  };
+
+  $scope.district_locclkl = function(district_gid) {
+    var loccty = requestservice.getcityddl(district_gid)
+    loccty.then(function(result) {
+        $scope.loccity = [];
+        $scope.loccity = JSON.parse(result.data);
+      }),
+      function() {
+        alert('no data');
+      };
+  };
+
+  $scope.city_locclk = function(city) {
+    var city_gid = city.city_gid;
+    var locpincd = requestservice.getpincode(city_gid)
+    locpincd.then(function(result) {
+        var locpincde = [];
+        locpincde = JSON.parse(result.data);
+        $scope.locpcode = locpincde[0].pincode_no;
+        $scope.locpcodegid = locpincde[0].pincode_gid;
+      }),
+      function() {
+        alert('no data');
+      };
+  };
+
+  var courier = requestservice.getcourier_dtl()
+  courier.then(function(result) {
+      $scope.courier_dtl = result.data
+        //   alert(JSON.stringify(result.data))
+    }),
+    function() {
+      alert('no data');
+    };
+
+
+  $scope.employe = [];
+  var employee = requestservice.getemployee()
+  employee.then(function(result) {
+      $scope.employe = JSON.parse(result.data);
+
+    }),
+    function() {
+      alert('no data');
+    };
+
+  $scope.create_click = function(){
+
+      sessionStorage.clear();
+      $window.location.href = "Requestexe";
+  }
+
+
+
+  function selecteddate() {
+
+    var d = $scope.to_date;
+    var curr_date = d.getDate();
+    var curr_month = d.getMonth();
+    curr_month++;
+    var curr_year = d.getFullYear();
+    Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+  }
+
+  $scope.SERVICE = [];
+
+  function servicejson_set() {
+
+    $scope.SERVICE.push({
+      product_gid: $scope.servicedata.service_product_gid,
+      product_slno: $scope.servicedata.service_productslno,
+      invoice_no: '',
+      remark: $scope.servicedata.service_remarks,
+      service_gid: $scope.servicedata.service_gid,
+      dispatch_mode: $scope.servicedata.service_dispatchmode,
+      pay_by: $scope.servicedata.service_courierexp,
+      dispatch_gid:0,
+      central_off_dispatch_gid:0,
+      //is_removed:'N',
+
+    })
+  }
+
+
+
+  $scope.servicedata = [];
+  $scope.Dispatch_details = [];
+  $scope.selectAll = function(inndex) {
+    $scope.servicedata = inndex;
+
+    if (inndex.checked == false) {
+      inndex.checked = true;
+      servicejson_set();
+
+      // inndex.SERVICE=$scope.SERVICE
+
+      $scope.Dispatch_details.push(inndex)
+    } else {
+      inndex.checked = false;
+      var ID = inndex.service_gid;
+      var whatIndex = null;
+      angular.forEach($scope.Dispatch_details, function(cb, index) {
+        if (cb.service_gid === ID) {
+          whatIndex = index;
+        }
+      });
+      var serviceIndex = null;
+      angular.forEach($scope.Dispatch_details, function(cb, index) {
+        if (cb.service_gid === ID) {
+          serviceIndex = index;
+        }
+      });
+      $scope.SERVICE.splice(serviceIndex, 1);
+      $scope.Dispatch_details.splice(whatIndex, 1);
+    }
+//    alert(JSON.stringify($scope.Dispatch_details))
+    console.log($scope.Dispatch_details)
+  }
+
+
+  $scope.staus_update = function() {
+
+   $scope.loading();
+
+
+    selecteddate();
+
+    var data_int = [{
+      courier_gid: $scope.courier.courier_gid,
+      Dispatch_date: Service_date,
+      send_by: 1,
+      awbno: $scope.AWS_no,
+      dispatch_mode: $scope.mode,
+      dispatch_type: "Ndoc",
+      packets: $scope.packets,
+      weight: $scope.weights,
+      dispatch_to: $scope.Send_to.office_name,
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      remark: "",
+      returned: "N",
+      returned_on: "",
+      returned_remark: "",
+      pod: "",
+      pod_image: "",
+      isactive: "Y",
+      isremoved: "N",
+      dispatch_gid: 0,
+      action: "Insert",
+      type: "SERVICE",
+      in_out: "SERVICE_TOCENTRAL",
+      status: $scope.Send_to.office_name
+    }];
+
+    service_json = {
+      SERVICE: $scope.SERVICE
+    }
+
+    var save_dispatch = requestservice.setdispatch_dtl(data_int, service_json);
+    save_dispatch.then(function(result) {
+      if (result.data == "SUCCESS") {
+        alert("Inserted Successfully!.")
+        load();
+        modalhide('mdl_present');
+        $scope.SERVICE = [];
+        $scope.Dispatch_details = [];
+        $scope.courier ="";
+        $scope.packets = "";
+        $scope.AWS_no = "";
+        $scope.mode = "";
+        $scope.weights = "";
+        $scope.Send_to ="";
+
+
+      } else {
+        alert("Not Inserted!.")
+      }
+    },function(err){
+            alert("Data Not Inserted!.")
+        }).finally($scope.endloading);
+
+  }
+
+  $scope.Dispatch_click = function() {
+  if($scope.Dispatch_details.length <= 0){
+  alert("Select Any One Service!.")
+  return false;
+  }
+
+    modalshow('mdl_present');
+                    $scope.myform.$setPristine();
+                $scope.myform.$setUntouched();
+  }
+
+    $scope.endloading=function(){
+        $mdDialog.hide();
+    };
+
+}]);
+app.service("requestservice", function ($http) {
+
+    this.getCustomername = function(){
+        var response = $http.post(Appname+"/customer_service/",{params:{'customer_gid':0,'customer_code':'','customer_name':''}});
+        return response;
+        }
+
+    this.getservicedtl = function(){
+        var response = $http.post(Appname+"/ServiceDtl_get/",{params:{'from_date':'','to_date':'','customer_gid':0,'product_gid':0,'service_gid':0}});
+        return response;
+        }
+
+    this.setdispatch_dtl = function(data,service_json){
+        var response = $http.post(Appname+"/Dispatch_Set/",{'dispatch_data':data,'service_dtl':service_json});
+        return response;
+        }
+
+    this.getstateddl = function (d) {
+        var response = $http.get(Appname+"/stateddl/");
+        return response;
+
+    }
+
+        this.getdistddl = function (state_gid) {
+        var response = $http.get(Appname+"/districtddl/", { params: { "state_gid": state_gid} });
+        return response;
+
+    }
+
+        this.getcityddl = function (district_gid) {
+        var response = $http.get(Appname+"/cityddl/", { params: { "district_gid": district_gid} });
+        return response;
+    }
+
+        this.getpincode = function (city_gid) {
+        var response = $http.get(Appname+"/pincode/", { params: { "city_gid": city_gid} });
+        return response;
+    }
+
+   this.getcourier_dtl = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params: { "courier_gid": 0, "courier_name":''} });
+        return response;
+    }
+
+    this.getemployee = function (d) {
+        var response = $http.get(Appname+"/employe_get/");
+        return response;
+    }
+
+    this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+    }
+});
+
+
+
+
+
+</script>
+{% endblock %}

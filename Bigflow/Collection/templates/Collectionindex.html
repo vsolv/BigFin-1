@@ -1,0 +1,600 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Collection {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="App" ng-cloak ng-controller="Ctrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Invoice Mapping</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-9 col-lg-8">
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="Customer Group Name"
+                        md-input-maxlength=126
+                        md-item-text="item.customergroup_name"
+                        md-items="item in getcustomergrp(searchTex)"
+                        md-min-length=0
+                        md-search-text="searchTex"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="customergrpChange(item)"
+                        placeholder="Customer Group Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.customergroup_name}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12">
+                <h4>Payment Details</h4>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <th>S.No</th>
+                    <th>Date</th>
+                    <th>Mode</th>
+                    <th>Bank</th>
+                    <th>Cheque No</th>
+                    <th>Cheque Date</th>
+                    <th>Amount</th>
+                    <th>Amount Adjusted</th>
+                    <th>Balance Amount</th>
+                    <th>Select<br>
+                        <input ng-click="selectAll()" ng-model="paysmey.allItemsSelected" type="checkbox"></th>
+                    </thead>
+                    <tbody ng-init="totall = 0">
+                    <tr ng-class="{selected: entity.isChecked}"
+                        ng-repeat="entity in paysmey.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))">
+                        <td>
+                            <center>{{((currentPag-1)*itemsPerPag)+$index+1}}</center>
+                        </td>
+                        <td ng-hide="true">{{entity.fetcollectionheader_gid}}</td>
+                        <td class="text-center">{{entity.fetcollectionheader_date}}</td>
+                        <td class="text-center">{{entity.fetcollectionheader_mode}}</td>
+                        <td class="text-center">{{entity.bank_name}}</td>
+                        <td class="text-right">{{entity.fetcollectionheader_chequeno}}</td>
+                        <td class="text-center">{{entity.fetcollectionheader_chequedate}}</td>
+                        <td class="text-right">{{entity.fetcollectionheader_amount | number}}</td>
+                        <td class="text-right">{{entity.adjusted_amount | number}}</td>
+                        <td class="text-right">{{entity.balance_amount | number}}</td>
+                        <td class="text-center"><input ng-click="selectEntity(entity.fetcollectionheader_amount)"
+                                                       ng-model="entity.isChecked"
+                                                       type="checkbox"
+                        ></td>
+                    </tr>
+                    <tr ng-show="paysmey.length == 0">
+                        <td class="warning" colspan="10">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination" items-per-page="itemsPerPag"
+                                max-size="maxSiz"
+                                ng-model="currentPag" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{paysmey.length}}
+                        </td>
+                        <td class="text-right">
+                            Total
+                        </td>
+                        <td class="text-right" ng-bind="totalbilling(paysmey) | number">
+
+                        </td>
+                        <td class="text-right">
+                            {{reslt}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-3" ng-hide="true">
+            <md-input-container class="md-block inputcontainer">
+                <label>Total Amount Selected: </label>{{reslt}}
+                <input name="number" ng-init="amnt = 0" ng-model="vv"
+                       placeholder="Amount"/>
+            </md-input-container>
+        </div>
+        <div class="row">
+            <div class="col-md-9 col-lg-8 ">
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="Customer Name"
+                        md-input-id="custmer_Name"
+                        md-input-maxlength=126
+                        md-item-text="item.display_name"
+                        md-items="item in getcustomer(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText"
+                        md-selected-item="selectedIte"
+                        md-selected-item-change="customerChange(item)"
+                        placeholder="Customer Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.display_name}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12">
+                <h4>Map Invoice</h4>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <form name="demoForm">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                           md-progress="deferred">
+                        <thead class="header">
+                        <th>S.No</th>
+                        <th>Invoice Date</th>
+                        <th>Invoice Number</th>
+                        <th>Invoice Amount</th>
+                        <th>Amount Adjusted</th>
+                        <th>Not Realized</th>
+                        <th>Outstanding Amount</th>
+                        <th>Amount to be Adjusted</th>
+                        </thead>
+                        <tbody ng-init="total = 0">
+                        <tr ng-repeat="os in outstnd.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))"
+                            ng-show="balance_amount.length != 0">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{os.invoice_date}}</td>
+                            <td class="text-center">{{os.fetsoutstanding_invoiceno}}</td>
+                            <td class="text-right">{{os.net_amount | number}}</td>
+                            <td class="text-right">{{os.adjusted_amount | number}}</td>
+                            <td class="text-right">{{os.amount_tobe_adjusted | number}}</td>
+                            <td class="text-right">{{os.balance_amount - os.amount_tobe_adjusted | number}}</td>
+                            <td class="text-center">
+                                <input class="form-control" max={{os.balance_amount-os.amount_tobe_adjusted}}                                       min="1"
+                                       name="amount{{$index}}" ng-model="os.quantity"
+                                       type="number">
+                                <div ng-messages="demoForm['amount'+$index].$error">
+                                    <div ng-message="number">Should be a number</div>
+                                    <div ng-message="max">Amount exceeds {{os.balance_amount-os.amount_tobe_adjusted}}</div>
+                                    <div ng-message="min">Amount should be greater than zero</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr ng-show="outstnd.length != 0">
+                            <td class="text-center" colspan="6"><b>Total</b></td>
+                            <td class="text-right"
+                                ng-bind="totalbill(outstnd) | number"></td>
+                            <td class="text-right" ng-bind="totaladjust(outstnd) | number"
+                                ng-init="sum = 0"></td>
+                        </tr>
+                        <tr ng-show="outstnd.length == 0">
+                            <td class="warning" colspan="8">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="6">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage" max-size="maxSize"
+                                    ng-model="currentPage" total-items="outstnd.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <td colspan="4">
+                                Total Count:{{outstnd.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <md-button class="btn btn-info custbutton" ng-click="Save()"
+                           ng-disabled="demoForm.$dirty && demoForm.$invalid">Submit
+                    <md-tooltip>Save</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('App', ['ngMaterial', 'ngMessages', 'ui.bootstrap', 'AppCommon']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+myApp.controller('Ctrl', ['$scope', '$window', '$filter', 'colservice', '$mdDialog', '$timeout', 'SerCommon', '$mdToast','$interval', function($scope, $window, $filter, colservice, $mdDialog, $timeout, SerCommon, $mdToast,$interval) {
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.dbdate = convertdate(detail.date);
+    $scope.entity_gid = detail.entity_gid;
+    $scope.paysmey = [];
+    $scope.outstnd = [];
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.itemsPerPag = 10;
+    $scope.currentPag = 1;
+    $scope.maxSiz = 3;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+
+    $scope.toggled = function() {
+        $timeout(function() {
+            $('#custmer_Name').focus();
+        }, 50);
+    };
+
+    $scope.loading();
+    customergroup();
+    $scope.endloading();
+
+    $scope.getcustomergrp = gotoGetCustomer;
+    $scope.customergrpChange = gotoCustomerChange;
+
+    function customergroup() {
+        var data = {
+            Group: 'CUST_GROUP_GET',
+            Entity_Gid: $scope.entity_gid,
+            Cust_Group_Gid: 0,
+            Cust_Group_Code: 0,
+            Cust_Group_Name: '',
+            Query_Limit: ' 1,1000'
+        }
+
+        var custgrpddl = colservice.getcustgrp(data)
+        custgrpddl.then(function(result) {
+                $scope.custgrp = [];
+                $scope.custgrp = result.data.DATA;
+                if ($scope.selectedcustgrp != undefined) {
+                    textvalue($scope.selectedcustgrp)
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+    }
+
+    function gotoGetCustomer(query) {
+        var result = $filter('filter')($scope.custgrp, {
+            'customergroup_name': query
+        });
+        return result;
+    }
+
+    function gotoCustomerChange(item) {
+        if (item) {
+            loadpaydet(item.customergroup_gid);
+        } else {
+            $scope.paysmey.length = 0;
+        }
+    }
+
+    function loadpaydet(ddlcustomer) {
+        var overalldtl = colservice.getapi(ddlcustomer);
+        overalldtl.then(function(res) {
+                var paysmry = [];
+                $scope.paysmey = res.data.DATA;
+                for (var i = 0; i < $scope.paysmey.length; i++) {
+                    if ($scope.paysmey.length == 1) {
+                        $scope.paysmey[i].isChecked = true
+                        $scope.selectEntity()
+                    }
+                }
+                $scope.pageLength = $scope.paysmey.length;
+                $scope.outstnd = "";
+                $scope.selectedIte = "";
+                loadcust(ddlcustomer);
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    $scope.selectEntity = function(data) {
+        var amnt = 0;
+        for (var i = 0; i < $scope.paysmey.length; i++) {
+            if ($scope.paysmey[i].isChecked == true) {
+                amnt += $scope.paysmey[i].balance_amount;
+            }
+            $scope.vv = amnt;
+            $scope.$watch('vv', function(val) {
+                $scope.reslt = $filter('currency')(val, '₹', 2);
+            }, true);
+        }
+
+        for (var i = 0; i < $scope.paysmey.length; i++) {
+            if (!$scope.paysmey[i].isChecked) {
+                $scope.paysmey.allItemsSelected = false;
+                return;
+            }
+        }
+        $scope.paysmey.allItemsSelected = true;
+    };
+
+    $scope.selectAll = function() {
+        for (var i = 0; i < $scope.paysmey.length; i++) {
+            $scope.paysmey[i].isChecked = $scope.paysmey.allItemsSelected;
+        }
+        var amnt = 0;
+        for (var i = 0; i < $scope.paysmey.length; i++) {
+            if ($scope.paysmey[i].isChecked == true) {
+                amnt += $scope.paysmey[i].balance_amount;
+            }
+            $scope.vv = amnt;
+        }
+    };
+
+    $scope.totalbilling = function(data) {
+        var totall = 0;
+        if (data) {
+            if (data.length == 0) {
+                return totall;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    totall = totall + data[i].balance_amount;
+                }
+                return totall;
+            }
+        } else {
+            return totall;
+        }
+    }
+
+    $scope.totalbill = function(data) {
+        var total = 0;
+        if (!data) {
+            return total;
+        }
+        if (data.length == 0) {
+            return total;
+        } else {
+            for (var i = 0; i < data.length; i++) {
+                total = total + data[i].balance_amount;
+            }
+            return total;
+        }
+    }
+
+    $scope.totaladjust = function(data) {
+        var sum = 0;
+        for (var i = 0; i < $scope.outstnd.length; i++) {
+            if ($scope.outstnd[i].quantity !== undefined && $scope.outstnd[i].quantity !== "") {
+                sum += parseFloat($scope.outstnd[i].quantity);
+            }
+        }
+        return sum;
+    }
+
+    $scope.customer = [];
+    $scope.getcustomer = gotoCustomer;
+    $scope.customerChange = gotoCustChange;
+
+    function loadcust(ddlcustomer) {
+        $scope.custm = ddlcustomer;
+        var data = {
+            "params": {
+                "FILTER": {
+                    "isactive": "Y",
+                    "custgrp_gid": $scope.custm
+                }
+            }
+        }
+
+        var custdata = {
+            "Entity_Gid": $scope.entity_gid,
+            "Group": 'CUST_GET',
+            "data": data
+        }
+
+        var get_cust = colservice.getcust(custdata)
+        get_cust.then(function(result) {
+            $scope.customer = result.data.DATA
+            if ($scope.customer.length == 1) {
+                $scope.selectedIte = $scope.customer[0]
+            } else {
+                $scope.toggled();
+            }
+
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+
+    function gotoCustomer(quer) {
+        var result = $filter('filter')($scope.customer, {
+            'display_name': quer
+        });
+        return result;
+    }
+
+    function gotoCustChange(item) {
+        if (item) {
+            loadoutstd(item.customer_gid);
+        } else {
+            $scope.outstnd.length = 0;
+        }
+    }
+
+    function loadoutstd(dataint) {
+        var dta = {
+            'parms': {
+                'filter': {
+                    'Customer_Gid': dataint
+                },
+                'classification': {
+                    'Entity_Gid': $scope.entity_gid
+                }
+
+            }
+        }
+
+        var datainit = {
+            'type': 'OUTSTANDING_AR_BCL',
+            'sub_type': 'INV_MAPPING_BCL',
+            data: dta
+        }
+
+        var overalldtl = colservice.getoutstndng(datainit);
+        overalldtl.then(function(res) {
+                var outstnd = [];
+                $scope.outstnd = res.data.DATA;
+                $scope.colsmry = $scope.paydetsmry;
+                var myObject = $scope.salesSchedule;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    $scope.Save = function() {
+        $scope.loading();
+        $scope.alchq = [];
+        var chq = [];
+        for (var i = 0; i < $scope.paysmey.length; i++) {
+            if ($scope.paysmey[i].isChecked) {
+                chq = {
+                    "Receipt_Mode": "Cheque",
+                    "REF_Name": "COLLECTION_INVMAP",
+                    "REF_Table_Gid": $scope.paysmey[i].fetcollectionheader_gid,
+                    "Receipt_Date": formatStringDate($scope.dbdate, 'yyyy-mm-dd'),
+                    "Receipt_Type": "0",
+                    "Remarks": "9",
+                    "Collection_Amount": $scope.paysmey[i].fetcollectionheader_amount,
+                    "Is_Empty": "",
+                    "Remaining": "0"
+                }
+                $scope.alchq.push(chq);
+            }
+        }
+
+        $scope.invc = []
+        var INV_MAP = [];
+        var amntt = 0;
+        for (var i = 0; i < $scope.outstnd.length; i++) {
+        var quantity = $scope.outstnd[i].quantity;
+        if(quantity > 0){
+            INV_MAP = {
+                "Invoice_Gid": $scope.outstnd[i].invoiceheader_gid,
+                "Adjusted_Amount": $scope.outstnd[i].quantity,
+            }
+            $scope.invc.push(INV_MAP);
+            }
+
+            if ($scope.outstnd[i].quantity !== undefined && $scope.outstnd[i].quantity !== "") {
+                amntt = amntt + $scope.outstnd[i].quantity;
+            }
+        }
+        if (amntt > $scope.vv) {
+            alert('Your Entered Amount Is More Than Your Selected Amount')
+            return false;
+        }
+
+        var data = {
+            "params": {
+                "DATA": {
+                    CHEQUE: $scope.alchq,
+                    INV_MAP: $scope.invc,
+                },
+                "Classification": {
+                    "entity_gid": [$scope.entity_gid]
+                }
+            }
+        }
+        var data_int = {
+            Action: 'Insert',
+            Type: 'InvReceipt',
+            commit: 'Y',
+            Create_by: $scope.entity_gid,
+            Group: 'INV_RECEIPT',
+            data: data
+        };
+        savedata(data_int);
+        $scope.endloading();
+    }
+
+    function savedata(data_int) {
+        var overalldtl = colservice.setinv(data_int);
+        overalldtl.then(function(res) {
+            var recipt = res.data.MESSAGE;
+            if (recipt == "SUCCESS") {
+                $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                $interval(callAtInterval, 3000);
+            } else {
+            var recipt = res.data.DATA;
+                alert(recipt);
+            }
+        }, function(err) {
+            alert(JSON.stringify(err));
+        }).finally($scope.endloading);
+    }
+    function callAtInterval() {
+        $window.location.href = "Invoice_Mapping";
+    }
+}]);
+
+myApp.service("colservice", function($http) {
+    this.getcustgrp = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.getapi = function(custid) {
+        var respons = $http.post(Appname + "/getapi/", {
+            params: {
+                'custid': custid
+            }
+        });
+        return respons;
+    }
+    this.getoutstndng = function(data) {
+        var response = $http.post(Appname + "/getotsng/", data);
+        return response;
+    }
+    this.setinv = function(data) {
+        var response = $http.post(Appname + "/setcoll/", data);
+        return response;
+    }
+    this.getcust = function(custid) {
+        var respons = $http.post(Appname + "/custgroup/",
+            custid
+        );
+        return respons;
+    }
+});
+</script>
+{% endblock %}

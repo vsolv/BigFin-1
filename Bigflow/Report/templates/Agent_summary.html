@@ -1,0 +1,393 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Approval {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Agentsummary" ng-controller="Cntrlagentsummary" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Agent Summary</h4>
+            </div>
+        </div>
+        </br>
+
+        <div class="row">
+            <div class="col-md-12">
+                <form id="create" name="prform" method="post">
+                    <div class="col-md-3 col-sm-12 col-xs-12">
+                        <md-autocomplete md-clear-button="true" md-floating-label="Employee Name" md-input-maxlength=40
+                            md-item-text="item.employee_name" md-items="item in employee1(searchText1)" md-min-length=0
+                            md-no-cache="true" md-search-text="searchText1" md-selected-item="ag.emp"
+                            md-selected-item-change="search81()" required>
+                            <md-item-template>
+                                <span md-highlight-text="searchText1"> {{item.employee_name}} {{item.employee_code}}
+                                </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Employee matching "{{searchText1}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+
+                    <div class="col-md-3 col-sm-12 col-xs-12">
+                        <md-autocomplete md-clear-button="true" md-floating-label="Process Name" md-input-maxlength=40
+                            md-item-text="item.ref_name" md-items="item in process(sea)" md-min-length=0
+                            md-no-cache="true" md-search-text="sea" md-selected-item="ag.pname"
+                            md-selected-item-change="sear()" required>
+                            <md-item-template>
+                                <span md-highlight-text="searchText1"> {{item.ref_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Process Name matching "{{searchText1}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block ">
+                            <label>From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-min-date=""
+                             ng-model="ag.from_date" required>
+                            </md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block ">
+                            <label>To Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-min-date="" 
+                            ng-model="ag.to_date" required>
+                            </md-datepicker>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-12 text-right">
+                        <md-button class="md-fab md-mini md-primary custbutton" 
+                        ng-click="searchDetails(ag)"
+                            ng-disabled="prform.$invalid">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        </br>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Process Type</th>
+                            <th>Process Count</th>
+                            <th>Employee Code</th>
+                            <th>Employee Name</th>
+                            <th>Process Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="emp in data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center " >{{emp.ref_name}}
+                            </td>
+                            <td class="text-center">
+
+
+                                <md-button class="md-fab md-mini md-primary custbutton"  ng-click="viewdetails(emp)">
+                                    {{emp.process_count}}
+                                </md-button>
+
+                            </td>
+
+
+                            <td class="text-center">{{emp.employee_code}}</td>
+                            <td class="text-center">{{emp.employee_name}}</td>
+                            <td class="text-center">{{emp.tran_fromdate|date:'dd-MMM-y'}}</td>
+
+
+                        </tr>
+                        <tr ng-show="data.length== 0|| data.length=='undefined'">
+                            <td class="warning" colspan="8">
+                                No Records Found.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <td colspan="15">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage" max-size="maxSize" ng-model="currentPage"
+                                        total-items="pageLength" uib-pagination></ul>
+                                </td>
+                            </div>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+<!--        <div ng-include="'commodityadd'"></div>-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+    data-keyboard="false" id="userreport" role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg"  role="document">
+        <div class="modal-content "  >
+            <div class="modal-header popup-header aa" style="background-color: rgb(75, 122, 130)">
+                <h5 class="modal-title" id="lo">
+                    Details
+                    <button aria-label="Close" class="close" ng-click="cancel()" type="button" data-dismiss="modal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </h5>
+            </div>
+            <div class="modal-body popup-body">
+                <div class="row" style=" overflow:scroll;">
+                    <!--Data Table-->
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="  table   table-striped table-bordered table-condensed table-hover">
+                            <thead  >
+                                <tr>
+                                    <th ng-repeat="(key, val) in details[0]">{{ key }}</th>
+                                </tr>
+                            </thead>
+                            <tbody ng-init="total = 0">
+                                <tr ng-repeat="row in details">
+                                    <td ng-repeat="column in row">
+                                        {{ column }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-12 col-sm-12 text-center">
+
+                        <md-button class="md-raised" ng-click="cancel()" value="Submit" data-dismiss="modal">
+                            Close
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+<style>
+    .md-select-menu-container.md-active {
+        z-index: 1060;
+    }
+
+    .md-autocomplete-suggestions-container {
+        z-index: 100000 !important;
+    }
+
+    .md-dialog-container {
+        z-index: 100000 !important;
+    }
+</style>
+    </div>
+</div>
+
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Agentsummary', ['ngMaterial', 'ui.bootstrap', 'ngMessages']).config(function (
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    myApp.run(function ($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function (date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+
+    myApp.controller('Cntrlagentsummary', ['$scope', '$http', 'Serviceagentsummary', '$mdDialog', '$window', '$filter',
+        function ($scope, $http, Serviceagentsummary, $mdDialog, $window, $filter) {
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 8;
+            $scope.maintable = [];
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+            $scope.empcode = detail.employee_code;
+
+            //Employee Name filter
+            $scope.employee1 = function (query) {
+                var result = $filter('filter')($scope.employee, {
+                    'employee_name': query
+                });
+                return result;
+
+            }
+            //Employee details
+            var employee = Serviceagentsummary.getemployee();
+            employee.then(function (result) {
+                    
+                    var employee_data = JSON.parse(result.data)
+                    $scope.employee = employee_data;
+                },
+                function (err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+
+
+            //Process name
+            $scope.process = function godown1(query) {
+                var result = $filter('filter')($scope.ref, {
+                    'ref_name': query
+                });
+                return result;
+                //alert(JSON.stringify(query));
+                //$scope.employee1=result;
+            }
+
+            var trans = {
+                "Table_name": "gal_mst_tref",
+                "Column_1": "ref_gid,ref_name,ref_fieldname,ref_tablename",
+                "Column_2": "",
+                "Where_Common": "ref",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "gid"
+            }
+            $scope.ref = [];
+            var refddl = Serviceagentsummary.refdata(trans)
+            refddl.then(function (result) {
+                
+
+                var data = JSON.parse(result.data)
+                $scope.ref = data;
+            })
+            // finddata();
+            //search data
+            $scope.searchDetails = function (ag) {
+                
+                // var from =$filter('date')(prdate, "yyyy-MM-dd");
+                var id, empid
+
+                if (ag.pname == null) {
+                    id = ""
+                } else {
+                    id = ag.pname.ref_gid;
+                }
+                if (ag.emp == null) {
+                    empid = ""
+                } else {
+                    emp = ag.emp.employee_gid;
+                }
+
+
+
+
+                var json = {
+                    "ref_gid": id,
+                    "employee_gid": emp,
+                    "from_date": $filter('date')(ag.from_date, "yyyy-MM-dd"),
+                    "to_date": $filter('date')(ag.to_date, "yyyy-MM-dd")
+                }
+                var data = {
+                    "Action": "Tran_status",
+                    "Type": "SINGLE",
+                    "Main_data": json,
+                    "classification": "{}"
+                }
+
+                var refddl = Serviceagentsummary.trandata(data)
+                refddl.then(function (result) {
+                    
+
+                    var data = JSON.parse(result.data)
+                    $scope.data = data.DATA;
+                })
+                // modalshow('userreport');
+
+            }
+
+
+
+            //viewdetails
+            $scope.viewdetails = function (ddl) {
+                
+                var ptype = JSON.parse(ddl.good)
+                // console.log(Object.entries(ptype)[1]);
+                var arr = [];
+
+                for (var x in ptype) {
+                    arr.push(ptype[x].tran_reftable_gid);
+                }
+                // var ptype=JSON.stringify(ddl.good)
+
+                var json = {
+                    "ref_gid": ddl.ref_gid,
+                    "ref_tablename": ddl.ref_tablename,
+                    "ref_fieldname": ddl.ref_fieldname,
+                    "tran_reftable_gid": arr,
+                     "classification": "{}"
+
+                }
+                var data = {
+                    "Action": "Tran_status",
+                    "Type": "Details",
+                    "Main_data": json
+
+                }
+
+                var refddl = Serviceagentsummary.trandata(data)
+                refddl.then(function (result) {
+                    
+
+                    var data = JSON.parse(result.data)
+                    $scope.details = data.DATA;
+                })
+
+
+
+                modalshow('userreport');
+            }
+
+        }
+    ]);
+
+    myApp.service("Serviceagentsummary", function ($http) {
+        //Employee
+        this.getemployee = function () {
+            var response = $http.get(Appname + "/empddl/");
+            return response;
+        }
+
+        //Alltable_get drop
+        this.refdata = function (data) {
+            var response = $http.post(Appname + "/reftable/", data);
+            return response;
+        }
+        //trandata
+        this.trandata = function (data) {
+            var response = $http.post(Appname + "/trandatadetails/", data);
+            return response;
+        }
+
+
+    });
+</script>
+<!-- <style>
+md-autocomplete input::-webkit-input-placeholder {
+    color:red !important;
+}
+md-autocomplete input:-moz-placeholder { /* Firefox 18- */
+    color:red;
+}
+
+md-autocomplete input::-moz-placeholder {  /* Firefox 19+ */
+    color:red;
+}
+
+md-autocomplete input:-ms-input-placeholder { 
+    color:red;
+}
+</style> -->
+{% endblock %}

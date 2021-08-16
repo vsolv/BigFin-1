@@ -1,0 +1,388 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SVSProcess_Set`(in ls_action varchar(2000),in ls_type varchar(2000),
+in ls_filter json,in ls_classification json,in ls_created_by varchar(2000),out message varchar(2000))
+sp_SVSProcess_Set:BEGIN
+##TAMILOLI
+declare query_store varchar(2000);
+declare query_column varchar(2000);
+declare query_value varchar(2000);
+declare ls_count varchar(2000);
+declare i varchar(200);
+declare errno varchar(200);
+declare msg varchar(200);
+
+               DECLARE done INT DEFAULT 0;
+         DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+         DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+		 BEGIN
+                  GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+                      set Message = concat(errno , msg);
+                 ROLLBACK;
+         END;
+
+start transaction;   
+#SELECT 1;
+if ls_action='INSERT' and ls_type='INSERT_TICKET_HEADER_DETAIL' then
+
+			 select json_length(ls_filter,'$')into @ls_filter;
+			 select json_length(ls_classification,'$')into @ls_classification;
+  
+			  if @ls_filter='' or @ls_filter is null then
+				 set message='NO DATA IN JSON-sp_SVSProcess_Set.';
+                 rollback;
+				 leave sp_SVSProcess_Set;
+			  end if;
+  
+			  if @ls_classification='' or @ls_classification is null then
+				 set message='NO DATA IN JSON-sp_SVSProcess_Set.';
+                 rollback;
+				 leave sp_SVSProcess_Set;
+			  end if;
+ 
+#select 5;
+			  
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_DueDate'))) into @TicketHeader_DueDate ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_Status'))) into @TicketHeader_Status ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_OnHold'))) into @TicketHeader_OnHold ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.Ticketheader_Summary'))) into @Ticketheader_Summary ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.Ticketheader_Description'))) into @Ticketheader_Description ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_AssignedTo'))) into @TicketHeader_AssignedTo ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_SupplierGid'))) into @TicketHeader_SupplierGid ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_BranchGid'))) into @TicketHeader_BranchGid ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.TicketHeader_nopGid'))) into @TicketHeader_nopGid ;    
+			 Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid ;    
+           #  select @TicketHeader_DueDate;
+			  if @TicketHeader_DueDate='' or @TicketHeader_DueDate is null then 
+				    set message='TicketHeader_DueDate is not given - sp_SVSProcess_Set.';
+				 rollback;
+				 leave sp_SVSProcess_Set;
+			  end if; 
+              
+			  set @TicketHeader_DueDate=date_format(@TicketHeader_DueDate,'%Y-%m-%d') ;	
+              
+		      if @TicketHeader_Status='' or @TicketHeader_Status is null then 
+			  	 set message='TicketHeader_Status is not given.';
+			    rollback;
+			    leave sp_SVSProcess_Set;
+		      end if;
+             
+			   if @Ticketheader_Summary='' or @Ticketheader_Summary is null then 
+					set message='Ticketheader_Summary is not given - sp_SVSProcess_Set.';
+				 rollback;
+				 leave sp_SVSProcess_Set;
+			   end if;
+			 
+			   if @Ticketheader_Description='' or @Ticketheader_Description is null then 
+				   set message='Ticketheader_Description is not given - sp_SVSProcess_Set.';
+				 rollback;
+				 leave sp_SVSProcess_Set;
+			   end if;
+			  
+			   if @TicketHeader_AssignedTo='' or @TicketHeader_AssignedTo is null then 
+					set message='TicketHeader_AssignedTo is not given - sp_SVSProcess_Set.';
+				  rollback;
+				  leave sp_SVSProcess_Set;
+			   end if;
+			 
+			    if @TicketHeader_SupplierGid='' or @TicketHeader_SupplierGid is null then 
+					set message='TicketHeader_SupplierGid is not given - sp_SVSProcess_Set.';
+				  rollback;
+				  leave sp_SVSProcess_Set;
+			    end if;
+			 
+			   if @TicketHeader_BranchGid='' or @TicketHeader_BranchGid is null then 
+					set message='TicketHeader_BranchGid is not given - sp_SVSProcess_Set.';
+				  rollback;
+				  leave sp_SVSProcess_Set;
+			   end if;
+              
+              if @TicketHeader_nopGid='' or @TicketHeader_nopGid is null then 
+					set message='TicketHeader_nopGid is not given - sp_SVSProcess_Set.';
+				  rollback;
+				  leave sp_SVSProcess_Set;
+			   end if;
+              
+			  if @Entity_Gid='' or @Entity_Gid is null then 
+					set message='Entity_Gid is not given - sp_SVSProcess_Set.';
+				  rollback;
+				  leave sp_SVSProcess_Set;
+			   end if;
+/*
+
+			select  @TicketHeader_Code,@TicketHeader_DueDate,@TicketHeader_Status,@Ticketheader_Summary,
+                     @Ticketheader_Description,@TicketHeader_BranchGid
+								
+											 ,@TicketHeader_AssignedTo,@TicketHeader_SupplierGid;
+
+			  */
+
+		   set query_column=' ' ;
+		   set query_value=' ' ;
+
+		   if @TicketHeader_OnHold<>'' or @TicketHeader_OnHold is not null then 
+			 set query_column=concat(',ticketheader_onhold');
+			 set query_value=concat(',''',@TicketHeader_OnHold,'''');
+		   end if;
+
+	       select max(ticketheader_code) into @Header_Code from svs_trn_tticketheader;
+    
+			if @Header_Code is null or @Header_Code<>0 or @Header_Code='' then
+				call sp_Generatecode_Get('WITHOUT_DATE', 'V', '000','000', @Message);
+				select @Message into @TicketHeader_Code;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE', 'V', '000',@Header_Code, @Message);
+				select @Message into @TicketHeader_Code;
+			end if;
+
+			   set query_store=' ';
+			   set query_store=concat('insert into svs_trn_tticketheader
+											 (ticketheader_code,ticketheader_duedate,
+											ticketheader_status,ticketheader_summary,
+											ticketheader_description, ticketheader_assignedto,
+											ticketheader_suppliergid, ticketheader_branchgid,ticketheader_nopgid,
+											 entity_gid,create_by ',query_column,')
+											value
+											(''',@TicketHeader_Code,''',''',@TicketHeader_DueDate,''',
+											''',@TicketHeader_Status,''',''',@Ticketheader_Summary,'''
+											,''',@Ticketheader_Description,''', ',@TicketHeader_AssignedTo,',
+										   ',@TicketHeader_SupplierGid,',',@TicketHeader_BranchGid,',',@TicketHeader_nopGid,',
+											 ',@Entity_Gid,',',ls_created_by,' ',query_value,' )');
+			  
+            # select query_store;
+				set @p=query_store;
+				prepare stmt from @p;
+				execute stmt;
+				select row_count() into ls_count;
+                #select ls_count;
+				  if ls_count>0 then
+						  set message='SUCCESS';
+						  select LAST_INSERT_ID() into @TicketHeaderGid; 
+                          #select @TicketHeaderGid;
+				  else
+						  set message='NOT SUCCESS';
+					rollback;
+					leave sp_SVSProcess_Set;
+				  end if;
+  
+  
+				  select json_length(ls_filter,'$.detail')into @ls_filter;
+				  
+				   if @ls_filter='' or @ls_filter is null then
+						 set message='no data in json.';
+					  rollback;
+					  leave sp_SVSProcess_Set;
+				   end if;
+  
+				   set i=0;
+				   while i<@ls_filter do
+     
+							Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',i,'].TicketDetails_AssetDetailId')))into @TicketDetails_AssetDetailId;
+							Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',i,'].TicketDetails_AssetBarcode')))into @TicketDetails_AssetBarcode;
+							Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.detail[',i,'].TicketDetails_AssetDetailCatGid')))into @TicketDetails_AssetDetailCatGid;
+
+			
+							  if @TicketDetails_AssetDetailId='' or @TicketDetails_AssetDetailId is null then 
+									set message='TicketDetails_AssetDetailId is not given - sp_SVSProcess_Set.'; 
+								  rollback;  
+								 leave sp_SVSProcess_Set;
+							  end if;
+							 
+								
+							  if @TicketDetails_AssetBarcode='' or @TicketDetails_AssetBarcode is null then 
+									set message='TicketDetails_AssetBarcode is not given - sp_SVSProcess_Set.';
+								  rollback;  
+								  leave sp_SVSProcess_Set;
+							  end if;
+							 
+							  if @TicketDetails_AssetDetailCatGid='' or @TicketDetails_AssetDetailCatGid is null then 
+									 set message='TicketDetails_AssetDetailCatGid is not given - sp_SVSProcess_Set.';
+									 rollback;
+								   leave sp_SVSProcess_Set;
+							  end if;
+
+	
+		# select @TicketHeaderGid,@TicketDetails_AssetDetailGid
+							#		   ,@TicketDetails_AssetBarcode,
+								#		@TicketDetails_AssetDetailCatGid;
+		
+
+							   set query_store=' ';
+		  
+							   set query_store=concat('insert into svs_trn_tticketdetails
+														   (ticketdetails_assetdetailid,ticketdetails_ticketheadergid,
+															TicketDetails_AssetBarcode,
+															TicketDetails_AssetDetailCatGid,create_by,
+                                                            entity_gid,Update_by)
+														value
+														  (',@TicketDetails_AssetDetailId,',',@TicketHeaderGid,',
+														   ',@TicketDetails_AssetBarcode,',
+															',@TicketDetails_AssetDetailCatGid,',',ls_created_by,',
+                                                            ',@Entity_Gid,',',ls_created_by,')');
+								   
+			                    #select query_store;
+								set @p=query_store;
+                                #select @p;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+
+						set i=i+1;
+					end while;
+   
+						   if ls_count>0 then
+							   set message='SUCCESS';
+						   commit;
+						 else
+							  set message='NOT SUCCESS - sp_SVSProcess_Set';
+							 rollback;
+						   leave sp_SVSProcess_Set;
+						end if;   
+                    
+end if; 
+
+
+if ls_action='INSERT' and ls_type='INSERT_ERROR_CATEGORY' then
+#select 1;
+			 select json_length(ls_filter,'$')into @ls_filter;
+			 select json_length(ls_classification,'$')into @ls_classification;
+  
+			  if @ls_filter='' or @ls_filter is null then
+				 set message='NO DATA IN JSON-sp_SVSProcess_Set.';
+                 rollback;
+				 leave sp_SVSProcess_Set;
+			  end if;
+  
+			  if @ls_classification='' or @ls_classification is null then
+				 set message='NO DATA IN JSON-sp_SVSProcess_Set.';
+                 rollback;
+				 leave sp_SVSProcess_Set;
+			  end if;
+              
+			Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ErrorCategory_Name'))) into @Errorcategory_Name ;    
+			Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ErrorCategory_Parent'))) into @ErrorCategory_Parent ;    
+			Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.ErrorCategory_ParentGid'))) into @ErrorCategory_ParentGid ;    
+			Select JSON_UNQUOTE(JSON_EXTRACT(ls_classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid ;    
+			Select JSON_UNQUOTE(JSON_EXTRACT(ls_filter,CONCAT('$.BASE'))) into @BASE ;    
+ 
+            select max(errorcategory_code) into @error_code from svs_mst_terrorcategory;
+    
+			if @error_code is null or @error_code<>0 or @error_code='' then
+				call sp_Generatecode_Get('WITHOUT_DATE', 'ER', '000','000', @Message);
+				select @Message into @error_code;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE', 'ER', '000',@error_code, @Message);
+				select @Message into @error_code;
+			end if;
+            #SELECT @error_code;
+           #SELECT @BASE;
+            if @BASE='Y' then
+					set query_store='';
+					set query_store=concat('insert into  svs_mst_terrorcategory 
+											(errorcategory_code,errorcategory_name,errorcategory_parent,
+											errorcategory_parentgid,entity_gid,create_by)
+											value
+											(''',@error_code,''',''',@Errorcategory_Name,''',''Y'',
+											0,',@Entity_Gid,',',ls_created_by,')');
+				   #select query_store;
+					set @p=query_store;
+					prepare stmt from @p;
+					execute stmt;
+					select row_count() into ls_count;
+					#select ls_count;
+					  if ls_count>0 then
+							  set message='SUCCESS';
+                              commit;
+							  
+							  #select @TicketHeaderGid;
+					  else
+							  set message='NOT SUCCESS';
+						rollback;
+						leave sp_SVSProcess_Set;
+					  end if;
+             end if; 
+             
+             if @BASE='N' then
+					set query_store='';
+					set query_store=concat('insert into  svs_mst_terrorcategory 
+											(errorcategory_code,errorcategory_name,errorcategory_parent,
+											errorcategory_parentgid,entity_gid,create_by)
+											value
+											(''',@error_code,''',''',@Errorcategory_Name,''',''N'',
+											',@ErrorCategory_ParentGid,',',@Entity_Gid,',',ls_created_by,')');
+				   #select query_store;
+					set @p=query_store;
+					prepare stmt from @p;
+					execute stmt;
+					select row_count() into ls_count;
+					#select ls_count;
+					  if ls_count>0 then
+							  set message='SUCCESS';
+                              commit;
+					  else
+							  set message='NOT SUCCESS';
+						rollback;
+						leave sp_SVSProcess_Set;
+					  end if;
+              end if;
+             
+              if @BASE='S' then
+					
+                    SET @A='';
+					select errorcategory_gid into @A from svs_mst_terrorcategory 
+							where  errorcategory_gid=@ErrorCategory_ParentGid AND errorcategory_parent='Y';
+					
+                    select errorcategory_gid ,errorcategory_parentgid into @A1,@parent_gid from svs_mst_terrorcategory 
+							where  errorcategory_gid=@ErrorCategory_ParentGid AND errorcategory_parent='N';
+                            
+                            
+						 #SELECT @A,@parent_gid;
+                         if @A<>'' AND @A is not null then
+                                
+                                #SELECT 45;
+                                set query_store='';
+								set query_store=concat('insert into  svs_mst_terrorcategory 
+														(errorcategory_code,errorcategory_name,errorcategory_parent,
+														errorcategory_parentgid,entity_gid,create_by)
+														value
+														(''',@error_code,''',''',@Errorcategory_Name,''',''Y'',
+														0,',@Entity_Gid,',',ls_created_by,')');
+							   #select query_store;
+								set @p=query_store;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+								#select ls_count;
+								  if ls_count>0 then
+										  set message='SUCCESS';
+										  commit;
+								  else
+										  set message='NOT SUCCESS';
+									rollback;
+									leave sp_SVSProcess_Set;
+								  end if;
+				           else
+                                #SELECT 1;
+                                set query_store='';
+								set query_store=concat('insert into  svs_mst_terrorcategory 
+														(errorcategory_code,errorcategory_name,errorcategory_parent,
+														errorcategory_parentgid,entity_gid,create_by)
+														value
+														(''',@error_code,''',''',@Errorcategory_Name,''',''Y'',
+														',@parent_gid,',',@Entity_Gid,',',ls_created_by,')');
+							   #select query_store;
+								set @p=query_store;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+								#select ls_count;
+								  if ls_count>0 then
+										  set message='SUCCESS';
+										  commit;
+								  else
+										  set message='NOT SUCCESS';
+									rollback;
+									leave sp_SVSProcess_Set;
+								  end if;
+						   end if;
+              end if;
+END IF;
+END

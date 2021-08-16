@@ -1,0 +1,308 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Electricity Details CO & DO Maker Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprsummary" ng-controller="Ctrlprsummsry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Electricity Details CO & DO Maker Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Consumer No</label>
+                        <input maxlength="256" letter-Only ng-model="consumer_no"/>
+                    </md-input-container>
+                </div>
+                   <div class="col-md-3">
+                        <md-autocomplete
+                                md-clear-button="true" md-floating-label="Choose Branch"
+                                md-input-maxlength=126
+                                md-item-text="item.branch_detail"
+                                md-items="item in soourcedata(searchbrancheName)"
+                                md-selected-item-change="branchNameChanged(item)"
+                                md-min-length=0 md-search-text="searchbrancheName"
+                                ng-model="itemss" md-no-cache="true" size="5"
+                                md-selected-item="branch_detail">
+                            <md-item-template>
+                                <span md-highlight-text="searchbrancheName"> {{item.branch_detail}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch Name matching "{{search Branch Name}}"
+                                were
+                                found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                <div class="col-md-3 ">
+                  <md-autocomplete md-floating-label="Status" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getstatus(searchText)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText" md-selected-item="status_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:15px"
+                               ng-click="geteb_search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-2">
+                    <a>
+                        <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:15px"
+                                   ng-click="add()">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Create New</md-tooltip>
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Consumer No</th>
+                        <th>Consumer Name</th>
+                        <th>Branch Name</th>
+                        <th>State</th>
+                        <th>Board Name</th>
+                        <th>Circle</th>
+                        <th>Active/Deactive</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="pr in maintable">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td ng-click="clkon_num(pr)" align="center"><a>{{pr.ebconsumer_no }}</a></td>
+                        <td>{{pr.ebconsumer_name}}</td>
+                        <td>{{pr.branchcode_name}}</td>
+                        <td>{{pr.ebconsumer_state}}</td>
+                        <td>{{pr.ebconsumer_board}}</td>
+                        <td>{{pr.region_name}}</td>
+                        <td>{{pr.ebconsumer_makerisactive}}</td>
+                        <td>{{pr.ebconsumer_status}}</td>
+                    </tr>
+
+                    <tr ng-show="maintable.length ==  0">
+                        <td class="warning" colspan="8">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+
+                    <tr>
+                        <td colspan="7">
+                                <ul uib-pagination total-items="Total_Length" ng-model="currentPage"
+                                    max-size="maxSize" ng-change="pageChanged()" class="pagination-sm"
+                                    boundary-links="true" items-per-page="itemsPerPage"></ul>
+                                </td>
+                            <td colspan="1">
+                                Total Count:{{Total_Length}}
+                            </td>
+
+                    </tr>
+
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+
+
+    </div>
+</div>
+{% endverbatim %}
+<style>
+    .paging {
+        width: 75px;
+        height: 15px;
+        border: 1px solid black;
+    }
+
+
+
+</style>
+<script>
+
+</script>
+<script>
+    var myApp = angular.module('Appprsummary', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    myApp.controller('Ctrlprsummsry', ['$scope', 'Serviceprsummary', '$mdDialog', '$window', '$filter','$http',
+        function ($scope, Serviceprsummary, $mdDialog, $window, $filter, $http) {
+            $scope.currentPage = 1;
+
+            $scope.maxSize = 3;
+
+            $scope.itemsPerPage = 10;
+
+            $scope.maintable = [];
+
+            $scope.add= function(){
+            sessionStorage.setItem('create_data', JSON.stringify({"val":"CO_DO"}));
+            $window.location.href = "ebdetails_create";
+            }
+            sessionStorage.removeItem('create_data');
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.employee_gid = detail.employee_gid;
+        $scope.branch_gid = detail.branch_gid;
+
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+
+
+$scope.status_array = [{
+        value: 'Modified',
+        data: 'Modified'
+    },{
+        value: 'Submitted',
+        data: 'Submitted'
+    }
+    ,{
+        value: 'Resubmitted',
+        data: 'Resubmitted'
+    },{
+        value: 'Rejected',
+        data: 'Rejected'
+    },{
+        value: 'Approved',
+        data: 'Approved'
+    }]
+
+$scope.getstatus = Change_occupancy_Name;
+            function Change_occupancy_Name(query) {
+               var result = $filter('filter')($scope.status_array, {
+               'value': query
+                 });
+               return result;
+       }
+
+            $scope.clkon_num  = function(pr){
+            debugger;
+            sessionStorage.setItem('fulldata', JSON.stringify(pr));
+                $window.location.href = "ebdetails_create";
+            }
+
+        sessionStorage.removeItem('fulldata');
+        $scope.getheaderdata = function(){
+
+if($scope.status_name){
+        $scope.stats = $scope.status_name.value;
+        }else{
+        $scope.stats  = "";
+        }
+        if($scope.branch_detail){
+        $scope.brnchcode = $scope.branch_detail.branch_gid;
+        }else{
+        $scope.brnchcode  = "";
+        }
+        if($scope.consumer_no == null){
+        $scope.consumer_no = "";
+        }
+        if($scope.consumer_name == null){
+        $scope.consumer_name = "";
+        }
+
+              var data={"branch_search":$scope.brnchcode,
+              "ebconsumer_status":$scope.stats,
+              "ebconsumer_name": $scope.consumer_name,
+              "ebconsumer_no":$scope.consumer_no,
+              "Page_Index": $scope.currentPage - 1,
+              "Page_Size": $scope.itemsPerPage
+              }
+                var data_int = {
+                "Action":'Consumer_All_CO_DO',
+                "data":data,
+                "classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+                }
+
+                var get_purchase = Serviceprsummary.getsmrydata(data_int)
+                get_purchase.then(function (result) {
+                debugger;
+                 $scope.maintable = result.data;
+                    if ($scope.currentPage == 1 && $scope.maintable.length != 0) {
+                    $scope.Total_Length = $scope.maintable[0].Total_Row;
+                    }
+                    if ($scope.maintable.length == 0) {
+                        $scope.currentPage == 1;
+                        $scope.Total_Length = 0;
+                    }
+                }).finally($scope.endloading);
+}
+$scope.getheaderdata();
+$scope.geteb_search = function () {
+            $scope.currentPage = 1;
+            $scope.getheaderdata();
+
+        }
+
+        $scope.pageChanged = function () {
+            $scope.getheaderdata();
+        }
+
+        $scope.soourcedata = function(query) {
+            var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                               "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                            "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+                         return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+                            var final_values=data.data.DATA;
+                            console.log(final_values);
+                            return final_values;
+                          });
+        }
+
+
+        }
+    ]);
+
+    myApp.service("Serviceprsummary", function ($http) {
+
+                this.getsmrydata = function(data) {
+            var response = $http.post(Appname + "/eb_mainsmry/", data);
+            return response;
+        }
+
+    });
+
+
+
+</script>
+{% endblock %}

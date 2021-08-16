@@ -1,0 +1,1083 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Customer Query Summary{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appquerysummary" ng-cloak ng-controller="Ctrlquerysummary">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Customer Query Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3" style="margin-top:-16px">
+                </br>
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="Customer Group"
+                        md-input-maxlength=126
+                        md-item-text="item.customergroup_name"
+                        md-items="item in getcustgroup(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText"
+                        md-selected-item="ddlCustgroup_gid"
+                        md-selected-item-change="CustomerGroupChange(item)"
+                >
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.customergroup_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-3">
+                <md-input-container>
+                    <label>Customer</label>
+                    <md-select class="box" data-md-container-class="selectdemoSelectHeader"
+                               md-on-close="clearSearchCustomer()"
+                               multiple
+                               ng-model="selectedCustomers">
+                        <md-select-header class="demo-select-header">
+                            <input class="demo-header-searchbox md-text" ng-model="searchCustomer"
+                                   placeholder="Search for a Customer.."
+                                   type="search">
+                        </md-select-header>
+                        <md-optgroup label="customerslist" style="display: block">
+                            <md-option ng-repeat="eachcustomer in customername |
+                            filter:searchCustomer" ng-value="eachcustomer.customer_gid">{{eachcustomer.display_name}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+
+            <div class="col-md-3">
+                <md-input-container class="md-block">
+                    <label>Inv.From Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="query_FromDate"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block">
+                    <label>Inv.To Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="query_ToDate"></md-datepicker>
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container>
+                        <label>Executive</label>
+                        <md-select class="box" data-md-container-class="selectdemoSelectHeader"
+                                   md-on-close="clearSearchExecutive()"
+                                   multiple
+                                   ng-model="selectedExecutives">
+                            <md-select-header class="demo-select-header">
+                                <input class="demo-header-searchbox md-text" ng-model="searchExecutive"
+                                       placeholder="Search for a Executive.."
+                                       type="search">
+                            </md-select-header>
+                            <md-optgroup label="executives">
+                                <md-option ng-repeat="eachexecutive in executivename |
+                            filter:searchExecutive" ng-value="eachexecutive.employee_gid">
+                                    {{eachexecutive.employee_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block">
+                        <label>Invoice No</label>
+                        <input maxlength="25" ng-model="query_invoiceno" type="text" value="">
+                    </md-input-container>
+                </div>
+                <div class="col-md-2" class="modal-body popup-body">
+                    <md-autocomplete
+                            layout-fill
+                            md-clear-button="true"
+                            md-floating-label="Courier Name"
+                            md-input-maxlength=126
+                            md-item-text="item.courier_name"
+                            md-items="item in getcourier(searchText3)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchText3"
+                            md-selected-item="courier"
+                            md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <span md-highlight-text="searchText3"> {{item.courier_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No dispatch matching "{{searchText3}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-checkbox aria-label="Checkbox No Ink" class="md-primary" md-no-ink ng-false-value="'N'"
+                                 ng-model="checkboxmodel" ng-true-value="'Y'">
+                        View Product
+                    </md-checkbox>
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchDetails()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-2">
+                    <div excel-export export-data="exportDat" file-name="{{Namefile}}" title="QuerySummary"></div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Invoice No</th>
+                        <th>Invoice Date</th>
+                        <th>Customer Name</th>
+                        <th ng-show="shwprod">Product Name</th>
+                        <th ng-show="shwprod">Product Quantity</th>
+                        <th>Executive Name</th>
+                        <th>Amount W/O Tax</th>
+                        <th>Amount W.Tax</th>
+                        <th>Despatch Date</th>
+                        <th>Courier</th>
+                        <th>AWB No</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="text-center"
+                        ng-repeat="so in salessummary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-left">
+                            <span>  <span class="editlink" ng-click="viewtadetails(so)">{{so.invoiceheader_no}}</span>
+                                    <span class="editlink" ng-click="showComments(so);">
+                                    <span class="material-icons">insert_comment</span>
+                                    <md-tooltip>Comments</md-tooltip>
+                                    </span>
+                            </span>
+                        </td>
+                        <td class="text-left">{{so.invoiceheader_date}}</td>
+                        <td class="text-left"><span class="editlink" ng-click="view_coll_outstanding_nameclick(so)">{{so.customer_name}}</span>
+
+                            <a align="center" class="editlink" ng-click="showview(so)"
+                               title="Phone Contact">
+                                <i class="material-icons">contact_phone</i>
+                            </a>
+                        </td>
+                        <td ng-show="shwprod">{{so.product_name}}</td>
+                        <td ng-show="shwprod">{{so.invoicedetails_qty}}</td>
+                        <td class="text-left">{{so.employee_name}}</td>
+                        <td class="text-right">{{so.invoiceheader_amount | number: 0}}</td>
+                        <span style="display: none;">Total: {{ getSalesTotal() }}</span>
+                        <td class="text-right">{{so.invoiceheader_total | number: 0}}</td>
+                        <td class="text-left">{{so.dispatch_date}}</td>
+                        <td class="text-left">{{so.courier_name}}</td>
+                        <td class="text-left">{{so.dispatch_awbno}}</td>
+                        <td class="text-left" ng-hide="true">{{so.customer_custgroup_gid}}</td>
+                        <td class="text-left" ng-hide="true">{{so.customer_gid}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="salessummary.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td class="text-right" style="font: italic bold 15px/30px Georgia, serif">{{SaleTotalamount
+                            | number:0}}
+                        </td>
+                        <td class="text-right" style="font: italic bold 15px/30px Georgia, serif">
+                            {{SaleWithTaxamount | number:0}}
+                        </td>
+                        <td colspan="3" style="font: italic bold 15px/30px Georgia, serif">
+                            Total Count:{{salessummary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--Invoice view modal-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="taview_modal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-lg modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel1">
+                                    <strong>View Invoice Details</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="panel-body" style="height:300px;overflow: auto;">
+                                    <div class="row table-responsive">
+                                        <div class="col-md-12 col-lg-12 col-sm-12">
+                                            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                                <thead class="header">
+                                                <tr>
+                                                    <th>S.No</th>
+                                                    <th>Invoice No</th>
+                                                    <th>Invoice Date</th>
+                                                    <th>Customer Name</th>
+                                                    <th>Executive Name</th>
+                                                    <th>Product</th>
+                                                    <th>Qty</th>
+                                                    <th>Price</th>
+                                                    <th>Amount W/O Tax</th>
+                                                    <th>Amount W.Tax</th>
+                                                    <th>Despatch Date</th>
+                                                    <th>Courier</th>
+                                                    <th>AWB No</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr class="text-center"
+                                                    ng-repeat="sp in salesproductsummary.slice(((sp_currentPage-1)*sp_itemsPerPage), ((sp_currentPage)*sp_itemsPerPage))">
+                                                    <td>
+                                                        <center>{{((sp_currentPage-1)*sp_itemsPerPage)+$index+1}}
+                                                        </center>
+                                                    </td>
+                                                    <td class="text-left">{{sp.invoiceheader_no}}</td>
+                                                    <td class="text-left">{{sp.invoiceheader_date}}</td>
+                                                    <td class="text-left">{{sp.customer_name}}</td>
+                                                    <td class="text-left">{{sp.employee_name}}</td>
+                                                    <td class="text-left">{{sp.product_displayname}}</td>
+                                                    <td class="text-left">{{sp.invoicedetails_qty}}</td>
+                                                    <td class="text-right">{{sp.invoicedetails_nrpprice}}</td>
+                                                    <td class="text-right">{{sp.invamount | number: 0}}</td>
+                                                    <td class="text-right">{{sp.invoicedetails_total | number: 0}}
+                                                    </td>
+                                                    <td class="text-left">{{sp.dispatch_date}}</td>
+                                                    <td class="text-left">{{sp.courier_name}}</td>
+                                                    <td class="text-left">{{sp.dispatch_awbno}}</td>
+                                                    <td class="text-left" ng-hide="true">
+                                                        {{sp.customer_custgroup_gid}}
+                                                    </td>
+                                                    <td class="text-left" ng-hide="true">{{sp.customer_gid}}</td>
+                                                </tr>
+                                                </tbody>
+                                                <tfoot>
+                                                <tr>
+                                                    <td colspan="8">
+                                                        <ul boundary-links="true"
+                                                            class="pagination-sm cust_pagination"
+                                                            items-per-page="sp_itemsPerPage"
+                                                            max-size="sp_maxSize"
+                                                            ng-model="sp_currentPage"
+                                                            total-items="salesproductsummary.length"
+                                                            uib-pagination></ul>
+                                                    </td>
+                                                    <td colspan="8">
+                                                        Total Count:{{salesproductsummary.length}}
+                                                    </td>
+                                                </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <!--endof Invoice View-->
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <div class="row table-responsive">
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+
+                            <div ng-hide="false">
+                                <div class="tabsdemoDynamicHeight">
+                                    <md-content>
+                                        <md-tabs>
+                                            <md-tab label="Collection"
+                                                    ng-class="{ active: isSet(1) }" ng-click="setTab(1)">
+                                            </md-tab>
+                                            <md-tab label="Outstanding"
+                                                    ng-class="{ active: isSet(2) }" ng-click="setTab(2)">
+                                            </md-tab>
+                                        </md-tabs>
+                                    </md-content>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred" ng-show="isSet(1)">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Collection Date</th>
+                        <th>Collection Amount</th>
+                        <th>Collection Mode</th>
+                        <th>Collection ChequeNo</th>
+                        <th>Collection ChequeDate</th>
+                        <th>Bank</th>
+                        <th>Status</th>
+                        <th>Customer</th>
+                        <th>Courier</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="text-center"
+                        ng-repeat="coll in collectionsummary.slice(((collectioncurrentPage-1)*collectionitemsPerPage), ((collectioncurrentPage)*collectionitemsPerPage))">
+                        <td>
+                            <center>{{((collectioncurrentPage-1)*collectionitemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-left">{{coll.fetcollectionheader_date}}</td>
+                        <td class="text-right">{{coll.fetcollectionheader_amount | number: 0}}</td>
+                        <td class="text-left">{{coll.fetcollectionheader_mode}}</td>
+                        <td class="text-left">{{coll.fetcollectionheader_chequeno}}</td>
+                        <td class="text-left">{{coll.fetcollectionheader_chequedate}}</td>
+                        <td class="text-left">{{coll.bank_name}}</td>
+                        <td class="text-left"><span class="editlink" ng-click="view_coll_status(coll)">{{coll.fetcollectionheader_status}}</span>
+                        </td>
+                        <td class="text-left">{{coll.customergroup_name}}</td>
+                        <td class="text-left">{{coll.courier_name}}</td>
+                        <td class="text-left" ng-hide="true">{{coll.fetcollectionheader_gid}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="collectionitemsPerPage"
+                                max-size="collectionmaxSize"
+                                ng-model="collectioncurrentPage" total-items="collectionsummary.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="8">
+                            Total Count:{{collectionsummary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row" ng-show="sheinclud">
+            <div class="col-lg-12 col-sm-12" ng-include="'comment'"></div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred" ng-show="isSet(2)">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Name</th>
+                        <th>Location</th>
+                        <th>Employee</th>
+                        <th>Net Amount</th>
+                        <th>Paid</th>
+                        <th>Balance Amt</th>
+                        <th>Last PaidDate</th>
+                        <th>Last PaidAmt</th>
+                        <th>Aging</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="text-center"
+                        ng-repeat="outstand in outstandingsummary.slice(((outstandingcurrentPage-1)*outstandingitemsPerPage), ((outstandingcurrentPage)*outstandingitemsPerPage))">
+                        <td>
+                            <center>{{((outstandingcurrentPage-1)*outstandingitemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-left">{{outstand.customer_name}}</td>
+                        <td class="text-left">{{outstand.location_name }}</td>
+                        <td class="text-left">{{outstand.employee_name}}</td>
+                        <td class="text-right">{{outstand.net_amount| number: 0}}</td>
+                        <td class="text-right">{{outstand.paid| number: 0}}</td>
+                        <td class="text-right">{{outstand.balance_amount| number: 0}}</td>
+                        <td class="text-left">{{outstand.last_paid_date}}</td>
+                        <td class="text-right">{{outstand.last_paid_amount| number: 0}}</td>
+                        <td class="text-left">{{outstand.aging_days}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="outstandingitemsPerPage"
+                                max-size="outstandingmaxSize"
+                                ng-model="outstandingcurrentPage" total-items="outstandingsummary.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="8">
+                            Total Count:{{outstandingsummary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred" ng-show="isSet(1)">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>DATE</th>
+                        <th>STATUS</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="text-center"
+                        ng-repeat="cs in collectionstatussummary.slice(((cscurrentPage-1)*csitemsPerPage), ((cscurrentPage)*csitemsPerPage))">
+                        <td>
+                            <center>{{((cscurrentPage-1)*csitemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-left">{{cs.tran_date }}</td>
+                        <td class="text-left">{{cs.tran_status}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="2">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="csitemsPerPage"
+                                max-size="csmaxSize"
+                                ng-model="cscurrentPage" total-items="collectionstatussummary.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="1">
+                            Total Count:{{collectionstatussummary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+  .box {
+   height: 21px !important;
+   width:200px;
+   max-width: 100%;
+   min-width: 200px;
+}
+</style>
+<script>
+    var myApp = angular.module('Appquerysummary', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+
+myApp.controller('Ctrlquerysummary', ['$scope', 'saleService', '$mdDialog', '$rootScope', '$window', '$filter', '$element',
+    function($scope, saleService, $mdDialog, $rootScope, $window, $filter, $element) {
+        $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.emp_gid = detail.employee_gid;
+        $scope.entity = detail.entity_gid;
+        $scope.salessummary = [];
+        $scope.salesproductsummary = [];
+        $scope.collectionsummary = [];
+        $scope.outstandingsummary = [];
+        $scope.collectionstatussummary = [];
+        $scope.shwprod = false;
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.sp_currentPage = 1;
+        $scope.sp_maxSize = 3;
+        $scope.sp_itemsPerPage = 10;
+        $scope.collectioncurrentPage = 1;
+        $scope.collectionmaxSize = 3;
+        $scope.collectionitemsPerPage = 10;
+        $scope.cscurrentPage = 1;
+        $scope.csmaxSize = 3;
+        $scope.csitemsPerPage = 10;
+        $scope.outstandingcurrentPage = 1;
+        $scope.outstandingmaxSize = 3;
+        $scope.outstandingitemsPerPage = 10;
+
+        $scope.query_FromDate = new Date(new Date().setDate(new Date().getDate() - 180));
+        $scope.query_ToDate = new Date(new Date().setDate(new Date().getDate()));
+        loadMasterData();
+        $scope.cmd = [];
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false,
+                multiple: true
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.showComments = function(data) {
+            $scope.cmd.comment = '';
+            $scope.cmd.customer_name = data.customer_display_name
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.cmd.Emp_name = detail.employee_name;
+            $scope.Emp_gids = detail.employee_gid;
+            $scope.sheinclud = true;
+            $scope.ref_no = data.customer_gid;
+            getComment($scope.ref_no);
+            modalshow('comment_view');
+        }
+
+        $scope.searchExecutive;
+        $scope.clearSearchExecutive = function() {
+        $scope.searchExecutive = '';
+        };
+
+        $scope.getSalesTotal = function() {
+            var SaleTotalamt = 0;
+            var SaleWtaxAmt = 0;
+            var value = $scope.salessummary;
+            for (var i = 0; i < value.length; i++) {
+                if (value[i].invoiceheader_amount !== undefined && value[i].invoiceheader_amount !== "") {
+                    SaleTotalamt += parseFloat(value[i].invoiceheader_amount);
+                }
+                if (value[i].invoiceheader_total !== undefined && value[i].invoiceheader_total !== "") {
+                    SaleWtaxAmt += parseFloat(value[i].invoiceheader_total);
+                }
+            }
+            $scope.SaleTotalamount = SaleTotalamt;
+            $scope.SaleWithTaxamount = SaleWtaxAmt;
+        }
+
+        $scope.CustomerGroupChange = function(item) {
+            if (item !== "undefined") {
+                loadCustomer(item.customergroup_gid);
+            }
+        }
+
+        function getComment(refno) {
+            var JSON_data = {};
+            JSON_data = {
+                "Filters": [{
+                    "Comment_For": "COMMENT_CUSTOMER",
+                    "Ref_No": [refno],
+                }]
+            };
+
+            var cmd_detail = saleService.S_getcomment('COMMENTS', 'TRANSACTION', JSON_data);
+            cmd_detail.then(function(result) {
+                $scope.cmd.comment_details = result.data;
+            }, function(err) {
+                alert("Error!.")
+            });
+            $scope.cmd.comment = '';
+        }
+
+        $scope.getcustomer = gotocustomer;
+        $scope.getcustgroup = gotocustgroup;
+        $scope.getExecutive = gotoexecutive;
+        loaddata();
+        $scope.searchDetails = function() {
+            $scope.loading();
+            $scope.SaleTotalamount = 0
+            $scope.salesproductsummary = [];
+            $scope.collectionsummary = [];
+            $scope.outstandingsummary = [];
+            $scope.collectionstatussummary = [];
+            loaddata();
+            $scope.endloading();
+        }
+        $scope.tab = 1
+        $scope.setTab = function(newTab) {
+            $scope.tab = newTab;
+        };
+
+        $scope.isSet = function(tabNum) {
+            return $scope.tab === tabNum;
+        };
+
+
+        var datan = {
+            "Table_name": "dis_mst_tcourier",
+            "Column_1": "courier_gid,courier_name",
+            "Column_2": "",
+            "Where_Common": "courier",
+            "Where_Primary": "type",
+            "Primary_Value": "courier",
+            "Order_by": "name"
+        }
+
+        var trans = {
+            Action: "COURIER",
+            Entity_Gid: $scope.entity,
+            data: datan
+        }
+
+        var gettransport = saleService.gettransportdata(trans)
+        gettransport.then(function(result) {
+            $scope.Courierdata = result.data.DATA;
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+
+        $scope.getcourier = function(query) {
+            var result = $filter('filter')($scope.Courierdata, {
+                'courier_name': query
+            });
+            return result;
+        }
+
+        function loadMasterData() {
+            var data = {
+                Group: 'CUST_GROUP_GET',
+                Entity_Gid: $scope.entity,
+                Cust_Group_Gid: 0,
+                Cust_Group_Code: 0,
+                Cust_Group_Name: '',
+                Query_Limit: ' 1,1000'
+            }
+            var custgrpddl = saleService.S_getcustgroup(data)
+            custgrpddl.then(function(result) {
+                    $scope.mullti = [];
+                    $scope.mullti = result.data.DATA;
+                }),
+                function() {
+                    alert('no data');
+                };
+            var dta = {
+                "params": {
+                    "FILTER": {}
+                }
+            }
+            var custdata = {
+                "Entity_Gid": $scope.entity,
+                "Group": 'CUST_GET',
+                "data": dta
+            }
+            var get_cust = saleService.S_getcustomer(custdata)
+            get_cust.then(function(result) {
+                $scope.loading();
+                $scope.customername = [];
+                $scope.customername = result.data.DATA
+                $scope.endloading();
+
+            }, function(err) {}).finally();
+
+            var datan = {
+                "Table_name": "gal_mst_temployee",
+                "Column_1": "employee_gid,employee_name,employee_dept_gid",
+                "Column_2": "",
+                "Where_Common": "employee",
+                "Where_Primary": "dept_gid",
+                "Primary_Value": "2",
+                "Order_by": "name"
+            }
+            var trans = {
+                "Action": "",
+                "Entity_Gid": $scope.entity,
+                "data": datan
+            }
+            var getemployee = saleService.S_getemployeedetail(trans)
+            getemployee.then(function(result) {
+                $scope.executivename = result.data.DATA;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+
+        function gotocustomer(query) {
+            var result = $filter('filter')($scope.customers, {
+                'display_name': query
+            });
+            return result;
+        }
+
+
+        function loadCustomer(ddlcustomer) {
+
+            var data = {
+                "params": {
+                    "FILTER": {
+                        "isactive": "Y",
+                        "custgrp_gid": ddlcustomer
+                    }
+                }
+            }
+
+            var custdata = {
+                "Entity_Gid": $scope.entity,
+                "Group": 'CUST_GET',
+                "data": data
+            };
+
+            var get_cust = saleService.S_getcustomer(custdata)
+            get_cust.then(function(result) {
+                $scope.customername = [];
+                $scope.customername = result.data.DATA
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+
+        function gotocustgroup(query) {
+            var result = $filter('filter')($scope.mullti, {
+                'customergroup_name': query
+            });
+            return result;
+        }
+
+        function gotoexecutive(query) {
+            var result = $filter('filter')($scope.executivename, {
+                'employee_name': query
+            });
+            return result;
+        }
+
+        function loaddata() {
+            if ($scope.query_invoiceno) {
+                $scope.invoiceno = $scope.query_invoiceno;
+            } else {
+                $scope.invoiceno = '';
+            }
+            if ($scope.selectedCustomers) {
+                $scope.customergid = $scope.selectedCustomers;
+            } else {
+                $scope.customergid = '';
+            }
+
+            if ($scope.ddlCustgroup_gid) {
+                $scope.customergroup_gid = $scope.ddlCustgroup_gid.customergroup_gid;
+            } else {
+                $scope.customergroup_gid = '';
+            }
+            if ($scope.checkboxmodel) {
+                if ($scope.checkboxmodel == 'N') {
+                    $scope.shwprod = false;
+                } else {
+                    $scope.shwprod = true;
+                }
+            }
+            if ($scope.courier) {
+                $scope.courier_gid = $scope.courier.courier_gid;
+            } else {
+                $scope.courier_gid = '';
+            }
+            if ($scope.selectedExecutives) {
+                $scope.employeegid = $scope.selectedExecutives;
+            } else {
+                $scope.employeegid = '';
+            }
+            if ($scope.query_FromDate == undefined) {
+                $scope.invoicefromdate = '';
+            } else {
+                $scope.invoicefromdate = formatStringDate($scope.query_FromDate, 'yyyy-mm-dd');
+            }
+            if ($scope.query_ToDate == undefined) {
+                $scope.invoicetodate = '';
+            } else {
+                $scope.invoicetodate = formatStringDate($scope.query_ToDate, 'yyyy-mm-dd');
+            }
+
+            var data = {
+                "Params": {
+                    "Filter": {
+                        "InvoiceNo": $scope.invoiceno,
+                        "customer_gid": $scope.customergid,
+                        "customergroup_gid": $scope.customergroup_gid,
+                        "employee_gid": $scope.employeegid,
+                        "Invoice_FromDate": $scope.invoicefromdate,
+                        "Invoice_ToDate": $scope.invoicetodate,
+                        "courier_gid": $scope.courier_gid,
+                        "Is_Product_Wise": $scope.checkboxmodel
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity
+                    },
+                    "Group": "QUERYSUMMARY",
+                    "Type": "SALESSUMMARY",
+                    "Sub_Type": "TEMP"
+                }
+            }
+
+            var get_salesSummary = saleService.S_getsales(data)
+            get_salesSummary.then(function(result) {
+                $scope.salessummary = result.data.DATA;
+                $scope.sspageLength = $scope.salessummary.length;
+                $scope.exportDat = [];
+                $scope.exportDat.push(["Invoice No", "Invoice Date", "Customer Name", "Location", "Executive Name", "Amount W/O Tax","Tax Amount",
+                    "Amount W.Tax","Product Name","Product Quantity", "Despatch Date", "Courier", "AWB No"
+                ]);
+                angular.forEach($scope.salessummary, function(value, key) {
+                    $scope.exportDat.push([value.invoiceheader_no, value.invoiceheader_date, value.customer_name,value.location ,value.employee_name,
+                        value.invoiceheader_amount,value.invoiceheader_taxamount, value.invoiceheader_total, value.product_name,value.invoicedetails_qty,value.dispatch_date,
+                        value.courier_name, value.dispatch_awbno
+                    ]);
+                });
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+
+        $rootScope.showview = function(ev) {
+            var dialogData = {
+                action: 'custmercont',
+                cus_name: ev.customer_name,
+                landline: ev.Contact_landline,
+                mobilenum: ev.Contact_mobileno
+            }
+            $rootScope.gid = ev.employee_gid;
+            $mdDialog.show({
+                    controller: 'DialogController',
+                    templateUrl: 'empview',
+                    parent: angular.element(document.body),
+                    targetEvent: ev,
+                    locals: {
+                        dialogData: dialogData
+                    },
+                    clickOutsideToClose: false,
+                    fullscreen: false
+                })
+                .then(function(res) {
+
+                }, function(err) {
+
+                })
+        };
+
+        $scope.Namefile = "QuerySummary";
+        $scope.exportDat = [];
+        $scope.exportDat.push(["Invoice No", "Invoice Date", "Customer Name", "Executive Name", "Amount W/O Tax",
+            "Amount W.Tax", "Despatch Date", "Courier", "AWB No"
+        ]);
+
+        $scope.viewtadetails = function(e) {
+            $scope.invoiceheaderno = e.invoiceheader_no;
+            LoadProductDetail();
+        }
+
+        function LoadProductDetail() {
+            var data = {
+                "Params": {
+                    "Filter": {
+                        "InvoiceNo": $scope.invoiceheaderno
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity
+                    },
+                    "Group": "QUERYSUMMARY",
+                    "Type": "SALESDETAIL",
+                    "Sub_Type": "TEMP"
+                }
+            }
+            var get_salesProductSummary = saleService.S_getsalesProduct(data)
+            get_salesProductSummary.then(function(result) {
+                modalshow('taview_modal');
+                $scope.salesproductsummary = result.data.DATA;
+                $scope.ssppageLength = $scope.salesproductsummary.length;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+
+        $scope.view_coll_outstanding_nameclick = function(e) {
+            $scope.customergroupgid = e.customer_custgroup_gid;
+            loaddata_Collection();
+            $scope.customergid = e.customer_gid;
+            loaddata_Outstanding();
+        }
+        $scope.view_coll_status = function(e) {
+            $scope.collectionheadergid = e.fetcollectionheader_gid;
+            loaddata_CollectionStatus();
+        }
+
+        function loaddata_CollectionStatus() {
+            var data = {
+                "Params": {
+                    "Filter": {
+                        "Tablegid": $scope.collectionheadergid
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity
+                    },
+                    "Group": "QUERYSUMMARY",
+                    "Type": "'COLLECTION_INVMAP'",
+                    "Action": "COLLECTIONSTATUS",
+                    "Sub_Type": "TEMP"
+                }
+            }
+            var get_CollectionStatus = saleService.S_getcollectionstatus(data)
+            get_CollectionStatus.then(function(result) {
+                $scope.collectionstatussummary = result.data.DATA;
+                $scope.csspageLength = $scope.collectionstatussummary.length;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+
+        function loaddata_Collection() {
+            var data = {
+                "Params": {
+                    "Filter": {
+                        "CustGroup_Gid": $scope.customergroupgid,
+                        "Customer_Name": "",
+                        "Cheque_From_Date": "",
+                        "Cheque_To_date": "",
+                        "Status": "",
+                        "Cheque_No": "0",
+                        "Cheque_Amount": "0",
+                        "Courier_Name": "",
+                        "AWB_no": "",
+                        "CollectionLimit": "3"
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity
+                    },
+                    "Group": "QUERYSUMMARY",
+                    "Type": "SUMMARY",
+                    "Action": "COLLECTION",
+                    "Sub_Type": "TEMP"
+                }
+            }
+
+            var get_CollectionSummary = saleService.S_getcollection(data)
+            get_CollectionSummary.then(function(result) {
+                $scope.collectionsummary = result.data.DATA;
+                $scope.cspageLength = $scope.collectionsummary.length;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+
+        function loaddata_Outstanding() {
+            var data = {
+                "Params": {
+                    "Filter": {
+                        "Customer_Gid": $scope.customergid
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity
+                    },
+                    "Group": "QUERYSUMMARY",
+                    "Type": "OUTSTANDING_REPORT",
+                    "Action": "OUTSTANDING",
+                    "Sub_Type": "BUCKET_CUSTOMER_WISE"
+                }
+            }
+
+            var get_OutstandingSummary = saleService.S_getoutstanding(data)
+            get_OutstandingSummary.then(function(result) {
+                $scope.outstandingsummary = result.data.DATA;
+                $scope.ospageLength = $scope.outstandingsummary.length;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        };
+    }
+]);
+
+myApp.service("saleService", function($http) {
+    this.S_getsales = function(data) {
+        var respons = $http.post(Appname + "/query_summary_salesget/",
+            data
+        );
+        return respons;
+    }
+    this.S_getsalesProduct = function(data) {
+        var respons = $http.post(Appname + "/query_summary_salesproductget/",
+            data
+        );
+        return respons;
+    }
+    this.S_getcollection = function(data) {
+        var respons = $http.post(Appname + "/query_summary_collectionget/",
+            data
+        );
+        return respons;
+    }
+    this.S_getoutstanding = function(data) {
+        var respons = $http.post(Appname + "/query_summary_outstandingget/",
+            data
+        );
+        return respons;
+    }
+    this.S_getcollectionstatus = function(data) {
+        var respons = $http.post(Appname + "/query_summary_getcollectionstatus/",
+            data
+        );
+        return respons;
+    }
+    this.gettransportdata = function(trans) {
+        var respons = $http.post(Appname + "/prodget/", trans);
+        return respons;
+    }
+    this.S_getcustomer = function(custid) {
+        var respons = $http.post(Appname + "/custgroup/",
+            custid
+        );
+        return respons;
+    }
+
+    this.S_getcustgroup = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.S_getemployeedetail = function(custid) {
+        var respons = $http.post(Appname + "/prodget/", custid);
+        return respons;
+    }
+    this.S_getcomment = function(action, type, json) {
+        var response = $http.post(Appname + "/commentget/", {
+            params: {
+                "action": action,
+                "type": type,
+                "json": json
+            }
+        });
+        return response;
+    };
+    this.getprod = function(lmt, prodnme) {
+        var response = $http.get(Appname + "/prodgett/", {
+            params: {
+                "Limit": lmt,
+                "Product_Name": prodnme
+            }
+        });
+        return response;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,556 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}CCBS Maker Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<style>
+    .dialogdemoThemeInheritance .container {
+  text-align: center; }
+
+</style>
+<div class="maincontent">
+    <div class="container container1" class="modal-body popup-body"
+         ng-app="myApp" ng-controller="myCtrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>CCBS Maker Summary</h4>
+            </div>
+        </div>
+        <div class="modal-body popup-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Ccbs Glno</label>
+                        <input type="text"
+                               ng-model="chk.invnum"
+                               ng-change="ccbsglno(chk)"
+                               autocomplete="off">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Ccbs Code</label>
+                        <input type="text"
+                               ng-model="chk.code"
+                               ng-change="ccbsglno(chk)"
+                               autocomplete="off">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Ccbs Name</label>
+                        <input type="text"
+                               ng-model="chk.name"
+                               ng-change="ccbsglno(chk)"
+                               autocomplete="off">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Status"
+                            md-item-text="item.status"
+                            md-input-maxlength=126
+                            md-min-length=0
+                            md-items="item in getstatus(searchText2)"
+                            md-no-cache="true"
+                            md-search-text="searchText2"
+                            md-selected-item="chk.ddlstatus"
+                            md-selected-item-change="ccbsglno(chk)"
+                            layout-fill>
+                        <md-item-template>
+                            <span md-highlight-text="searchText2"> {{item.status}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No dispatch matching "{{searchText2}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1" >
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="showAdvanced($event)">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+                </div>
+                <div class="col-md-3">
+                    <md-button href="ccbs_approver">approved</md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       style="width:100%">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>CCBS GLNO</th>
+                        <th>CCBS NAME</th>
+                        <th>CCBS CODE</th>
+                        <th>CCBS CC</th>
+                        <th>CCBS BS</th>
+                        <th>STATUS</th>
+                        <th>CCBS IS_ACTIVE</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="x in mainsummary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict">
+                        <td class="text-center">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                        <td class="text-center"><a href="">{{x.ccbs_glno}}</a>
+                                    <md-tooltip md-direction="right"
+                                                style="background-color:#337ab7">
+                                        {{x.ccbs_glno}}
+                                    </md-tooltip></td>
+                        <td class="text-center">{{x.ccbs_name}}</td>
+                        <td class="text-center">{{x.ccbs_code}}</td>
+                        <td class="text-center">{{x.ccbs_cc}}</td>
+                        <td class="text-center">{{x.ccbs_bs}}</td>
+                        <td class="text-center"
+                            ng-class="x.ccbs_status== 'APPROVED' ? 'text-success':'danger'">
+                            {{x.ccbs_status}}
+                        </td>
+                        <td class="text-center"
+                            ng-class="x.ccbs_isactive== 'N' ? 'danger':''"
+                            style="width:120px"
+                        >
+                            {{x.ccbs_isactive}}
+                        </td>
+
+                    </tr>
+                    <tr ng-show="mainsummary.length ==  0">
+                        <td class="warning" colspan="8">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+                            <td colspan="15">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="pageLength"
+                                    uib-pagination></ul>
+                            </td>
+                        </div>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div ng-include="'ccbs_maker_popup'"></div>
+    </div>
+</div>
+{% endverbatim %}
+
+<script>
+var app = angular.module('myApp', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+.config(function ($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+app.controller('myCtrl',['ccbsservice','$scope','$mdDialog','$interval','$filter', function(ccbsservice,$scope, $mdDialog, $interval,$filter) {
+
+         var detail = JSON.parse(sessionStorage.getItem('today'));
+         $scope.employgid = detail.employee_gid;
+         $scope.entity_gid = detail.entity_gid;
+         $scope.currentPage = 1;
+         $scope.maxSize = 3;
+         $scope.itemsPerPage = 10;
+         $scope.drop_down_category=[];
+         $scope.maincategory=[];
+         $scope.sub_category=[];
+         $scope.mainsummary=[];
+         $scope.maintable=[];
+         $scope.code1='';
+         $scope.code2='';
+         $scope.code3='';
+         $scope.code4='';
+         $scope.code_generate='';
+         $scope.pop=[];
+
+
+         $scope.chk=function(e)
+         {
+         
+         }
+
+          $scope.getstatus=function(query)
+
+          {
+                var result=$filter('filter')($scope.review_status,
+                {
+                'status':query
+                });
+                return result;
+          }
+
+          $scope.review_status = [{
+            status: "APPROVED",
+            value: "approved"
+        }, {
+            status: "PENDING",
+            value: "pending"
+        },
+        {
+            status: "REJECTED",
+            value: "rejected"
+        }]
+
+         var e=[];
+         $scope.ccbsglno=function(e)
+         {
+         
+         if(e.ddlstatus == null && e.ddlstatus == undefined)
+         {
+          var rep='';
+         }
+         else
+         {
+         var rep = e.ddlstatus.status;
+         }
+         $scope.mainsummary =$filter('filter')($scope.maintable,{
+                'ccbs_glno':e.invnum,
+                'ccbs_code':e.code,
+                'ccbs_name':e.name,
+                'ccbs_status':rep
+                });
+          $scope.pageLength = $scope.mainsummary.length;
+          $scope.Totalpages = Math.ceil($scope.mainsummary.length / $scope.itemsPerPage);
+          $scope.pageLength = $scope.mainsummary.length;
+         }
+
+
+
+
+         $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+         $scope.submit=function(x)
+         {
+         
+         if( x.categoryname == null ||
+             x.SubCategoryName == null ||
+             x.CC == null ||
+             x.BC == null ||
+             x.categoryname == "" ||
+             x.SubCategoryName == "" ||
+             x.CC == "" ||
+             x.BC == "" ||
+             x.categoryname == undefined ||
+             x.SubCategoryName == undefined ||
+             x.CC == undefined ||
+             x.BC == undefined )
+         {
+         alert('Please Fill Required Fields');
+         return false;
+         }
+
+         var pop=[];
+         var pop=x;
+         var data={
+                        "Params":
+                                { "FILTER":
+                                    {"ccbs_name":x.BC.tbs_name+"_"+x.CC.tcc_name,
+                                     "ccbs_cc":x.CC.tcc_code,
+                                     "ccbs_bs":x.BC.tbs_code,
+                                     "ccbs_code":x.CC.tcc_code+"_"+x.BC.tbs_code,
+                                     "ccbs_glno":$scope.code_generate,
+                                     "ccbs_isactive":x.group1,
+                                     "ccbs_status":"PENDING",
+                                     "ccbs_remarks":x.remarks
+
+                                    },
+                                    "CLASSIFICATION":
+                                    {"Entity_Gid":$scope.entity_gid,
+                                     "Create_by":$scope.employgid
+                                    }
+                                }
+                 }
+
+         var datam={
+                    "Group":"SET_CCBS_MASTER",
+                    "Type":"INSERT",
+                    "Sub_type":"code_generate",
+                    "data":data
+                    }
+
+             var submit_get=ccbsservice.ser_get(datam)
+             submit_get.then(function(result)
+             {
+             
+             if(result.data.MESSAGE == 'SUCCESS')
+             {
+             alert(result.data.MESSAGE);
+             modalhide('ccbspresent');
+             canc(pop);
+             mainsummary();
+
+             }
+             else
+             {
+             alert(result.data.MESSAGE);
+             }
+
+             });
+
+
+         }
+         $scope.getcategory=function(query)
+           {
+
+                var result=$filter('filter')($scope.maincategory,{
+                'category_name':query
+                });
+                return result;
+           }
+
+         $scope.ACselectchange=function(e)
+         {
+         
+         if(e == undefined)
+         {
+          $scope.code2='';
+          $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         return false;
+         }
+         $scope.code2=e.subcategory_no;
+         $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         }
+
+         $scope.ACselectchange1=function(e)
+         {
+         
+         if(e == undefined)
+         {
+          $scope.code3='';
+          $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         return false;
+         }
+         $scope.code3=e.cc_no;
+         $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         }
+
+         $scope.ACselectchange2=function(e)
+         {
+         
+         if(e == undefined)
+         {
+          $scope.code4='';
+          $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         return false;
+         }
+         $scope.code4=e.bs_no;
+         $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         }
+
+
+         $scope.change_sub_category=function(ev)
+         {
+         
+         if(ev == undefined)
+         {
+
+         $scope.sub_category=[];
+          $scope.code1='';
+          $scope.code2='';
+          $scope.pop.SubCategoryName='';
+          $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         return false;
+         }
+         $scope.sub_category=$filter('filter')($scope.drop_down_category,{
+                'category_name': ev.category_name
+                });
+         $scope.code1=ev.category_no;
+         $scope.code_generate=$scope.code1+$scope.code2+$scope.code3+$scope.code4;
+         }
+
+         $scope.getsubcategory=function(query)
+         {
+         
+         var result=$filter('filter')($scope.sub_category,{
+                'subcategory_name':query
+                });
+                return result;
+         }
+
+         $scope.getcostcenter=function(query)
+         {
+         
+         var result=$filter('filter')($scope.cost_center,{
+                'tcc_name':query
+                });
+                return result;
+         }
+
+          $scope.getbusiness=function(query)
+         {
+         
+         var result=$filter('filter')($scope.business_segment,{
+                'tbs_name':query
+                });
+                return result;
+         }
+        $scope.pop=[];
+         $scope.cancel = function(pop) {
+             
+             canc(pop);
+            };
+         function canc(pop)
+         {
+         $scope.code1='';
+         $scope.code2='';
+         $scope.code3='';
+         $scope.code4='';
+         $scope.code_generate='';
+         $scope.pop.categoryname='';
+         $scope.pop.SubCategoryName='';
+         $scope.pop.CC='';
+         $scope.pop.BC='';
+         $scope.pop.remarks='';
+         }
+
+
+         $scope.showAdvanced = function(ev) {
+         modalshow('ccbspresent');
+        }
+
+        // category---//
+
+        mainsummary();
+        loadcategory();
+        category();
+        function loadcategory()
+        {
+        var data={
+                        "Params":
+                                { "FILTER":
+                                    {"category_gid":""
+                                    },
+                                    "CLASSIFICATION":
+                                    {"Entity_Gid":$scope.entity_gid
+                                    }
+                                }
+                 }
+         var datam={
+                    "Group":"CCBS_MASTER",
+                    "Type":"ccbs_category",
+                    "Sub_type":"get",
+                    "data":data
+                    }
+
+         var category_get=ccbsservice.service_get(datam)
+             category_get.then(function(result)
+             {
+             
+             $scope.drop_down_category=result.data.DATA;
+             });
+        }
+        function mainsummary()
+        {
+        $scope.loading();
+        var data={
+                        "Params":
+                                { "FILTER":
+                                    {"status":""
+                                    },
+                                    "CLASSIFICATION":
+                                    {"Entity_Gid":$scope.entity_gid
+                                    }
+                                }
+                 }
+         var datam={
+                    "Group":"CCBS_MASTER",
+                    "Type":"ccbs_category",
+                    "Sub_type":"summary",
+                    "data":data
+                    }
+
+         var mainsummary_get=ccbsservice.sum_get(datam)
+             mainsummary_get.then(function(result)
+             {
+             
+             $scope.maintable=result.data.DATA;
+             if(result.data.MESSAGE == 'FOUND')
+             {
+             $scope.mainsummary=$scope.maintable;
+             $scope.pageLength = $scope.mainsummary.length;
+             $scope.Totalpages = Math.ceil($scope.mainsummary.length / $scope.itemsPerPage);
+             $scope.pageLength = $scope.mainsummary.length;
+             }
+             else
+             {
+             alert('No data!');
+             }
+             $scope.endloading();
+             //alert(JSON.stringify($scope.mainsummary));
+             },
+             function(err) {
+                    alert('No data!.');
+                }).finally()
+        }
+
+        function category()
+        {
+        var main_category_get=ccbsservice.main_service_get()
+             main_category_get.then(function(result)
+             {
+             
+             //alert(result.data);
+             $scope.maincategory=JSON.parse(result.data[0]);
+             $scope.cost_center=JSON.parse(result.data[1]);
+             $scope.business_segment=JSON.parse(result.data[2]);
+             });
+
+        }
+
+
+        }]);
+
+        app.service('ccbsservice', function($http) {
+
+
+        this.service_get=function(custid)
+        {
+        var respons = $http.post(Appname + "/cbsmaster/", custid);
+        return respons;
+        }
+
+        this.main_service_get=function()
+        {
+        var respons = $http.get(Appname + "/cbsmain/");
+        return respons;
+        }
+
+        this.ser_get=function(d)
+        {
+        var respons = $http.post(Appname + "/cbsmaster/",d);
+        return respons;
+        }
+
+        this.sum_get=function(d)
+        {
+        var respons = $http.post(Appname + "/cbsmaster/",d);
+        return respons;
+        }
+
+
+        });
+
+
+</script>
+{%endblock%}

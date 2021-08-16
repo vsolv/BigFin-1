@@ -1,0 +1,570 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} GRN Approval{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appgrnaprvlsmry" ng-controller="Ctrlgrnaprvlsmry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>GRN Approval Summary </h4>
+            </div>
+        </div>
+          <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewtranhistory" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> View Transaction History Against {{Number}} </strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                        md-progress="deferred">
+                                        <thead class="header">
+                                            <tr>
+                                                <td align="right">
+                                                    S.No
+                                                </td>
+                                                <td>GRN Header No</td>
+                                                <td>Transaction Date</td>
+                                                <td>Status</td>
+                                                <td>Employee Name</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="obj in viewtran">
+                                                <td>
+                                                    <center>{{$index+1}}</center>
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.grninwardheader_code}}
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.Tran_Date |date:'dd-MMM-y HH:mm:ss'}}
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.status}}
+                                                </td>
+                                                       <td class="text-center">
+                                                    {{obj.Approved_Name}}
+                                                </td>
+                                            </tr>
+
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>GRN Number</label>
+                        <input id="ponum" maxlength="256" ng-model="grn_number" ng-change="filtersearch()" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Supplier</label>
+                        <input id="supplr" maxlength="256" ng-model="Supplier_name" ng-change="filtersearch()" />
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>GRN From Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="grn_from_date" md-hide-icons="calendar"
+                            formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>GRN To Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="grn_to_date" md-hide-icons="calendar"
+                            formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>MIN Quantity To</label>
+                        <input maxlength="256" ng-model="min_quantity" ng-change="filtersearch()" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>MAX Quantity</label>
+                        <input maxlength="256" ng-model="max_quantity" ng-change="filtersearch()" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="search_getgnheader()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                    md-progress="deferred">
+                    <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>GRN No</th>
+                            <th>PO No</th>
+                            <th>DC No</th>
+                            <th>Invoice No</th>
+                            <th>Supplier</th>
+                            <th>Date</th>
+                            <th>UOM</th>
+                            <th>Received Quantity</th>
+                            <th>Status</th>
+                            <th>File</th>
+                            <th>Action</th>
+                            <th>Tran History</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="grn in grnheader">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{grn.grninwardheader_code }}</td>
+                            <td>{{grn.poheader_no }}</td>
+                            <td>{{grn.grninwardheader_dcnote }}</td>
+                            <td>{{grn.grninwardheader_invoiceno}}</td>
+                            <td>{{grn.supplier_name}}</td>
+                            <td>{{grn.grninwardheader_date |date:'dd-MMM-yyyy'}}</td>
+                            <td>{{grn.podetails_uom}}</td>
+                            <td>{{grn.grninwarddetails_qty}}</td>
+                            <td>{{grn.grninwardheader_status}}</td>
+                            <td class="text-center">
+                                <span class="editlink" ng-click="viewgrnheaders(grn)">
+                                    <i class="material-icons">visibility</i>
+                                    <md-tooltip>View GRN File</md-tooltip>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="editlink"
+                                    ng-click="grnapproval(grn.grninwardheader_gid,grn.supplier_gid,grn.grninwardheader_status)">
+                                    <i class="material-icons">visibility</i>
+                                    <md-tooltip>View</md-tooltip>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span title="Transaction History" ng-click="tran_history(grn)" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr ng-show="grnheader.length ==  0">
+                            <td class="warning" colspan="12">
+                                No Records Found.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="9">
+                                <ul uib-pagination total-items="Total_Row" ng-model="currentPage" max-size="maxSize"
+                                    ng-change="pageChanged()" class="pagination-sm" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="2">
+                                Total Count:{{Total_Row}}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewgrnheader" role="dialog" style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> GRN Header File(s) for {{grnheadernum}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table
+                                        class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                        md-progress="deferred">
+                                        <thead class="header">
+                                            <tr>
+                                                <td align="right">
+                                                    S.No
+                                                </td>
+                                                <td>File Name</td>
+                                                <td>Download File</td>
+                                                <td>View File</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="obj in grnsummary1">
+                                                <td>
+                                                    <center>{{$index+1}}</center>
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.file_path}}
+                                                </td>
+                                                <td class="text-center">
+                                                    <span title="Download {{obj.file_path}}" class="editlink">
+                                                        <a class="material-icons"
+                                                            href="/common_downloadfile/?filename={{obj.file_path}}"
+                                                            target="_blank">get_app</a>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span title="View {{obj.file_path}}" class="editlink">
+                                                        <a class="material-icons"  onclick="clk()" ng-click="clkview(obj.file_path)"
+                                                            target="_blank">touch_app</a>
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewgrnfile" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Viewing {{filename}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-md-12 text-center">
+<span title="Zoom in">
+     <a href="" onclick="zoomin()" style="font-size:50px"><i style="font-size:50px" class="material-icons">zoom_in
+                        </i></a>
+</span>
+                                    <span title="Zoom Out">
+                        <a href="" onclick="zoomout()" style="font-size:50px"><i style="font-size:50px"
+                                                                                 class="material-icons">
+                            zoom_out
+                        </i></a>
+                                        </span>
+                                </div>
+                            </div>
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                   <img src="{{viewfilepath}}"
+            id="zooming" GFG="250">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+        function zoomin() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth + 150) + "px";
+        }
+        function zoomout() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth - 150) + "px";
+        }
+        function clk(){
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (892) + "px";
+        }
+</script>
+
+<script>
+    var myApp = angular.module('Appgrnaprvlsmry', ['ngMaterial', 'ui.bootstrap', 'ngMessages']).config(function (
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    myApp.run(function ($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function (date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    });
+
+
+
+
+    myApp.controller('Ctrlgrnaprvlsmry', ['$scope', 'Servicegrnaprvlsmry', '$mdDialog', '$window', '$filter', function (
+        $scope, Servicegrnaprvlsmry, $mdDialog, $window, $filter) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+        $scope.loading = function () {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+
+        $scope.endloading = function () {
+            $mdDialog.hide();
+        };
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+
+        $scope.tran_history = function(e){
+
+        $scope.Number = e.poheader_no;
+        var data= {"DETAIL":{
+        "GRNInwardHeader_GID":e.grninwardheader_gid
+        },"CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+        }
+        var data = {
+                    "Group":"GRN_HISTORY",
+                    "Type": "GET",
+                    "SubType": "GRN_HISTORY",
+                    "DETAIL": data
+                }
+            var get_purchase = Servicegrnaprvlsmry.getviewtran(data)
+                get_purchase.then(function (result) {
+                if(result.data.MESSAGE == "FOUND"){
+                    $scope.viewtran = result.data.DATA;
+                    }
+                    modalshow('viewtranhistory');
+                }).finally($scope.endloading);
+        }
+
+
+        $scope.filtersearch = function () {
+            $scope.grnheader = $filter('filter')($scope.maintable, {
+                grninwardheader_code: $scope.grn_num,
+                supplier_name: $scope.grn_supplier
+            });
+            $scope.userTotalItems = $scope.grnheader.length;
+        }
+
+        $scope.grnheader = [];
+        $scope.getgnheader = function () {
+            if($scope.grn_to_date==null|| $scope.grn_from_date==null){
+                $scope.grn_from_date="";
+                $scope.grn_to_date="";
+            }
+            $scope.loading();
+          
+
+
+            var data = {
+                "Params": {
+                    "filter": {
+                        "GRNInwardHeader_Code": $scope.grn_number,
+                        "Supplier_Name": $scope.Supplier_name,
+                      
+                        "From_Date":$filter('date')($scope.grn_from_date, "yyyy-MM-dd"),
+
+                        "To_Date": $filter('date')($scope.grn_to_date, "yyyy-MM-dd"),
+                        "Min_Qty": $scope.min_quantity,
+                        "Max_Qty": $scope.max_quantity,
+                        "Page_Index": $scope.currentPage - 1,
+                        "Page_Size": $scope.itemsPerPage
+                    },
+                    "classification": {},
+
+                    "type": "GRN_APPROVAL_SUMMARY",
+                    "Action": "GET"
+                }
+
+            }
+            var get_header = Servicegrnaprvlsmry.getgrnheader(data)
+
+            get_header.then(function (result) {
+
+
+                    $scope.maintable = result.data;
+                    //($scope.maintable);
+                    $scope.grnheader = $scope.maintable;
+                    if ($scope.currentPage == 1 && $scope.grnheader.length != 0) {
+                        $scope.Total_Row = $scope.grnheader[0].Total_Row;
+                    }
+                    if ($scope.grnheader.length == 0) {
+                        $scope.currentPage == 1;
+                        $scope.Total_Row = 0;
+
+                    }
+                },
+                function () {
+                    alert('no data');
+                }).finally($scope.endloading);
+
+        }
+        $scope.getgnheader();
+        $scope.search_getgnheader = function () {
+            $scope.currentPage = 1;
+            $scope.getgnheader();
+
+        }
+
+        $scope.pageChanged = function () {
+            $scope.getgnheader();
+        }
+
+        $scope.viewgrnheaders = function (e) {
+
+            $scope.grnheadernum = e.grninwardheader_code;
+            $scope.grnsummary1 = JSON.parse(e.file_path);
+            if ($scope.grnsummary1.length > 0) {
+                if ($scope.grnsummary1[0].file_path != null) {
+                    modalshow('viewgrnheader');
+                } else {
+                    alert("No File for against " + e.grninwardheader_code);
+                }
+            }
+        }
+
+        $scope.clkview = function (e) {
+            $scope.filename = e;
+            var data = {
+                "Filename": e
+            }
+            var get_purchase = Servicegrnaprvlsmry.getviewfile(data)
+            get_purchase.then(function (result) {
+                $scope.viewfilepath = result.data;
+                if ($scope.viewfilepath != '') {
+                    modalshow('viewgrnfile');
+                }
+            }).finally($scope.endloading);
+        }
+
+
+
+        $scope.grnapproval = function (grnheader_gid, supplier_gid, status) {
+            var grnheader_approval = {
+                grnheader_gid: grnheader_gid,
+                grnheader_approve: "YES",
+            };
+            sessionStorage.setItem('grn_header', JSON.stringify(grnheader_approval));
+            $window.location.href = "grn_details_view";
+        }
+
+
+    }]);
+
+    myApp.service("Servicegrnaprvlsmry", function ($http) {
+        this.getcusomter = function (d) {
+            var response = $http.get(Appname + "/get_grnapprovalget/");
+            return response;
+        }
+
+        this.getstatusprocess = function (tablename, gid, status) {
+            var response = $http.post(Appname + "/get_allqueue_status/", {
+                params: {
+                    "table_name": tablename,
+                    "gid": gid,
+                    "status": status
+                }
+            });
+            return response;
+        }
+
+        this.getgrnheader = function (data) {
+            var response = $http.post(Appname + "/get_grnheadersumry/", data)
+            return response;
+        }
+        this.getviewfile = function (data) {
+            var response = $http.post(Appname + "/common_viewfile/", data);
+            return response;
+        }
+                 this.getviewtran = function (data) {
+            var response = $http.post(Appname + "/Get_Tran_History/", data);
+            return response;
+        }
+
+    });
+</script>
+{% endblock %}

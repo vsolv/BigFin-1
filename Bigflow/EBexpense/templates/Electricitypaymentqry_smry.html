@@ -1,0 +1,416 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}EB Details Transaction Summary{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprsummary" ng-controller="Ctrlprsummsry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>EB Details Transaction Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Consumer No</label>
+                        <input maxlength="256" letter-Only ng-model="consumer_no"/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Consumer Name</label>
+                        <input maxlength="256" letter-Only ng-model="consumer_name"/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3 ">
+                    <md-autocomplete md-floating-label="Status" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getstatus(searchText)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText" md-selected-item="status_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:15px"
+                               ng-click="geteb_search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="potermview_template" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Caution Deposit Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <div class="btn-group" id="statusa" data-toggle="buttons">
+                                        <label ng-class="newcls" ng-click="clkbtn('Y')" title="click to Yes">
+                                            <input type="radio" checked="checked" ng-model="selected_active" required>YES</label>
+                                        <label ng-class="newcls1" ng-click="clkbtn('N')" title="click to No">
+                                            <input type="radio" checked="checked" ng-model="selected_active">NO</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer" ng-show="displyamount">
+                                        <label>Caution Deposit Amount</label>
+                                        <input numbers-only maxlength="8" ng-model="cdamount" required/>
+                                    </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Remarks</label>
+                                        <input ng-model="remarks"/>
+                                    </md-input-container>
+                                        </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" align="center">
+                            <md-button
+                                        class="md-raised custbutton" class="btn btn-secondary"
+                                        ng-click="caution_submitclick()">Submit
+                                    <md-tooltip>Submit</md-tooltip>
+                                </md-button>
+                            <md-button class="md-raised" ng-click="clkclose()" data-dismiss="modal">
+                                close
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Consumer No</th>
+                        <th>Consumer Name</th>
+                        <th>Branch Name</th>
+                        <th>State</th>
+                        <th>Board Name</th>
+                        <th>Transaction Date</th>
+                        <th>Bill Amount</th>
+                        <th>Caution Deposit Amount</th>
+                        <th>Status</th>
+                        <th>Payment Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="pr in maintable">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td ng-click="clkon_num(pr)" align="center"><a>{{pr.ebconsumer_no }}</a></td>
+                        <td>{{pr.ebconsumer_name}}</td>
+                        <td>{{pr.branchcode_name}}</td>
+                        <td>{{pr.ebconsumer_state}}</td>
+                        <td>{{pr.ebconsumer_board}}</td>
+                        <td>{{pr.bill_txndate | date:'dd-MMM-yyyy'}}</td>
+                        <td align="right">{{pr.bill_amount}}</td>
+                        <td align="right">{{pr.bill_ecd_amount}}</td>
+                        <td>{{pr.bill_status}}</td>
+                        <td>{{pr.bill_paymentstatus}}</td>
+                        <td align="center">
+                            <button class="btn btn-success" ng-disabled="(pr.bill_paymentstatus == 'New'|| pr.bill_cautiondeposit_req != null) ? 'true':''" style="font-size:12px" ng-click="caution_click(pr)">
+                                Caution Deposit
+                                <md-tooltip>Caution Deposit</md-tooltip>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr ng-show="prsummary.length ==  0">
+                        <td class="warning" colspan="8">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="11">
+                            <ul uib-pagination total-items="Total_Length" ng-model="currentPage"
+                                max-size="maxSize" ng-change="pageChanged()" class="pagination-sm"
+                                boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="1">
+                            Total Count:{{Total_Length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+.btn-default.btn-on.active{background-color: #5BB75B;color: white;}
+.btn-default.btn-off.active{background-color: #DA4F49;color: white;}
+.btn-default.btn-off.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-1.active{background-color: #006FFC;color: white;}
+.btn-default.btn-off-1.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-2.active{background-color: #00D590;color: white;}
+.btn-default.btn-off-2.active{background-color: #A7A7A7;color: white;}
+
+.btn-default.btn-on-3.active{color: #5BB75B;font-weight:bolder;}
+.btn-default.btn-off-3.active{color: #DA4F49;font-weight:bolder;}
+
+.btn-default.btn-on-4.active{background-color: #006FFC;color: #5BB75B;}
+.btn-default.btn-off-4.active{background-color: #DA4F49;color: #DA4F49;}
+    .paging {
+        width: 75px;
+        height: 15px;
+        border: 1px solid black;
+    }
+
+
+
+
+
+
+</style>
+<script>
+    var myApp = angular.module('Appprsummary', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    myApp.controller('Ctrlprsummsry', ['$scope', 'Serviceprsummary', '$mdDialog', '$window', '$filter',
+        function ($scope, Serviceprsummary, $mdDialog, $window, $filter) {
+            $scope.currentPage = 1;
+            $scope.currentPge = 1;
+            $scope.currentPge1 = 1;
+            $scope.Total_Lengh = 12;
+            $scope.maxSize = 3;
+            $scope.mxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.itemsPerPge = 10;
+            $scope.itemsPerPge1 = 10;
+            $scope.maintable = [];
+
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.employee_gid = detail.employee_gid;
+        $scope.branch_gid = detail.branch_gid;
+
+
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+
+
+$scope.status_array = [{
+        value: 'New',
+        data: 'New'
+    },{
+        value: 'Payment',
+        data: 'Payment'
+    }]
+
+    $scope.newcls = "btn btn-default btn-on btn-xs";
+    $scope.newcls1 = "btn btn-default btn-off btn-xs"
+
+
+    $scope.clkbtn = function(e){
+    $scope.selected_active = e;
+    $scope.cdamount ="";
+    $scope.remarks ="";
+
+    if(e=='Y'){
+    $scope.newcls = "btn btn-default btn-on btn-xs active";
+    $scope.newcls1 = "btn btn-default btn-off btn-xs"
+    $scope.displyamount = true;
+    }
+    if(e=='N'){
+    $scope.newcls = "btn btn-default btn-on btn-xs";
+    $scope.newcls1 = "btn btn-default btn-off btn-xs active"
+    $scope.displyamount = false;
+    }
+
+    }
+
+$scope.getstatus = Change_occupancy_Name;
+            function Change_occupancy_Name(query) {
+               var result = $filter('filter')($scope.status_array, {
+               'value': query
+                 });
+               return result;
+       }
+
+            $scope.clkon_num  = function(pr){
+
+            sessionStorage.setItem('fulldata', JSON.stringify(pr));
+                $window.location.href = "ebdetails_create";
+            }
+
+            $scope.caution_click= function(e){
+            modalshow('potermview_template');
+            $scope.bill_gid = e.bill_gid;
+            $scope.main_amount = e.bill_amount;
+            }
+
+            $scope.clkclose= function(){
+            $scope.remarks = "";
+            $scope.selected_active = "";
+            $scope.newcls = "btn btn-default btn-on btn-xs";
+            $scope.newcls1 = "btn btn-default btn-off btn-xs"
+            }
+            $scope.caution_submitclick= function(e){
+
+            if($scope.main_amount < $scope.cdamount){
+            alert('Given Caution Amount is Greater than Original Amount');
+            $scope.cdamount = '0';
+            return false;
+            }
+
+
+            if($scope.cdamount ==""){
+            $scope.cdamount = '0';
+            }
+
+var datas ={
+"bill_gid": $scope.bill_gid,
+"bill_cautiondeposit_req":$scope.selected_active,
+"bill_ecd_amount":$scope.cdamount,
+"bill_cautionremarks":$scope.remarks
+}
+var data={
+"Action":"Caution_Update",
+datas:datas,
+"classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+}
+    var checkpan=Serviceprsummary.pay_ebdetails(data)
+    checkpan.then(function(result){
+
+
+    $scope.status=result.data;
+    alert($scope.status);
+    $window.location.href = "ebdetailsquery_paymtsmry";
+
+    }),
+                function(err) {
+                    alert('no data');
+                }
+
+        }
+
+
+        sessionStorage.removeItem('fulldata');
+      $scope.getheaderdata = function(){
+
+        if($scope.status_name){
+        $scope.stats = $scope.status_name.value;
+        }else{
+        $scope.stats  = "";
+        }
+        if($scope.consumer_no == null){
+        $scope.consumer_no = "";
+        }
+        if($scope.consumer_name == null){
+        $scope.consumer_name = "";
+        }
+
+              var data={"ebconsumer_branchgid":$scope.branch_gid,
+         "ebconsumer_status":$scope.stats ,
+              "ebconsumer_no": $scope.consumer_no,
+              "ebconsumer_name": $scope.consumer_name ,
+              "Page_Index": $scope.currentPage - 1,
+              "Page_Size": $scope.itemsPerPage
+
+              }
+                var data_int = {
+                "Action":'Bill_All_Caution',
+                "data":data,
+                "classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+                }
+                var get_purchase = Serviceprsummary.getsmrydata(data_int)
+                get_purchase.then(function (result) {
+
+                   $scope.maintable = result.data;
+                    if ($scope.currentPage == 1 && $scope.maintable.length != 0) {
+                    $scope.Total_Length = $scope.maintable[0].Total_Row;
+                    }
+                    if ($scope.maintable.length == 0) {
+                        $scope.currentPage == 1;
+                        $scope.Total_Length = 0;
+                    }
+                }).finally($scope.endloading);
+
+
+                }
+
+
+
+                $scope.getheaderdata();
+$scope.geteb_search = function () {
+            $scope.currentPage = 1;
+            $scope.getheaderdata();
+        }
+
+        $scope.pageChanged = function () {
+            $scope.getheaderdata();
+        }
+        }
+    ]);
+
+    myApp.service("Serviceprsummary", function ($http) {
+
+                this.getsmrydata = function(data) {
+            var response = $http.post(Appname + "/eb_mainsmry/", data);
+            return response;
+        }
+
+        this.pay_ebdetails= function(data) {
+            var response = $http.post(Appname + "/ebconsumer_payment/", data);
+            return response;
+        }
+
+    });
+
+
+
+
+
+
+</script>
+{% endblock %}

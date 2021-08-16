@@ -1,0 +1,189 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Barcode Scanning{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="App" ng-controller="Ctrl" >
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong>Barcode Scanning</strong></h4>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+
+                    <input type="file" file-model="files"  accept=".PDF,.pdf"fileinput="file" id="file" multiple  required/>
+                                     </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Barcode Number</label>
+                        <input  ng-init="barcodenum = '999201999999'" ng-model="barcodenum"
+                               placeholder="Enter your Number"
+                               type="text"
+                        />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-raised custbutton" ng-click="submit()" ng-disabled="IsDisabled"
+                               value="submit">
+                        Submit
+                    </md-button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('App', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+    myApp.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+
+
+    myApp.directive("fileinput", [function() {
+        return {
+            scope: {
+                fileinput: "=",
+                filepreview: "="
+            },
+            link: function(scope, element, attributes) {
+                element.bind("change", function(changeEvent) {
+                    scope.fileinput = changeEvent.target.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function(loadEvent) {
+                        scope.$apply(function() {
+                            scope.filepreview = loadEvent.target.result;
+                        });
+                    }
+                    reader.readAsDataURL(scope.fileinput);
+                });
+            }
+        }
+    }]);
+
+myApp.controller('Ctrl', ['$scope', 'barcodeser', '$mdDialog', '$rootScope', '$window', '$filter','$interval',
+    function($scope, barcodeser, $mdDialog, $rootScope, $window, $filter,$interval) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.emp_gid = detail.employee_gid;
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false,
+                multiple: true
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+      function reconname(item)
+        {
+        //alert(JSON.stringify(item));
+        fileExtension=item.name.split('.').pop();
+        $scope.recon="RECON"+new Date().getTime()+fileExtension;
+        //alert($scope.recon);
+        }
+
+    $scope.submit = function() {
+
+    if ($scope.files== undefined)
+    {alert('Choose a file')
+    return false
+
+
+    }
+    if( $scope.barcodenum=='') {
+			alert('Enter The Barcode Type')
+			return false
+					}
+    $scope.loading();
+    var count=0;
+            $scope.file_name=[];
+            for(i=0;i<$scope.files.length;i++){
+             count=count+1;
+            if($scope.files[i].name != ''){
+            $scope.fl = $scope.files[i];
+             $scope.name=$scope.files[i].name;
+            $scope.file_name=$scope.name.split('.');
+            $scope.file_name_extension=$scope.file_name[0];
+            $scope.file_extension=$scope.file_name[1];
+                        var excl=new FormData();
+                        excl.append('file',$scope.fl);
+                        excl.append('name',  $scope.file_name_extension);
+                        excl.append('file_extension',$scope.file_extension);
+                        excl.append('pdfcount',$scope.files.length);
+                        excl.append('barcodenum',$scope.barcodenum);
+                        excl.append('filecount',count)
+                        loadexcl(excl);
+
+
+                }
+
+            }
+
+    function loadexcl(excl)
+        {
+            var overalldtl = barcodeser.excelgen(excl);
+
+            overalldtl.then(function(res)
+            {
+               if(res.data!=''){
+               $scope.endloading()
+               $window.location.href = "barcode";
+               }
+                alert(JSON.stringify(res.data));
+                $scope.exsmry=res.data;
+
+            }).finally();
+        }
+
+    }
+}]);
+myApp.service("barcodeser", function($http) {
+    this.scanningbar = function(data) {
+        var response = $http.post(Appname + "/scanning_barcode/", data);
+        return response;
+    }
+    this.excelgen=function(excl)
+    {
+        var response=$http.post(Appname + "/scanning_barcode/",excl,
+        {
+        transformRequest:angular.identity,
+        headers:
+            {
+            'Content-Type':undefined
+            }
+        }
+        );
+
+        return response;
+    }
+});
+
+</script>
+{% endblock %}

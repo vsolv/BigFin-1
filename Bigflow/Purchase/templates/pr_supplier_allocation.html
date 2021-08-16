@@ -1,0 +1,243 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PR Supplier Allocation {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprsupplier" ng-controller="Ctrlprsupplier" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Supplier Allocation</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <md-checkbox ng-model="autocalculation" class="md-primary"
+                                 aria-label="Auto Calculation" ng-change="auto_change()">
+                        Auto
+                    </md-checkbox>
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-mode="month" md-open-on-focus md-max-date="maxDate"
+                                   ng-model="from_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Supplier</label>
+                    <md-select ng-model="ddlproduct" md-container-class="selectSelectHeader">
+                        <md-select-header class="select-header">
+                            <input type="text" id="sProduct" autocomplete="off" ng-model="sInput"
+                                   ng-keydown="mdselectInput($event)"
+                                   class="header-searchbox" value="" placeholder="search..">
+                        </md-select-header>
+                        <md-option ng-repeat="cus in producttype | filter:{display_name:sInput}"
+                                   ng-value="cus.productype_gid">
+                            {{ cus.display_name }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-button class="md-icon-button md-primary" aria-label="Search" ng-click="search_click()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>Desc</th>
+                        <th>Supplier</th>
+                        <th rowspan="2">Quantity</th>
+                        <th ng-repeat="sup in supplierList">{{supplierList[$index].supplier_name}}</th>
+                        <th rowspan="2">Remain</th>
+                    </tr>
+                    <tr>
+                        <td>S.No</td>
+                        <td>Price/Product</td>
+                        <th ng-repeat="sup in supplierList">{{sup.creditlimit_days}}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sd in showndetails" ng-class="overflow_prqty(sd)">
+                        <td>
+                            <center>{{$index+1}}</center>
+                        </td>
+                        <td>{{sd.product_name}}</td>
+                        <td>{{sd.pr_qty}}</td>
+                        <td  ng-repeat="sup in supplierList" ng-class="overflow_capacity($index)">
+                            <input ng-if="!autocalculation && (sd[sup.supplier_gid]|| sd[sup.supplier_gid]==0)" type="text" ng-model="sd[sup.supplier_gid]"
+                                   class="form-control" >
+                            <span ng-if="autocalculation">{{sd[sup.supplier_gid]}}</span>
+                           </td>
+                        <td>{{sd.remain=sd.pr_qty-sd.total}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="2">Total</td>
+                        <td rowspan="2">{{totalList.ttl_prqty}}</td>
+                        <td ng-repeat="sup in supplierList">{{totalList[sup.supplier_gid]}}</td>
+                        <td rowspan="2">{{totalList.ttl_prqty-totalList.ttl_total}}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">Capacity</td>
+                        <th ng-repeat="sup in supplierList">{{sup.sup_capacity}}</th>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script type="text/javascript">
+ var app_prsupplier = angular.module('Appprsupplier', ['ngMaterial', 'ui.bootstrap', 'AppCommon','ngMessages'])
+  .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+ app_prsupplier.run(function($mdDateLocale, $filter) {
+     $mdDateLocale.formatDate = function(date) {
+         return $filter('date')(date, "dd-MMM-yyyy");
+     };
+ })
+ app_prsupplier.controller('Ctrlprsupplier',
+  function($scope,$rootScope,$filter, $mdDialog, Serprsupplier, SerCommon) {
+    $scope.productList=[];
+    $scope.supplierList=[];
+    $scope.showndetails=[];
+
+    $scope.math=window.Math;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+          templateUrl: 'loaderSpinner',
+          parent: angular.element(document.body),
+          clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading=function(){
+        $mdDialog.hide();
+    };
+
+    $scope.mdselectInput=function(ev){
+        ev.stopPropagation();
+    }
+
+    <!--var get_supplier = Serprsupplier.getsupplier()-->
+         <!--get_supplier.then(function(result) {-->
+                 <!--$scope.productList = result.data;-->
+             <!--}, function(err) {-->
+                 <!--alert('No data!.');-->
+             <!--}-->
+    <!--);-->
+
+    $scope.search_click=function (){
+        var get_data = Serprsupplier.getprdetails(formatDate($scope.from_date))
+         get_data.then(function(result) {
+                 $scope.supplierList=result.data.supplier;
+                 $scope.showndetails=result.data.product;
+                 $scope.autocalculation=true;
+                 <!--calculateTotal(result.data);-->
+             }, function(err) {
+                 alert('No data!.');
+             });
+    }
+
+    $scope.quantity_change=function(data){
+        var value=data;
+        alert(data);
+    }
+
+    $scope.$watch('showndetails',calculateTotal,true);
+
+    function calculateTotal(data){
+        var sup=$scope.supplierList;
+
+        for(var i=0;i<data.length;i++){
+        var total=0;
+            for(var j=0;j<sup.length;j++){
+                if(data[i][sup[j].supplier_gid]){
+                    total=total+Number(data[i][sup[j].supplier_gid])
+                }
+            }
+            data[i].total=total;
+        }
+
+       var totalList={}
+       var ttl_prqty=0,ttl_total=0;
+        for(var i=0;i<sup.length;i++){
+            var total=0;
+            for(var j=0;j<data.length;j++){
+                if(data[j][sup[i].supplier_gid]){
+                    total=total+Number(data[j][sup[i].supplier_gid])
+                }
+                if(i==0){
+                    ttl_prqty=ttl_prqty+data[j].pr_qty
+                    ttl_total=ttl_total+data[j].total
+                }
+            }
+         totalList[sup[i].supplier_gid]=total
+        }
+        totalList['ttl_prqty']=ttl_prqty
+        totalList['ttl_total']=ttl_total
+        $scope.totalList=totalList;
+    }
+
+    $scope.overflow_prqty=function(dt){
+        var t =dt.pr_qty-dt.total
+        if(t==0){return ''}
+        else if(t>0){return 'danger'}
+        else if(t<0){return 'info'}
+    }
+
+    $scope.overflow_capacity=function(index){
+        var t =$scope.supplierList[index].sup_capacity-$scope.totalList[$scope.supplierList[index].supplier_gid];
+        if(t<0){return 'danger'}
+        else{return 0}
+    }
+
+    $scope.closedialog = function(){
+        $mdDialog.hide();
+    };
+
+
+ });
+
+ app_prsupplier.service("Serprsupplier", function($http) {
+
+    this.getsupplier=function(){
+        var response=$http.get(Appname+"/get_Masters",{params:{"tablename":"producttype"}});
+        return response;
+    };
+    this.getprdetails=function(fdate){
+        var response = $http.get(Appname+"/sup_capacity/",{params:{'action':'all','supplier_gid':0,'product_gid':0,'product_name':'','serial_no':0}})
+        return response;
+    };
+ });
+$(document).ready(function() {
+ $('#detailstable tbody').scroll(function(e) { //detect a scroll event on the tbody
+
+   $('#detailstable thead').css("left", -$("#detailstable tbody").scrollLeft()); //fix the thead relative to the body scrolling
+   $('#detailstable thead th:nth-child(-n+2)').css("left", $("#detailstable tbody").scrollLeft()); //fix the first cell of the header
+   $('#detailstable tbody td:nth-child(-n+2)').css("left", $("#detailstable tbody").scrollLeft()); //fix the first column of tdbody
+    $('#detailstable tfoot').css("left", -$("tbody").scrollLeft()); //fix the tfoot relative to the body scrolling
+   $('#detailstable tfoot td:nth-child(-n+2)').css("left", $("tbody").scrollLeft()); //fix the first cell of the header
+ });
+});
+
+
+
+</script>
+{% endblock %}

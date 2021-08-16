@@ -1,0 +1,978 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Electricity Details Payment Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprsummary" ng-controller="Ctrlprsummsry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Electricity Details Payment Summary</h4>
+            </div>
+        </div>
+        <div class="modal fade" id="potermview_template" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Approve and Pay for Consumer Number {{no}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="col-md-12">
+                                <div class="col-md-6">
+                                    <b>Consumer Number :</b> <b>{{no}}</b> </br>
+                                    <b>Consumer Name :</b> <b>{{name}}</b> </br>
+                                    <b>Last Paid Amount :</b> <b>{{lastpayment}}</b> </br>
+                                    <b>Current Amount to Pay :</b> <b>{{bill_amount}}</b> </br
+                                    <b>Current Status from API :</b> <b>{{status_frm_API}}</b> </br
+                                    </tr>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                     <div class="row">
+                        <div class="col-md-12">
+                            <br></br>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-2">
+                            </div>
+                            <div class="col-md-3" style="margin-top:-11px">
+                                <form name="ebform">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Reject Remarks</label>
+                                        <input ng-model="reject_remarks" required/>
+                                    </md-input-container>
+                                </form>
+                            </div>
+                            <div class="col-md-2">
+                                <md-button
+                                        class="md-raised md-warn"
+                                        class="btn btn-secondary" ng-disabled="ebform.$invalid"
+                                        ng-click="reject_btn()">Reject
+                                    <md-tooltip>Reject</md-tooltip>
+                                </md-button>
+                            </div>
+                            <div class="col-md-2">
+                                <md-button
+                                        class="md-raised custbutton" style="margin-left:-40px" class="btn btn-secondary"
+                                        ng-click="pay_click()" ng-disabled="enabl_from_API">Approve & Pay
+                                    <md-tooltip>Approve & Pay</md-tooltip>
+                                </md-button>
+                            </div>
+                            <div class="col-md-2">
+                                <md-button class="md-raised" style="margin-left:-40px" ng-click="clkclose()" data-dismiss="modal">
+                                    close
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="view_prepare_payment_data" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:80%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            Payment Data
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                           md-progress="deferred">
+                                        <thead class="header">
+                                        <tr style="text-align:center">
+                                            <th>S.No</th>
+                                            <th>CR No</th>
+                                            <th>Paymode Name</th>
+                                            <th>Invoice Type</th>
+                                            <th>Supplier Name</th>
+                                            <th>Employee Name</th>
+                                            <th>Bank Name</th>
+                                            <th>Bank Account Number</th>
+                                            <th>Branch IFSC Code</th>
+                                            <th>Beneficiary Name</th>
+                                            <th>Invoice No</th>
+                                            <th>Invoice Date</th>
+                                            <th>Invoice Credit Amount</th>
+                                            <th>Invoice Amount</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="sums in final_prepare_payment_data.slice(((currentPages-1)*itemsPerPages),((currentPages)*itemsPerPages)) | filter:search:strict">
+                                            <td class="text-center">
+                                                {{((currentPages-1)*itemsPerPages)+$index+1}}
+                                            </td>
+                                            <td> {{sums.invoiceheader_crno}}</td>
+                                            <td> {{sums.paymode_name}}</td>
+                                            <td> {{sums.invoiceheader_invoicetype}}</td>
+                                            <td> {{sums.supplier_name}}</td>
+                                            <td> {{sums.employee_name}}</td>
+                                            <td> {{sums.bank_name}}</td>
+                                            <td> {{sums.bankdetails_acno}}</td>
+                                            <td> {{sums.bankbranch_ifsccode}}</td>
+                                            <td> {{sums.bankdetails_beneficiaryname}}</td>
+                                            <td>{{sums.invoiceheader_invoiceno}}</td>
+                                            <td>{{sums.invoiceheader_invoicedate_full | date:'dd-MMM-yyyy'}}</td>
+                                            <td align="right">{{sums.credit_amount}}</td>
+                                            <td align="right">{{sums.invoiceheader_amount}}</td>
+                                            <td align="right" ng-hide="true">
+                                                {{sums.Amt_topay=sums.invoiceheader_amount}}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                        <tfoot>
+                                        <tr>
+
+                                            <td colspan="11">
+                                                <ul uib-pagination total-items="final_prepare_payment_data.length"
+                                                    ng-model="currentPages"
+                                                    max-size="maxSizes"
+                                                    class="pagination-sm" boundary-links="true"
+                                                    items-per-page="itemsPerPages"></ul>
+                                            </td>
+                                            <td colspan="2" style="padding: 20px">
+                                                <strong>Total Count:{{final_prepare_payment_data.length}}</strong>
+                                            </td>
+                                        </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-2">
+                                        <md-button class="md-raised md-warn" value="close"
+                                                   ng-click="save_Payment()" ng-disabled="enabl_from_API"
+                                                   aria-label="Close">Submit
+                                        </md-button>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </form>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Consumer No</label>
+                        <input maxlength="256" letter-Only ng-model="consumer_no"/>
+                    </md-input-container>
+                </div>
+                 <div class="col-md-3">
+                <md-autocomplete
+                                md-clear-button="true" md-floating-label="Choose Branch"
+                                md-input-maxlength=126
+                                md-item-text="item.branch_detail"
+                                md-items="item in soourcedata(searchbrancheName)"
+                                md-selected-item-change="branchNameChanged(item)"
+                                md-min-length=0 md-search-text="searchbrancheName"
+                                ng-model="itemss" md-no-cache="true" size="5"
+                                md-selected-item="branch_detail">
+                            <md-item-template>
+                                <span md-highlight-text="searchbrancheName"> {{item.branch_detail}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch Name matching "{{search Branch Name}}"
+                                were
+                                found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Transaction From Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="tran_from_date" md-hide-icons="calendar"
+                                       md-min-date="maxDate"
+                                       md-max-date="minDate" formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Transaction To Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="tran_to_date" md-hide-icons="calendar"
+                                       md-min-date="maxDate1" md-max-date="minDate" formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-12">
+
+
+                <div class="col-md-3">
+                    <md-autocomplete md-floating-label="Occupancy" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getoccupancy(searchText_)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText_" md-selected-item="occupancy_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText_">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-2">
+                    <md-autocomplete md-floating-label="Ownership" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getownership(searchText_1)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText_1" md-selected-item="ownership_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText_1">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete md-floating-label="Payment Status" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getstatus(searchText)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText" md-selected-item="status_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-2">
+                    <md-autocomplete md-floating-label="Invoice Status" md-clear-button="true"
+                                     md-input-maxlength=126 md-item-text="item.value"
+                                     md-items="item in getinvoice(searchText_2)" md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="searchText_2" md-selected-item="invoicestatus_name"
+                                     md-selected-item-change="ACselectchange(item)">
+                        <md-item-template>
+                            <td md-highlight-text="searchText_2">
+                                {{item.value}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:15px"
+                               ng-click="geteb_search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <!--                <div class="col-md-1">-->
+                <!--                    <md-button class="md-fab md-mini md-info custbutton"-->
+                <!--                               href="getreport_data?action=Bill_All&ebconsumer_branchgid={{}}&bill_paymentstatus={{stats}}&ebconsumer_no={{consumer_no}}&ebconsumer_name={{consumer_name}}&tran_fromdate={{tran_from_date}}&tran_todate={{tran_to_date}}&Entity_Gid={{selected_transaction_type}}&Create_By={{download_employee_gid}}">-->
+                <!--                        <md-icon>get_app</md-icon>-->
+                <!--                        <md-tooltip>Report</md-tooltip>-->
+                <!--                    </md-button>-->
+                <!--                </div>-->
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Consumer No</th>
+                        <th>Consumer Name</th>
+                        <th>Branch Name</th>
+                        <th>Occupancy Type</th>
+                        <th>Ownership</th>
+                        <th>State</th>
+                        <th>Board Name</th>
+                        <th>Transaction Date</th>
+                        <th>Bill Amount</th>
+                        <th>Status</th>
+                        <th>Reference No</th>
+                        <th>Payment Status</th>
+                        <th>Invoice Status</th>
+                        <th>Action</th>
+                        <th>Pay</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="pr in maintable">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td ng-click="clkon_num(pr)" align="center"><a>{{pr.ebconsumer_no }}</a></td>
+                        <td>{{pr.ebconsumer_name}}</td>
+                        <td>{{pr.branchcode_name}}</td>
+                        <td>{{pr.Occupancy}}</td>
+                        <td>{{pr.ownership}}</td>
+                        <td align="center">{{pr.ebconsumer_state}}</td>
+                        <td align="center">{{pr.ebconsumer_board}}</td>
+                        <td align="center">{{pr.bill_txndate | date:'dd-MMM-yyyy'}}</td>
+                        <td align="right">{{pr.bill_amount}}</td>
+                        <td align="center">{{pr.bill_status}}</td>
+                        <td>{{pr.bill_refno}}</td>
+                        <td align="center">{{pr.bill_paymentstatus}}</td>
+                        <td align="center">{{pr.invoiceheader_status}}</td>
+                        <td align="center">
+                            <button class="btn btn-success" style="font-size:12px"
+                                    ng-disabled="(pr.invoiceheader_status == 'CHECKER' || pr.invoiceheader_status == 'APPROVED') ? '':'true'"
+                                    ng-disabled="pr.bill_paymentstatus == 'Payment' ? 'true':''"
+                                    ng-click="popup_click(pr)">
+                                View
+                                <md-tooltip>View</md-tooltip>
+                            </button>
+                        </td>
+                        <td align="center">
+                            <button class="btn btn-success" style="font-size:12px"
+                                    ng-disabled="pr.bill_paymentstatus == 'Payment' ? 'true':''"
+                                    ng-show="(pr.invoiceheader_status == 'PAYMENT' && pr.bill_paymentstatus == 'New') ? 'true':''"
+                                    ng-click="ebpay_click(pr)">
+                                PAY
+                                <md-tooltip>PAY</md-tooltip>
+                            </button>
+                        </td>
+                    </tr>
+
+                    <tr ng-show="maintable.length ==  0">
+                        <td class="warning" colspan="8">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="12">
+                            <ul uib-pagination total-items="Total_Length" ng-model="currentPage"
+                                max-size="maxSize" ng-change="pageChanged()" class="pagination-sm"
+                                boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="1">
+                            Total Count:{{Total_Length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+    .paging {
+        width: 75px;
+        height: 15px;
+        border: 1px solid black;
+    }
+
+
+
+
+
+
+</style>
+<script>
+    var myApp = angular.module('Appprsummary', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+    myApp.controller('Ctrlprsummsry', ['$scope', 'Serviceprsummary', '$mdDialog', '$window', '$filter','$http',
+        function ($scope, Serviceprsummary, $mdDialog, $window, $filter,$http) {
+            $scope.currentPage = 1;
+            $scope.currentPge = 1;
+            $scope.currentPages = 1;
+            $scope.Total_Lengh = 12;
+
+
+            $scope.maxSize = 3;
+            $scope.maxSizes = 3;
+            $scope.itemsPerPage = 10;
+            $scope.itemsPerPages = 10;
+            $scope.itemsPerPge1 = 10;
+            $scope.maintable = [];
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.employee_gid = detail.employee_gid;
+        $scope.enabl_from_API = true;
+
+
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+
+                    $scope.loading_popup = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_prepare_payment_data')),
+                clickOutsideToClose: false
+            });
+        };
+
+
+            $scope.save_Payment = function() {
+                if($scope.status_frm_API != 'K'){
+            alert('Payment Cannot Proceed, Current Status is ' +$scope.status_frm_API )
+            return false;
+            }
+            $scope.approve_button=0;
+            var header_json=[];
+            var detail_json=[];
+            var total_amounts=0;
+            var new_paymode="";
+            var new_paymode_gl="";
+            var new_branch_name="";
+            var new_bank_details_gid="";
+            var new_account_number="";
+            var new_ifsc_code="";
+            var new_beneficiary_name="";
+
+            for (var i = 0; i < $scope.final_prepare_payment_data.length; i++) {
+                console.log($scope.final_prepare_payment_data[i])
+                if ($scope.final_prepare_payment_data[i].invoiceheader_ppx == "E"   ) {
+                       $scope.ref_id = $scope.final_prepare_payment_data[i].invoiceheader_employeegid;
+                       $scope.header_type = "EMPLOYEE_PAYMENT";
+                }else if($scope.final_prepare_payment_data[i].invoiceheader_ppx == "I" ){
+                      $scope.ref_id = $scope.final_prepare_payment_data[i].invoiceheader_branchgid;
+                         $scope.header_type = "BRANCH_PAYMENT";
+                } else{
+                     $scope.ref_id = $scope.final_prepare_payment_data[i].supplier_gid;
+                        $scope.header_type = "SUPPLIER_PAYMENT";
+                }
+                total_amounts+=$scope.final_prepare_payment_data[i].Amt_topay;
+                if($scope.final_prepare_payment_data[i].paymode_name!="CREDITGL"){
+                    new_paymode=$scope.final_prepare_payment_data[i].paymode_name;
+                    new_bank_details_gid=$scope.final_prepare_payment_data[i].credit_bankgid;
+                    new_branch_name=$scope.final_prepare_payment_data[i].bankbranch_name;
+                    new_account_number=$scope.final_prepare_payment_data[i].bankdetails_acno;
+                    new_ifsc_code=$scope.final_prepare_payment_data[i].bankbranch_ifsccode;
+                    new_beneficiary_name=$scope.final_prepare_payment_data[i].bankdetails_beneficiaryname;
+                    new_paymode_gl=$scope.final_prepare_payment_data[i].paymode_glno;
+                    new_paymode_credit_ddtranbranch=$scope.final_prepare_payment_data[i].credit_ddtranbranch;
+                    new_paymode_credit_ddpaybranch=$scope.final_prepare_payment_data[i].credit_ddpaybranch;
+                }
+
+
+                detail_values=$scope.final_prepare_payment_data[i];
+
+                detail_json.push(detail_values);
+
+            }
+            if(new_paymode=="" && $scope.final_prepare_payment_data.length>0){
+                new_paymode="CREDITGL";
+                new_bank_details_gid=0;
+                new_branch_name="null";
+                new_account_number="null";
+                new_ifsc_code="null";
+                new_beneficiary_name="null";
+                new_paymode_gl="null";
+                new_paymode_credit_ddtranbranch="";
+                new_paymode_credit_ddpaybranch="";
+            }
+
+
+
+
+
+            header_values = {
+                        "Paymentheader_Date": $filter('date')(new Date(), "yyyy-MM-dd"),
+                        "Paymentheader_Amount": parseFloat(total_amounts).toFixed(2),
+                        "REF_Gid":  $scope.ref_id,
+                        "Payment_Mode":new_paymode,
+                        "Bank_Detail_Gid": new_bank_details_gid,
+                        "Paymentheader_Status": "PAYMENT INITIATE",
+                        "Remark": "PAYMENT INITIATE",
+                        "Header_type": $scope.header_type,
+                        "bankbranch_name":new_branch_name ,
+                        "bankdetails_acno":new_account_number,
+                        "ifsccode":new_ifsc_code ,
+                        "beneficiaryname":new_beneficiary_name,
+                        "paymode_glno":new_paymode_gl,
+                        "credit_ddtranbranch":new_paymode_credit_ddtranbranch,
+                        "credit_ddpaybranch":new_paymode_credit_ddpaybranch
+            }
+            header_json.push(header_values);
+            detail_json = {"DETAILS":detail_json}
+            header_json={"HEADER":header_json}
+
+            var r = confirm("Are You Sure To prepare Payment");
+                if (r == true) {
+                    $scope.loading_popup();
+                    var setpayment = Serviceprsummary.setpayment(header_json, detail_json);
+                    setpayment.then(function(result) {
+                        if (result.data == "SUCCESS") {
+                            alert("Payment Prepared");
+                            $window.location.href = "ebdetails_paymentsmry";
+                        }
+                        else{
+                            alert(JSON.stringify(result.data));
+                            $scope.endloading();
+                            $window.location.href = "ebdetails_paymentsmry";
+                        }
+                    }, function(err) {
+                        alert(res);
+                    }).finally($scope.endloading);
+                } else
+                {
+                }
+         }
+
+
+
+$scope.status_array = [{
+        value: 'New',
+        data: 'New'
+    },{
+        value: 'Payment',
+        data: 'Payment'
+    }]
+
+    $scope.ownership_array = [{
+        value: 'Leased',
+        data: 'Leased'
+    },{
+        value: 'Own',
+        data: 'Own'
+    }]
+       $scope.invoicestatus_array = [{
+        value: 'CHECKER',
+        data: 'CHECKER'
+    },{
+        value: 'AP INITIATED',
+        data: 'AP INITIATED'
+    },{
+        value: 'PAY INITIATED',
+        data: 'PAY INITIATED'
+    },{
+        value: 'APPROVED',
+        data: 'APPROVED'
+    },{
+        value: 'REJECTED',
+        data: 'REJECTED'
+    },{
+        value: 'PAYMENT',
+        data: 'PAYMENT'
+    }]
+
+          $scope.soourcedata = function(query) {
+            var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                               "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                            "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+                         return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+                            var final_values=data.data.DATA;
+                            console.log(final_values);
+                            return final_values;
+                          });
+        }
+
+
+$scope.getstatus = Change_occupancy_Name;
+            function Change_occupancy_Name(query) {
+               var result = $filter('filter')($scope.status_array, {
+               'value': query
+                 });
+               return result;
+       }
+
+
+$scope.occupancy_array = [{
+        value: 'OnsiteATM',
+        data: 'OnsiteATM'
+    },{
+        value: 'BranchOffsite',
+        data: 'BranchOffsite'
+    },{
+        value: 'D.O',
+        data: 'D.O'
+    },{
+        value: 'C.O',
+        data: 'C.O'
+    },{
+        value: 'Office',
+        data: 'Office'
+    },{
+        value: 'Guest House',
+        data: 'Guest House'
+    },{
+        value: 'Staff Quarters',
+        data: 'Staff Quarters'
+    },{
+        value: 'Others',
+        data: 'Others'
+    }]
+$scope.getoccupancy = getoccupancy_Name;
+            function getoccupancy_Name(query) {
+               var result = $filter('filter')($scope.occupancy_array, {
+               'value': query
+                 });
+               return result;
+       }
+       $scope.getownership = getownership_Name;
+            function getownership_Name(query) {
+               var result = $filter('filter')($scope.ownership_array, {
+               'value': query
+                 });
+               return result;
+       }
+
+       $scope.getinvoice = getinvoice_Name;
+            function getinvoice_Name(query) {
+               var result = $filter('filter')($scope.invoicestatus_array, {
+               'value': query
+                 });
+               return result;
+       }
+
+$scope.final_prepare_payment_data=[];
+            $scope.clkon_num  = function(pr){
+
+            sessionStorage.setItem('fulldata', JSON.stringify(pr));
+                $window.location.href = "ebdetails_create";
+            }
+
+            $scope.popup_click = function(e){
+            $scope.status_frm_API ="";
+            $scope.enabl_from_API = true;
+            var json = {"contact_no":e.ebconsumer_contactno,
+                        "consumer_no":e.ebconsumer_no};
+    var checkpan = Serviceprsummary.validate_api(json)
+    checkpan.then(function(result){
+    $scope.status_frm_API=result.data['DATA'];
+    if($scope.status_frm_API == 'K'){
+    $scope.enabl_from_API = false;
+    }
+  }),
+                function(err) {
+                    alert('no data');
+                }
+
+
+            if(e.invoiceheader_status =='APPROVED'){
+var datas={params:{"action":"GET","type":"AP_PAYMENTDETAILS",
+                                   "filter":{"InvoiceHeader_Status":e.invoiceheader_status,"InvoiceHeader_Gid":e.bill_invoiceheader_gid,
+                                   "InvoiceHeader_InvoiceDate": "", "fromdate": "", "invoiceheader_branchgid": "",
+                                   "Page_Index": 0, "Page_Size": 10}}};
+                            $scope.loading();
+                            var summary = Serviceprsummary.get_ecf_maker_summary(datas);
+                            summary.then(function(result) {
+                                    $scope.endloading();
+                                   $scope.final_prepare_payment_data=result.data;
+                                   console.log($scope.final_prepare_payment_data);
+                                   modalshow('view_prepare_payment_data');
+                                },
+                                function(err) {
+                                    alert('No data!.');
+                                }).finally($scope.endloading);
+            modalshow('view_prepare_payment_data');
+            }
+            else{
+
+            $scope.bill_invoiceheader_crno = e.bill_invoiceheader_crno;
+            $scope.bill_invoiceheader_gid = e.bill_invoiceheader_gid;
+            $scope.branch_gid = e.branch_gid;
+            $scope.no = e.ebconsumer_no;
+            $scope.name = e.ebconsumer_name;
+            $scope.bill_amount = e.bill_amount;
+            $scope.billgid = e.bill_gid;
+
+            var data={
+              "bill_consumerno": e.ebconsumer_no
+              }
+                var data_int = {
+                "Action":'Previous_Amount',
+                "data":data,
+                "classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+                }
+                var get_purchase = Serviceprsummary.getsmrydata(data_int)
+                get_purchase.then(function (result) {
+
+                    $scope.popup_data = result.data[0];
+                    $scope.lastpayment = $scope.popup_data['Previous_Amt']
+                    modalshow('potermview_template');
+                }).finally($scope.endloading);
+}
+
+            }
+
+            $scope.pay_click= function(e){
+
+            if($scope.status_frm_API != 'K'){
+            alert('Payment Cannot Proceed, Current Status is ' +$scope.status_frm_API )
+            return false;
+            }
+
+var json = {"Invoice_Header_Gid":$scope.bill_invoiceheader_gid,
+"Status":"APPROVED",
+"Header_Status":"APPROVED",
+"Remark":"xxx",
+"Invoice_Type":"EB",
+"Is_approve_and_pay":"Y",
+"ref_no":$scope.bill_invoiceheader_crno,
+"branch_gid":$scope.branch_gid};
+
+
+    var checkpan = Serviceprsummary.approvalset(json)
+    alert('Transaction Initiated');
+    modalhide('potermview_template');
+    $window.location.href = "ebdetails_paymentsmry";
+    checkpan.then(function(result){
+    }),
+                function(err) {
+                    alert('no data');
+                }
+
+        }
+
+
+        $scope.reject_btn= function(e){
+
+$scope.loading();
+var datas={
+    "invoiceheader_gid": $scope.bill_invoiceheader_gid ,
+    "invoiceheader_remarks": $scope.reject_remarks,
+}
+var data={
+"Action":"Manual_Rejected",
+datas:datas,
+"classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+}
+    var checkpan=Serviceprsummary.pay_ebdetails(data)
+    checkpan.then(function(result){
+    $scope.status=result.data;
+    alert($scope.status);
+    $window.location.href = "ebdetails_paymentsmry";
+    }),
+                function(err) {
+                    alert('Error in API');
+                }
+$scope.endloading();
+        }
+
+
+  $scope.ebpay_click= function(e){
+  alert('Pay Initiated for '+e.ebconsumer_no);
+$scope.loading();
+var data={
+    "CustomerId": e.credit_ebcustid,
+    "MobileNo": e.ebconsumer_contactno,
+    "BankCode": "PGMKVB",
+    "ConsumerNo": e.ebconsumer_no,
+    "Outstdamount": e.bill_amount,
+    "SavingAccountNo": e.credit_glno,
+    "Channel": "IXCEED"
+}
+var datas ={
+"Action":"Payment",
+"bill_gid": e.bill_gid,
+"bill_paymentstatus":"Payment",
+"bill_invoiceheader_gid": e.bill_invoiceheader_gid,
+"bill_invoiceheader_crno": e.bill_invoiceheader_crno,
+"bill_consumerno": e.ebconsumer_no
+}
+var data={
+"Action":"Payment",
+data:data,
+datas:datas,
+"classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+}
+    var checkpan=Serviceprsummary.pay_ebdetails(data)
+    checkpan.then(function(result){
+    $scope.status=result.data;
+    alert($scope.status);
+    $window.location.href = "ebdetails_paymentsmry";
+    }),
+                function(err) {
+                    alert('Error in API');
+                }
+$scope.endloading();
+        }
+
+
+        sessionStorage.removeItem('fulldata');
+                $scope.getheaderdata = function(){
+                 if($scope.tran_from_date==null|| $scope.tran_to_date==null){
+                $scope.tran_from_date="";
+                $scope.tran_to_date="";
+            }
+
+        if($scope.status_name){
+        $scope.stats = $scope.status_name.value;
+        }else{
+        $scope.stats  = "";
+        }
+        if($scope.consumer_no == null){
+        $scope.consumer_no = "";
+        }
+        if($scope.consumer_name == null){
+        $scope.consumer_name = "";
+        }
+        if($scope.invoicestatus_name){
+        $scope.inv_stats = $scope.invoicestatus_name.value;
+        }else{
+        $scope.inv_stats  = "";
+        }
+        if($scope.ownership_name){
+        $scope.ownership_stats = $scope.ownership_name.value;
+        }else{
+        $scope.ownership_stats  = "";
+        }
+         if($scope.occupancy_name){
+        $scope.occupancy_stats = $scope.occupancy_name.value;
+        }else{
+        $scope.occupancy_stats  = "";
+        }
+            if($scope.branch_detail){
+        $scope.brnchcode = $scope.branch_detail.branch_gid;
+        }else{
+        $scope.brnchcode  = "";
+        }
+
+              var data={"ebconsumer_branchgid":"",
+              "bill_paymentstatus":$scope.stats ,
+              "ebconsumer_no": $scope.consumer_no,
+              "branch_search":$scope.brnchcode,
+              "occupancy_name" : $scope.occupancy_stats,
+              "occupancy_type": $scope.ownership_stats,
+              "invoiceheader_status" : $scope.inv_stats ,
+              "ebconsumer_name": "" ,
+              "Page_Index": $scope.currentPage - 1,
+              "Page_Size": $scope.itemsPerPage,
+              "tran_fromdate":$filter('date')($scope.tran_from_date, "yyyy-MM-dd"),
+              "tran_todate":$filter('date')($scope.tran_to_date, "yyyy-MM-dd")
+              }
+                var data_int = {
+                "Action":'Bill_All',
+                "data":data,
+                "classification":{"Entity_Gid":$scope.entity_gid,
+                "Create_By": $scope.employee_gid}
+                }
+                var get_purchase = Serviceprsummary.getsmrydata(data_int)
+                get_purchase.then(function (result) {
+debugger;
+                    $scope.maintable = result.data;
+                    if ($scope.currentPage == 1 && $scope.maintable.length != 0) {
+                    $scope.Total_Length = $scope.maintable[0].Total_Row;
+                    }
+                    if ($scope.maintable.length == 0) {
+                        $scope.currentPage == 1;
+                        $scope.Total_Length = 0;
+                    }
+                }).finally($scope.endloading);
+}
+
+                $scope.getheaderdata();
+$scope.geteb_search = function () {
+            $scope.currentPage = 1;
+            $scope.getheaderdata();
+        }
+
+        $scope.pageChanged = function () {
+            $scope.getheaderdata();
+        }
+
+
+
+        }
+    ]);
+
+    myApp.service("Serviceprsummary", function ($http) {
+
+                this.getsmrydata = function(data) {
+            var response = $http.post(Appname + "/eb_mainsmry/", data);
+            return response;
+        }
+
+        this.pay_ebdetails= function(data) {
+            var response = $http.post(Appname + "/ebconsumer_payment/", data);
+            return response;
+        }
+
+        this.approvalset=function(status_json){
+        var response=$http.post(Appname+"/Invoiceheader_set/",{params:{"action":"UPDATE","type":"STATUS","header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
+        return response;
+    }
+        this.get_ecf_maker_summary = function (datas) {
+        var response=$http.post(Appname+"/get_onward_data/",datas);
+        return response;
+    }
+        this.setpayment = function (header,details) {
+          var response = $http.post(Appname+"/APpayment_set/",{params:{"action":"Insert","type":"PAYMENT_ADD","header_json":header,"detail_json":details,"other_json":{},"status_json":{}}})
+          return response;
+    }
+this.validate_api = function (datas) {
+        var response=$http.post(Appname+"/eb_fetch_validateonly/",datas);
+        return response;
+    }
+
+
+    });
+
+
+
+
+
+
+</script>
+{% endblock %}

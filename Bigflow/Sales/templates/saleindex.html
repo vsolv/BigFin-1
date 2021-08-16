@@ -1,0 +1,976 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Sale Order Summary{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appemployee" ng-cloak ng-controller="Ctrlemployee"
+         ng-init="selectBranch($event)">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Sale Order Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <md-input-container class="md-block">
+                    <label>Sales Order No</label>
+                    <input maxlength="20" ng-model="searchquery_SalesOrderNo" type="text">
+                </md-input-container>
+            </div>
+            <div class="col-md-3" style="margin-top:12px">
+                <md-autocomplete flex
+                                 md-floating-label="Customer Name"
+                                 md-clear-button="true"
+                                 md-input-maxlength=126
+                                 md-item-text="item.display_name"
+                                 md-items="item in getcustmer(searchTex)"
+                                 md-min-length=0
+                                 md-no-cache="true"
+                                 md-search-text="searchTex"
+                                 md-selected-item="selectedItem"
+                                 md-selected-item-change="ACselectchange(item)"
+                                 ng-disabled="Customer_disable"
+                                 placeholder="Customer Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.display_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No customer matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-3" style="margin-top:12px">
+                <md-autocomplete
+                        flex
+                        md-floating-label="Product Name"
+                        md-clear-button="true"
+                        md-input-maxlength=126
+                        md-item-text="item.product_name"
+                        md-items="item in getproduct(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText"
+                        md-selected-item="selectedIt"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable"
+                        placeholder="Product"
+                        placeholder="Product">
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.product_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No product matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block">
+                    <label>So Header Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="searchquery_StartDate"></md-datepicker>
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3" style="margin-top:12px">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-input-maxlength=126
+                            md-item-text="item.employee_name"
+                            md-items="item in querySearch(searchTe)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchTe"
+                            md-selected-item="selectedemp"
+                            md-selected-item-change="ACselectchange(item)"
+                            placeholder="Executive">
+                        <md-item-template>
+                            <span md-highlight-text="searchTe"> {{item.employee_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Executive matching "{{searchTe}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block ">
+                        <label>Enter Amount</label>
+                        <input id="amount" maxlength="11" ng-model="cashAmount"
+                               ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                               valid-number/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchDetails()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-4">
+                    <md-input-container class="md-block inputcontainer">
+                        <md-radio-group layout="row" ng-change="check_radio()" ng-model="dataType">
+                            <md-radio-button value="header">Header Only</md-radio-button>
+                            <md-radio-button value="sodetails">Sale Order Details</md-radio-button>
+                        </md-radio-group>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive" ng-show="headeronly">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>SO No</th>
+                        <th>SO Date</th>
+                        <th>Customer Name</th>
+                        <th>Executive Name</th>
+                        <th>Amount W/O Tax</th>
+                        <th>Courier Name</th>
+                        <th>Select<br>
+                            <input ng-click="selectAll()" ng-model="salesmry.allItemsSelected" type="checkbox"></th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-class="{selected: entity.isCheckd}"
+                        ng-repeat="emp in salesmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.soheader_no }}</td>
+                        <td class="text-center">{{emp.soheader_date}}</td>
+                        <td class="text-left">{{emp.Customer_Display_Name}}</td>
+                        <td class="text-center">{{emp.employee_name}}</td>
+                        <td class="text-right" ng-class="emp.totalamount=='0'?'danger':'text-success'">
+                            {{emp.totalamount}}
+                        </td>
+                        <td class="text-center">{{emp.courier}}</td>
+                        <td class="text-center">
+                            <input ng-click="selectEntity(emp)"
+                                   ng-model="emp.isCheckd"
+                                   type="checkbox">
+                        </td>
+                        <td align="center">
+                            <span align="center" class="editlink">
+                                    <span class="material-icons" ng-click="edit_data(emp)">edit</span>
+                                <md-tooltip>Edit</md-tooltip>
+                                </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="4">
+                            Total Count:{{salesmry.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row table-responsive" ng-if="!headeronly">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>SO No</th>
+                        <th>SO Date</th>
+                        <th>Customer Name</th>
+                        <th>Executive Name</th>
+                        <th>Product Name</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Campaign</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Select<br>
+                            <input ng-click="selectAllSo()" ng-model="sosmry.allItemsSelectd" type="checkbox"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="text-center"
+                        ng-repeat="so in sosmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{so.soheader_no }}</td>
+                        <td>{{so.soheader_date}}</td>
+                        <td>{{so.Customer_Display_Name}}</td>
+                        <td>{{so.employee_name}}</td>
+                        <td>{{so.product_name}}</td>
+                        <td class="text-right">{{so.final_rate}}</td>
+                        <td class="text-right">{{so.sodetails_qty}}</td>
+                        <td>
+                            <select class="form-control" ng-change="getPrice(so)" ng-model="so.priceType"
+                                    style="width: 80px;">
+                                <option ng-repeat="obj in so.lj_campaign.DETAILS"
+                                        ng-value="obj.Campaign_Gid">
+                                    {{obj.Campaign_Name}}
+                                </option>
+                            </select>
+                        </td>
+                        <td class="text-right" ng-class="so.totalAmount==0?'danger':'text-success'">
+                            {{so.totalAmount=so.final_rate *so.sodetails_qty | number: 2}}
+                        </td>
+                        <td>{{so.sodetails_status}}</td>
+                        <td>
+                            <input ng-click="selectSODet(so)" ng-model="so.isChecked"
+                                   type="checkbox">
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="7">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="6">
+                            Total Count:{{sosmry.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div ng-hide="hide_btn" layout="row">
+                    <div class="col-md-12 text-center">
+                        <md-button class="btn btn-info custbutton" ng-show="shwcancl" ng-click="rejectclck(hide_btn)"
+                                   ng-disabled="disbbtn"
+                        >
+                            Sale Cancel
+                        </md-button>
+                        <md-button class="btn btn-info custbutton" ng-click="generate()" ng-disabled="disbbtn"
+                        >
+                            Generate Invoice
+                        </md-button>
+                    </div>
+                </div>
+                <div ng-show="hide_btn">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <form name="formcmnt">
+                                <input id="name" class="textboxline" maxlength="60"
+                                       placeholder="Comments for reject"
+                                       ng-model="comment"
+                                       required/>
+                                <md-button class="btn btn-info custbutton" aria-label="Reject"
+                                           ng-if="formcmnt.$valid"
+                                           ng-click="salecancel()"
+                                >
+                                    Sale Cancel
+                                </md-button>
+                                <md-button class="md-icon-button"
+                                           aria-label="cancel"
+                                           ng-if="!formcmnt.$valid"
+                                           ng-click="rejectclck(hide_btn)">
+                                    <md-icon class="material-icons editlink">clear
+                                    </md-icon>
+                                    <md-tooltip>Cancel</md-tooltip>
+                                </md-button>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrlemployee', ['$scope', 'saleService', '$mdDialog', '$rootScope', '$window', '$filter',
+    function($scope, saleService, $mdDialog, $rootScope, $window, $filter) {
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.emp_gid = detail.employee_gid;
+        $scope.entity = detail.entity_gid;
+        $scope.sosmry = [];
+        $scope.salesmry = [];
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.disbbtn = true;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false,
+                multiple: true
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.selectBranch = function() {
+            var dialogData = {
+                action: 'select_clas',
+                Params: {
+                    "Params": {
+                        "CLASSIFICATION": {
+                            "Entity_Gid": [$scope.entity]
+                        },
+                        "FILTER": {
+                            "Employee_Gid": $scope.emp_gid
+                        }
+                    }
+                }
+            }
+            $mdDialog.show({
+                    controller: 'DialogController',
+                    templateUrl: 'branchdetail',
+                    parent: angular.element(document.body),
+                    locals: {
+                        dialogData: dialogData
+                    },
+                    clickOutsideToClose: false,
+                    escapeToClose: false,
+                    fullscreen: false,
+                    multiple: true
+                }).then(function(res) {
+                    $scope.branch_gid = res[0].branch_gid;
+                    $scope.billing_state_gid = res[0].billing_state_gid;
+                    $scope.Godown_Gid = res[1].Godown_Gid;
+                }, function(err) {
+
+                })
+                .finally($scope.endloading);
+        }
+
+        $scope.getproduct = gotoprod;
+        $scope.getcustmer = gotocust;
+        $scope.querySearch = gotoexe;
+
+        $scope.selectEntity = function(data) {
+            for (var i = 0; i < $scope.salesmry.length; i++) {
+                if (($scope.salesmry[i].isCheckd) && ($scope.salesmry[i].totalamount > 0)) {
+                    if (($scope.salesmry[i].customer_gst == "") && ($scope.salesmry[i].flag == undefined)) {
+                        var name = $scope.salesmry[i].Customer_Display_Name
+                        var r = confirm('No Gst For ' + name + ' Would Like to Continue');
+                        if (r == true) {
+                            $scope.disbbtn = false;
+                            $scope.salesmry[i].flag = 'Y'
+                            $scope.salesmry.allItemsSelected = false;
+                            return;
+                        } else {
+                            $scope.salesmry[i].isCheckd = false;
+                            $scope.salesmry[i].flag = undefined;
+                        }
+                    }
+                } else {
+                    $scope.disbbtn = true;
+                    $scope.salesmry[i].flag = undefined;
+                    $scope.salesmry.allItemsSelected = false;
+                }
+            }
+            for (var i = 0; i < $scope.salesmry.length; i++) {
+                if (($scope.salesmry[i].isCheckd) && ($scope.salesmry[i].totalamount > 0)) {
+                    if ($scope.salesmry[i].customer_gst != "") {
+                        $scope.disbbtn = false;
+                        $scope.salesmry.allItemsSelected = false;
+                        return;
+                    }
+                } else {
+                    $scope.disbbtn = true;
+                    $scope.salesmry.allItemsSelectd = false;
+                }
+            }
+            $scope.salesmry.allItemsSelected = false;
+        };
+
+        $scope.selectAll = function() {
+            for (var i = 0; i < $scope.salesmry.length; i++) {
+                if ((!$scope.salesmry[i].isCheckd) && ($scope.salesmry[i].totalamount > 0)) {
+                    if ($scope.salesmry[i].customer_gst != "") {
+                        $scope.salesmry[i].isCheckd = true;
+                        $scope.disbbtn = false;
+                    } else if ($scope.salesmry[i].customer_gst == "") {
+                        $scope.salesmry[i].isCheckd = false;
+                    }
+                } else {
+                    $scope.salesmry[i].isCheckd = $scope.salesmry.allItemsSelected;
+                    $scope.disbbtn = true;
+                }
+            }
+        };
+
+        $scope.selectAllSo = function() {
+            for (var i = 0; i < $scope.sosmry.length; i++) {
+                if ((!$scope.sosmry[i].isChecked) && ($scope.sosmry[i].totalAmount > 0)) {
+                    if ($scope.sosmry[i].customer_gst != "") {
+                        $scope.sosmry[i].isChecked = true;
+                        $scope.disbbtn = false;
+                    } else if ($scope.sosmry[i].customer_gst == "") {
+                        $scope.sosmry[i].isChecked = false;
+                    }
+                } else {
+                    $scope.sosmry[i].isChecked = $scope.sosmry.allItemsSelectd;
+                    $scope.disbbtn = true;
+                }
+            }
+        };
+
+        $scope.selectSODet = function(data) {
+            for (var i = 0; i < $scope.sosmry.length; i++) {
+                if (($scope.sosmry[i].isChecked) && ($scope.sosmry[i].totalAmount > 0)) {
+                    if (($scope.sosmry[i].customer_gst == "") && ($scope.sosmry[i].flag == undefined)) {
+                        var name = $scope.sosmry[i].Customer_Display_Name
+                        var r = confirm('No Gst For ' + name + ' Would Like to Continue');
+                        if (r == true) {
+                            $scope.disbbtn = false;
+                            $scope.sosmry[i].flag = 'Y'
+                            $scope.sosmry.allItemsSelectd = false;
+                            return;
+                        } else {
+                            $scope.sosmry[i].isChecked = false;
+                            $scope.sosmry[i].flag = undefined;
+                        }
+                    }
+                } else {
+                    $scope.disbbtn = true;
+                    $scope.sosmry[i].flag = undefined;
+                    $scope.sosmry.allItemsSelectd = false;
+                }
+            }
+            for (var i = 0; i < $scope.sosmry.length; i++) {
+                if (($scope.sosmry[i].isChecked) && ($scope.sosmry[i].totalAmount > 0)) {
+                    if ($scope.sosmry[i].customer_gst != "") {
+                        $scope.disbbtn = false;
+                        $scope.sosmry.allItemsSelectd = false;
+                        return;
+                    }
+                } else {
+                    $scope.disbbtn = true;
+                    $scope.sosmry.allItemsSelectd = false;
+                }
+            }
+
+            $scope.sosmry.allItemsSelectd = false;
+        };
+
+        function gotoprod(query) {
+            var result = $filter('filter')($scope.prodnme, {
+                'product_name': query
+            });
+            return result;
+        }
+
+        function gotocust(query) {
+            var result = $filter('filter')($scope.customers, {
+                'display_name': query
+            });
+            return result;
+        }
+
+        function gotoexe(query) {
+            var result = $filter('filter')($scope.executivename, {
+                'employee_name': query
+            });
+            return result;
+        }
+
+        $scope.searchDetails = function() {
+            if ($scope.dataType == "header") {
+                $scope.headeronly = true;
+                loaddata();
+            } else {
+                $scope.headeronly = false;
+                loadSODetails();
+            }
+        }
+
+        $scope.dataType = "header";
+        $scope.searchDetails();
+
+        function loaddata() {
+            getValues();
+            var data = {
+                "Parms": {
+                    "Filter": {
+                        Header_No: $scope.searchquery_SalesOrderNo,
+                        Customer_Name: $scope.cus,
+                        Product_Name: $scope.prod,
+                        Date: $scope.sodate,
+                        Emp_name: $scope.emp,
+                        Amount: $scope.cashAmount
+                    },
+                    "Classification": {
+                        Entity_Gid: [$scope.entity],
+                        Client_Gid: []
+                    }
+                }
+            }
+            var datainit = {
+                Action: 'SALES_REGISTER',
+                date: "",
+                cust_gid: 0,
+                Emp_Gid: 0,
+                limit: 1000,
+                Group: 'SO_Register',
+                data: data
+            }
+
+            var get_salesSummary = saleService.getsales(datainit)
+            get_salesSummary.then(function(result) {
+                $scope.maintable = result.data.DATA
+                $scope.salesmry = $scope.maintable
+                $scope.pageLength = $scope.salesmry.length;
+                for (i = 0; i < $scope.salesmry.length; i++) {
+                    var sodetail = $scope.salesmry[i].so_details;
+                    var sum = 0;
+                    for (j = 0; j < sodetail.length; j++) {
+                        sodetail[j].newval = parseInt((sodetail[j].Order_Quantity) * (sodetail[j].Final_Rate))
+                        sum = sum + parseInt(sodetail[j].newval)
+                    }
+                    $scope.salesmry[i].totalamount = sum;
+                }
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+            modalshow('mdl_presen');
+        };
+
+        function loadSODetails() {
+            $scope.loading();
+            getValues();
+            var sodata = {
+                "Parms": {
+                    "Filter": {
+                        Header_Gid: '',
+                        Header_No: $scope.searchquery_SalesOrderNo,
+                        Cust_Name: $scope.cus,
+                        State_Code: "SN00002",
+                        Date: $scope.sodate,
+                        Emp_name: $scope.emp,
+                        Amount: $scope.cashAmount,
+                        Product_Name: $scope.prod
+                    },
+                    "Classification": {
+                        Entity_Gid: [$scope.entity],
+                        Client_Gid: []
+                    }
+                }
+            }
+            var dataint = {
+                Action: 'SALES_DETAILS_INVOICE',
+                date: "",
+                cust_gid: 0,
+                Emp_Gid: 0,
+                limit: 1000,
+                Group: 'SO_Invoice_Register',
+                data: sodata
+            }
+
+            var getsodet = saleService.getsales(dataint)
+            getsodet.then(function(result) {
+                    $scope.maintabl = result.data.DATA
+                    $scope.sosmry = $scope.maintabl
+                    $scope.pageLength = $scope.sosmry.length;
+                    loaddrpdwn();
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally($scope.endloading);
+        };
+
+        function getValues() {
+            if ($scope.selectedItem) {
+                $scope.cus = $scope.selectedItem.customer_name;
+            } else {
+                $scope.cus = '';
+            }
+            if ($scope.selectedIt) {
+                $scope.prod = $scope.selectedIt.product_name;
+            } else {
+                $scope.prod = '';
+            }
+            if ($scope.selectedemp) {
+                $scope.emp = $scope.selectedemp.employee_name;
+            } else {
+                $scope.emp = '';
+            }
+            if ($scope.searchquery_SalesOrderNo == undefined) {
+                $scope.searchquery_SalesOrderNo = '';
+            }
+            if ($scope.cashAmount == undefined) {
+                $scope.cashAmount = '';
+            }
+            if ($scope.searchquery_StartDate == undefined) {
+                $scope.sodate = '';
+            } else {
+                $scope.sodate = formatStringDate($scope.searchquery_StartDate, 'yyyy-mm-dd');
+            }
+        };
+
+        var get_employ = saleService.getprod('100', '')
+        get_employ.then(function(result) {
+                $scope.prodnme = [];
+                $scope.prodnme = result.data.DATA;
+                if ($scope.selectedcustgrp != undefined) {
+                    textvalue($scope.selectedcustgrp)
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+
+        var datan = {
+            "Table_name": "gal_mst_temployee",
+            "Column_1": "employee_gid,employee_name",
+            "Column_2": "",
+            "Where_Common": "employee",
+            "Where_Primary": "dept_gid",
+            "Primary_Value": "1",
+            "Order_by": "name"
+        }
+
+        var trans = {
+            Action: "",
+            Entity_Gid: $scope.entity,
+            data: datan
+        }
+
+        var getemployee = saleService.getprodt(trans)
+        getemployee.then(function(result) {
+            $scope.executivename = result.data.DATA;
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+
+        var dta = {
+            "params": {
+                "FILTER": {}
+            }
+        }
+        var custdata = {
+            "Entity_Gid": $scope.entity,
+            "Group": 'CUST_GET',
+            "data": dta
+        }
+
+        var get_cust = saleService.getcust(custdata)
+        get_cust.then(function(result) {
+            $scope.customers = result.data.DATA
+        }, function(err) {}).finally();
+
+        $scope.getPrice = function(rowDetail) {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                        "SO_Header_GidS": rowDetail.soheader_gid,
+                        "Campaign_Gid": rowDetail.priceType,
+                        "Product_Gid": rowDetail.product_gid
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity],
+                        "client_gid": []
+                    }
+                }
+            }
+            var dataint = {
+                Group: 'INV_Process_Single_GET',
+                Type: 'INV_PROCESS',
+                Sub_Type: 'SINGLE',
+                data: data
+            }
+            $scope.loading();
+            var responcePrice = saleService.setinv(dataint);
+            responcePrice.then(function(result) {
+                var te = [];
+                te = result.data.DATA;
+                var index = $scope.sosmry.findIndex(m => m == rowDetail);
+                if (te.length != 0) {
+                    $scope.sosmry[index].final_rate = te[0].rate;
+                } else {
+                    $scope.sosmry[index].final_rate = 0;
+                }
+            }, function(err) {
+                alert("Test");
+            }).finally($scope.endloading);
+        }
+
+        function loaddrpdwn() {
+            var data = {
+                "Parms": {
+                    "Classification": {
+                        "Entity_Gid": [$scope.entity]
+                    },
+                    "Filter": {
+                        "XXXXX": ""
+                    }
+                }
+            }
+            var dta = {
+                Group: 'CAMPAIGN_GET',
+                Type: 'INVOICE',
+                SubType: 'SALES',
+                data: data
+            }
+
+            var getcompaig = saleService.getdrpdwn(dta)
+            getcompaig.then(function(result) {
+                $scope.getcompaign = result.data.DATA;
+                for (var j = 0; j < $scope.sosmry.length; j++) {
+                    $scope.sosmry[j].priceType = $scope.sosmry[j].sodetails_campaign_gid;
+                }
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+
+        $scope.check_radio = function() {
+            if ($scope.dataType == "header") {
+                $scope.shwcancl = false;
+                $scope.headeronly = true;
+            } else {
+                $scope.headeronly = false;
+                $scope.shwcancl = true;
+                if ($scope.sosmry.length == 0) {
+                    loadSODetails();
+                }
+            }
+        }
+
+        $scope.edit_data = function(e) {
+            var header = {
+                sesnentyid: $scope.entity,
+                sesnempid: $scope.emp_gid,
+                gid: e.soheader_gid,
+                headerno: e.soheader_no,
+                custname: e.Customer_Display_Name,
+                empname: e.employee_name,
+                sodate: e.soheader_date,
+                amnt: e.soheader_amount,
+                billinggid: $scope.billing_state_gid,
+                godowngid: $scope.Godown_Gid,
+                branch_gid: $scope.branch_gid
+            };
+            sessionStorage.setItem('header_details', JSON.stringify(header));
+            $window.location.href = "saleinvoice";
+        }
+
+        $scope.Delete = function() {
+            var r = confirm("Do You Want To Cancel This Sales!");
+            if (r == true) {
+                salesfulldelete();
+            } else {
+                $window.location.href = "direct";
+            }
+        }
+
+        $scope.salecancel = function() {
+            $scope.ary = [];
+            $scope.ary1 = [];
+            var headerGid = 0;
+            for (var j = 0; j < $scope.sosmry.length; j++) {
+                if ($scope.sosmry[j].isChecked) {
+                    headerGid = $scope.sosmry[j].soheader_gid;
+                    detailGid = $scope.sosmry[j].sodetails_gid;
+                    $scope.ary.push(headerGid);
+                    $scope.ary1.push(detailGid);
+                }
+            }
+
+            $scope.loading();
+            var datas = {
+                "Header_Data": {
+                    "sodetails_gid": $scope.ary1,
+                    "soheader_gid": $scope.ary,
+                    "Godown_Gid": $scope.Godown_Gid,
+                    "soheader_status": "COMPLETED",
+                    "sodetails_status": "CANCELLED",
+                    "soheader_remarks": $scope.comment
+                },
+                "CLASSIFICATION": {
+                    "entity_gid": $scope.entity
+                }
+            }
+            var datain = {
+                Group: 'SALES_PARTIAL_CANCEL',
+                Action: 'SO_CANCEL',
+                Create_by: $scope.emp_gid,
+                data: datas
+            }
+            setinvdet(datain)
+        }
+
+        $scope.rejectclck = function(iscommnt) {
+            if (iscommnt) {
+                $scope.hide_btn = false;
+            } else {
+                $scope.hide_btn = true;
+            }
+        };
+
+        $scope.generate = function() {
+            $scope.last = [];
+            var data = [];
+            $scope.data1 = '';
+            var data2 = '';
+            for (var i = 0; i < $scope.sosmry.length; i++) {
+                if ($scope.sosmry[i].isChecked) {
+                    data = {
+                        SOHeader_Gid: $scope.sosmry[i].soheader_gid,
+                        SODetail_Gid: $scope.sosmry[i].sodetails_gid,
+                        Product_Gid: $scope.sosmry[i].product_gid,
+                        Campaign_Gid: $scope.sosmry[i].priceType,
+                        Order_Quantity: $scope.sosmry[i].sodetails_qty,
+                        Customer_Gid: $scope.sosmry[i].customer_gid,
+                        Godown_Gid: $scope.Godown_Gid
+                    }
+                    $scope.last.push(data);
+                }
+            }
+            for (var j = 0; j < $scope.salesmry.length; j++) {
+                if ($scope.salesmry[j].isCheckd) {
+                    var Godown_Gid = $scope.Godown_Gid
+                    for (var i = 0; i < $scope.salesmry[j].so_details.length; i++) {
+                        $scope.salesmry[j].so_details[i]['Godown_Gid'] = Godown_Gid;
+                    }
+                    $scope.data1 = $scope.salesmry[j].so_details
+                    for (var k = 0; k < $scope.data1.length; k++) {
+                        data2 = $scope.data1[k],
+                            $scope.last.push(data2)
+                    }
+                }
+            }
+
+            $scope.loading();
+            var datas = {
+                "Params": {
+                    "HEADER": {
+                        "State_Billing_From_Gid": $scope.billing_state_gid,
+                        "Employee_Gid": $scope.emp_gid
+                    },
+                    "DETAILS": {
+                        "SO_DETAILS": $scope.last
+                    },
+                    "RATE": {
+                        "Capaign_Gid": 0
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity],
+                        "Entity_Details_Gid": [1],
+                        "Branch_Gid": $scope.branch_gid
+                    }
+                }
+            }
+            var datain = {
+                Group: 'SALES_INV_PROCESS',
+                Action: 'Insert',
+                Type: 'SODETAILS_LEVEL',
+                Create_by: $scope.emp_gid,
+                Is_Commit: 'Y',
+                data: datas
+            }
+            setinvdet(datain)
+        }
+
+        function setinvdet(datain) {
+            var set_state = saleService.setinv(datain)
+            set_state.then(function(result) {
+                    $scope.prodge = result.data.MESSAGE;
+                    if ($scope.prodge == "SUCCESS") {
+                        alert($scope.prodge);
+                        $window.location.href = "saleindex";
+                    } else {
+                        alert($scope.prodge);
+                        for (var i = 0; i < $scope.sosmry.length; i++) {
+                            if ($scope.sosmry[i].isChecked) {
+                                $scope.sosmry[i].isChecked = false;
+                            }
+                        }
+                        for (var j = 0; j < $scope.salesmry.length; j++) {
+                            if ($scope.salesmry[j].isCheckd) {
+                                $scope.salesmry[j].isCheckd = false;
+                            }
+                        }
+                    }
+                    $scope.endloading();
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+    }
+]);
+
+myApp.service("saleService", function($http) {
+    this.getsales = function(custid) {
+        var respons = $http.post(Appname + "/saleget/",
+            custid
+        );
+        return respons;
+    }
+    this.getstate = function(custid) {
+        var respons = $http.post(Appname + "/stateget/",
+            custid
+        );
+        return respons;
+    }
+    this.setinv = function(custid) {
+        var respons = $http.post(Appname + "/setinvc/",
+            custid
+        );
+        return respons;
+    }
+    this.getcust = function(custid) {
+        var respons = $http.post(Appname + "/custgroup/",
+            custid
+        );
+        return respons;
+    }
+    this.getdrpdwn = function(custid) {
+        var respons = $http.post(Appname + "/compgn/",
+            custid
+        );
+        return respons;
+    }
+    this.getprodt = function(custid) {
+        var respons = $http.post(Appname + "/prodget/",
+            custid
+        );
+        return respons;
+    }
+    this.getprod = function(lmt, prodnme) {
+        var response = $http.get(Appname + "/prodgett/", {
+            params: {
+                "Limit": lmt,
+                "Product_Name": prodnme
+            }
+        });
+        return response;
+    }
+});
+</script>
+{% endblock %}

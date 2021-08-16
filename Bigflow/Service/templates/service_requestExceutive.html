@@ -1,0 +1,575 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Service Request {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appschedule" ng-controller="Ctrlschedulereport" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12" ng-show="!direct_screen">
+                <h4>Service Request - Field Executive</h4>
+            </div>
+            <div class="row-header col-lg-12 col-sm-12" ng-show="direct_screen">
+                <h4>Service Request - Direct</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                      <md-input-container class="md-block inputcontainer">
+        <label>Product Type</label>
+        <md-select ng-model="product_type" md-on-close="clearSearchTerm()"
+                   data-md-container-class="selectdemoSelectHeader">
+          <md-select-header class="demo-select-header">
+            <input ng-model="searchTerm" type="search" placeholder="Search for a Product Type.." class="demo-header-searchbox md-text">
+          </md-select-header>
+          <md-optgroup label="Product Type">
+             <md-option ng-repeat="pro in Producttype | filter:searchTerm" ng-click="producttype_click(pro.producttype_gid)"
+                                       ng-value="pro" ng-selected="protypegid==pro.producttype_gid">
+                                {{ pro.producttype_name }}
+                            </md-option>
+          </md-optgroup>
+        </md-select>
+      </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <label>Product Name</label>
+                    <!--<md-select ng-model="product_name" required>-->
+                    <!--<md-option ng-repeat="name in Productname" ng-value="name"-->
+                    <!--ng-selected="pronamegid==name.product_gid">-->
+                    <!--{{ name.product_name }}-->
+                    <!--</md-option>-->
+                    <!--</md-select>-->
+                    <md-autocomplete
+                            md-no-cache="true"
+                            md-selected-item="product_name"
+                            md-search-text="searchTextproduct"
+                            md-selected-item-change="ACselectchange(item)"
+                            md-items="item in querySearchproduct(searchTextproduct)"
+                            md-item-text="item.product_name"
+                            md-min-length=0
+                            required>
+                        <md-item-template>
+                            <span md-highlight-text="searchTextproduct"> {{item.product_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{searchTextproduct}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                  <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Product Count</label>
+                        <input type="text" maxlength="128" ng-model="count" ng-init="count = 1">
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                      <md-input-container class="md-block inputcontainer">
+        <label>Send By</label>
+        <md-select ng-model="search_emp" ng-disabled="service_disable" required md-on-close="clearSearchTerm()"
+                   data-md-container-class="selectdemoSelectHeader">
+          <md-select-header class="demo-select-header">
+            <input ng-model="searchTer" type="search" placeholder="Search for a Send By.." class="demo-header-searchbox md-text">
+          </md-select-header>
+          <md-optgroup label="Send By">
+            <md-option ng-repeat="y in employe | filter:searchTer" ng-value="y" ng-selected="emply==y.employee_gid">{{
+                                y.employee_name }}
+                            </md-option>
+          </md-optgroup>
+        </md-select>
+      </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="col-lg-3 col-sm-3 col-md-3" ng-show="add_screen">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Product SI No</label>
+                        <input type="text" maxlength="12" ng-model="slno" ng-init="slno = updata.service_productslno"
+                               required>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Send On</label>
+                        <md-datepicker ng-disabled="service_disable" md-hide-icons="calendar" ng-model="to_date"
+                                       md-min-date="maxDate" md-max-date="minDate" md-hide-icons="calendar"
+                                       ng-click="date" formatDate required></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                          <md-input-container  class="md-block inputcontainer">
+                        <label>Courier Exp by</label>
+                        <md-select ng-model="Pay_by" ng-disabled="service_disable" required>
+                            <md-optgroup label="Courier Exp by">
+                                <md-option ng-repeat="y in payby" ng-value="y" ng-selected="courierexp==y.pay_code"> {{y.pay}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <label>Customer Name</label>
+                    <md-autocomplete ng-disabled="auto_disable"
+                                     md-no-cache="true"
+                                     md-selected-item="selectedItem"
+                                     md-search-text="searchText"
+                                     md-selected-item-change="ACselectchange(item)"
+                                     md-items="item in querySearch(searchText)"
+                                     md-item-text="item.display_name"
+                                     md-min-length=0
+                                     md-clear-button="!auto_disable"
+                                     required>
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.display_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Remark</label>
+                        <input type="text" maxlength="128" ng-model="remark" ng-init="remark = updata.service_remarks"
+                               required>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12 col-lg-12 col-sm-12 " ng-show="!add_screen">
+            <div class="pull-right">
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-button class="md-fab md-mini md-primary custbutton" id="btn_create" type="submit"
+                               ng-click="add_continue()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Add & Continue</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5 col-sm-3 col-md-3 pull-right" ng-show="add_screen">
+            <md-button type="submit" class="md-raised md-primary" id="btn_create" ng-click="update()">
+                Update
+            </md-button>
+        </div>
+        </span>
+        <div name="demoForm" novalidate>
+            <div class="row" ng-show="!add_screen">
+                <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                           md-progress="deferred">
+                        <thead class="header">
+                        <tr style="text-align:center">
+                            <th>SR.No</th>
+                            <th>SR Date</th>
+                            <th>SR Raised By</th>
+                            <th>Product Type</th>
+                            <th>Product Name</th>
+                            <th>Product SI NO</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="m in ServiceDetails ">
+                            <td>{{$index + 1}}</td>
+                            <td>{{m.SR_Date | date:'dd-MMM-yyyy'}}</td>
+                            <td>{{m.Employee_name}}</td>
+                            <td>{{m.Product_type}}</td>
+                            <td>{{m.Product_name}}</td>
+
+                            <td><input type="text" maxlength="12" ng-model="m.Product_slno"
+                                       required></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12 col-lg-12 col-sm-12 " ng-show="!add_screen">
+            <div class="pull-right">
+                <md-button ng-show="showadd" type="submit" class="btn btn-info custbutton" id="btn_create"
+                           ng-disabled="demoForm.$invalid" ng-click="add_close()">Submit
+                </md-button>
+                <md-button class="md-raised" href="servicesummary">Close</md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+
+
+
+</style>
+<script>
+var app=angular.module('Appschedule',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+app.controller('Ctrlschedulereport', ['$scope', '$http', 'requestservice', '$filter', '$window', '$mdDateLocale','$element',
+ function($scope, $http, requestservice, $filter, $window, $mdDateLocale,$element) {
+
+      $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+
+   $scope.to_date = new Date();
+   $scope.ls_followup_date = new Date();
+
+//date format
+   $scope.minDate = new Date(
+      $scope.ls_followup_date.getFullYear(),
+      $scope.ls_followup_date.getMonth(),
+      $scope.ls_followup_date.getDate()
+   );
+
+   $scope.maxDate = new Date(
+      $scope.ls_followup_date.getFullYear(),
+      $scope.ls_followup_date.getMonth() - 3,
+      $scope.ls_followup_date.getDate() - 1
+   );
+
+   $mdDateLocale.formatDate = function(date) {
+      return $filter('date')($scope.to_date, "dd-MMM-yyyy");
+   };
+
+   var producttype = requestservice.getproducttype()
+   producttype.then(function(result) {
+         var result1 = JSON.parse(result.data);
+         $scope.Producttype = result1;
+      }),
+      function() {
+         alert('no data');
+      };
+
+   $scope.producttype_click = function(gid) {
+      var productname = requestservice.getproductname(gid)
+      productname.then(function(result) {
+            var result = JSON.parse(result.data);
+
+            $scope.Productname = result;
+         }),
+         function() {
+            alert('no data');
+         };
+   }
+
+   $scope.employe = [];
+   var employee = requestservice.getemployee()
+   employee.then(function(result) {
+         $scope.employe = JSON.parse(result.data);
+         if($scope.employe != undefined){
+            if (SR_gid == null)
+                {
+                    $scope.emply =$scope.employe[0].emp_gid;
+                }
+         }
+
+      }),
+      function() {
+         alert('no data');
+      };
+
+   var SR_direct = sessionStorage.getItem('Direct_mode');
+   if (SR_direct !== null) {
+   $scope.direct=true;
+
+   var cust = requestservice.getCustomername(0)
+   cust.then(function(result) {
+         $scope.Customer = result.data;
+      }),
+      function() {
+         alert('no data');
+      };
+   }
+   else{
+    $scope.direct=false;
+
+    var cust = requestservice.getCustomername()
+   cust.then(function(result) {
+         $scope.Customer = result.data;
+      }),
+      function() {
+         alert('no data');
+      };
+   }
+
+
+   $scope.querySearch = function(query) {
+      te = $filter('filter')($scope.Customer, {
+         'display_name': query
+      });
+      return te;
+   }
+
+    $scope.querySearchproduct = function(query) {
+
+      te = $filter('filter')($scope.Productname, {
+         'product_name': query
+      });
+      return te;
+   }
+
+   var courier = requestservice.getcourier_dtl()
+   courier.then(function(result) {
+         $scope.courier_dtl = result.data
+      }),
+      function() {
+         alert('no data');
+      };
+
+   $scope.ServiceDetails = [];
+   $scope.SERVICE = [];
+
+
+   if (SR_direct !== null) {
+      $scope.direct_screen = !$scope.direct_screen;
+
+      var dispatch_mode = 'DIRECT'
+   } else {
+      var dispatch_mode = 'EXECUTIVE'
+   }
+
+   function servicejson_set() {
+
+  $scope.finalresult="";
+    if($scope.ServiceDetails.length>0){
+      for(var j=0;j<$scope.ServiceDetails.length;j++){
+      if( $scope.ServiceDetails[j].Product_slno !== undefined && $scope.ServiceDetails[j].Product_slno !== "" && $scope.ServiceDetails[j].Product_slno !== "0" ){
+        $scope.SERVICE.push({
+         product_gid: $scope.ServiceDetails[j].product_gid,
+         product_slno:  $scope.ServiceDetails[j].Product_slno,
+         invoice_no: '',
+         remark:  $scope.ServiceDetails[j].remark,
+         dispatch_mode: $scope.ServiceDetails[j].dispatch_mode,
+         pay_by:$scope.ServiceDetails[j].pay_by,
+        });
+      }
+       else{
+        alert("Serial Number should be filled");
+         $scope.finalresult="error";
+        return false;
+     }
+    }
+    }else{
+        $scope.SERVICE.push({
+         product_gid: $scope.product_name.product_gid,
+         product_slno: $scope.slno,
+         invoice_no: '',
+         remark: $scope.remark,
+         //service_gid:1,
+         dispatch_mode: dispatch_mode,
+         pay_by: $scope.Pay_by.pay_code,
+         //dispatch_gid:'',
+         //central_off_dispatch_gid:'',
+         //is_removed:'N',
+
+      })
+    }
+
+   }
+
+   $scope.add_continue = function() {
+
+
+        $scope.slno='0';
+    
+      var slnochk = $scope.slno;
+      $scope.no_chk = $filter('filter')($scope.ServiceDetails, {
+         Product_slno: slnochk
+      }, true);
+
+      if ($scope.no_chk.length > 0) {
+         alert("Slno Already Inserted")
+         return false;
+      }
+
+      if ($scope.product_type !== undefined && $scope.product_name !== undefined && $scope.product_name !== null && $scope.search_emp !== undefined && $scope.slno !== undefined && $scope.remark !== undefined && $scope.Pay_by !== undefined && $scope.selectedItem !== null && $scope.slno !== "" && $scope.remark !== "") {
+         $scope.service_disable = "true";
+         $scope.auto_disable = "true"
+
+        if($scope.count>0){
+          for(var i=0;i<$scope.count;i++){
+            $scope.ServiceDetails.push({
+                sno: 1,
+                SR_Date: $scope.to_date,
+                product_gid: $scope.product_name.product_gid,
+                Product_type: $scope.product_type.producttype_name,
+                Product_name: $scope.product_name.product_name,
+                Employee_name: $scope.search_emp.employee_name,
+                invoice_no: '',
+                remark: $scope.remark,
+                dispatch_mode: dispatch_mode,
+                pay_by: $scope.Pay_by.pay_code,
+               });
+           };
+        }
+
+         $scope.slno = "";
+         $scope.remark = "";
+         $scope.product_type = "";
+         $scope.product_name = "";
+         $scope.showadd = true;
+
+      } else {
+         alert("Fill The Required Fields")
+
+      }
+   }
+
+   function selecteddate() {
+
+      var d = $scope.to_date;
+      var curr_date = d.getDate();
+      var curr_month = d.getMonth();
+      curr_month++;
+      var curr_year = d.getFullYear();
+      Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+   }
+
+   var service_json = {
+      SERVICE: $scope.SERVICE,
+      "Schedule_Affect":"YES"
+   }
+
+   $scope.add_close = function() {
+      servicejson_set()
+       if($scope.finalresult == "error"){
+            return false;
+       }
+      selecteddate();
+      var cust_gid = $scope.selectedItem.customer_gid;
+      var empl_gid = $scope.search_emp.employee_gid;
+      var save_service = requestservice.setservice_dtl('Insert', cust_gid, service_json, Service_date, empl_gid);
+      save_service.then(function(result) {
+         alert("Inserted Successfully!.");
+         if (SR_direct !== null) {
+            sessionStorage.clear();
+            $window.location.href = "Servicedirect";
+         } else {
+            $window.location.href = "servicesummary";
+         }
+      });
+   }
+
+
+   var SR_gid = sessionStorage.getItem('Service_gid');
+
+   if (SR_gid !== null) {
+      $scope.add_screen = !$scope.add_screen;
+      $scope.service_disable = "true";
+      var servicedtl = requestservice.getservicedtl(SR_gid)
+
+      servicedtl.then(function(result) {
+           console.log(result.data);
+         var Serviceupdate = result.data;
+         $scope.protypegid = Serviceupdate[0].producttype_gid;
+         $scope.producttype_click(Serviceupdate[0].producttype_gid);
+         $scope.pronamegid = Serviceupdate[0].service_product_gid;
+         $scope.searchTextproduct=Serviceupdate[0].product_name;
+         $scope.emply = Serviceupdate[0].employee_gid;
+         $scope.to_date = new Date(Serviceupdate[0].service_date);
+         $scope.slno = Serviceupdate[0].service_productslno;
+         $scope.remark = Serviceupdate[0].service_remarks;
+         $scope.searchText = Serviceupdate[0].customer_name;
+         $scope.customer_gid = result.data[0].service_customer_gid;
+         $scope.service_gid = Serviceupdate[0].service_gid;
+         $scope.courierexp = Serviceupdate[0].service_courierexp.charAt(0);
+         // $scope.Serviceupdate = result.data;
+
+      });
+   }
+
+   $scope.update = function() {
+      selecteddate();
+      servicejson_set();
+      service_json.SERVICE[0].service_gid = $scope.service_gid
+
+      var cust_gid = $scope.customer_gid;
+      var empl_gid = $scope.search_emp.employee_gid
+      if ($scope.selectedItem !== null) {
+         cust_gid = $scope.selectedItem.customer_gid;
+      }
+      var save_service = requestservice.setservice_dtl('update', cust_gid, service_json, Service_date, empl_gid);
+      save_service.then(function(result) {
+
+         if (result.data == 'SUCCESS') {
+            alert(" Updated Successfully");
+            $window.location.href = "servicesummary";
+
+         } else {}
+
+      })
+   }
+
+   $scope.update_click = function() {
+
+      modalshow('mdl_present');
+   }
+
+
+   $scope.payby = [{
+      pay: "Customer",
+      pay_code: "C"
+   }, {
+      pay: "Executive",
+      pay_code: "E"
+   }];
+
+
+}]);
+
+app.service("requestservice", function ($http) {
+
+    this.getemployee = function (d) {
+        var response = $http.get(Appname+"/employe_get/");
+        return response;
+    }
+
+    this.getproducttype = function (details) {
+
+        var response = $http.post(Appname+"/Producttype_service/", { params:{'producttype_gid': 0} });
+        return response;
+    }
+
+    this.getproductname = function(gid){
+            var response = $http.post(Appname+"/Productname_service/",{params:{'producttype_gid':gid,'supplier_gid':0}});
+        return response;
+        }
+
+    this.getCustomername = function(emp_gid){
+        var response = $http.post(Appname+"/get_mappedcustomer/",{params:{'Emp_gid':emp_gid}});
+        return response;
+        }
+
+    this.setservice_dtl = function(action,cust_gid,service,date,emplgid){
+        var response = $http.post(Appname+"/Service_set/",{params:{'action':action,'date':date,'customer_gid':cust_gid,'status':'INITIATED','SERVICE_JSON':service,'entity_gid':1,'employee_gid':emplgid}});
+        return response;
+        }
+
+    this.getservicedtl = function(sr_gid){
+        var response = $http.post(Appname+"/ServiceDtl_get/",{params:{'from_date':'','to_date':'','customer_gid':0,'product_gid':0,'service_gid':sr_gid}});
+        return response;
+        }
+
+    this.getcourier_dtl = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params: { "courier_gid": 0, "courier_name":''} });
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

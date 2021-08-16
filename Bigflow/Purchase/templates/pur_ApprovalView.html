@@ -1,0 +1,949 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Approval {% endblock %}
+{% block content %}
+{% csrf_token %}
+<link href="{% static 'Content/font-awesome-4.1.0.css' %}" rel="stylesheet">
+<link href="{% static 'Content/robotofonttext400300.css' %}" rel="stylesheet">
+<link href="{% static 'Content/textangular.css' %}" rel="stylesheet">
+<script src="{% static 'Scripts/Core/textAngular-rangy.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular-sanitize.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular.js' %}"></script>
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appprapproval" ng-controller="Ctrlprapproval" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PR Approval</h4>
+            </div>
+        </div>
+        </br>
+        <div class="row row-search" ng-form="searchfrom">
+            <form role="form">
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PR No</label>
+                        <input class="textboxgeneral" ng-disabled="true" ng-model="prheader_no" />
+                    </md-input-container>
+
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PR Date</label>
+                        <input class="textboxgeneral" ng-disabled="true" ng-model="prheader_date| date:'dd-MMM-y'" />
+                    </md-input-container>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PR Raised By</label>
+                        <input class="textboxgeneral" ng-disabled="true" ng-model="employee_name" />
+                    </md-input-container>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Commodity Name</label>
+                        <input class="textboxgeneral" ng-disabled="true" ng-model="commodity_name" />
+                    </md-input-container>
+                </div>
+                <div class="col-lg-4 col-sm-3">
+                    <md-autocomplete md-clear-button="true" md-floating-label="Choose Approver" md-input-maxlength=126
+                        md-item-text="item.employee_name" md-items="item in getcust(searchText)" md-min-length=0
+                        md-no-cache="true" md-search-text="searchText" md-selected-item="limi"
+                        md-selected-item-change="Loader(limi)">
+                        <md-item-template>
+
+                            <span md-highlight-text="searchText"> {{item.employee_code}}--
+                                {{item.employee_name}} --{{item.delmat_limit}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Approver matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-12" style="text-align:right" style="margin-top:16px">
+            <span title="Add a Note" ng-click="notepad()" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                        </span>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewnotepad" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Note Pad</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <div text-angular="text-angular" id="con"  name="htmlcontent" ng-focus="displaynamechng('content_flag')" ng-model="htmlcontent" ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                    md-progress="deferred">
+                    <thead class="header" style="text-align:center;">
+                        <tr>
+                            <td>
+                                S.No
+                            </td>
+                            <td>
+                                Product Category
+                            </td>
+                            <td>
+                                Product Type
+                            </td>
+                            <td>
+                                Product Name
+                            </td>
+                            <td>Supplier Name</td>
+                            <td>
+                                UOM
+                            </td>
+                            <td style="text-align:center;">
+                                Quantity
+                            </td>
+                            <td style="text-align:left;">
+                                Unit Price
+                            </td>
+                            <td>Amount</td>
+                            <td>Capitalize</td>
+                            <th>Delivery Details</th>
+                            <th>Download File</th>
+                            <th>View File</th>
+                        </tr>
+                    </thead>
+                    <tbody style="text-align:center;">
+                        <tr ng-repeat="prapp in approval_details ">
+                            <td>
+                                <center>{{+$index+1}}</center>
+                            </td>
+                            <td>
+                                {{prapp.productcategory_name}}
+                            </td>
+                            <td>
+                                {{prapp.producttype_name}}
+                            </td>
+                            <td>{{prapp.product_name}}</td>
+                            <td>{{prapp.supplier_name}}</td>
+                            <td>{{prapp.uom_name}}</td>
+                            <td>{{prapp.prdetails_qty|number:amount}}</td>
+                            <td>{{prapp.supplierproduct_unitprice|number:amount}}</td>
+                            <td>{{prapp.prdetails_qty*prapp.supplierproduct_unitprice|number:amount}}</td>
+                            <td><md-checkbox ng-true-value="'Y'"
+                                             ng-false-value="'N'"  ng-disabled="true" ng-model="prapp.prdetails_capitalized" ng-class="md-warn"
+                                         type="checkbox">
+                                        </md-checkbox></td>
+                            <td ng-click="ccbs_popup(prapp)" class="text-center">
+                                <i class="  material-icons" style="color:#297338;font-size:31px;">
+                                    local_shipping
+                                </i>
+                            </td>
+                            <td>
+                                 <span class="material-icons" ng-class="prapp.prdetails_imagepath!=''? 'editlink':''"
+                                  ng-click="clkdownload(prapp.prdetails_imagepath)"
+                                  title="{{prapp.prdetails_imagepath=='' ? 'No File To Download':'Download' +' '+ prapp.prdetails_imagepath}}">get_app</span>
+                            </td>
+                            <td>
+                                 <span class="material-icons" ng-class="prapp.prdetails_imagepath!=''? 'editlink':''"
+                                  onclick="clk()" ng-click="clkview(prapp.prdetails_imagepath)"
+                                  title="{{prapp.prdetails_imagepath=='' ? 'No File To View': 'View' +' '+ prapp.prdetails_imagepath}}">touch_app</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right" colspan="8"><b>PR Amount</b></td>
+                            <td style="text-align:center;" colspan="1">
+                                {{pr_amount1|number:amount}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row  text-left">
+            <form name="prapprovel" role="form">
+                <div class="col-lg-3 col-sm-3 ">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Reject Remarks</label>
+                        <input id="premarks" maxlength="56" letter-Only title="Three letter country code"
+                            ng-change="reject_remarks(approvelreject)" ng-model="approvelreject" required />
+                    </md-input-container>
+
+                </div>
+
+            </form>
+
+            <div id="status" ng-if="status">
+                <b class="md-padding" layout="row" layout-align="center center">
+                    {{status}}
+                </b>
+            </div>
+            <div class="col-lg-3 col-sm-3 ">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Approval Remarks</label>
+                    <input id="prremarksapp" maxlength="56" letter-Only ng-change="approvelreject=''"
+                        ng-model="approvelremark" />
+                </md-input-container>
+            </div>
+            <div class="col-lg-6 col-sm-6 text-right">
+                <button type="button" class="btn btn-default" ng-click="Close()" type="button" style="margin:5px;"
+                    value="Close">Close
+                    <md-tooltip>Close</md-tooltip>
+
+                    </md-button>
+                    <button type="button" class="btn btn-danger" ng-click="prapprovedr('Reject',approvelreject,limi)"
+                        ng-disabled="prapprovel.$invalid" ng-hide="hide" type="button" style="margin:5px;"
+                        value="Reject">Reject
+                        <md-tooltip>Reject</md-tooltip>
+
+                    </button>
+                    <button class="btn btn-success" ng-click="prapproved('Approve',approvelremark,limi)"
+                        ng-disabled="prapprovel.$valid" ng-hide="hide" type="button" style="margin:5px;"
+                        value="Approve">Approve
+                        <md-tooltip>Approve</md-tooltip>
+                    </button>
+            </div>
+        </div>
+        <!-- Delivery DDl -->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="delivery_details" role="dialog" tabindex="-1">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content ">
+                    <div class="modal-header popup-header aa" style="background-color: rgb(75, 122, 130)">
+                        <h5 class="modal-title" id="lo">
+                            Delivery Details
+                            <button aria-label="Close" class="close" ng-click="cancel()" type="button"
+                                data-dismiss="modal">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="modal-body popup-body">
+                        <div class="row">
+                            <!--Data Table-->
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+
+
+                                <table class="table  table-striped table-bordered table-condensed table-hover">
+                                    <thead
+                                        style="background: #607D8B;color:white;align-content:center;text-align:center;">
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>BS Description</th>
+                                            <th>CC Description</th>
+
+
+                                            <th> Quantity</th>
+                                            <th>Branch Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="del in ccbsdetailarray">
+                                            <td>
+                                                {{ $index+1 }}
+
+                                            </td>
+                                            <td>{{del.tbs_name}}<br />
+                                                <b
+                                                    style="color:black;">Desription</b><span>:{{del.tbs_description}}</span>
+                                            </td>
+                                            <td>{{del.tcc_name}}<br />
+                                                <b
+                                                    style="color:black;">Desription</b><span>:{{del.tcc_description}}</span>
+                                            </td>
+                                            <td>{{del.prccbs_qty}}
+                                            </td>
+
+                                            <td>{{del.location}}</td>
+                                        </tr>
+                                        <tr ng-show="Mep_data.length ==  0">
+                                            <td class="" colspan="10">
+                                                No Records.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-lg-12 col-sm-12 text-center">
+
+                                <md-button class="md-raised" ng-click="cancel()" value="Submit" data-dismiss="modal">
+                                    Close
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewprfile" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Viewing {{filename}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-md-12 text-center">
+<span title="Zoom in">
+     <a href="" onclick="zoomin()" style="font-size:50px"><i style="font-size:50px" class="material-icons">zoom_in
+                        </i></a>
+</span>
+                                    <span title="Zoom Out">
+                        <a href="" onclick="zoomout()" style="font-size:50px"><i style="font-size:50px"
+                                                                                 class="material-icons">
+                            zoom_out
+                        </i></a>
+                                        </span>
+                                </div>
+                            </div>
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                       <img src="{{viewfilepath}}"
+            id="zooming" GFG="250">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- end -->
+    </div>
+
+</div>
+
+
+</div>
+</div>
+{% endverbatim %}
+<script>
+        function zoomin() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth + 150) + "px";
+        }
+        function zoomout() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth - 150) + "px";
+        }
+        function clk(){
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (892) + "px";
+        }
+</script>
+<script>
+    var myApp = angular.module('Appprapproval', ['ngMaterial', 'ui.bootstrap', 'ngMessages','textAngular']).config(function (
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    myApp.directive('letterOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z. ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+
+    myApp.controller('Ctrlprapproval', ['$scope', '$http', 'Serviceprapproval', '$filter','$mdDialog', '$window', '$filter', '$q',
+        '$timeout',
+        function ($scope, $http, Serviceprapproval,$filter, $mdDialog, $window, $filter, $q, $timeout) {
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 8;
+            $scope.start = 0;
+            $scope.end = 60;
+            $scope.maintable = [];
+            $scope.IsDisabled = false;
+            $scope.pofrom= new Date();
+            $scope.poto= $scope.pofrom.setDate($scope.pofrom.getDate() + 15);
+
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+            $scope.loading();
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+            $scope.empcode = detail.employee_code;
+            var pr_gid = sessionStorage.getItem('prapp_gid');
+            $scope.prheader_gid1 = sessionStorage.getItem('prapp_gid');
+            $scope.totalamount = sessionStorage.getItem('prheader_totalamount');
+            $scope.c_gid = sessionStorage.getItem('commodity_gid');
+            var get_prdetails = Serviceprapproval.getprdetails(pr_gid)
+            get_prdetails.then(function (result) {
+                // $scope.loading();supplierproduct_dts
+                $scope.approval_details = result.data;
+                $scope.prheader_mepno = $scope.approval_details[0].prheader_mepno;
+                $scope.prheader_gid = $scope.approval_details[0].prheader_gid;
+                $scope.prheader_no = $scope.approval_details[0].prheader_no;
+                $scope.file_path_notepad = $scope.approval_details[0].prheader_notepad;
+                $scope.prheader_date = $scope.approval_details[0].prheader_date;
+                $scope.employee_name = $scope.approval_details[0].employee_name;
+                $scope.raisedby = $scope.approval_details[0].employee_gid;
+                $scope.status = $scope.approval_details[0].status;
+                $scope.pr_amount1 = $scope.approval_details[0].prheader_totalamount
+                $scope.pr_amount = $scope.approval_details[0].prheader_totalamount;
+
+                $scope.como = $scope.approval_details[0].commodity_name;
+                $scope.commodity_name = $scope.approval_details[0].commodity_name;
+
+
+                getlogindelmat();
+
+            }, function () {
+                alert('no data');
+                $scope.endloading();
+            })
+
+
+
+
+         $scope.notepad = function(){
+
+         if($scope.file_path_notepad == ' '){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad == undefined){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad){
+                      var data = {
+                        "Filename": $scope.file_path_notepad
+                    }
+                    var getdept_name = Serviceprapproval.get_file_read(data)
+                    getdept_name.then(function(result) {
+                    $scope.htmlcontent = result.data.file_path
+                     modalshow('viewnotepad');
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally();
+                }
+
+                else{
+                 modalshow('viewnotepad');
+                }
+        }
+
+
+
+            $scope.reject_remarks = function (remark) {
+                if (remark) {
+                    $scope.IsDisabled = true;
+                    $scope.approvelremark = "";
+                } else {
+                    $scope.IsDisabled = false;
+                }
+            }
+            $scope.pr_amount1 = $scope.pr_amount;
+
+            $scope.prapprovedr = function (ev, remark, k) {
+            if(k != null){
+                      if (k.employee_gid != detail.employee_gid) {
+                        confirm("Rejection is Only Accepted for Login Employee .!!")
+                        return false;
+                }
+                }
+
+                $scope.prapprovel.$invalid = true;
+                $scope.IsDisabled = true;
+                $scope.loading();
+
+                var data = {
+
+                    "li_ref_gid": "pr",
+                    'li_reftable_gid': $scope.prheader_gid1,
+                    'ls_status': ev,
+                    'lc_totype': 'C',
+                    'li_tto': '',
+                    "ls_remarks": remark
+
+                }
+                var tran = Serviceprapproval.trnapp(data)
+                tran.then(function (tran) {
+
+                    var aa = JSON.parse(tran.data)
+                })
+                var k = '';
+                var approvel = Serviceprapproval.getprapproved(ev, $scope.prheader_gid, remark, k);
+                approvel.then(function (approvel) {
+
+                    var approval = JSON.parse(approvel.data)
+                    if (approval == "Success") {
+                        if (ev == "Reject") {
+                            alert("Rejected");
+                        }
+                        $window.location.href = "pr_approve";
+                        sessionStorage.setItem('prapp_gid', '');
+                    }
+
+                }, function () {
+                    alert('Records not found');
+                    $scope.prapprovel.$invalid = false;
+                    $scope.IsDisabled = false;
+                }).finally($scope.endloading)
+
+            }
+
+
+
+
+
+            //dropdown for appeoval
+            // $scope.getcust = gotocust;
+
+
+
+            $scope.getcust = function (searchText) {
+
+
+                $scope.searcheployee1 = searchText;
+
+                var data = {
+                    'employee_gid': "",
+                    'employee_name': "",
+                    "employee_detail":$scope.searcheployee1,
+                    'commodity_gid': $scope.c_gid,
+                    "rised_by": $scope.raisedby,
+                    'Limit_Start': 0,
+                    'Limit_End': 50,
+                }
+                var params1 = {
+                    'params': data,
+                    'action': 'limit',
+                    'type': 'pr_Dir_limit',
+                    'amount': 0,
+                }
+                return $http.post(Appname + "/approvalview/", params1)
+                    .then(function (data) {
+                        $scope.data1 = JSON.parse(data.data);
+                        //     $scope.data.push({
+                        //     "employee_gid": -1,
+                        //     "employee_name": 'Load More..'
+                        // })
+
+                        return $scope.data1;
+                    });
+            };
+
+
+
+
+            //LOGIN DATA
+
+            function getlogindelmat() {
+                // $scope.loading();
+                var data = {
+                    'employee_gid': "",
+                    'commodity_gid': parseInt($scope.c_gid),
+                }
+                var params1 = {
+                    'params': data,
+                    'action': 'limit',
+                    'type': 'Pr_Approver',
+                    'amount': 0,
+
+                }
+                $scope.logdelmat = [];
+                //delmat Details
+                var limitdata = Serviceprapproval.delmat(params1);
+                limitdata.then(function (commoditylimitdataname) {
+                    $scope.logdelmat = JSON.parse(commoditylimitdataname.data);
+                    $scope.logdelmat_copy = JSON.parse(commoditylimitdataname.data);
+                    $scope.endloading();
+
+                })
+            }
+
+        $scope.clkdownload = function(e){
+        if(e!=""){
+        $window.location.href = "/common_downloadfile/?filename="+e;
+        }
+        else{
+        return false;
+        }
+        }
+
+
+            $scope.clkview = function (e) {
+                $scope.filename = e;
+                var data = {
+                    "Filename": e
+                }
+                var get_purchase = Serviceprapproval.getviewfile(data)
+                get_purchase.then(function (result) {
+                    $scope.viewfilepath = result.data;
+                    if ($scope.viewfilepath != '') {
+                        modalshow('viewprfile');
+                    }
+                }).finally($scope.endloading);
+            }
+
+
+            // Save Approve
+            $scope.prapproved = function (ev, remark, k) {
+
+                $scope.loading();
+                $scope.apr_msg = '';
+                $scope.IsDisabled = true;
+
+                if (k != undefined) {
+                    var name = k.employee_code;
+                    $scope.toemp = [];
+                    $scope.toemp = $filter('filter')($scope.data1, {
+                        "employee_code": k.employee_code,
+                        "commodity_name": $scope.como
+
+                    }, true);
+                    if ($scope.toemp.length > 0) {
+                        //limit than the amount
+                        if ($scope.toemp[0].delmat_limit < $scope.totalamount) {
+                            if (confirm(
+                                    "This Employee Dosen't Have Rights To Approve! Do You Want To Continue Further?"
+                                )) {
+                                var type = "I";
+
+                                var tto = k.employee_gid;
+                                $scope.apr_msg = 'next_level';
+                            } else {
+                                $scope.IsDisabled = false;
+
+                                $scope.endloading();
+                                return false
+                            }
+                        }
+                        if ($scope.toemp[0].delmat_limit >= $scope.totalamount) {
+                            if (confirm(
+                                    "Sending To Next Level Approver! Do You Want To Continue Further?")) {
+                                var type = "I";
+
+                                var tto = k.employee_gid;
+                                $scope.apr_msg = 'next_level';
+                            } else {
+                                $scope.IsDisabled = false;
+
+                                $scope.endloading();
+                                return false
+                            }
+                        }
+                    } else {
+                        if (confirm(
+                                "This Employee Dosen't Have Rights To Approve!Do You Want To Continue Further?"
+                            )) {
+                            var type = "I";
+                            $scope.apr_msg = 'next_level';
+                            var tto = k.employee_gid;
+                        } else {
+                            $scope.IsDisabled = false;
+
+                            $scope.endloading();
+                            return false
+                        }
+                    }
+                } else {
+                    if ($scope.logdelmat.length > 0) {
+
+
+                        if ($scope.totalamount > $scope.logdelmat[0].delmat_limit) {
+                            alert(" No  Valid Limit Choose An Approver. ");
+                            // $scope.showConfirm(p)
+                            $scope.IsDisabled = false;
+
+                            $scope.endloading();
+                            return false
+                        } else {
+                            if (confirm('Are You sure for the Approval?')) {
+                                var type = "C"
+                                var ev = 'FinalApproved'
+                                var tto = ''
+                                var name = $scope.empcode;
+                                
+                                //if the product is dts  
+                                // $scope.loading();supplierproduct_dts
+                                // $scope.approval_details 
+                                $scope.prdetails_gid = [];
+                                for (var d = 0; d < $scope.approval_details.length; d++) {
+                                    if ($scope.approval_details[d].supplierproduct_dts == 'Y') {
+                                        $scope.prdetails_gid.push($scope.approval_details[d].prdetails_gid)
+                                    }
+                                }
+                                if($scope.prdetails_gid.length>0){
+                                    $scope.po_type = "DTS";
+                                      $scope.dts_params = {
+                                    "prheader_gid": $scope.prheader_gid1,
+                                    "prdetails_gid": $scope.prdetails_gid,
+                                    "poheader_date": "2020-05-16",
+                                    "supplier_gid": $scope.approval_details[0].supplier_gid,
+                                    "teamandcont_gid": 1,
+                                    "total_amount":"",
+                                    "amement_gid": 1,
+                                    "vesion_gid": 1,
+                                    "commodity_gid":$scope.approval_details[0].prheader_commodity_gid,
+                                    "branch_gid": $scope.approval_details[0].prheader_branchgid,
+                                    "poheader_mepno": $scope.prheader_mepno,
+                                    "poheader_status": "Approved",
+                                    "from_date": $filter('date')($scope.pofrom, "yyyy-MM-dd"),
+                                    "to_date": $filter('date')($scope.poto, "yyyy-MM-dd"),
+                                    "tran_to":"",
+                                    "ref_name": "POMAKER",
+                                    "po_type":$scope.po_type
+
+                                }
+                                }
+                              
+
+                            } else {
+                                $scope.IsDisabled = false;
+
+                                $scope.endloading();
+                                return false
+                            }
+                        }
+
+
+                    } else {
+                        alert(" No Limit Choose An Approver. ")
+                        $scope.IsDisabled = false
+
+                        $scope.endloading();
+                        return false
+                    }
+
+
+
+                }
+                var data1 = {
+
+                    "li_ref_gid": "pr",
+                    'li_reftable_gid': $scope.prheader_gid1,
+                    'ls_status': ev,
+                    'lc_totype': type,
+                    'li_tto': tto.toString(),
+                    "ls_remarks": remark
+                }
+
+                var tran = Serviceprapproval.trnapp(data1)
+                tran.then(function (tran) {
+
+                    var aa = JSON.parse(tran.data)
+                })
+
+                var approvel = Serviceprapproval.getprapproved(ev, $scope.prheader_gid, remark, name);
+                approvel.then(function (approvel) {
+
+                    var approval = JSON.parse(approvel.data)
+
+                    if (approval == "Success") {
+                        if ($scope.apr_msg == "next_level") {
+                            alert(" Moved To Next Level Approver");
+                            $window.location.href = "pr_approve";
+                        } else {
+                            $scope.loading();
+                            if ($scope.po_type == "DTS") {
+                                $scope.loading();
+                                var approvel = Serviceprapproval.sendmail($scope.dts_params);
+                                approvel.then(function (result) {
+                                    $scope.loading();
+                                    if (result.data.Message == "Mailsent") {
+                                        alert("Approved Successfully");
+                                        $window.location.href = "pr_approve";
+                                        sessionStorage.setItem('prapp_gid', '');
+                                    }
+                                    else{
+                                        alert(result.data.Message);
+                                        $window.location.href = "pr_approve";
+                                        sessionStorage.setItem('prapp_gid', '');
+                                    }
+
+                                }).finally($scope.endloading)
+                            } else {
+                                alert("Approved Successfully");
+                                $window.location.href = "pr_approve";
+                                sessionStorage.removeItem('prapp_gid');
+                            }
+                        }
+
+                    } else {
+                        alert(approvel.data);
+                    }
+
+                }, function () {
+                    alert('Records not found');
+                    $scope.IsDisabled = false;
+                    $scope.prapprovel.$invalid = false;
+                }).finally($scope.endloading)
+            }
+
+            $scope.Close = function () {
+                $scope.loading();
+                $window.location.href = "pr_approve";
+                sessionStorage.setItem('prapp_gid', '');
+                // $scope.endloading();Close
+            }
+            var data = {
+                'prheader_gid': parseInt($scope.prheader_gid1)
+            }
+            $scope.ccbs_popup = function (emp) {
+                $scope.loading();
+
+
+                var data = {
+                    "Params": {
+                        "filter": {
+
+
+                            "prdetail_gid": emp.prdetails_gid
+                        },
+                        "type": "PR_CCBS_DETAIL",
+                        "Action": "Get"
+                    },
+                }
+                var get_state = Serviceprapproval.Pr_approvalget(data)
+                get_state.then(function (result) {
+                        $scope.ccbsdetailarray = result.data.DATA;
+                        modalshow('delivery_details');
+
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            }
+
+
+
+
+
+
+
+        }
+    ]);
+
+    myApp.service("Serviceprapproval", function ($http) {
+        this.getprdetails = function (prheader_gid) {
+            var response = $http.post(Appname + "/Prdetail_get/", {
+                params: {
+                    'prheader_gid': prheader_gid,
+                    'product_name': '',
+                    'action': 'Details'
+                }
+            })
+            return response;
+        }
+        this.getprapproved = function (ev, ev1, ev2, k) {
+            var response = $http.post(Appname + "/Prapproval_set/", {
+                params: {
+                    "status_pr": ev,
+                    "prheader": ev1,
+                    "lsremaks": ev2,
+                    "empname": k
+                }
+            });
+            return response;
+        }
+
+        //Approval
+        this.delmat = function (data) {
+            var response = $http.post(Appname + "/approvalview/", data)
+
+            return response;
+        }
+        this.Pr_approvalget = function (data) {
+            var response = $http.post(Appname + "/Pr_approvalget/", data)
+
+            return response;
+        }
+        //trnapp
+        this.trnapp = function (data) {
+
+            var response = $http.post(Appname + "/tranapproval/", data)
+
+            return response;
+        }
+        this.getviewfile = function (data) {
+            var response = $http.post(Appname + "/common_viewfile/", data);
+            return response;
+        }
+        this.sendmail = function (data) {
+            var response = $http.post(Appname + "/sendmail/", data);
+            return response;
+        }
+        this.get_file_read = function (data) {
+            var response = $http.post(Appname + "/common_read_file/", data);
+            return response;
+        }
+
+    });
+</script>
+{% endblock %}

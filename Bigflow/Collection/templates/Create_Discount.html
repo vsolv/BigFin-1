@@ -1,0 +1,517 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Create Discount{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="AppCreateDiscount" ng-cloak ng-controller="CtrlCreateDiscount">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Create Discount</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 ">
+                <md-autocomplete flex
+                                 md-clear-button="true"
+                                 md-floating-label="Customer Group Name"
+                                 md-input-maxlength=126
+                                 md-item-text="item.customergroup_name"
+                                 md-items="item in GetCustomerGroup(searchT)"
+                                 md-min-length=0
+                                 md-search-text="searchT"
+                                 md-selected-item="selected_customer_group"
+                                 md-selected-item-change="CustomerGroupChange(item)"
+                                 placeholder="Customer Group Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchT"> {{item.customergroup_name}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Group Name matching "{{searchT}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+
+            </div>
+            <div class="col-md-3 ">
+                <md-autocomplete flex
+                        md-clear-button="true"
+                        md-floating-label="Customer Name"
+                        md-input-maxlength=126
+                        md-item-text="item.display_name"
+                        md-items="item in GetCustomer(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText"
+                        md-selected-item="selected_customer"
+                        md-selected-item-change="CustomerChange(item)"
+                        placeholder="Customer Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.display_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <!--<div class="col-md-3 ">
+                <md-input-container class="md-block inputcontainer ">
+                    <label>Discount Type</label>
+                    <md-select ng-model="ddl_discount_type">
+                        <md-option><em>None</em></md-option>
+                        <md-option ng-repeat="type in discount_type "
+                                   value="{{type}}">{{type}}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>-->
+            <div class="col-md-3 ">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Discount Amount</label>
+                    <input maxlength="8" ng-change="calculate_discount_amount()" ng-model="discount_amount"
+                       ng-pattern="/^[0123456789][.0-9]{0,10}$/"   valid-number required/>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-autocomplete flex
+                                 md-clear-button="true"
+                                 md-floating-label="Discount Remark"
+                                 md-input-maxlength=126
+                                 md-item-text="item.metadata_value"
+                                 md-items="item in remarkdiscount(searchdis)"
+                                 md-min-length=0
+                                 md-search-text="searchdis"
+                                 md-selected-item="discount_remark"
+                                 md-selected-item-change="remarkChange(item)"
+                                 placeholder="Discount Remark">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.metadata_value}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Group Name matching "{{searchdis}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+        </div>
+        <div ng-show="myVar">
+            <div class="col-md-3 ">
+                <md-autocomplete flex
+                                 md-clear-button="true"
+                                 md-floating-label="Employee Name"
+                                 md-input-maxlength=126
+                                 md-item-text="item.employee_name"
+                                 md-items="item in GetEmployeeGroup(searchTex)"
+                                 md-min-length=0
+                                 md-search-text="searchTex"
+                                 md-selected-item="selected_employee_group"
+                                 md-selected-item-change="EmployeeGroupChange(item)"
+                                 placeholder="Employee Name"
+                                 required>
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.employee_name}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Group Name matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-offset-8 col-md-4">
+                <md-input-container class="md-block inputcontainer">
+                    <md-icon class="material-icons">search</md-icon>
+                    <label>Invoice No</label>
+                    <input maxlength="11" ng-model="dis_invoice_no"/>
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <div style="height:300px;overflow:auto">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Customer Name</th>
+                            <th>Invoice Date</th>
+                            <th>Invoice No</th>
+                            <th>Bill Amount</th>
+                            <th>Paid Amount</th>
+                            <th>To be Paid Amount</th>
+                            <th>Discount Amount</th>
+                            <th>Select</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="os in outstandings | filter:{fetsoutstanding_invoiceno:dis_invoice_no}">
+                            <td>
+                                <center>{{$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{os.customer_display_name }}</td>
+                            <td class="text-center">{{os.invoice_date}}</td>
+                            <td class="text-center">{{os.fetsoutstanding_invoiceno}}</td>
+                            <td class="text-right">{{os.net_amount}}</td>
+                            <td class="text-right">{{os.adjusted_amount}}</td>
+                            <td class="text-right">{{os.balance_amount}}</td>
+                            <td class="text-right">{{os.amount_tobe_adjusted}}</td>
+                            <td align="center">
+                                <input ng-change="calculate_discount_amount($index)" ng-model="os.ischecked"
+                                       type="checkbox">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-if="outstandings.length != 0">
+            <div class="col-md-12 text-right">
+                <label>To Be Paid Amount :<span class="highligter"> {{tobe_paid_amount}}</span></label>
+                <label>Discount Amount :<span class="highligter"> {{discount_amount_total}}</span></label>
+                <label>Invoice count:<span class="highligter">{{invoice_count}}</span></label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <md-button class="md-raised custbutton" ng-click="save_details()" ng-disabled="submit_disable"
+                           ng-init="submit_disable=true">Submit
+                    <md-tooltip>Save</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+
+<script type="text/javascript">
+ var app_tracking = angular.module('AppCreateDiscount', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages']).config(function ($httpProvider) {
+     $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+     $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+ });
+ app_tracking.run(function ($mdDateLocale, $filter) {
+     $mdDateLocale.formatDate = function (date) {
+         return $filter('date')(date, "dd-MMM-yyyy");
+     };
+ })
+ app_tracking.controller('CtrlCreateDiscount', function ($scope, $mdDialog, $window, discountser, SerCommon, $filter, $timeout, $mdToast, $interval) {
+     var detail = JSON.parse(sessionStorage.getItem('today'));
+     $scope.dbdate = convertdate(detail.date);
+     $scope.entity_gid = detail.entity_gid;
+     $scope.outstandings = [];
+     $scope.custgrp = [];
+     $scope.customer = [];
+     $scope.discount_type = ['Trade Discount'];
+     $scope.invoice_count = 0;
+     $scope.tobe_paid_amount = 0;
+
+     // <!--getcustomer group-->
+     function customergroup() {
+         var datacust = {
+             Group: 'CUST_GROUP_GET',
+             Entity_Gid: $scope.entity_gid,
+             Cust_Group_Gid: 0,
+             Cust_Group_Code: 0,
+             Cust_Group_Name: '',
+             Query_Limit: ' '
+         }
+         var custgrpddl = discountser.getcustgrp(datacust)
+         custgrpddl.then(function (result) {
+                 $scope.custgrp = result.data.DATA;
+             }),
+             function () {
+                 alert('no data');
+             };
+     };
+     customergroup();
+
+     //<!--    Discount remarks-->
+     function load_remarks() {
+         $scope.remarks = [];
+         var details, jsondata;
+         details = {
+             "Table_name": "gal_mst_tmetadata",
+             "Column_1": "metadata_value,metadata_remarks",
+             "Column_2": "",
+             "Where_Common": "metadata",
+             "Where_Primary": "columnname",
+             "Primary_Value": "receipt_type",
+             "Order_by": "value"
+         }
+
+         jsondata = {
+             Action: "DISCOUNT",
+             Entity_Gid: $scope.entity_gid,
+             data: details
+         }
+
+         var remarks_get = discountser.getremrks(jsondata)
+         remarks_get.then(function (result) {
+             $scope.remarks = result.data.DATA;
+         }, function (err) {
+             alert('No data!.');
+         })
+     }
+     load_remarks();
+
+     //get customer
+     function loadCustomer(ddlcustomer) {
+         var data = {
+             "params": {
+                 "FILTER": {
+                     "isactive": "Y",
+                     "custgrp_gid": ddlcustomer
+                 }
+             }
+         }
+
+         var custdata = {
+             "Entity_Gid": $scope.entity_gid,
+             "Group": 'CUST_GET',
+             "data": data
+         };
+
+         var get_cust = discountser.getcust(custdata)
+         get_cust.then(function (result) {
+         debugger;
+             $scope.customer = result.data.DATA
+         }, function (err) {
+             alert('No data!.');
+         }).finally();
+     };
+
+     function loaddata(ddlgid) {
+         var outstandresponse = discountser.getOutStanding(ddlgid);
+         outstandresponse.then(function (result) {
+             $scope.maindata = result.data.DATA;
+             $scope.outstandings = $scope.maindata;
+         }, function (err) {
+             alert(err);
+         }).finally(function () {
+
+         });
+     }
+
+     //loaddata();
+     $scope.GetCustomerGroup = function (query) {
+         var result = $filter('filter')($scope.custgrp, {
+             'customergroup_name': query
+         });
+         return result;
+     }
+
+     $scope.GetEmployeeGroup = function (query) {
+         var result = $filter('filter')($scope.employee, {
+             'employee_name': query
+         });
+         return result;
+     }
+
+     $scope.remarkdiscount = function (query) {
+         var result = $filter('filter')($scope.remarks, {
+             'metadata_value': query
+         });
+         return result;
+     }
+
+     $scope.CustomerGroupChange = function (item) {
+         loadCustomer(item.customergroup_gid);
+         loaddata(item.customergroup_gid)
+         }
+
+        $scope.remarkChange = function(item){
+           if (item.metadata_value == 'Employee Receipt') {
+             $scope.myVar = true;
+         } else {
+             $scope.myVar = false;
+         }
+     }
+
+     $scope.GetCustomer = function (quer) {
+         var result = $filter('filter')($scope.customer, {
+             'display_name': quer
+         });
+         return result;
+     };
+
+     $scope.CustomerChange = function (item) {
+        $scope.outstandings = $filter('filter')($scope.maindata, {
+           "customer_display_name": item.display_name
+            });
+     };
+
+     $scope.calculate_discount_amount = function(index) {
+         var dis_count_perc = 0;
+         var discount_amount = 0;
+         var total_selection = 0;
+         var last_index;
+         $scope.invoice_count = 0;
+         $scope.tobe_paid_amount = 0;
+         $scope.discount_amount_total = 0;
+         discount_amount = parseFloat($scope.discount_amount);
+
+
+
+         for (var i = 0; i < $scope.outstandings.length; i++) {
+             if ($scope.outstandings[i].ischecked) {
+                 $scope.invoice_count += 1;
+                 $scope.tobe_paid_amount += $scope.outstandings[i].balance_amount;
+                 total_selection += 1;
+             }
+         }
+
+         if (discount_amount > $scope.tobe_paid_amount && total_selection != 0) {
+             alert("Discount Amount Not greater then total Invoice amount!.");
+             $scope.submit_disable = true;
+             return;
+         }
+
+         dis_count_perc = discount_amount / $scope.tobe_paid_amount * 100;
+
+         for (var i = 0; i < $scope.outstandings.length; i++) {
+             if ($scope.outstandings[i].ischecked) {
+                 var tobe_paid_amount = $scope.outstandings[i].balance_amount;
+                 var tobe_adjust_amount = (tobe_paid_amount * dis_count_perc) / 100;
+                 tobe_adjust_amount = tobe_adjust_amount;
+                 $scope.discount_amount_total += tobe_adjust_amount;
+                 $scope.outstandings[i].amount_tobe_adjusted = tobe_adjust_amount;
+                 last_index = i;
+             } else {
+                 $scope.outstandings[i].amount_tobe_adjusted = 0;
+             }
+         }
+         if (last_index) {
+             var last_value = $scope.outstandings[last_index].amount_tobe_adjusted;
+             var dif_amount = discount_amount - $scope.discount_amount_total;
+             $scope.outstandings[last_index].amount_tobe_adjusted = last_value + dif_amount;
+             $scope.discount_amount_total += dif_amount;
+         }
+         if (total_selection != 0) {
+             $scope.submit_disable = false;
+         }
+     };
+
+     function resetValue() {
+         for (var i = 0; i < $scope.outstandings.length; i++) {
+             if ($scope.outstandings[i].ischecked) {
+                 $scope.outstandings[i].ischecked = false;
+             }
+             $scope.outstandings[i].amount_tobe_adjusted = 0;
+         }
+         $scope.invoice_count = 0;
+         $scope.tobe_paid_amount = 0;
+         $scope.discount_amount_total = 0;
+     }
+
+     if ($scope.selected_employee_group != undefined) {
+         alert(($scope.selected_employee_group))
+     }
+
+     $scope.save_details = function () {
+         if ($scope.discount_remark) {
+              if ($scope.discount_remark.metadata_value == 'Employee Receipt') {
+                 if(!$scope.selected_employee_group){
+                     alert('Kindly Choose Employee Name')
+                     return false;
+                 }
+              }
+         }
+         else if(!$scope.discount_remark)
+         {
+         alert('Please fill remark details!.');
+         }
+    
+         if ($scope.selected_employee_group) {
+             $scope.employeeid = $scope.selected_employee_group.employee_gid;
+         } else {
+             $scope.employeeid = '';
+         }
+
+         var params = {
+             'discount_amount': $scope.discount_amount,
+             'discount_remark': $scope.discount_remark.metadata_value,
+             'Discount_Remark':$scope.discount_remark.metadata_remarks,
+             'employeeid': $scope.employeeid
+         };
+         var datas = [];
+         for (var i = 0; i < $scope.outstandings.length; i++) {
+             if ($scope.outstandings[i].ischecked) {
+                 var data = {
+                     'Receipt_RefTable_Gid': $scope.outstandings[i].invoiceheader_gid,
+                     'Receipt_Adjusted_Amount': $scope.outstandings[i].amount_tobe_adjusted
+                 };
+
+                 datas.push(data);
+             }
+         }
+         if (datas.length != 0) {
+             params['data'] = datas;
+             var response = discountser.save_details(params);
+             response.then(function (result) {
+                 if (result.data.MESSAGE == 'SUCCESS') {
+                     resetValue();
+                     $scope.discount_amount = "";
+                     $scope.discount_remark = "";
+                     $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                     $interval(callAtInterval, 3000);
+                 } else {
+                     alert('Data not saved successfully!.');
+                 }
+
+             }, function (err) {
+                 alert('Data not saved successfully!.');
+             }).finally();
+         } else {
+             alert("Don't have record to save!.");
+         }
+     }
+
+     function callAtInterval() {
+         $window.location.href = "createDiscount";
+     }
+
+     // getEmployee
+     var employee = discountser.getemployee();
+     employee.then(function (result) {
+             var employee_data = JSON.parse(result.data)
+             $scope.employee = employee_data;
+         },
+         function (err) {
+             alert('No data!.');
+         }).finally($scope.endloading);
+
+ });
+ app_tracking.service("discountser", function ($http) {
+     this.getOutStanding = function (cust_group_gid) {
+         data = {
+             'cust_group_gid': cust_group_gid
+         }
+         var response = $http.post(Appname + "/getOutStanding/", data);
+         return response;
+     }
+     this.getcustgrp = function (data) {
+         var response = $http.post(Appname + "/custgroup/", data);
+         return response;
+     }
+     this.getcust = function (custid) {
+         var respons = $http.post(Appname + "/custgroup/",
+             custid
+         );
+         return respons;
+     }
+     this.save_details = function (data) {
+         var response = $http.post(Appname + "/setDiscountDetails/", data);
+         return response;
+     }
+     this.getremrks = function (jsonData) {
+         var response = $http.post(Appname + "/prodget/",
+             jsonData
+         );
+         return response;
+     }
+     this.getemployee = function () {
+         var response = $http.get(Appname + "/empddl/");
+         return response;
+     }
+ });
+
+</script>
+{% endblock %}

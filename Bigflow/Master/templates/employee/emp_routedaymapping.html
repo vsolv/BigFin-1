@@ -1,0 +1,324 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Routeday mapping{% endblock %}
+{% block content %}
+{% verbatim %}
+<body oncopy="return false">
+<div class="maincontent" id="maincontent">
+    <div ng-app="Appcredit" ng-controller="Ctrlcuecard" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Route Day Mapping</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <br>
+                <div class="col-md-10 col-lg-10 ">
+                    <md-autocomplete
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="customerChange(item)"
+                            md-items="item in getcustomer(searchText)"
+                            md-item-text="item.employee_name"
+                            md-min-length=0
+                            placeholder="Employee Name">
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.employee_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{ctrl.searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+        </div>
+        <div class="row  table-responsive">
+            <div class="col-md-12">
+                <div class="text-right">
+                    <span>Route Day Mapping</span>
+                </div>
+                <table class="table  table-striped table-bordered table-condensed table-hover">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Employee Route</th>
+                        <th ng-repeat="x in headers" ng-value="x.value">{{x.text}}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sale in salesdetails">
+                        <td class="text-center">{{$index+1}}</td>
+                        <td class="text-center">{{sale.routeheader_name}}</td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="monday.checked"
+                                   ng-change="checkmon(monday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday == 'Monday'"/>
+                        </td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="tuesday.checked"
+                                   ng-change="checktue(tuesday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday =='Tuesday'"/>
+                        </td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="wednesday.checked"
+                                   ng-change="checkwed(wednesday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday =='Wednesday'"/>
+                        </td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="thursday.checked"
+                                   ng-change="checkthu(thursday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday =='Thursday'"/>
+                        </td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="friday.checked"
+                                   ng-change="checkfri(friday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday =='Friday'"/>
+                        </td>
+                        <td align="center">
+                            <input type="checkbox" ng-model="saturday.checked"
+                                   ng-change="checksat(saturday.checked,sale.routeemp_gid,$index)"
+                                   ng-checked="sale.routeemp_scheduleday =='Saturday'"/>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+{% endverbatim %}
+<script>
+    (function(angular, undefined) {
+        'use strict';
+
+        var myapp = angular
+            .module('Appcredit', ['ngMaterial', 'ui.bootstrap'])
+            .config(configAddschedule)
+            .controller('Ctrlcuecard', Ctrlcuecard)
+            .service('Sercuecard', Sercuecard);
+
+        function configAddschedule($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        }
+
+        Ctrlcuecard.$inject = ['$scope', '$mdDialog', 'Sercuecard', '$filter'];
+
+        function Ctrlcuecard($scope, $mdDialog, Sercuecard, $filter) {
+            $scope.employee = [];
+            $scope.getcustomer = gotoGetCustomer;
+            $scope.customerChange = gotoCustomerChange;
+
+            $scope.headers = [{
+                text: "Monday",
+                value: "1"
+            }, {
+                text: "Tuesday",
+                value: "2"
+            }, {
+                text: "Wednesday",
+                value: "3"
+            }, {
+                text: "Thursday",
+                value: "4"
+            }, {
+                text: "Friday",
+                value: "5"
+            }, {
+                text: "Saturday",
+                value: "6"
+            }];
+
+            var get_cust = Sercuecard.getdropdown(0, '', 0, 'ALL')
+            get_cust.then(function(result) {
+                $scope.employee = result.data;
+            }, function(err) {
+                alert('No data!.');
+            });
+
+            function gotoGetCustomer(query) {
+                var result = $filter('filter')($scope.employee, {
+                    'employee_name': query
+                });
+                return result;
+            }
+
+            function gotoCustomerChange(item) {
+                getentityoutcome(item.employee_gid);
+
+            }
+
+            function getentityoutcome(emp_gid) {
+                var get_cust = Sercuecard.getentity('', '', emp_gid)
+                get_cust.then(function(result) {
+                    $scope.salesdetails = JSON.parse(result.data);
+                    <!--$scope.routeemp_scheduleday  = true;-->
+                }, function(err) {
+                    alert('No data!.');
+                });
+                <!--getcheckeddata(emp_gid);-->
+            }
+
+
+            $scope.checkmon = function(check, routeemp_gid, index) {
+                debugger;
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Monday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+
+            $scope.checktue = function(check, routeemp_gid, index) {
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Tuesday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+
+            $scope.checkwed = function(check, routeemp_gid, index) {
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Wednesday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+            $scope.checkthu = function(check, routeemp_gid, index) {
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Thursday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+            $scope.checkfri = function(check, routeemp_gid, index) {
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Friday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+            $scope.checksat = function(check, routeemp_gid, index) {
+                var emp_det = {
+                    day: check == 'true' ? 'day' : 'Saturday',
+                    routeemp_gid: routeemp_gid
+                }
+                var emp_det = {
+                    emp_det: emp_det
+                };
+                var set_week = Sercuecard.setweek('Route_day_map', emp_det)
+                set_week.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert('Saved successfully!.');
+                    } else {
+                        alert("Data Not Inserted!.");
+                    }
+                }, function(err) {
+                    alert('Data Not Inserted!.');
+                });
+            };
+
+        }
+
+        function Sercuecard($http) {
+            this.getdropdown = function(gid, name, clusgid, cluster) {
+                var response = $http.get(Appname + "/employee_get/", {
+                    params: {
+                        "emp_gid": gid,
+                        "emp_name": name,
+                        "li_cluster_gid": clusgid,
+                        "cluster": cluster
+                    }
+                });
+                return response;
+            };
+
+            this.getentity = function(tableName, searchGid, emp_gid) {
+                var response = $http.get(Appname + "/daymapping/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "emp_gid": emp_gid,
+                    }
+                });
+                return response;
+            };
+
+            this.setweek = function(action, emp_det) {
+                var response = $http.post(Appname + "/setdaymapping/", {
+                    parms: {
+                        "action": action,
+                        'emp_det': emp_det,
+                    }
+                });
+                return response;
+            };
+
+        }
+
+    })(angular);
+
+</script>
+{% endblock %}

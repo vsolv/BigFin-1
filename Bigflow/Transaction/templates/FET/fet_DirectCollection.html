@@ -1,0 +1,109 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} DirectCollection {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appdrctsale" ng-controller="Ctrldrctsale" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Direct Collection</h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Customer Name</label>
+                        <input id="name" maxlength="16" ng-model="customer_name"/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-6 text-right">
+                    <a href="collectioncreate">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="add()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>ADD</md-tooltip>
+                    </md-button></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Name</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sale in salesSchedule.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:searchquery ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{sale.customer_name}}</td>
+                        <td>{{sale.schedule_status}}</td>
+                       <td>
+                             <span class="editlink" ng-click="edit_click()">
+                               <span class="material-icons">mode_edit</span>
+                                <md-tooltip>Edit</md-tooltip>
+                             </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <ul uib-pagination total-items="empsmry.length" ng-model="currentPage" max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="col-md-12 text-right">
+                <md-button ng-click="close()" class="md-raised md-warn">Close
+                    <md-tooltip>Close</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('Appdrctsale', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.controller('Ctrldrctsale', ['$scope','Servicedrctsale','$mdDialog','$filter', function($scope,Servicedrctsale,$mdDialog,$filter) {
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.salesSchedule=[];
+    var overallSchedule=[];
+
+    var overalldtl=Servicedrctsale.getsalelist(formatDate(new Date()));
+    overalldtl.success(function(res){
+        overallSchedule=res;
+        $scope.salesSchedule=$filter('filter')(overallSchedule,{scheduletype_name:'COLLECTION'},true);
+    }).error(function(err){
+        alert(err);
+    });
+}]);
+myApp.service("Servicedrctsale", function ($http) {
+    this.getsalelist=function(t){
+        var response=$http.post(Appname+"/pre_schedule_get/",{parms:{"action":"view","f_date":t}});
+        return response;
+    };
+});
+</script>
+{% endblock %}

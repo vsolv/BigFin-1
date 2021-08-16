@@ -1,0 +1,74 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SVSFollowup_Get`(IN ls_Type varchar(64),IN ls_Sub_Type varchar(64),
+IN lj_Filters json,IN lj_Classification json, OUT Message varchar(1024))
+BEGIN
+##SELVA
+Declare Query_Select varchar(6144);
+declare ls_count int;
+declare errno varchar(200);
+declare msg varchar(200);
+
+
+                              DECLARE done INT DEFAULT 0;
+	                          DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+                              DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+                              BEGIN
+                                    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+                                   set Message = concat(errno , msg);
+						    	  ROLLBACK;
+							  END;
+       
+       
+if ls_Type='GET' and ls_Sub_Type='FOLLOW_UP_GET' then
+                    #select 1; 
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ticketheader_Gid'))) into @Ticketheader_Gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+		
+               set Query_Select=' '; 
+               set Query_Select=concat('select d.ticketheader_summary,d.ticketheader_description,d.ticketheader_assignedto,d.ticketheader_status,e.employee_name,f.branch_name,ticketheader_code,date_format(a.create_date,''%Y-%m-%d'') as followupdate,g.errorcategory_name
+                             ,followup_gid,concat(''['',group_concat( JSON_OBJECT(''metadata_value'',metadata_value,''metadata_data'',case
+															   when metadata_value = ''STATUS'' then concat(''STATUS CHANGED FROM  '',followuptran_oldvalue,'' To '', followuptran_newvalue)
+															   when metadata_value = ''TRACK'' then concat(''TRACK '',if(followuptran_oldvalue is null, concat(''Created with '',followuptran_newvalue), concat(''Updated from '',followuptran_oldvalue,'' to '',followuptran_newvalue)))
+															   when metadata_value = ''ASSIGN'' then concat(''ASSIGNED from '',(select employee_name from gal_mst_temployee where employee_gid= followuptran_assignfrom),'' to '' ,(select employee_name from gal_mst_temployee where employee_gid= followuptran_assignto))
+															   when metadata_value = ''COMMENT'' then followuptran_newvalue
+                                                               when metadata_value = ''FILE'' then followuptran_newvalue
+															   else ''N''
+															 End)),'']'' )  as followupdetail,
+                                                             (select concat(''['',group_concat( JSON_OBJECT(''track_engineername'',track_engineername,''track_visitdate'',date_format( track_visitdate,''%Y-%m-%d'') ,''track_visittime'',date_format(track_visittime,''%H:%i'') ,''track_gid'',track_gid
+                                                             )),'']'' )
+                                                             from svs_trn_ttrack where track_ticketheadergid = d.ticketheader_gid ) as trackdetails,
+                                                              ( select concat(''['',group_concat( JSON_OBJECT(''assetdetails_id'',assetdetails_id,''product_name'',product_name)),'']'')
+                                                                from svs_trn_tticketdetails sub_a
+                                                                inner join fa_trn_tassetdetails sub_b on sub_a.ticketdetails_assetdetailid=sub_b.assetdetails_id
+															    inner join gal_mst_tproduct sub_c on sub_b.assetdetails_productgid=sub_c.product_gid
+                                                                where sub_a.ticketdetails_ticketheadergid=d.ticketheader_gid)as asset_name
+								 from svs_trn_tticketheader as d 
+                                 left join svs_trn_tfollowup as a on d.ticketheader_gid = a.followup_ticketheadergid 
+								 left join svs_trn_tfollowuptran as b on a.followup_gid = b.followuptran_followupgid and
+										a.followup_isactive=''Y'' and a.followup_isremoved=''N'' and
+										b.followuptran_isactive=''Y'' and b.followuptran_isremoved=''N''
+                                 left join gal_mst_tmetadata as c on c.metadata_gid = b.followuptran_metadatagid and
+										c.metadata_isactive=''Y'' and c.metadata_isremoved=''N''
+                                 left join gal_mst_temployee as e on e.employee_gid=d.ticketheader_assignedto and
+										e.employee_isactive=''Y'' and e.employee_isremoved=''N''
+                                 left join gal_mst_tbranch as f on f.branch_gid = d.ticketheader_branchgid and
+										f.branch_isactive=''Y'' and f.branch_isremoved=''N''
+								 left join svs_mst_terrorcategory g on d.ticketheader_nopgid=g.errorcategory_gid 
+								 where d.ticketheader_gid =  (',@Ticketheader_Gid,') and
+                                                             d.entity_gid=(',@Entity_Gid,') 
+                                            group by followup_gid');
+                                                                     
+                #select  Query_Select;
+				set @p= Query_Select;
+				prepare stmt from @p;
+				execute stmt;
+			    select found_rows() into ls_count;
+						if ls_count >0 then
+						  
+						  set message='FOUND';
+						else
+							set message='NOT FOUND-sp_Followup_Get.';
+					  end if;
+                 
+END IF;
+
+END

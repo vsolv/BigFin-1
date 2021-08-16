@@ -1,0 +1,676 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Vendor Selection {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appvendor" ng-controller="Ctrlvendor" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Vendor Selection</h4>
+            </div>
+        </div>
+        <div>
+            <div class="row">
+                <div class="col-lg-6 col-sm-6">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            APPROVED PR
+                        </div>
+                        <div class="panel-body" style="height: 500px;overflow: auto;">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>PR No</label>
+                                            <input id="txt_prno" maxlength="256" ng-change="filtersearch()"
+                                                   ng-model="txt_prno"/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Product Name</label>
+                                            <input id="txt_productname" maxlength="256" ng-change="filtersearch()"
+                                                   ng-model="txt_productname"/>
+                                        </md-input-container>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                   md-progress="deferred">
+                                <thead class="header">
+                                <tr style="text-align:center">
+                                    <th>S.No</th>
+                                    <th>PR No</th>
+                                    <th>PR Date</th>
+                                    <th>Product Name</th>
+                                    <th>Req Qty</th>
+                                    <th>Rem Qty</th>
+                                    <th>Qty</th>
+                                    <th>PR Approval Remarks</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody ng-repeat="details in prheader">
+                                <td class="text-center">
+                                    {{$index+1}}
+                                </td>
+                                <td>{{details.prheader_no}}</td>
+                                <td>{{details.prheader_date | date:'dd-MMM-y'}}</td>
+                                <td>{{details.product_displayname}}</td>
+                                <td>{{details.prdetails_qty}}</td>
+                                <td>{{details.req_qty-details.qty}}</td>
+                                <td><input style="width:100%;" ng-model="details.qty"
+                                           ng-blur="checkqty(details.req_qty,details.qty,$index,details.edit)" numbers-only  maxlength="5"></td>
+                                <td>{{details.prheader_remarks}}</td>
+                                <td align="center">
+                                    <input type="checkbox" ng-model="details.checked"
+                                           ng-change="checkproduct(details.product_gid,$index,details.edit,details.checked)"/>
+                                </td>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-sm-6">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            SUPPLIER DETAILS
+                        </div>
+                        <div class="panel-body" style="height: 250px;overflow: auto;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label style="color:blue">Product Name: {{product_name}}</label>
+
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label style="color:blue"> Product Qty: {{product_qty}}</label>
+                                    </md-input-container>
+                                </div>
+                            </div>
+                            <br/>
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                   md-progress="deferred">
+                                <thead class="header">
+                                <tr style="text-align:center">
+                                    <th>S.No</th>
+                                    <th>Supplier Name</th>
+                                    <th>Rate</th>
+                                    <th>Credit Period</th>
+                                    <th>Delivery Days</th>
+                                    <th>Capacity</th>
+                                    <th>Pending PO</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody ng-repeat="details in supplier_details|orderBy : 'unitprice'">
+                                <td class="text-center">
+                                    {{$index+1}}
+                                </td>
+                                <td>{{details.supplier_name}}</td>
+                                <td>{{details.unitprice}}</td>
+                                <td>{{details.creditlimit_days}}</td>
+                                <td>{{details.prod_capacity}}</td>
+                                <td>{{details.delivery_days}}</td>
+                                <td>{{details.total}}</td>
+                                <td align="center">
+                                    <input type="checkbox" ng-model="details.checked"
+                                           ng-change="supplier_check($index,details.checked,details.supplier_name)"/>
+                                </td>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            PO DETAILS
+                        </div>
+                        <div class="panel-body" style="height: 250px;overflow: auto;">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                   md-progress="deferred">
+                                <thead class="header">
+                                <tr style="text-align:center">
+                                    <th>S.No</th>
+                                    <th>Supplier Name</th>
+                                    <th>Product Name</th>
+                                    <th>Qty</th>
+                                    <th>Unit Prize</th>
+                                    <th>Total Prize</th>
+                                </tr>
+                                </thead>
+                                <tbody ng-repeat="details in finalpodetails">
+                                <td class="text-center">
+                                    {{$index+1}}
+                                </td>
+                                <td>{{details.supplier_name}}</td>
+                                <td>{{details.product_name}}</td>
+                                <td>{{details.podetails_qty}}</td>
+                                <td align="right">{{details.podetails_unitprice|number : 2}}</td>
+                                <td align="right">{{details.podetails_amount|number : 2}}</td>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 text-right">
+                           <md-button ng-click="Close()" class="md-raised md-warn">Close
+                        <md-tooltip>Close</md-tooltip>
+                    </md-button>
+
+
+                      <md-button ng-click="save_podetails('draft',poheader_gid)" ng-hide="disable"
+                               class="btn btn-info custbutton">Submit
+                        <md-tooltip>Submit</md-tooltip>
+                    </md-button>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+        {% endverbatim %}
+<script>
+    var app = angular.module('Appvendor', ['ngMaterial', 'ui.bootstrap','AppCommon']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    app.controller('Ctrlvendor', ['$scope', '$filter', 'Servicevendor', '$mdDateLocale', '$window','$mdDialog', function($scope, $filter, Servicevendor, $mdDateLocale, $window,$mdDialog) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.maintable = [];
+
+$scope.loading = function() {
+      $mdDialog.show({
+         templateUrl: 'loaderSpinner',
+         parent: angular.element(document.body),
+         clickOutsideToClose: false
+      });
+   };
+
+   hsncode();
+$scope.hsndetails=[];
+function hsncode(){
+     var get_hsncode = Servicevendor.gethsndata()
+      get_hsncode.then(function(result) {
+            $scope.hsndetails=result.data;
+      });
+}
+
+        <!--page load-->
+  var po_gid;
+      var po_gid;
+      if (sessionStorage.getItem('povendor_gid') != undefined && sessionStorage.getItem('povendor_gid') != "" ){
+        po_gid=JSON.parse(sessionStorage.getItem('povendor_gid'));
+      }
+        if (po_gid != undefined){
+             var get_purchase = Servicevendor.getprheader(0, 0, po_gid.poheader_gid)
+                get_purchase.then(function(result) {
+                    $scope.maintable = JSON.parse(result.data);
+                    $scope.prheader = $scope.maintable;
+                    angular.forEach($scope.prheader,function(user){
+                            user.qty=user.all_qty;
+                            if(user.all_qty!=0){
+                                user.checked=true;
+                                user.edit=true;
+                            }
+                    });
+
+                    $scope.userTotalItems = $scope.prheader.length;
+                    $scope.Totalpages = Math.ceil($scope.prheader.length / $scope.itemsPerPage);
+                    $scope.prpoqty_filter=[];
+
+                    var get_purc = Servicevendor.getpodetails(po_gid.poheader_gid)
+                    get_purc.then(function(result) {
+                       $scope.maintable = JSON.parse(result.data);
+                        var prpoheader=[];
+                         prpoheader = $scope.maintable;
+                    if(prpoheader.length>0){
+                         angular.forEach(prpoheader,function(user){
+                           
+                          $scope.prpoqty_filter=$filter('filter')($scope.prheader, {product_gid:user.product_gid,checked: true},true);
+                            finaldata.push({
+                                poheader_gid: user.poheader_gid,
+                                podetail_gid: user.podetails_gid,
+                                "teamandcont_gid":0,
+                                "amement_gid":'N',
+                                "vesion_gid":0,
+                                "supplier_name": user.supplier_name,
+                                "supplier_gid": user.poheader_supplier_gid,
+                                "product_gid": user.product_gid,
+                                "product_name": user.product_name,
+                                "podetails_uom":user.uom_name,
+                                "podetails_qty": user.podetails_qty,
+                                "podetails_unitprice": user.podetails_unitprice,
+                                "podetails_amount": user.podetails_amount,
+                                "podetails_taxamount": user.podetails_taxamount,
+                                "podetails_totalamount": user.podetails_totalamount,
+                                "prpopty": $scope.prpoqty_filter,
+                                "godown":"",
+                                 "delete":"",
+                            })
+                        $scope.finalpodetails = finaldata;
+                     });
+                  }
+                });
+              }),function() {
+                alert('no data');
+            };
+            }
+            else{
+                $scope.prheader = [];
+                var get_purchase = Servicevendor.getprheader(0, 0, 0)
+                get_purchase.then(function(result) {
+                $scope.maintable = JSON.parse(result.data);
+                $scope.prheader = $scope.maintable;
+
+                $scope.userTotalItems = $scope.prheader.length;
+                $scope.Totalpages = Math.ceil($scope.prheader.length / $scope.itemsPerPage);
+            });
+		}
+
+        <!--filter concept-->
+        $scope.filtersearch = function() {
+            $scope.prheader = $filter('filter')($scope.maintable, {
+                "prheader_no": $scope.txt_prno,
+                "product_name": $scope.txt_productname
+            });
+            $scope.userTotalItems = $scope.prheader.length;
+        }
+
+
+
+        <!--check qty-->
+        $scope.checkqty = function(balanceqty, qty, index) {
+            if (qty > balanceqty) {
+                $scope.prheader[index].qty = 0;
+            }
+             $scope.prheader[index].checked=false;
+        }
+
+        <!--supplier check-->
+        var finaldata = [];
+        $scope.supplier_check = function(index, check, supplier_name) {
+        if($scope.finalpodetails != undefined && $scope.finalpodetails.length != 0){
+            if ($scope.suppliername != undefined) {
+                    if (supplier_name != $scope.suppliername) {
+                        alert("U cant Select This Supplier");
+                        $scope.supplier_details[index].checked = false;
+                        return false;
+                    }
+                }
+            }
+            if (check == true) {
+                var count = $filter('filter')($scope.supplier_details, {
+                    checked: true
+                });
+                if (count.length > 1) {
+                    $scope.supplier_details[index].checked = false;
+                    alert("Please Unselect About Line Item And Select This Line");
+                    return false;
+                } else {
+                    productfinal = $filter('filter')($scope.finalpodetails, {
+                        product_name: $scope.product_name
+                    }, true);
+                    var index = 0;
+                    var count_final = 0;
+                    if (productfinal == undefined) {
+                        count_final = 0;
+                    } else {
+                        count_final = productfinal.length;
+                        index = $scope.finalpodetails.indexOf(productfinal);
+                    }
+                    if (count_final > 0) {
+                        $scope.finalpodetails[index].product_qty = $scope.product_qty;
+                        $scope.finalpodetails[index].podetails_taxamount =taxamount(count[0].unitprice * $scope.product_qty,count[0].address_state_gid,count[0].stategid,$scope.product_hsncode);
+                        $scope.finalpodetails[index].podetails_amount = count[0].unitprice * $scope.product_qty;
+                    } else {
+                        $scope.prpoqty_filter=[];
+                        $scope.suppliername = count[0].supplier_name;
+
+                        $scope.prpoqty_filter=$filter('filter')($scope.prheader, {product_gid:$scope.product_gid,checked: true},true);
+                        finaldata.push({
+                        poheader_gid: "",
+                        podetail_gid: "",
+                        "teamandcont_gid":0,
+                            "amement_gid":'N',
+                            "vesion_gid":0,
+                            "supplier_name": count[0].supplier_name,
+                            "supplier_gid": count[0].supplier_gid,
+                            "product_gid": $scope.product_gid,
+                            "product_name": $scope.product_name,
+                            "podetails_uom":"",
+                            "podetails_qty": $scope.product_qty,
+                            "podetails_unitprice": count[0].unitprice,
+                            "podetails_amount": count[0].unitprice * $scope.product_qty,
+                            "podetails_taxamount":taxamount(count[0].unitprice * $scope.product_qty,count[0].address_state_gid,count[0].stategid,$scope.product_hsncode),
+                            "podetails_totalamount": (count[0].unitprice * $scope.product_qty) +taxamount(count[0].unitprice * $scope.product_qty,count[0].address_state_gid,count[0].stategid,$scope.product_hsncode),
+                            "prpopty": $scope.prpoqty_filter,
+                            "godown":"",
+                            "delete":"",
+                        })
+                        $scope.finalpodetails = finaldata;
+
+                    }
+                }
+            } else {
+                productfinal = $filter('filter')($scope.finalpodetails, {
+                    product_name: $scope.product_name
+                }, true)[0];
+                var index = $scope.finalpodetails.indexOf(productfinal);
+                $scope.finalpodetails.splice(index, 1);
+                if ($scope.finalpodetails == undefined ) {
+                    $scope.suppliername = undefined;
+                }
+            }
+
+        }
+
+        function taxamount( amount, supplier_stategid, our_stategid, hsccode){
+              var hsndetails=$filter('filter')($scope.hsndetails,{
+                        hsn_gid:hsccode
+              }, true)[0];
+
+              if(supplier_stategid==our_stategid){
+                   return (parseFloat(amount)*(parseFloat(hsndetails.hsn_cgstrate)/100))+(parseFloat(amount)*(parseFloat(hsndetails.hsn_sgstrate)/100));
+              }else{
+                  return (parseFloat(amount)*(parseFloat(hsndetails.hsn_igstrate)/100));
+              }
+
+        }
+
+        <!--prcheck-->
+        $scope.checkproduct = function(product_gid, index,edit,check_Details) {
+
+        if(edit!= undefined){
+        if(check_Details == true){
+             var product_json = {
+                product_gid: product_gid
+            }
+            var get_supplier = Servicevendor.getsupplier(0, product_json)
+            get_supplier.then(function(result) {
+                $scope.supplier_details = JSON.parse(result.data);
+            });
+            angular.forEach($scope.supplier_details,function(user){
+                if(user.supplier_gid==po_gid.supplier_gid){
+                    user.checked=true;
+                }
+                user.checked.disabled=true;
+            });
+        }else{
+            var  productfinal = $filter('filter')($scope.finalpodetails, {
+                    product_gid: product_gid,
+                    delete:"",
+                }, true)[0];
+                if($scope.finalpodetails.podetails_qty==$scope.prheader[index].qty){
+                    var index = $scope.finalpodetails.indexOf(productfinal);
+                    $scope.finalpodetails[index].delete=true;
+                }else{
+                var total_qty = 0;
+                var prheader_de = $filter('filter')($scope.prheader, {
+                         checked: true,
+                         product_gid: product_gid
+                });
+
+              angular.forEach(prheader_de, function(user) {
+                if (user.product_name == prheader_de[0].product_name) {
+                    total_qty = parseInt(user.qty) + parseInt(total_qty);
+                    user.assigned = true
+                }
+              })
+
+                var index = $scope.finalpodetails.indexOf(productfinal);
+                $scope.finalpodetails[index].podetails_qty=total_qty;
+                $scope.finalpodetails[index].podetails_amount=total_qty*$scope.finalpodetails[index].podetails_unitprice;
+                $scope.finalpodetails[index].podetails_totalamount=total_qty*$scope.finalpodetails[index].podetails_unitprice;
+             }
+        }
+
+        }else{
+            var prheader_details = $filter('filter')($scope.prheader, {
+                checked: true,
+            });
+            var prheader_check=prheader_details;
+
+            if ($scope.prheader[index].qty == "0" || $scope.prheader[index].qty == undefined) {
+                $scope.prheader[index].checked = false;
+                alert("Qty Should be filled");
+                return false;
+            }
+            var prheaderfinal = $filter('filter')(prheader_check, {
+                checked: true,
+                product_gid:product_gid
+            });
+            var total = 0;
+             prheader_detotal = $filter('filter')($scope.prheader, {
+                            checked: true,
+                            product_gid: product_gid
+              });
+            if (prheaderfinal.length==0){
+                if ($scope.finalpodetails != undefined) {
+                    if ($scope.finalpodetails.length > 0) {
+                        var final_podetails = $filter('filter')($scope.finalpodetails, {
+                             product_gid: product_gid
+                     }, true)[0];
+                     if(final_podetails != undefined){
+                      var index = $scope.finalpodetails.indexOf(final_podetails);
+                        $scope.finalpodetails.splice(index, 1);
+                     }
+                    }
+                 }
+            }else{
+                var total=0;
+               if($scope.finalpodetails != undefined){
+                   if($scope.finalpodetails.length>0){
+                angular.forEach(prheader_detotal, function(user) {
+                 if (user.product_name == prheader_detotal[0].product_name) {
+                    total = parseInt(user.qty) + parseInt(total);
+                    user.assigned = true
+                 }
+                });
+
+                    }
+                }
+            }
+            for (var i = 0; i < prheader_details.length; i++) {
+                if ($scope.finalpodetails != undefined) {
+                   var finalpo=  $filter('filter')($scope.finalpodetails, {
+                       product_gid:product_gid
+                   },true)[0];
+                  if(finalpo != undefined){
+                    var index = $scope.finalpodetails.indexOf(finalpo);
+                    $scope.finalpodetails[index].podetails_qty=total;
+                    $scope.finalpodetails[index].podetails_amount=total*$scope.finalpodetails[index].podetails_unitprice;
+                    $scope.finalpodetails[index].podetails_totalamount=total*$scope.finalpodetails[index].podetails_unitprice;
+                  }else{
+                  var finalproduct=  $filter('filter')($scope.finalpodetails, {
+                       product_gid:prheader_details[i].product_gid
+                   },true)[0];
+                      if(finalproduct == undefined ){
+                        if(prheader_details[i].product_gid != product_gid) {
+                            $scope.prheader[index].checked = false;
+                            $scope.prheader[index].qty = 0;
+                            alert("Please Select Same Product");
+                            return false;
+                        }
+                      }
+
+                    }
+                }
+            else{
+            if($scope.finalpodetails != undefined){
+
+                     if(prheader_details[i] != undefined){
+                      var finalproduct=  $filter('filter')($scope.finalpodetails, {
+                       product_gid:prheader_details[i].product_gid
+                   },true)[0];
+                        if(finalproduct == undefined){
+                            if(prheader_details[i].product_gid != product_gid) {
+                                $scope.prheader[index].checked = false;
+                                $scope.prheader[index].qty = 0;
+                                alert("Please Select Same Product");
+                                return false;
+                            }
+                        }
+                     }
+
+            }else{
+              if(prheader_details[i] != undefined){
+                if(prheader_details[i].product_gid != product_gid) {
+                          $scope.prheader[index].checked = false;
+                          $scope.prheader[index].qty = 0;
+                          alert("Please Select Same Product");
+                          return false;
+                    }
+                   }
+                }
+
+                 }
+
+            }
+            total=0;
+            angular.forEach(prheader_detotal, function(user) {
+                if (user.product_name == prheader_detotal[0].product_name) {
+                    total = parseInt(user.qty) + parseInt(total);
+                    user.assigned = true
+                }
+            })
+
+            if(prheader_details[0]==undefined){
+                $scope.product_name = null;
+                $scope.product_gid = null;
+                 $scope.product_hsncode= null;
+            }else{
+             $scope.product_name = prheader_details[0].product_name;
+              $scope.product_gid = prheader_details[0].product_gid;
+                $scope.product_hsncode=  prheader_details[0].product_hsn_gid;
+            }
+
+             if(prheader_detotal[0]!=undefined){
+                $scope.product_name = prheader_detotal[0].product_name;
+                $scope.product_gid =prheader_detotal[0].product_gid;
+                  $scope.product_hsncode=  prheader_details[0].product_hsn_gid;
+            }
+
+            $scope.product_qty = total;
+            var product_json = {
+                product_gid: product_gid
+            }
+            var get_supplier = Servicevendor.getsupplier(0, product_json)
+            get_supplier.then(function(result) {
+                $scope.supplier_details = JSON.parse(result.data);
+
+                 var finalpo=  $filter('filter')($scope.finalpodetails, {
+                       product_gid:product_gid
+                   },true);
+
+                  if(finalpo != undefined){
+                    var index = $scope.finalpodetails.indexOf(finalpo);
+                    $scope.finalpodetails[index].podetails_qty=total;
+                    $scope.finalpodetails[index].podetails_amount=total*$scope.finalpodetails[index].podetails_unitprice;
+                    $scope.finalpodetails[index].podetails_totalamount=total*$scope.finalpodetails[index].podetails_unitprice;
+                    var index1 = getIndexOf($scope.supplier_details,  $scope.finalpodetails[index].supplier_gid, "supplier_gid");
+                    $scope.supplier_details[index1].checked=true;
+                 }
+
+            });
+        }
+      }
+function getIndexOf(arr, val, prop) {
+      var l = arr.length,
+        k = 0;
+      for (k = 0; k < l; k = k + 1) {
+        if (arr[k][prop] === val) {
+          return k;
+        }
+      }
+      return false;
+    }
+    function calucatesum() {
+        var sum = 0;
+        var podetails = $scope.finalpodetails;
+        for (var i = 0; i < podetails.length ; i++) {
+            if (podetails[i].podetails_totalamount !== undefined && podetails[i].podetails_totalamount !== "") {
+                sum += parseFloat(podetails[i].podetails_totalamount);
+            }
+        }
+        return sum;
+    };
+
+        $scope.save_podetails=function(action,prheader_gid){
+              angular.forEach($scope.finalpodetails,function(user){
+                  $scope.prpoqty_filter=$filter('filter')($scope.prheader, {product_gid:user.product_gid,checked: true},true);
+                  user.prpopty=$scope.prpoqty_filter;
+              });
+            $scope.loading();
+            var calculatePay=calucatesum();
+             var status='';
+            var fromdate =formatDate(new Date());
+            var todate = formatDate(new Date());
+            if(action=='draft'){status='Draft'}else{status='Pending For Approval'}
+                var prdatas = Servicevendor.D(action,status,$scope.finalpodetails,calculatePay,fromdate,todate)
+                prdatas.then(function(result) {
+                  alert(result.data);
+                  sessionStorage.setItem('povendor_gid', '');
+                  $window.location.href = "po_maker";
+                  $scope.endloading();
+             }),function() {
+                alert('no data');
+            }.finally($scope.endloading);
+        }
+
+        $scope.Close=function(){
+             sessionStorage.setItem('povendor_gid', '');
+                  $window.location.href = "welcome";
+        };
+
+    }]);
+
+    app.service("Servicevendor", function($http) {
+
+      this.setposave = function (action,status,podetails,calculatePay,fromdate,todate) {
+      var response = $http.post(Appname + "/POheader_Set/", {params:{'action':action,'status':status,'podetails':podetails,'total_amount':calculatePay,'from_date':fromdate,'to_date':todate}});
+      return response;
+    }
+
+    this.gethsndata = function(){
+         var response=$http.post(Appname+"/HSN_get/");
+            return response;
+     }
+
+     this.getpodetails = function (po_gid) {
+       var response = $http.post(Appname+"/Approval_PODetail/", { params:{'podetails_gid': po_gid ,'product_name': ''  } })
+        return response;
+    }
+
+        this.getprheader = function(supp_gid, product_gid, podetail_gid) {
+            var response = $http.post(Appname + "/POQtyList/", {
+                params: {
+                    'action': 'ALL',
+                    'supplier_gid': supp_gid,
+                    'product_gid': product_gid,
+                    'product_name': '',
+                    'serial_no': podetail_gid
+                }
+            })
+            return response;
+        }
+        this.getsupplier = function(supp_gid, product_gid) {
+            var response = $http.post(Appname + "/supplier_details/", {
+                params: {
+                    'action': 'suppliercapacity',
+                    'type': '',
+                    'product_gid': product_gid
+                }
+            })
+            return response;
+        }
+    });
+</script>
+{% endblock %}

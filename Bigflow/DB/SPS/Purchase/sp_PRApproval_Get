@@ -1,0 +1,94 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_PRApproval_Get`(
+IN `Action` varchar(100),
+IN `li_login_code` varchar(5000),
+IN `li_entity_gid` int,
+Out `Message` varchar(5000)
+ )
+BEGIN
+
+#Vigneshwari       22-11-2017
+
+declare Query_search varchar(1000);
+declare PR_Headersrch varchar(1000);
+declare Query_Insert text;
+declare  li_count int;
+declare Query_search1 varchar(1000);
+
+if  Action='PR' then
+
+
+	   set  Query_Insert = '';
+       set Query_Insert = concat(' select prheader_gid,prheader_no,prheader_date,prheader_employee_gid,prheader_status, 
+													  prheader_branchgid,prheader_totalamount,prheader_commodity_gid,commodity_name,commodity_code,
+													 concat(supplier_name,''-'',supplier_branchname) as supplier_name,supplier_gid,employee_name
+													 from  gal_trn_tprheader as a
+													 inner join gal_trn_tprdetails as b on b.prdetails_prheader_gid=a.prheader_gid
+                                                     and b.prdetails_isremoved=''N''
+                                                     inner join gal_mst_temployee as cc on cc.employee_gid = a.prheader_employee_gid
+													 inner join ap_mst_tcommodity as c on c.commodity_gid=a.prheader_commodity_gid
+                                                     and c.commodity_isactive =''Y'' and c.commodity_isremoved=''N''
+                                                    inner join gal_map_tsupplierproduct on 
+													supplierproduct_gid = prdetails_supplierproductgid and 
+													 prdetails_product_gid= supplierproduct_product_gid and supplierproduct_isremoved = ''N'' 
+													 and  supplierproduct_isactive=''Y'' and  prdetails_isremoved=''N''
+													inner join gal_mst_tsupplier as f on supplier_gid = supplierproduct_supplier_gid
+	                                                 and
+                                                      f.supplier_isactive=''Y'' and  f.supplier_isremoved=''N''
+													where lower(trim(SPLIT_STR(a.prheader_status,''to'',2))) =''',lower(li_login_code),'''
+													and a.prheader_isactive=''Y''
+													and a.prheader_isremoved=''N''
+													and a.entity_gid=',li_entity_gid,'
+                                                    group by prheader_gid');
+                                 
+
+						set @Insert_query = Query_Insert;	
+						#select Query_Insert; ## Remove It
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						Select found_rows() into li_count;
+        
+            if li_count > 0 then
+				set Message = 'FOUND';
+			else 
+				set Message = 'NOT_FOUND';
+			end if;
+  
+  end if;
+  
+  if  Action='PO' then
+
+
+	   set  Query_Insert = '';
+       set Query_Insert = concat(' select poheader_gid,poheader_no,poheader_date,poheader_status,employee_name, 
+													  poheader_branchgid,poheader_commodity_gid,commodity_name,commodity_code,
+													 concat(supplier_name,''-'',supplier_branchname) as supplier_name,supplier_gid,poheader_amount
+													 from  gal_trn_tpoheader as a
+													 inner join gal_trn_tpodetails as b on b.podetails_poheader_gid=a.poheader_gid
+                                                     and b.podetails_isremoved=''N''
+													 inner join ap_mst_tcommodity as c on c.commodity_gid=a.poheader_commodity_gid
+                                                     and c.commodity_isactive =''Y'' and c.commodity_isremoved=''N''
+                                                    inner join gal_mst_tsupplier as f on f.supplier_gid=a.poheader_supplier_gid
+                                                    and  f.supplier_isactive=''Y'' and  f.supplier_isremoved=''N''
+                                                    inner join gal_mst_temployee as gg on gg.employee_gid=a.create_by
+													where lower(trim(SPLIT_STR(a.poheader_status,''to'',2))) =''',lower(li_login_code),'''
+													and a.poheader_isactive=''Y''
+													and a.poheader_isremoved=''N''
+													and a.entity_gid=',li_entity_gid,' 
+                                                    group by poheader_gid');
+                                 
+
+						set @Insert_query = Query_Insert;	
+						#select Query_Insert; ## Remove It
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						Select found_rows() into li_count;
+        
+            if li_count > 0 then
+				set Message = 'FOUND';
+			else 
+				set Message = 'NOT_FOUND';
+			end if;
+  
+  end if;
+
+END

@@ -1,0 +1,743 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Transfer {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-cloak ng-controller="datectrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Transfer Addition </h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Id</label>
+                            <input maxlength="30" ng-change="" ng-model="assetdetails_id"
+                                   placeholder="Asset id"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Value</label>
+                            <input ng-change="" ng-model="assetdetails_value" placeholder="Asset Value"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Cap Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                           ng-change="selectdate()"
+                                           ng-model="assetdetails_cpdate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Category</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedcat"
+                                md-search-text="searchcat"
+                                md-selected-item-change="selectchange(item)"
+                                md-items="item in catsearch(searchcat)"
+                                md-item-text="item.assetcat_subcatname"
+                                md-min-length=0
+                                placeholder="Category">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Category matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Branch</label>
+                            <input ng-change="" ng-model="assetdetails_branch" placeholder="Branch"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th class="text-center" scope="col">Asset Transaction Id
+                        <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                    <th scope="col" class="text-center">Product Name</th>
+                    <th scope="col" class="text-center">Category</th>
+                    <th scope="col" class="text-center">Capitalization Date</th>
+                    <th scope="col" class="text-center">Asset Value</th>
+                    <th scope="col" class="text-center">Branch</th>
+                    <th scope="col" class="text-center">Location</th>
+                    <th scope="col" class="text-center">Status</th>
+                    <th class="text-center" scope="col">Select
+                        <input ng-click="selectall()"
+                               ng-model="checkall" ng-checked="checkall"
+                               type="checkbox">
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="ast in assets | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{ast.index}}</center>
+                        </td>
+                        <td class="text-center" ng-click="imgshow($index)">{{ast.assetdetails_id}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.product_name}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.asset_cat_name}}
+                        </td>
+                        <td class="text-center">{{ast.assetdetails_capdate}}</td>
+                        <td class="text-right">{{ast.assetdetails_value | number :
+                            fractionSize}}
+                        </td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.branch_name}} -
+                            {{view.branch_code}}
+                        </td>
+                        <td class="text-left" ng-repeat="view in ast.lj_default_details">{{view.location_name}}</td>
+                        <td class="text-left">{{ast.assetdetails_requeststatus}}</td>
+                        <td class="text-center" style="width:100px;">
+                            <input
+                                    ng-click="selectEntity()"
+                                    ng-model="ast.isChecked" ng-checked="isChecked"
+                                    type="checkbox"> &nbsp &nbsp &nbsp
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-change="search()"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="1">
+                            <label>Page Count:</label>
+                            <select type="text" style="width:100px;"
+                                    class="form-control" placeholder="count"
+                                    ng-model="itemsPerPage">
+                                <option ng-value="10">10</option>
+                                <option ng-value="20">20</option>
+                                <option ng-value="50">50</option>
+                                <option ng-value="100">100</option>
+                                <option ng-value="150">150</option>
+                                <option ng-value="200">200</option>
+                            </select>
+                        </td>
+                        <td colspan="1" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{pageLength}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div ng-show="reason">
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Transfer Reason</label>
+                            <input class="textboxline" maxlength="60"
+                                   placeholder="Comments for asset transfer"
+                                   ng-change="Check(comments)"
+                                   ng-model="comments" required/>
+                            <p ng-show="test">The Special Characters except 'Comma', 'Fullstop' and 'Exclamation Mark'
+                                not accepted.</p>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3" style="margin-top:12px">
+                        <md-autocomplete
+                                md-clear-button="true"
+                                md-input-maxlength=126
+                                md-item-text="item.branch_name"
+                                md-items="item in querySearchs(searchbr)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-search-text="searchbr"
+                                md-selected-item="selectedbr"
+                                md-selected-item-change="branch_change(item)"
+                                placeholder="Branch">
+                            <md-item-template>
+                                <span md-highlight-text="searchTe"> {{item.branch_name}} - {{item.branch_code}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch matching "{{searchTe}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3" style="margin-top:12px">
+                        <md-autocomplete
+                                md-clear-button="true"
+                                md-input-maxlength=126
+                                md-item-text="item.assetlocation_name"
+                                md-items="item in querySearch(searchloc)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-search-text="searchloc"
+                                md-selected-item="selectedloc"
+                                md-selected-item-change="loc_change(item)"
+                                placeholder="Location">
+                            <md-item-template>
+                                <span md-highlight-text="searchTe"> {{item.assetlocation_name}} --- {{item.assetlocation_floor}} </span> </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Location matching "{{searchTe}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Transfer Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-min-date="minDate" ng-change="" md-open-on-focus
+                                           ng-model="transfer_date" formatDate></md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="col-md-3"></div>
+                <div class="col-md-3" style="margin-top:12px">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-input-maxlength=126
+                            md-item-text="item.bs_name"
+                            md-items="item in querySearchbs(search_bs)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="search_bs"
+                            md-selected-item="selectedbs"
+                            md-selected-item-change="bschange(item)"
+                            placeholder="Select BS">
+                        <md-item-template>
+                            <span md-highlight-text="searchTe">{{item.bs_name}} - {{item.bs_code}}  </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No BS matching "{{searchTe}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3" style="margin-top:12px">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-input-maxlength=126
+                            md-item-text="item.cc_name"
+                            md-items="item in querySearchcc(search_cc)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="search_cc"
+                            md-selected-item="selectedcc"
+                            md-selected-item-change="ACselectchange(item)"
+                            placeholder="Select CC">
+                        <md-item-template>
+                            <span md-highlight-text="searchTe">{{item.cc_name}} - {{item.cc_code}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No CC matching "{{searchTe}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <md-button class="btn btn-info custbutton" ng-click="Save(emp)"
+                           ng-disabled="enable_update">Submit
+                    <md-tooltip>Submit</md-tooltip>
+                </md-button>
+                <md-button class="md-raised" data-dismiss="modal" ng-href="fa_transferplus">Back
+                    <md-tooltip>Close</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <!--Image start-->
+            <div ng-include="'fa_image_popup'"></div>
+    </div>
+</div>
+
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+
+var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.enable_update = true;
+    $scope.data_len = 0;
+    var td = detail.date;
+    $scope.set_branch = [];
+    $scope.get_drop = [];
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.transfer_date = convertdate(td);
+    $scope.maxDate = new Date($scope.transfer_date.getFullYear(), $scope.transfer_date.getMonth(), $scope.transfer_date.getDate() + 7);
+    $scope.minDate = new Date($scope.transfer_date.getFullYear(), $scope.transfer_date.getMonth() - 1, $scope.transfer_date.getDate());
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+     $scope.Check= function(x) {
+        var reg = /^[^`~@#$%\^&*()_+={}|[\]\\:';"<>?/]*$/;
+
+              if (!x.match(reg)) {
+              $scope.comments = x.substring(0, x.length-1);
+              $scope.test=true;
+
+              }
+              else
+              {
+               $scope.test=false;
+              }
+      };
+
+    var Choose_branch =1;
+    function loadlocation(Choose_branch) {
+        var loc = {
+            "Params": {
+                "FILTER": {
+                    "Reftable_Gid": Choose_branch,
+                },
+            }
+        }
+        var get_drops = newservice.drop_locat(loc);
+            get_drops.then(function(result) {
+
+                $scope.maintble = result.data.DATA;
+                $scope.get_drop_location = $scope.maintble;
+            });
+    }
+    loaddata(0,30);
+    $scope.set_branch = [];
+    function loaddata(x,y) {
+     var data = {
+        params: {
+                "Branch_name": $scope.searchbranch,
+                "Limits": x + "," + y,
+            }
+        }
+     var get_brn = newservice.drop_brch(data);
+           get_brn.then(function(result) {
+            $scope.maintble = result.data.DATA;
+            $scope.set_branch = $scope.maintble;
+            for (var i = 0; i < 1; i++) {
+                dta = {
+                    "branch_gid": -1,
+                    "branch_name": "LOAD MORE.....",
+                }
+                $scope.set_branch.push(dta);
+            }
+
+         });
+        var get_bs_data = newservice.drop_bs($scope.entity_gid)
+        get_bs_data.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_bs = $scope.main;
+        })
+     }
+        $scope.querySearchs = gotobranch;
+        function gotobranch(query) {
+         $scope.searchbranch = query;
+         loaddata(0, 30);
+            var result = $filter('filter')($scope.set_branch, {
+                'branch_name': query
+            });
+            return result;
+        }
+        $scope.querySearchcc = gotocc;
+        function gotocc(query) {
+            var result = $filter('filter')($scope.get_cc, {
+                'cc_name': query
+            });
+            return result;
+        }
+
+        $scope.bschange = function(bs){
+        $scope.cmp_bs = bs.bs_gid;
+            var get_cc_data = newservice.drop_cc($scope.entity_gid,$scope.cmp_bs)
+            get_cc_data.then(function(result) {
+
+                $scope.main = result.data.DATA;
+                $scope.get_cc = $scope.main;
+            })
+        }
+
+        $scope.querySearchbs = gotobs;
+        function gotobs(query) {
+            var result = $filter('filter')($scope.get_bs, {
+                'bs_name': query
+            });
+            return result;
+        }
+
+
+    $scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+            }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+            }
+    }
+    $scope.selectdate = function() {
+        $scope.assetdetails_capdate = $filter('date')(new Date($scope.assetdetails_cpdate),'yyyy-MM-dd');
+    }
+    $scope.search = function() {
+        $scope.loading();
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Asset_Id": $scope.assetdetails_id,
+                    "Asset_Value": $scope.assetdetails_value,
+                    "Cap_Date": $scope.assetdetails_capdate,
+                    "Asset_Code": $scope.catagry,
+                    "Branch": $scope.assetdetails_branch,
+                    "Asset_Group":"N",
+                    "Page_Index":$scope.currentPage -1,
+                    "Page_Size":$scope.itemsPerPage,
+                },
+            }
+        };
+        var get_asset = newservice.asset_detail(data)
+        get_asset.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.assets = $scope.main;
+            if($scope.currentPage != 0){
+                var count = $scope.currentPage - 1;
+                count = count * $scope.itemsPerPage;
+            }
+            else{
+                count = 0;
+            }
+            for (i = 0; i < $scope.assets.length; i++) {
+                var t = i+1;
+                $scope.assets[i].index = count + t ;
+            };
+            $scope.pageLength = $scope.assets[0].Total_Row;
+            $scope.data_len = $scope.assets.length;
+            $scope.Totalpages = Math.ceil($scope.pageLength / $scope.itemsPerPage);
+        }).finally($scope.endloading);
+    }
+
+    loadcat();
+    function loadcat(){
+        var get_drop = newservice.drop_data()
+        get_drop.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.get_drop_data = $scope.main;
+
+        });
+    }
+    $scope.catsearch = gotocat;
+        function gotocat(query) {
+            var result = $filter('filter')($scope.get_drop_data, {
+                'assetcat_subcatname': query
+            });
+            return result;
+        }
+
+    $scope.imgshow = function(id){
+    if($scope.assets[id].assetdetails_imagepath != null){
+         modalshow('viewmodals');
+         $scope.asset_img =$scope.assets[id].assetdetails_imagepath;
+     }
+    }
+
+      $scope.selectall = function () {
+        if($scope.checkall == true){
+            for (var i = 0; i < $scope.assets.length; i++) {
+			    $scope.assets[i].isChecked = true;
+			    $scope.enable_update = false;
+			     $scope.reason = true;
+		}
+		}
+		else if ($scope.checkall == false){
+            for (var i = 0; i < $scope.assets.length; i++) {
+			    $scope.assets[i].isChecked = false;
+		}
+		     $scope.enable_update = true;
+		     $scope.reason = false;
+        }
+	};
+
+    $scope.selectEntity = function() {
+
+                  $scope.asset_branch = [];
+                for (var i = 0; i < $scope.assets.length; i++) {
+                   if ($scope.assets[i].isChecked == true) {
+                        $scope.enable_update = false;
+                        $scope.enable_reject = false;
+                        $scope.reason = true;
+<!--                        $scope.asset_branch = [];-->
+                        var datas_asset_branch = ($scope.assets[i].lj_default_details[0].branch_code).toString();
+                        $scope.asset_branch.push(datas_asset_branch);
+
+                    }
+                    else if ($scope.assets[i].isChecked == false){
+                        $scope.reason = false;
+                        $scope.enable_update = true;
+                        $scope.enable_reject = true;
+
+                    }
+
+                }
+
+<!--                alert(JSON.stringify($scope.asset_branch));-->
+            };
+    $scope.branch_change = function(branch_select) {
+        $scope.count = 0;
+        var ite = branch_select.branch_gid;
+        if (ite > 0) {
+           var check_branchexists = $scope.asset_branch.indexOf(branch_select.branch_code)
+           if (check_branchexists > 0) {
+            alert("Can't Initialize Same Branch Transfer");
+            $scope.selectedbr = '';
+           }
+
+            $scope.set_branch = $filter('filter')($scope.set_branch, {
+                'branch_name': branch_select.branch_name
+            });
+            $scope.Choose_branch = branch_select.branch_gid;
+            loadlocation($scope.Choose_branch)
+        } else {
+            $scope.selectedbr = "";
+            $scope.count++;
+            $scope.loadcount = $scope.count * 60
+            for (i = 0; i <= $scope.loadcount; i++) {
+                if ($scope.loadcount == i) {
+                    loaddata(1, i)
+                }
+            }
+    }
+
+        }
+    $scope.loc_change = function(loc_select) {
+        $scope.Choose_loc = loc_select.assetlocation_gid;
+        }
+    $scope.querySearch = gotoexe;
+        function gotoexe(query) {
+            var result = $filter('filter')($scope.get_drop_location, {
+                'assetlocation_reftablegid': query
+            });
+            return result;
+        }
+
+    $scope.date_checkdate = function() {
+            if($scope.transfer_date != undefined){
+                        $scope.date_checkbranch();
+                        return false;
+                }
+             else if($scope.transfer_date == undefined){
+                        error_toast(not_enter_date,time_toast);
+                }
+    };
+    $scope.date_checkbranch = function() {
+            if($scope.Choose_branch != undefined){
+                    $scope.location_checkbranch();
+                }
+             else if($scope.Choose_branch == undefined){
+                       error_toast(not_enter_branch,time_toast);
+
+                }
+    };
+     $scope.location_checkbranch = function() {
+            if($scope.Choose_loc != undefined){
+                        submit_data();
+                }
+             else if($scope.Choose_loc == undefined){
+                       error_toast(not_enter_location,time_toast);
+
+                }
+    };
+
+
+
+
+ $scope.Save = function(entity) {
+     if($scope.comments == undefined){
+           error_toast(not_enter_reason,time_toast);
+
+        }
+        else{
+            $scope.date_checkdate();
+        }
+    }
+            function submit_data(){
+               $scope.asset_grp = [];
+               $scope.enable_update = true;
+                for (i = 0; i < $scope.assets.length; i++) {
+                    if ($scope.assets[i].isChecked) {
+                        var datas_asset = $scope.assets[i].assetdetails_gid;
+                        $scope.asset_grp.push(datas_asset);
+                    }
+                };
+                var d = new Date($scope.transfer_date);
+                var transdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+                 $scope.asset = {
+                 "Asset_Gid":($scope.asset_grp).toString(),
+                 "AssetDetails_TransferTo_Gid":($scope.Choose_branch).toString(),
+                 "AssetDetails_Location_Gid":($scope.Choose_loc).toString(),
+                 "AssetDetails_Transfer_Date":(transdate).toString(),
+                 "BS_NO":($scope.selectedbs.bs_no).toString(),
+                 "CC_NO":($scope.selectedcc.cc_no).toString(),
+                     };
+                  var details = {
+                    "ASSET": $scope.asset
+                   };
+
+            var submit = {
+                "Params": {
+                "DETAILS": details,
+                "CHANGE": {},
+                "STATUS": {
+                          "Status":"TRANSFER",
+                          "Remark":($scope.comments).toString(),
+                           },
+                 }
+                     };
+                 save_file(submit);
+
+            }
+
+  function save_file(submit){
+ var reduct_save = newservice.data_save(submit);
+ $scope.loading();
+        reduct_save.then(function(result) {
+        $scope.set_msg = result.data.MESSAGE
+        if($scope.set_msg == 'SUCCESS' ){
+            success_toast();
+        }
+        else{
+            alert($scope.set_msg);
+        }
+         $window.location.href= "fa_transferplus";
+        }).finally($scope.endloading);
+    }
+});
+
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+        var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                "Sub_Type": "SEARCH",
+                "Type": "ASSET_DETAILS",
+                "Group": "FA_ASSET_TRAN_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+
+      this.data_save = function(submit) {
+        var response = $http.post(Appname + "/writeoff_summary/", {
+            params: {
+                 "Group" : "FA_ASSET_TRAN",
+                 "Type" :  "ASSET_TRANSFER",
+                 "Sub_Type" : "MAKER",
+                 "Action" : "UPDATE",
+                 "Employee_Gid" : "13",
+                 "json" : submit,
+            }
+        });
+        return response;
+    }
+
+    this.drop_brch = function(data) {
+        var response = $http.post(Appname + "/get_branch/", data);
+        return response;
+    }
+    this.drop_locat = function(branch, employgid) {
+        var respons = $http.post(Appname + "/branch_details/", {
+            params: {
+                "Group": "FA_LOCATION_GET",
+                "Type": "FA_LOCATION",
+                "Sub_Type": "DDL",
+                "json": branch,
+            }
+        });
+        return respons;
+    }
+    this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+    }
+    this.drop_cc = function(entity,bsgid) {
+        var response = $http.post(Appname + "/data_cc/", {
+        params: {
+               "Entity_Gid": entity,
+               "Bs_gid": bsgid,
+            }
+        });
+        return response;
+    }
+    this.drop_bs = function(entity) {
+        var response = $http.post(Appname + "/data_bs/", {
+        params: {
+               "Entity_Gid": entity,
+            }
+        });
+        return response;
+    }
+
+});
+
+
+
+
+
+
+
+</script>
+{% endblock %}

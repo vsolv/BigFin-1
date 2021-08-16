@@ -1,0 +1,222 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PO close {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="polose" ng-controller="Ctrlpoclose" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PO Close Maker Summary</h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PO Amount</label>
+                        <input id="amount" maxlength="256" type="number" numbers-only    ng-model="poheader_amount" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PO No</label>
+                        <input id="ponum" maxlength="14" letter-Num  ng-model="Po_num" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Supplier</label>
+                        <input id="supplr" maxlength="128" letter-Num ng-model="Po_supplier" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:24px; "
+                        ng-click="getpoclose_header('search')">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                    md-progress="deferred">
+                    <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>PO No</th>
+                            <th>Supplier Name</th>
+                            <th>PO Date</th>
+                            <th>PO Amount</th>
+                            <th>PO Status</th>
+                            <th>PO Closed Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="poclose in poclosesummary">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{poclose.poheader_no }}</td>
+                            <td>{{poclose.Supplier_code}}--{{poclose.supplier_name}}--{{poclose.supplier_branchname}}</td>
+                            <td>{{poclose.poheader_date|date:"dd-MMM-y"}}</td>
+                            <td align="right">{{poclose.poheader_amount| number:2}}</td>
+                            <td>{{poclose.poheader_status}}</td>
+                            <td>{{poclose.poclose_status}}</td>
+                            <td align="center">
+                                <a href="poclosecrte"> <span
+                                        ng-click="poview(poclose.poheader_gid,poclose.poclose_status,poclose.poheader_status)"
+                                        class="editlink">
+                                        <i class="material-icons">visibility</i>
+                                        <md-tooltip>View Close Create</md-tooltip>
+                                    </span></a>
+                            </td>
+                        </tr>
+                        <tr ng-show="poclosesummary.length ==  0">
+                            <td class="warning" colspan="10">
+                                No Records Found.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="10">
+                                <ul uib-pagination total-items="poheader_length" ng-model="currentPage"
+                                    max-size="maxSize" ng-change="getpoclose_header()" class="pagination-sm"
+                                    boundary-links="true" items-per-page="itemsPerPage"></ul>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('polose', ['ngMaterial', 'ui.bootstrap']).config(function (
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    myApp.directive('letterNum', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z./'-: ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+    myApp.controller('Ctrlpoclose', ['$scope', 'Servicepoclose', '$mdDialog', '$window', function ($scope,
+        Servicepoclose,
+        $mdDialog, $window, ) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.pagect = '';
+        $scope.loading = function () {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function () {
+            $mdDialog.hide();
+        };
+
+        $scope.poview = function (poheader_gid, poclose_status, poheader_status) {
+            var poclosehead = {
+                poheader_gid: poheader_gid,
+                poclose_status: poclose_status,
+                postatus: poheader_status,
+            };
+            sessionStorage.setItem('poclosepoheader', JSON.stringify(poclosehead));
+        }
+        $scope.getpoclose_header = function (a) {
+            if(a=='search'){$scope.currentPage=1}
+            $scope.loading();
+            $scope.pagect = $scope.currentPage - 1
+            var datas = {
+                "params": {
+                    "Filter": {
+                        "poheader_no": $scope.Po_num,
+                        "supplier_name": $scope.Po_supplier,
+                        "poheader_amount": $scope.poheader_amount,
+                        "Page_Index": $scope.currentPage - 1,
+                        "Page_Size": $scope.itemsPerPage
+                    },
+                    "Classification": {}
+                },
+
+                "Action": "GET",
+                "Type": "PO_CLOSE",
+            }
+
+
+
+
+
+
+            var getpoheader = Servicepoclose.getpoclosesearch(datas);
+
+            getpoheader.then(function (getpoheader) {
+
+                var cancel_data = JSON.parse(getpoheader.data)
+
+                $scope.poclosesummary = cancel_data
+                if ($scope.pagect == 0) {
+                    $scope.poheader_length = $scope.poclosesummary[0].Total_Row;
+                }
+
+
+
+            }, function () {
+                alert('Records not found');
+            }).finally($scope.endloading);
+
+
+        }
+
+
+
+        $scope.getpoclose_header()
+
+
+
+
+
+    }]);
+
+
+
+    myApp.service("Servicepoclose", function ($http) {
+
+        this.getpoclosesearch = function (data) {
+            var response = $http.post(Appname + "/pur_poclosesummary/", data);
+            return response;
+        }
+
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,734 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} BOM {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appcmpnt" ng-controller="Ctrlcmpnt" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Component Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Component Name</label>
+                    <input type="text" ng-model="stxtSupplier_name" autocomplete="off">
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>UOM</label>
+                    <input type="text" ng-model="stxtUOM" autocomplete="off">
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="showCmpntDtl($event,'')">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Component Code</th>
+                        <th>Name</th>
+                        <th>UOM</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="comp in cmpntList.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{comp.component_code}}</td>
+                        <td class="text-center">{{comp.component_name}}</td>
+                        <td class="text-center">{{comp.uom_name}}</td>
+                        <td align="center">
+                            <span title="Edit" ng-click="showCmpntDtl($event,comp)" align="center"
+                                  class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+                            <span title="Mapping Customer" ng-click="showMapSupplier($event,comp)"
+                                  align="center" class="editlink">
+                                    <i class="material-icons">group</i>
+                                </span>
+                            <span title="Mapping Product" ng-click="showmapproduct($event,comp)"
+                                  align="center" class="editlink">
+                                    <i class="material-icons">settings_input_composite</i>
+                                </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="3">
+                            <ul uib-pagination total-items="cmpntList.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{cmpntList.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!-- Add / Edit Component -->
+        <div style="visibility: hidden">
+            <div class="md-dialog-container" id="dialogAddComponent">
+                <md-dialog layout-padding>
+                    <div>
+                        <div class="col-md-12">
+                            <md-subheader class="md-primary">Component Details</md-subheader>
+                            </br>
+                        </div>
+                        <div>
+                            <form name="formcomponent">
+                                <div>
+                                    <div class="col-md-12" ng-show="is_edit">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>code</label>
+                                            <input ng-model="txtcmpnt_code" ng-disabled="is_edit" type="text"
+                                                   name="txtcmpnt_name"
+                                                   autocomplete="off"
+                                                   required/>
+                                            <div ng-messages="formcomponent.txtcmpnt_name.$error">
+                                                <div ng-message="required">Please enter a Code.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Name</label>
+                                            <input ng-model="txtcmpnt_name" type="text" name="txtcmpnt_name"
+                                                   autocomplete="off"
+                                                   required/>
+                                            <div ng-messages="formcomponent.txtcmpnt_name.$error">
+                                                <div ng-message="required">Please enter a name.</div>
+                                            </div>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="col-md-12">
+
+
+                                              <md-input-container class="md-block inputcontainer">
+                        <label>UOM(Unit Of Measurement)</label>
+                        <md-select ng-model="txtcmpnt_uom" name="txtcmpnt_uom" required>
+                            <md-optgroup label="UOM(Unit Of Measurement)">
+                                <md-option ng-repeat="c in hierarchydetails" ng-value="c.UOM_gid"> {{c.UOM_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                                       <div ng-messages="formcomponent.txtcmpnt_uom.$error">
+                                                <div ng-message="required">Please choose UOM.</div>
+                                            </div>
+                    </md-input-container>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div>
+                            <div class="col-md-12 text-center">
+                                <md-button class="md-raised custbutton" ng-click="Save_comp()"
+                                           ng-disabled="!formcomponent.$valid">
+                                    Save
+                                    <md-tooltip>Save</md-tooltip>
+                                </md-button>
+                                <md-button class="md-raised" ng-click="closeApprove()">
+                                    Cancel
+                                    <md-tooltip>close</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </md-dialog>
+            </div>
+        </div>
+        <!-- Mapped supplier against Component -->
+        <div style="visibility: hidden">
+            <div class="md-dialog-container" id="dialogMapSupplier">
+                <md-dialog layout-padding>
+                    <div>
+                        <div class="col-md-12">
+                            <md-subheader class="md-primary">Mapped Supplier</md-subheader>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12 text-center">
+                            Component Name: <strong>{{component_name}}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-9">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Search..</label>
+                                <input ng-model="txtSSupplier" type="text" name="txtSSupplier"
+                                       autocomplete="off"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-button class="md-icon-button md-primary" aria-label="Search"
+                                       ng-click="selectsupplier($event)">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Add Supplier</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                <thead class="header">
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Rate</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="map in mappedsmry | filter:txtSSupplier">
+                                    <td>{{$index+1}}</td>
+                                    <td>{{map.Supplier_code}}</td>
+                                    <td>{{map.supplier_name}}</td>
+                                    <td>{{map.rate}}</td>
+                                    <td>
+                                        <span ng-click="removeSupplier(map)" class="removelink">
+                                            <i class="material-icons">remove_circle_outline</i>
+                                    </span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised custbutton" ng-click="save_mappedSupplier()">
+                                Save
+                                <md-tooltip>Save</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" ng-click="closeApprove()">
+                                Cancel
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </md-dialog>
+            </div>
+        </div>
+        <!--Mapped Supplier against Product-->
+        <div style="visibility: hidden">
+            <div class="md-dialog-container" id="dialogMapproduct">
+                <md-dialog layout-padding>
+                    <div>
+                        <div class="col-md-12">
+                            <md-subheader class="md-primary">Mapped Product</md-subheader>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12 text-center">
+                            Component Name: <strong>{{component_name}}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-9">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Search..</label>
+                                <input ng-model="prodsearch" type="text" name="prodsearch"
+                                       autocomplete="off"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-button class="md-icon-button md-primary" aria-label="Search"
+                                       ng-click="selectprodsupplier($event)">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Add Supplier</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                <thead class="header">
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Rate</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="map in mappedprod | filter:prodsearch">
+                                    <td>{{$index+1}}</td>
+                                    <td>{{map.product_code}}</td>
+                                    <td>{{map.product_name}}</td>
+                                    <td>{{map.rate}}</td>
+                                    <td>
+                                        <span ng-click="removeproduct(map)" class="removelink">
+                                            <i class="material-icons">remove_circle_outline</i>
+                                    </span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised custbutton" ng-click="save_mappedproduct()">
+                                Save
+                                <md-tooltip>Save</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" ng-click="closeApprove()">
+                                Cancel
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </md-dialog>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appcmpnt', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    myApp.controller('Ctrlcmpnt', ['$scope', 'Sercmpnt', '$mdDialog', '$rootScope', '$window', '$filter', 'SerCommon', '$http',
+        function($scope, Sercmpnt, $mdDialog, $rootScope, $window, $filter, SerCommon, $http) {
+            $scope.cmpntList = [];
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+
+            $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false,
+                    multiple: true
+                });
+            };
+
+            $scope.endloading = function() {
+                $mdDialog.hide();
+            };
+
+            function loaddata() {
+                $scope.cmpntList = [];
+                var getcmpnt = Sercmpnt.getcomponents('BOM', 'COMPONENTS', '')
+                getcmpnt.then(function(res) {
+                        $scope.maintable = res.data;
+                        $scope.cmpntList = $scope.maintable;
+                    }, function(err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            };
+
+            loaddata();
+
+            $scope.Save_comp = function() {
+                $scope.loading();
+                var action = 'Insert';
+                var jsondata = {
+                    "Component_Name": $scope.txtcmpnt_name,
+                    "Component_UOM_Gid": $scope.txtcmpnt_uom
+                }
+                if ($scope.is_edit) {
+                    action = 'Update';
+                    jsondata['Component_Gid'] = $scope.cmpnt_gid
+                }
+                var save_deptdetail = Sercmpnt.savedetail(action, 'COMPONENTS', jsondata);
+                save_deptdetail.then(function(result) {
+                        if (result.data > 0 || result.data == 'SUCCESS') {
+                            alert("Saved Successfully!.");
+                            loaddata();
+                            $mdDialog.hide();
+                        } else {
+                            alert("Not Saved Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Saved Successfully!.");
+                    })
+                    .finally($scope.endloading);
+            };
+
+            $scope.save_mappedSupplier = function() {
+                var supplier_gid = [];
+                if ($scope.mappedsmry.length == 0) {
+                    alert('Please select any one supplier!.');
+                    return false;
+                }
+
+                var filteredList = $filter('filter')($scope.mappedsmry, function(item) {
+                    return (item.compsup_gid == null) || (item.compsup_gid == undefined)
+                }, true);
+
+                if (filteredList.length == 0) {
+                    alert('There is no data to save!.');
+                    return false;
+                }
+                for (i = 0; i < filteredList.length; i++) {
+                    supplier_gid.push(filteredList[i].supplier_gid);
+                };
+                var jsond = {
+                    "Component_Gid": $scope.component_gid,
+                    "Supplier_Gid": supplier_gid
+                };
+                var save_deptdetail = Sercmpnt.saverow('Insert', 'COMPONENT_SUPPLIER_MAP', jsond);
+                save_deptdetail.then(function(result) {
+                        if (result.data > 0) {
+                            alert("Saved Successfully!.");
+                            loaddata();
+                        } else {
+                            alert("Not Saved Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Saved Successfully!.");
+                    })
+                    .finally($scope.endloading);
+            };
+
+
+            $scope.save_mappedproduct = function() {
+                var product_gid = [];
+                if ($scope.mappedprod.length == 0) {
+                    alert('Please select any one product!.');
+                    return false;
+                }
+
+                var filteredList = $filter('filter')($scope.mappedprod, function(item) {
+                    return (item.prodcomp_productgid == null) || (item.prodcomp_productgid == undefined)
+                }, true);
+
+                if (filteredList.length == 0) {
+                    alert('There is no data to save!.');
+                    return false;
+                }
+                for (i = 0; i < filteredList.length; i++) {
+                    product_gid.push(filteredList[i].product_gid);
+                };
+                var jsond = {
+                    "Component_Gid": $scope.component_gid,
+                    "Product_Gid": product_gid
+                };
+                var save_deptdetail = Sercmpnt.saverow('Insert', 'COMPONENT_PRODUCT_MAP', jsond);
+                save_deptdetail.then(function(result) {
+                        if (result.data > 0) {
+                            alert("Saved Successfully!.");
+                            loaddata();
+                        } else {
+                            alert("Not Saved Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Saved Successfully!.");
+                    })
+                    .finally($scope.endloading);
+            };
+
+
+            function load_ddlUOM() {
+                var get_hier = SerCommon.getdropdown('UOM', 0, '')
+                get_hier.then(function(result) {
+                        $scope.hierarchydetails = JSON.parse(result.data);
+                    }, function(err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            };
+
+            $scope.showCmpntDtl = function(ev, details) {
+                if (details) {
+                    $scope.is_edit = true;
+                    $scope.cmpnt_gid = details.component_gid
+                    load_ddlUOM();
+                    showmodal(ev);
+                    $scope.txtcmpnt_code = details.component_code;
+                    $scope.txtcmpnt_name = details.component_name;
+                    $scope.txtcmpnt_uom = details.component_uomgid;
+                } else {
+                    $scope.formcomponent.$setPristine();
+                    $scope.formcomponent.$setUntouched();
+                    load_ddlUOM();
+                    $scope.is_edit = false;
+                    showmodal(ev);
+                    $scope.txtcmpnt_name = "";
+                    $scope.txtcmpnt_uom = "";
+                }
+            };
+
+            function showmodal(ev) {
+                $mdDialog.show({
+                    contentElement: '#dialogAddComponent',
+                    parent: angular.element(document.body),
+                    targetEvent: ev,
+                    multiple: true,
+                    clickOutsideToClose: false,
+                    fullscreen: false
+                });
+            }
+
+            $scope.closeApprove = function() {
+                $mdDialog.hide();
+            }
+
+            $scope.showMapSupplier = function(ev, detail) {
+                $scope.loading();
+                $scope.component_name = detail.component_name;
+                $scope.component_gid = detail.component_gid;
+                $scope.mappedsmry = [];
+                var jsondta = {
+                    "Component_Gid": detail.component_gid
+                }
+                var mappedSupplier = Sercmpnt.getmapped('EACH', 'COMPONENTS_SUPPLIER_MAP', jsondta)
+                mappedSupplier.then(function(res) {
+                        $scope.mappedsmry = res.data;
+                        dialog_mappedSupplier(ev);
+                    }, function(err) {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            };
+
+            function dialog_mappedSupplier(ev) {
+                $mdDialog.show({
+                    contentElement: '#dialogMapSupplier',
+                    parent: angular.element(document.body),
+                    targetEvent: ev,
+                    multiple: true,
+                    clickOutsideToClose: false,
+                    fullscreen: false
+                });
+            };
+
+            $scope.showmapproduct = function(ev, detail) {
+                $scope.component_name = detail.component_name;
+                $scope.component_gid = detail.component_gid;
+                $scope.mappedsmry = [];
+                var jsondta = {
+                    "Component_Gid": detail.component_gid
+                }
+                var mappedSupplier = Sercmpnt.getmapped('EACH', 'COMPONENT_PRODUCT_MAP', jsondta)
+                mappedSupplier.then(function(res) {
+                    $scope.mappedprod = res.data;
+                    dialog_mappedSupplie(ev);
+                }, function(err) {
+                    alert('No data!.');
+                })
+            };
+
+            function dialog_mappedSupplie(ev) {
+                $mdDialog.show({
+                    contentElement: '#dialogMapproduct',
+                    parent: angular.element(document.body),
+                    targetEvent: ev,
+                    multiple: true,
+                    clickOutsideToClose: false,
+                    fullscreen: false
+                });
+            };
+
+
+            $scope.selectprodsupplier = function(ev) {
+                var dialogData = {
+                    action: 'select_product',
+                    isMultiple: true,
+                    selectedData: $scope.selected_data
+                }
+                $mdDialog.show({
+                        controller: 'DialogController',
+                        templateUrl: 'select_product',
+                        parent: angular.element(document.body),
+                        targetEvent: ev,
+                        locals: {
+                            dialogData: dialogData
+                        },
+                        clickOutsideToClose: true,
+                        fullscreen: false,
+                        multiple: true
+                    })
+                    .then(function(res) {
+                        $scope.selected_data = res
+                        $scope.sel_product = res;
+                        push_productData();
+
+                    }, function(err) {})
+                    .finally();
+            };
+
+            $scope.mappedprod = [];
+            $scope.selectsupplier = function(ev) {
+                var dialogData = {
+                    action: 'select_supplier',
+                    isMultiple: true,
+                    selectedData: $scope.selected_data
+                }
+                $mdDialog.show({
+                        controller: 'DialogController',
+                        templateUrl: 'select_supplier',
+                        parent: angular.element(document.body),
+                        targetEvent: ev,
+                        locals: {
+                            dialogData: dialogData
+                        },
+                        clickOutsideToClose: true,
+                        fullscreen: false,
+                        multiple: true
+                    })
+                    .then(function(res) {
+                        $scope.selected_data = res
+                        $scope.sel_supplier = res;
+                        push_supplierData();
+
+                    }, function(err) {})
+                    .finally();
+            };
+
+            function push_productData() {
+                for (i = 0; i < $scope.sel_product.length; i++) {
+                    var t = $scope.sel_product[i].product_gid;
+                    var index = $filter('filter')($scope.mappedprod, {
+                        product_gid: t
+                    }, true);
+                    if (index.length == 0) {
+                        var data = {
+                            product_code: $scope.sel_product[i].product_code,
+                            product_name: $scope.sel_product[i].product_name,
+                            product_gid: $scope.sel_product[i].product_gid,
+                            rate: 0
+                        };
+                        $scope.mappedprod.push(data);
+                    }
+                }
+
+            };
+
+            function push_supplierData() {
+                for (i = 0; i < $scope.sel_supplier.length; i++) {
+                    var t = $scope.sel_supplier[i].supplier_gid;
+                    var index = $filter('filter')($scope.mappedsmry, {
+                        supplier_gid: t
+                    }, true);
+                    if (index.length == 0) {
+                        var data = {
+                            Supplier_code: $scope.sel_supplier[i].supplier_code,
+                            supplier_name: $scope.sel_supplier[i].supplier_name,
+                            supplier_gid: $scope.sel_supplier[i].supplier_gid,
+                            rate: 0
+                        };
+                        $scope.mappedsmry.push(data);
+                    }
+                }
+
+            };
+
+            $scope.removeSupplier = function(data) {
+            debugger;
+                if (data.compsup_gid!='') {
+  var jsond = {
+
+                        "Component_Supplier_Gid": data.compsup_gid,
+                    };
+                    var save_deptdetail = Sercmpnt.saverow('Update', 'COMPONENT_SUPPLIER_MAP', jsond);
+                    save_deptdetail.then(function(result) {
+                        if (result.data = 'SUCCESS') {
+                            var index = $scope.mappedsmry.indexOf(data);
+                            $scope.mappedsmry.splice(index, 1);
+                            alert("Deleted Successfully!.");
+                        } else {
+                            alert("Not Deleted Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Deleted Successfully!.");
+                    })
+                } else {
+                    alert("not Deleted Successfully!.")
+                }
+            };
+
+            $scope.removeproduct = function(data) {
+                debugger;
+                if (data.product_gid != '') {
+                    var jsond = {
+                        "Component_Gid": $scope.component_gid,
+                        "Product_Component_Gid": data.prodcomp_gid,
+                    };
+                    var save_deptdetail = Sercmpnt.saverow('Update', 'COMPONENT_PRODUCT_MAP', jsond);
+                    save_deptdetail.then(function(result) {
+                        if (result.data = 'SUCCESS') {
+                            var index = $scope.mappedprod.indexOf(data);
+                            $scope.mappedprod.splice(index, 1);
+                            alert("Deleted Successfully!.");
+                        } else {
+                            alert("Not Deleted Successfully!.");
+                        }
+                    }, function(err) {
+                        alert("Not Deleted Successfully!.");
+                    })
+                } else {
+                    alert("Not Deleted Successfully!.")
+                }
+            };
+        }
+    ]);
+
+    myApp.service("Sercmpnt", function($http) {
+        this.getcomponents = function(group, type, jsonData) {
+            var response = $http.get(Appname + "/compnt_get/", {
+                params: {
+                    "group": group,
+                    "type": type,
+                    "jsonData": jsonData
+                }
+            });
+            return response;
+        }
+        this.getmapped = function(group, type, jsondta) {
+            var response = $http.get(Appname + "/mapped_get/", {
+                params: {
+                    "group": group,
+                    "type": type,
+                    "jsondta": jsondta
+                }
+            });
+            return response;
+        }
+        this.savedetail = function(action, type, jsond) {
+            var response = $http.post(Appname + "/setcomp/", {
+                parms: {
+                    "action": action,
+                    'type': type,
+                    "jsond": jsond
+                }
+            });
+            return response;
+        }
+        this.saverow = function(action, type, jsond) {
+            var response = $http.post(Appname + "/setcomp/", {
+                parms: {
+                    "action": action,
+                    'type': type,
+                    "jsond": jsond
+                }
+            });
+            return response;
+        }
+    });
+</script>
+{% endblock %}

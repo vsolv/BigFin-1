@@ -1,0 +1,718 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Sales Register Invoice {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appemployee" ng-cloak ng-controller="Ctrlemployee">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Sales Register Invoice</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div>Customer Name : {{searchquery_CustomerName}}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div>Executive : {{searchquery_Executive}}</div>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div>So Header Date : {{from_date}}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div>Sales Order No : {{searchquery_SalesOrderNo}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Sales Order No</th>
+                        <th>Customer Name</th>
+                        <th>Executive Name</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Value</th>
+                        <th>Campaign</th>
+                        <th>Amount</th>
+                        <th>Courier Name</th>
+                        <th>Discount</th>
+                        <th>HSN Code</th>
+                        <th>SGST</th>
+                        <th>CGST</th>
+                        <th>IGST</th>
+                        <th>NET AMOUNT</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in Sale_Reg_Smry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict "
+                    >
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.soheader_no }}</td>
+                        <td class="text-center">{{emp.customer_name}}</td>
+                        <td class="text-center">{{emp.employee_name}}</td>
+                        <td class="text-center">{{emp.product_name}}</td>
+                        <td class="text-right" ng-class="(emp.stockavail=='N'&& emp.stockcheck=='Y')?'danger':''">
+                            {{emp.sodetails_qty}}
+                        </td>
+                        <td class="text-right">{{emp.ratecheck| number:2}}</td>
+                        <td><select class="form-control"
+                                    ng-change="checkcampaign(emp.val)" ng-model="emp.val"
+                                    required style="width: 120px;">
+                            <option ng-repeat="cou in emp.lj_campaign.DETAILS" ng-value="cou.Campaign_Gid">
+                                {{cou.Campaign_Name}}
+                            </option>
+                        </select>
+                        </td>
+                        <td class="text-right" ng-class="emp.ratecheck=='0'?'danger':''">{{emp.Amount | number:2}}
+                        </td>
+                        <td class="text-center">{{emp.courier}}</td>
+                        <td class="text-right">{{emp.sodetails_discount}}</td>
+                        <td class="text-right">{{emp.sodetails_hsncode}}</td>
+                        <td class="text-right">{{emp.sodetails_sgst | number:2}}</td>
+                        <td class="text-right">{{emp.sodetails_cgst | number:2}}</td>
+                        <td class="text-right">{{emp.sodetails_igst | number:2}}</td>
+                        <td class="text-right">{{emp.sodetails_total | number:2}}</td>
+                        <td ng-hide="true">{{emp.ratecheck}}</td>
+                        <td ng-hide="true">{{emp.stockavail}}</td>
+                        <td ng-hide="true">{{emp.dealerprice}}</td>
+                        <td ng-hide="true">{{emp.totaltax}}</td>
+                        <td ng-hide="true">{{emp.rate}}</td>
+                        <td ng-hide="true">{{emp.stockcheck}}</td>
+                    </tr>
+                    <tr ng-show="Sale_Reg_Smry.length != 0">
+                        <td class="text-center"><b>Total</b></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-right"
+                            ng-bind="totalamount(Sale_Reg_Smry)| number:2" ng-init="amnt = 0"></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-right"
+                            ng-bind="totalbill(Sale_Reg_Smry) | number:2" ng-init="total = 0"></td>
+                        <td class="text-right"
+                            ng-bind="totalcgst(Sale_Reg_Smry) | number:2" ng-init="cgst = 0"></td>
+                        <td class="text-right"
+                            ng-bind="totaligst(Sale_Reg_Smry) | number:2" ng-init="igst = 0"></td>
+                        <td class="text-right" ng-bind="totaladjust(Sale_Reg_Smry) | number:2"
+                            ng-init="sum = 0"></td>
+                    </tr>
+                    <tr ng-show="Sale_Reg_Smry.length == 0">
+                        <td colspan="6">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot class="row" colspan="12">
+                    <tr>
+                        <td colspan="16">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+            </div>
+            <div class="col-md-2" style="margin-top:20px">
+                <input ng-click="clkshdw(modl)" ng-model="modl" type="checkbox">
+                <label>Shadow Credit</label>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block">
+                    <label>Credit</label>
+                    <input id="amount" maxlength="11" ng-change="chngcrdt()" ng-disabled="shwcrdt"
+                           ng-model="crdt"
+                           ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                           type="text" valid-number>
+                </md-input-container>
+            </div>
+
+            <div class="col-md-4 pull-right">
+                <table class="table table-condensed">
+                    <tr>
+                        <td>Credit Note Amount :</td>
+                        <td class="text-right">{{crdtnoteamnt}}</td>
+                    </tr>
+                    <tr>
+                        <td>Amount :</td>
+                        <td class="text-right">{{amount | number:2}}</td>
+                    </tr>
+                    <tr>
+                        <td>Discount Amount :</td>
+                        <td class="text-right" ng-init="discntamnt = 0">{{discntamnt | number:2}}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Amount :</td>
+                        <td class="text-right">{{totamnt | number:2}}</td>
+                    </tr>
+                    <tr>
+                        <td>CGST :</td>
+                        <td class="text-right">{{cgstsale | number :2}}</td>
+                    </tr>
+                    <tr>
+                        <td>SGST :</td>
+                        <td class="text-right">{{sgstsale | number :2}}</td>
+                    </tr>
+                    <tr>
+                        <td>IGST :</td>
+                        <td class="text-right">{{igstsale | number:2}}</td>
+                    </tr>
+                    <tr>
+                        <td>Net Amount :</td>
+                        <td class="text-right">{{netamnt | number:0}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-raised custbutton" ng-click="generteinv()" ng-disabled="shwgenr">Generate
+                        Invoice
+                    </md-button>
+                </div>
+                <div class="col-md-3">
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrlemployee', ['$timeout', '$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter',
+    function($timeout, $scope, testService, $mdDialog, $rootScope, $window, $filter) {
+        if (JSON.parse(sessionStorage.getItem('header_details')) != null) {
+            var employee_detail = JSON.parse(sessionStorage.getItem('header_details'));
+            $scope.gid = employee_detail.gid;
+            $scope.entity = employee_detail.sesnentyid;
+            $scope.emp_gid = employee_detail.sesnempid;
+            $scope.searchquery_SalesOrderNo = employee_detail.headerno;
+            $scope.searchquery_CustomerName = employee_detail.custname;
+            $scope.searchquery_Executive = employee_detail.empname;
+            $scope.from_date = employee_detail.sodate;
+            $scope.amountt = employee_detail.amnt;
+            $scope.billinggid = employee_detail.billinggid;
+            $scope.godwngid = employee_detail.godowngid;
+            $scope.branch_gid = employee_detail.branch_gid;
+        } else {
+            $scope.gid = 0;
+        }
+
+        $scope.Sale_Reg_Smry = [];
+        $scope.shwgenr = true;
+        $scope.shwcrdt = true;
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        loaddata();
+        function loaddata() {
+
+            var sodata = {
+                "Parms": {
+                    "Filter": {
+                        Header_Gid: $scope.gid,
+                        Cust_Name: "",
+                        State_Code: "SN00001",
+                        Date: "",
+                        Emp_name: "",
+                        Amount: ""
+                    },
+                    "Classification": {
+                        Entity_Gid: [$scope.entity],
+                        Client_Gid: []
+                    }
+                }
+            }
+
+            var dataint = {
+                Action: 'SALES_DETAILS_INVOICE',
+                date: "",
+                cust_gid: 0,
+                Emp_Gid: 0,
+                limit: 1000,
+                Group: 'SO_Invoice_Register',
+                data: sodata
+            }
+            dealrprcesmry(dataint);
+            $scope.endloading();
+        }
+
+        function dealrprcesmry(dataint) {
+            var get_employ = testService.getprcesmry(dataint)
+            get_employ.then(function(result) {
+
+                    $scope.maintable = result.data.DATA;
+                    $scope.Sale_Reg_Smry = $scope.maintable
+                    $scope.pageLength = $scope.Sale_Reg_Smry.length;
+                    $scope.Totalpages = Math.ceil($scope.Sale_Reg_Smry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.Sale_Reg_Smry.length;
+                    $scope.endloading();
+                    loaddrpdown();
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally($scope.endloading());
+        };
+
+        function loaddrpdown() {
+
+            var data = {
+                "Parms": {
+                    "Classification": {
+                        "Entity_Gid": [$scope.entity]
+                    },
+                    "Filter": {
+                        "XXXXX": ""
+                    }
+                }
+            }
+
+            var dta = {
+                Group: 'CAMPAIGN_GET',
+                Type: 'INVOICE',
+                SubType: 'SALES',
+                data: data
+            }
+
+            var getcompaig = testService.getdrpdwn(dta)
+            getcompaig.then(function(result) {
+                $scope.getcompaign = result.data.DATA;
+                for (j = 0; j < $scope.Sale_Reg_Smry.length; j++) {
+                    $scope.Sale_Reg_Smry[j].val = $scope.Sale_Reg_Smry[j].sodetails_campaign_gid;
+                    for (i = 0; i < $scope.getcompaign.length; i++) {
+
+                        $scope.camgid = $scope.getcompaign[i].campaign_gid;
+                        if ($scope.Sale_Reg_Smry[j].val == $scope.camgid) {
+                            $scope.checkcampaign($scope.Sale_Reg_Smry[j].val);
+                        }
+                    }
+                }
+
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+
+        $scope.totalbill = function(data) {
+            var total = 0;
+            if (data.length == 0) {
+                return total;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    total = total + data[i].sodetails_sgst;
+                    $scope.sgstsale = total;
+                }
+                return total;
+            }
+        }
+
+        $scope.chngcrdt = function() {
+            if (parseInt($scope.crdt) > 0) {
+                $scope.crdtnoteamnt = ((parseInt($scope.crdt) * parseInt($scope.totamnt)) / 100)
+                $scope.netamnt = $scope.totamnt - $scope.crdtnoteamnt;
+            } else {
+                $scope.netamnt = $scope.totamnt;
+                $scope.crdtnoteamnt = 0;
+            }
+        }
+
+        $scope.totalamount = function(data) {
+            var amnt = 0;
+            if (data.length == 0) {
+                return amnt;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    amnt = amnt + data[i].Amount;
+                    $scope.amount = amnt;
+                }
+                return amnt;
+            }
+        }
+
+        $scope.totalcgst = function(data) {
+            var cgst = 0;
+            if (data.length == 0) {
+                return cgst;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    cgst = cgst + data[i].sodetails_cgst;
+                    $scope.cgstsale = cgst;
+                }
+                for (i = 0; i < $scope.Sale_Reg_Smry.length; i++) {
+                    if (($scope.cgstsale > 0) && ($scope.igstsale == 0)) {
+                        if($scope.Sale_Reg_Smry[i].stockcheck == "N"){
+                            $scope.shwgenr = false;
+                            return;
+                        }
+                        if($scope.Sale_Reg_Smry[i].stockavail == "N"){
+                            $scope.shwgenr = true;
+                            return;
+                        }
+                        else if(($scope.Sale_Reg_Smry[i].stockavail == "Y")&&($scope.Sale_Reg_Smry[i].stockcheck == "Y")){
+                            $scope.shwgenr = false;
+                        }
+                        else if(($scope.Sale_Reg_Smry[i].stockavail == "N")&&($scope.Sale_Reg_Smry[i].stockcheck == "Y")){
+                            $scope.shwgenr = true;
+                        }
+                    }
+                }
+                return cgst;
+            }
+        }
+
+        $scope.totaligst = function(data) {
+            var igst = 0;
+            if (data.length == 0) {
+                return igst;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    igst = igst + data[i].sodetails_igst;
+                    $scope.igstsale = igst;
+                }
+                for (i = 0; i < $scope.Sale_Reg_Smry.length; i++) {
+                    if (($scope.igstsale > 0) && ($scope.cgstsale == 0)) {
+                        if($scope.Sale_Reg_Smry[i].stockcheck == "N"){
+                            $scope.shwgenr = false;
+                            return;
+                        }
+                        if($scope.Sale_Reg_Smry[i].stockavail == "N"){
+                            $scope.shwgenr = true;
+                            return;
+                        }
+                        else if(($scope.Sale_Reg_Smry[i].stockavail == "Y")&&($scope.Sale_Reg_Smry[i].stockcheck == "Y")){
+                            $scope.shwgenr = false;
+                        }
+                        else if(($scope.Sale_Reg_Smry[i].stockavail == "N")&&($scope.Sale_Reg_Smry[i].stockcheck == "Y")){
+                            $scope.shwgenr = true;
+                        }
+                    }
+                }
+                return igst;
+
+            }
+        }
+<!--                    if (($scope.igstsale > 0) && ($scope.cgstsale == 0)&&($scope.Sale_Reg_Smry[i].stockcheck == 'N')) {-->
+<!--                        $scope.shwgenr = false;-->
+<!--                    }-->
+<!--                    if (($scope.igstsale == 0) && ($scope.cgstsale == 0)) {-->
+<!--                        $scope.shwgenr = true;-->
+<!--                    }-->
+        $scope.loading();
+        $scope.checkcampaign = function(e) {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                        "SO_Header_GidS": $scope.gid,
+                        "Campaign_Gid": e
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity],
+                        "client_gid": []
+                    }
+                }
+            }
+            var dataint = {
+                Group: 'INV_Process_Single_GET',
+                Type: 'INV_PROCESS',
+                Sub_Type: 'SINGLE',
+                data: data
+            }
+            getdatacamp(dataint, e);
+            $scope.endloading();
+        }
+
+        function getdatacamp(dataint, e) {
+            var get_employ = testService.getcampaigndata(dataint, e)
+            get_employ.then(function(result) {
+                    $scope.maintab = result.data.DATA;
+                    for (var i = 0; i < $scope.Sale_Reg_Smry.length; i++) {
+                        if ($scope.Sale_Reg_Smry[i].val == e) {
+                            $scope.Sale_Reg_Smry[i].val = $scope.Sale_Reg_Smry[i].val
+                            prodgid1 = $scope.Sale_Reg_Smry[i].product_gid
+                            sogid1 = $scope.Sale_Reg_Smry[i].sodetails_gid
+                            rate1 = $scope.Sale_Reg_Smry[i].sodetails_qty
+                            tax = $scope.Sale_Reg_Smry[i].Tax_Calculate
+                            for (var j = 0; j < $scope.maintab.length; j++) {
+                                prodgid2 = $scope.maintab[j].product_gid
+                                sogid2 = $scope.maintab[j].sodetails_gid
+                                rate2 = $scope.maintab[j].rate
+                                stockavail = $scope.maintab[j].Is_StockAvailable
+                                dealrprce = $scope.maintab[j].dealer_price
+                                stockcheck = $scope.maintab[j].Is_Stock_Check
+                                if ((prodgid1 == prodgid2) && (sogid1 == sogid2)) {
+                                    $scope.Sale_Reg_Smry[i].rate = parseFloat(rate2)
+                                    $scope.Sale_Reg_Smry[i].Amount = parseFloat(parseFloat(rate1) * parseFloat(rate2));
+                                    $scope.Sale_Reg_Smry[i].ratecheck = parseFloat(rate2)
+                                    $scope.Sale_Reg_Smry[i].stockavail = stockavail
+                                    $scope.Sale_Reg_Smry[i].dealerprice = dealrprce
+                                    $scope.Sale_Reg_Smry[i].stockcheck = stockcheck
+                                }
+                                if ((prodgid1 == prodgid2) && (sogid1 == sogid2) && (tax.Tax_Area == 'I')) {
+                                    $scope.Sale_Reg_Smry[i].rate = parseFloat(rate2)
+                                    $scope.Sale_Reg_Smry[i].Amount = parseFloat(parseFloat(rate1) * parseFloat(rate2));
+                                    $scope.Sale_Reg_Smry[i].sodetails_igst = (($scope.Sale_Reg_Smry[i].Amount * tax.IGST_RATE) / 100)
+                                    $scope.Sale_Reg_Smry[i].sodetails_total = ((($scope.Sale_Reg_Smry[i].Amount * tax.IGST_RATE) / 100) + $scope.Sale_Reg_Smry[i]
+                                        .Amount);
+                                    $scope.Sale_Reg_Smry[i].totaltax = $scope.Sale_Reg_Smry[i].sodetails_igst
+
+                                }
+                                if ((prodgid1 == prodgid2) && (sogid1 == sogid2) && (tax.Tax_Area == 'L')) {
+                                    $scope.Sale_Reg_Smry[i].rate = parseFloat(rate2)
+                                    $scope.Sale_Reg_Smry[i].Amount = parseFloat(parseFloat(rate1) * parseFloat(rate2));
+                                    $scope.Sale_Reg_Smry[i].sodetails_cgst = (($scope.Sale_Reg_Smry[i].Amount * tax.CGST_RATE) / 100)
+                                    $scope.Sale_Reg_Smry[i].sodetails_sgst = (($scope.Sale_Reg_Smry[i].Amount * tax.SGST_RATE) / 100)
+                                    $scope.Sale_Reg_Smry[i].totaltax = $scope.Sale_Reg_Smry[i].sodetails_cgst + $scope.Sale_Reg_Smry[i].sodetails_sgst
+                                    $scope.Sale_Reg_Smry[i].sodetails_total = ((($scope.Sale_Reg_Smry[i].Amount * tax.SGST_RATE) / 100) + (($scope.Sale_Reg_Smry[i]
+                                        .Amount * tax.CGST_RATE) / 100) + $scope.Sale_Reg_Smry[i].Amount);
+                                }
+                            }
+                        }
+                    }
+                    $scope.endloading();
+
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally($scope.endloading());
+        };
+
+
+        $scope.clkshdw = function(modl) {
+            if (modl == true) {
+                $scope.modll = 'Y';
+                $scope.shwcrdt = false;
+                $timeout(function() {
+                    $('#amount')
+                        .focus();
+                }, 50);
+            } else {
+                $scope.modll = 'N';
+                $scope.shwcrdt = true;
+            }
+        }
+
+        $scope.totaladjust = function(data) {
+            var sum = 0;
+            if (data.length == 0) {
+                return sum;
+            } else {
+                for (var i = 0; i < data.length; i++) {
+                    sum = sum + data[i].sodetails_total;
+                    $scope.totamnt = sum;
+                    $scope.chngcrdt();
+                }
+                return sum;
+            }
+        }
+
+        $scope.generteinv = function() {
+            $scope.bulky = [];
+            for (var i = 0; i < $scope.Sale_Reg_Smry.length; i++) {
+                prodgid1 = $scope.Sale_Reg_Smry[i].product_gid
+                sogid1 = $scope.Sale_Reg_Smry[i].sodetails_gid
+                rate1 = $scope.Sale_Reg_Smry[i].sodetails_qty
+                tax = $scope.Sale_Reg_Smry[i].Tax_Calculate
+                stockcheck = $scope.Sale_Reg_Smry[i].stockcheck
+                if (rate1 > 0)  {
+                    $scope.cusgid = $scope.Sale_Reg_Smry[i].customer_gid
+                    data = {
+                        "CGST": parseFloat($scope.Sale_Reg_Smry[i].sodetails_cgst).toFixed(2),
+                        "IGST": parseFloat($scope.Sale_Reg_Smry[i].sodetails_igst).toFixed(2),
+                        "SGST": parseFloat($scope.Sale_Reg_Smry[i].sodetails_sgst).toFixed(2),
+                        "Total": parseFloat($scope.Sale_Reg_Smry[i].sodetails_total).toFixed(2),
+                        "UOM_Gid": $scope.Sale_Reg_Smry[i].sodetails_uom_gid,
+                        "Discount": 0.00,
+                        "HSN_Code": $scope.Sale_Reg_Smry[i].sodetails_hsncode,
+                        "Quantity": $scope.Sale_Reg_Smry[i].sodetails_qty,
+                        "Campaign_Gid": $scope.Sale_Reg_Smry[i].val,
+                        "NRP_Price": $scope.Sale_Reg_Smry[i].rate,
+                        "Tax_Amount": parseFloat($scope.Sale_Reg_Smry[i].totaltax).toFixed(2),
+                        "Unit_Price": parseFloat($scope.Sale_Reg_Smry[i].product_unitprice).toFixed(2),
+                        "Product_Gid": $scope.Sale_Reg_Smry[i].product_gid,
+                        "Dealer_Price": $scope.Sale_Reg_Smry[i].dealerprice,
+                        "Product_Code": $scope.Sale_Reg_Smry[i].sodetails_product_code,
+                        "SO_Header_gid": $scope.Sale_Reg_Smry[i].soheader_gid,
+                        "SO_Details_Gid": $scope.Sale_Reg_Smry[i].sodetails_gid,
+                        "Godown_Gid":$scope.godwngid
+                    }
+                    $scope.bulky.push(data);
+                }
+                if ($scope.modll == 'Y') {
+                    var data = {
+                        "Params": {
+                            "HEADER": {
+                                "State_Billing_From_Gid": $scope.billinggid,
+                                "Employee_Gid": $scope.emp_gid,
+                                "Customer_Gid": $scope.cusgid
+                            },
+                            "DETAILS": {
+                                "DETAILS": $scope.bulky
+                            },
+                            "RATE": {
+                                "Capaign_Gid": "1",
+                                "Shadow_Credit": {
+                                    "Is_Shadow_Credit": $scope.modll,
+                                    "Receipt_Amount": $scope.crdtnoteamnt
+                                }
+                            },
+                            "CLASSIFICATION": {
+                                "Entity_Gid": [$scope.entity],
+                                "Entity_Details_Gid": [1],
+                                "Branch_Gid":$scope.branch_gid
+                            }
+                        }
+                    }
+                } else {
+                    var data = {
+                        "Params": {
+                            "HEADER": {
+                                "State_Billing_From_Gid": $scope.billinggid,
+                                "Employee_Gid": $scope.emp_gid,
+                                "Customer_Gid": $scope.cusgid
+                            },
+                            "DETAILS": {
+                                "DETAILS": $scope.bulky
+                            },
+                            "RATE": {
+                                "Capaign_Gid": "1",
+                                "Shadow_Credit": {
+                                    "Is_Shadow_Credit": 'N',
+
+                                }
+                            },
+                            "CLASSIFICATION": {
+                                "Entity_Gid": [$scope.entity],
+                                "Entity_Details_Gid": [1],
+                                "Branch_Gid": $scope.branch_gid
+                            }
+                        }
+                    }
+                }
+            }
+
+            var datain = {
+                Group: 'SALES_INV_PROCESS',
+                Action: 'Insert',
+                Type: 'SINGLE_INVOICE',
+                Create_by: $scope.emp_gid,
+                Is_Commit: 'Y',
+                data: data
+            }
+            setinvdet(datain)
+        }
+
+        function setinvdet(datain) {
+            var set_state = testService.setinv(datain)
+            set_state.then(function(result) {
+                    $scope.prodge = result.data.MESSAGE;
+                    if ($scope.prodge == "SUCCESS") {
+                        alert($scope.prodge);
+                        $window.location.href = "saleindex";
+                    } else {
+                        alert($scope.prodge);
+                    }
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+    $mdDialog.show({
+      contentElement: '#myDialog',
+      parent: angular.element(document.body),
+      clickOutsideToClose: true
+    });
+
+    }
+]);
+
+myApp.service("testService", function($http) {
+    this.getprcesmry = function(custid) {
+        var respons = $http.post(Appname + "/saleget/",
+            custid
+        );
+        return respons;
+    }
+    this.getcampaigndata = function(custid) {
+        var respons = $http.post(Appname + "/setinvc/",
+            custid
+        );
+        return respons;
+    }
+    this.getcustgrp = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.getdrpdwn = function(custid) {
+        var respons = $http.post(Appname + "/compgn/",
+            custid
+        );
+        return respons;
+    }
+    this.setinv = function(custid) {
+        var respons = $http.post(Appname + "/setinvc/",
+            custid
+        );
+        return respons;
+    }
+});
+
+
+
+</script>
+{% endblock %}

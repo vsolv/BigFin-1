@@ -1,0 +1,198 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_ECFDebit_Set`(in `Action` varchar(64),in `Type` varchar(64),
+in `lj_Data` json,in `is_commit` char(1),in `li_Invoice_sno` varchar(11),in `li_create_by` int,in `li_entity_gid` int,
+Out `Message` varchar(1024)
+)
+sp_ECFDebit_Set:BEGIN
+# Ramesh May 17 2018
+
+declare Query_Insert varchar(1000); 
+declare lsQuery_Update varchar(2000);
+declare countRow int;
+declare errno int;
+declare msg varchar(1000);
+declare i,j int;
+
+#declare Query_column varchar(1000);
+#declare Query_value varchar(1000);
+declare update_count int;
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;   
+    
+    
+    select JSON_LENGTH(lj_Data,'$.DEBIT') into @li_json_Debit_count;    
+   
+		 if @li_json_Debit_count is null or @li_json_Debit_count = 0 then
+			set Message = 'No Data In Json - Debit.';
+            leave sp_ECFDebit_Set;
+        end if;
+   
+    
+     set i = 0;
+
+     WHILE i<= @li_json_Debit_count - 1 Do		
+		  select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Invoice_Details_Gid[0]'))) into @Invoice_Details_Gid;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Category_Gid[0]'))) into @Category_Gid;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Sub_Category_Gid[0]'))) into @Sub_Category_Gid;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].GL_No[0]'))) into @GL_No;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Debit_Amount[0]'))) into @Debit_Amount;
+          
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Debit_Gid[0]'))) into @Debit_Gid;
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Invoice_Sno[0]'))) into @Invoice_Sno;
+          
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Is_Update[0]'))) into @Is_Update;  
+		  select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].cc_id[0]'))) into @cc_id;          
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].bs_id[0]'))) into @bs_id;          
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].Debit_percentage[0]'))) into @Debit_percentage;          
+        
+          select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].CCBS'))) into @CCBS_Json;          
+          
+          if @Is_Update is  null then
+				set @Is_Update = 'N';
+          End if;
+                    select @CCBS_Json;
+          ### Validations Pending.          
+    
+    if Action = 'Insert' then
+			if li_Invoice_sno = @Invoice_Sno then
+    
+					set Query_Insert = '';
+    
+					set Query_Insert = concat('insert into ecf_trn_tdebit(debit_invoiceheadergid,debit_invoicedetailsgid,debit_categorygid,
+							debit_subcategorygid,debit_glno,debit_amount,entity_gid,create_by)
+							values(',@Invoice_Header_Gid,',',@Invoice_Details_Gid,',',@Category_Gid,',
+                            ',@Sub_Category_Gid,',''',@GL_No,''',''',@Debit_Amount,''',',li_entity_gid,',',li_create_by,'
+                            )');     
+                            
+						set @Insert_query = Query_Insert;
+						##SELECT @Insert_query; ### remove It
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt; 	  
+                
+						if countRow >  0 then
+							select LAST_INSERT_ID() into @debit_id ;
+					        #select JSON_LENGTH(@CCBS_Json,'$') into @lnth;    
+                           # set j = 0;
+						   # WHILE j<= @lnth - 1 Do	
+							# select JSON_UNQUOTE(JSON_EXTRACT(@CCBS_Json, CONCAT('$[',j,'].Amount'))) into @Amount;          
+							# select JSON_UNQUOTE(JSON_EXTRACT(@CCBS_Json, CONCAT('$[',j,'].cc'))) into @cc;          
+							# select JSON_UNQUOTE(JSON_EXTRACT(@CCBS_Json, CONCAT('$[',j,'].bs'))) into @bs;          
+							# select JSON_UNQUOTE(JSON_EXTRACT(@CCBS_Json, CONCAT('$[',j,'].percentage'))) into @percentage;          
+                      set @ccbs_data = concat('{"DATA": [{
+                                                            "Debit_Gid": "',@debit_id,'",
+                                                            "Ccbsdtl_Cc": "',@cc_id,'",
+                                                            "Ccbsdtl_Bs": "',@bs_id,'",
+															"Code": "3",
+															"Percent": "',@Debit_percentage,'",
+															"Gl_no": "3",
+															"Amount": "',@Debit_Amount,'",
+															"Remarks": ""
+                                                          
+																}]}');
+                                             select @ccbs_data;                   
+                             call sp_ECFCCBS_Set('INSERT','INITIAL_SET',
+																@ccbs_data,
+																	concat('{"Entity_Gid":["',li_entity_gid,'"]}'),
+																	li_create_by,
+																	@Message);
+                                                                                                        
+								if @Message <> 'SUCCESS' then
+										set Message = 'Error On CCBS Insert.';
+										rollback;
+										leave sp_ECFDebit_Set;
+								End if;     
+
+							# set j = j + 1;
+							#END WHILE;
+                             
+                             set Message = 'SUCCESS';
+							#commit;
+						else
+							set Message = 'FAIL';
+							#rollback;  Check The error
+						end if;
+			End if; ## Choose of Inv Serial No                    
+            
+elseif Action = 'Update' then                        
+		### Json data Validations
+						
+                         #set @ls_currentDateTime = '2018-12-21 18:02:00';
+                         #select current_timestamp() into @ls_currentDateTime;
+                         #select @ls_currentDateTime;
+                         
+                         select date_format(current_date(),'%Y-%m-%d %H:%i:%s') into @ls_currentDateTime ;
+                         #select @ls_currentDateTime;
+                         
+						if @Is_Update = 'Y' then
+                        
+												if @Debit_Gid is not null and @Debit_Gid <= 0 then
+														set Message = 'Debit Gid Is Needed.';
+														leave sp_ECFDebit_Set;
+												End if;
+                        
+										select JSON_UNQUOTE(JSON_EXTRACT(lj_Data, CONCAT('$.DEBIT[',i,'].IS_Remove[0]'))) into @IS_Remove;          
+                                                                                			
+										set lsQuery_Update = '';
+										set lsQuery_Update = concat('update ap_trn_tdebit  set update_by = ',li_create_by,', ');
+                            
+										if @Invoice_Header_Gid is not null and @Invoice_Header_Gid > 0 then
+													set lsQuery_Update = concat(lsQuery_Update, ' debit_invoiceheadergid = ',@Invoice_Header_Gid,', ' );
+										end if;
+										if @Invoice_Details_Gid is not null and @Invoice_Details_Gid > 0 then
+													set lsQuery_Update = concat(lsQuery_Update, ' debit_invoicedetailsgid = ',@Invoice_Details_Gid,', ' );
+										end if;
+                            
+										if @Category_Gid is not null and @Category_Gid > 0 then
+														set lsQuery_Update = concat(lsQuery_Update, ' debit_categorygid = ',@Category_Gid,', ' );
+										end if;
+										if @Sub_Category_Gid is not null and @Sub_Category_Gid > 0 then
+														set lsQuery_Update = concat(lsQuery_Update, ' debit_subcategorygid = ',@Sub_Category_Gid,', ' );
+										end if;
+										if @GL_No is not null and @GL_No <> '' then
+														set lsQuery_Update = concat(lsQuery_Update, ' debit_glno = ',@GL_No,', ' );
+										end if;
+										if @Debit_Amount is not null and @Debit_Amount > 0 then
+														set lsQuery_Update = concat(lsQuery_Update, ' debit_amount = ',@Debit_Amount,', ' );
+										end if;
+                                        
+                                        if @IS_Remove is not null and @IS_Remove <> '' and @IS_Remove = 'Y'  then
+													set lsQuery_Update = concat(lsQuery_Update,' debit_isremoved = ''',@IS_Remove,''', ');
+                                        End if;
+                            
+														set lsQuery_Update = concat(lsQuery_Update,' Update_date = ''',@ls_currentDateTime,''' ');
+							
+														set lsQuery_Update = concat(lsQuery_Update, ' where debit_gid = ',@Debit_Gid,' ' );
+								                                
+														set @zQuery_Update = '';
+														set @zQuery_Update = lsQuery_Update;		 
+														# select @zQuery_Update;  # Remove it
+														PREPARE stmt FROM @zQuery_Update;
+														EXECUTE stmt;  
+														set countRow = (select ROW_COUNT());
+														DEALLOCATE PREPARE stmt;                          
+                                                        
+												if countRow <= 0 then
+														#select countRow;
+                                                       # select @zQuery_Update;  # Remove it
+																set Message = 'Error On Debit Update.';
+																rollback;
+																leave sp_ECFDebit_Set;
+												elseif    countRow > 0 then
+															set Message = 'SUCCESS';
+												End if;
+
+
+							End if;  ### end Of Is Update 
+    End if;
+    
+    set i = i + 1;
+    END WHILE;
+
+END

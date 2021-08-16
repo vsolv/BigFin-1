@@ -1,0 +1,344 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_POProcessSPS_set`(in Action varchar(20000),in Type varchar(20000) ,
+in lj_filter json,in lj_classification json,in lj_status varchar(200),in ls_created_by varchar(2000),out message varchar(2000))
+sp_POProcessSPS_set:BEGIN
+declare Query_Insert varchar(20000);
+declare Query_Update varchar(20000);
+declare query_column varchar(20000);
+declare query_value varchar(20000);
+declare ls_count varchar(2000);
+declare i varchar(200);
+declare j,k varchar(200);
+declare z varchar(200);
+declare errno varchar(200);
+declare msg varchar(200);
+
+	DECLARE done INT DEFAULT 0;
+	 DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	 DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+	 BEGIN
+			  GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+				  set Message = concat(errno , msg);
+			 ROLLBACK;
+ END;
+##select 120;
+     if Action='INSERT' then
+#select 1;
+           # if @poheader_no is null or @poheader_no<>0 or @poheader_no='' then
+			#   call sp_Generate_number_get('PO','000',@Message);
+			#   select @Message into @poheader_no;
+            #end if;
+           # where   date_format(create_date,'%Y-%m-%d') = curdate() ;
+#set @pono= 'PO202002190009';
+
+			select max(poheader_no) into @pono from gal_trn_tpoheader;
+            
+			if @pono is null or @pono<>0 or @pono='' then
+				call sp_Generatecode_Get('WITH_DATE','PO','000','000',@Message);
+					set @poheader_no= @Message  ; 
+			else
+				call sp_Generatecode_Get('WITH_DATE','PO','000',@pono,@Message);
+					set @poheader_no= @Message  ; 
+			end if;
+
+
+
+			#call sp_Generatecode_Get('WITH_DATE','PO','000',@pono,@Message);
+			#set @poheader_no= @Message  ;    
+#select @pono, @poheader_no;         
+
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.poheader_date'))) into @poheader_date ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.supplier_gid'))) into @poheader_supplier_gid ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.teamandcont_gid'))) into @poheader_poterms_gid ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.total_amount'))) into @poheader_amount ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.amement_gid'))) into @poheader_amendment ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.vesion_gid'))) into @poheader_version ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.commodity_gid'))) into @poheader_commodity_gid ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branch_gid'))) into @poheader_branchgid ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.poheader_mepno'))) into @poheader_mepno ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.poheader_status'))) into @poheader_status ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.header_img'))) into @poheader_imagepath ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.from_date'))) into @poheader_validfrom ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.to_date'))) into @poheader_validto ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.tran_to'))) into @tran_to ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.status_poheader'))) into @status_poheader ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.entity_gid'))) into @entity_gid ;
+			
+			 
+			  if @poheader_supplier_gid='' or @poheader_supplier_gid is null then
+				  set message='poheader_supplier_gid is not given.';
+				  leave sp_POProcessSPS_set;
+			  end if;
+			 if @poheader_poterms_gid='' or @poheader_poterms_gid is null then
+				set message='poheader_poterms_gid is not given.';
+				leave sp_POProcessSPS_set;
+			 end if;
+			
+			 if @poheader_amendment='' or @poheader_amendment is null then
+				  set message='poheader_amendment is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+			 if @poheader_version='' or @poheader_version is null then
+				  set message='poheader_version is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+			 if @poheader_commodity_gid='' or @poheader_commodity_gid is null then
+				  set message='poheader_commodity_gid is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+			 if @poheader_branchgid='' or @poheader_branchgid is null then
+				  set message='poheader_branchgid is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+			 if @poheader_validfrom='' or @poheader_validfrom is null then
+				  set message='poheader_validfrom is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+			 if @poheader_validto='' or @poheader_validto is null then
+				  set message='poheader_validto is not given.';
+				  leave sp_POProcessSPS_set;
+			 end if;
+             
+           set query_column='';
+           set query_value='';
+
+		#select query_column,query_value, @poheader_imagepath;
+        
+		   if @poheader_imagepath<>'' or @poheader_imagepath is not null then 
+           #select 1;
+			 set query_column=concat(',poheader_imagepath');
+			 set query_value=concat(',''',@poheader_imagepath,'''');
+		   end if;
+           
+           if @poheader_imagepath ='' or @poheader_imagepath is null then 
+           #select 1;
+			 set query_column='';
+			 set query_value='';
+		   end if;
+
+
+			if Type='submit' then
+          #select 2;
+				#set @ls_status='Pending For Approval';
+	/*
+    select @poheader_no,@ls_status,@poheader_supplier_gid,@poheader_poterms_gid,@poheader_amount,@poheader_amendment,
+    @poheader_amendment,@poheader_version,@poheader_commodity_gid,@poheader_branchgid,@ls_status,@poheader_validfrom,
+    @poheader_validto,@entity_gid,ls_created_by;	
+		*/	
+				set Query_Insert=' ';
+				set Query_Insert=concat('INSERT INTO gal_trn_tpoheader
+																(poheader_no,poheader_date,
+																poheader_supplier_gid , poheader_poterms_gid ,
+																poheader_amount ,poheader_amendment ,
+																poheader_version ,poheader_commodity_gid,
+																poheader_branchgid,poheader_mepno,
+																poheader_status,poheader_validfrom,
+																poheader_validto,entity_gid ,create_by ',query_column,'  )
+																VALUES
+																(''',@poheader_no,''',current_timestamp(),
+																  ',@poheader_supplier_gid,' ,',@poheader_poterms_gid,',
+																  ''',@poheader_amount,''',',@poheader_amendment,',
+																  ',@poheader_version,',',@poheader_commodity_gid,',
+																   ',@poheader_branchgid,',''1'',
+																   ''',@poheader_status,''',''',@poheader_validfrom,''',
+																   ''',@poheader_validto,''',',@entity_gid,',',ls_created_by,' ',query_value,' )');
+
+				#select Query_Insert;
+				set @p= Query_Insert;
+				prepare stmt from @p;
+				execute stmt;
+				select row_count() into ls_count;
+				if ls_count>0 then
+					select LAST_INSERT_ID() into @poheader_gid ;
+					#select @poheader_gid,@poheader_status;
+					 call sp_Trans_Set('Insert_PR','POMAKER',@poheader_gid,'Pending For Approval','G',@tran_to,'',
+					 @entity_gid,ls_created_by,@message);
+						#select @message;			
+					 select @message into @tran;
+					  if @tran <>0 or @tran <> '' then
+							
+							 select json_length(lj_filter,'$.podetails')into @lj_filter_count;
+					#select @lj_filter_count;
+						   if @lj_filter_count='' or @lj_filter_count is null then
+								set message='no data in json.';
+								rollback;
+							  leave sp_POProcessSPS_set;
+							end if;
+									   
+							 set i=0;
+							 while i<@lj_filter_count do
+
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].product_gid'))) into @podetails_product_gid;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].total_quatity'))) into @podetails_qty;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].podetails_uom'))) into @podetails_uom;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].supplier_unit_price	'))) into @podetails_unitprice;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].po_amount'))) into @podetails_amount;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].tax_amount'))) into @podetails_taxamount;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].podetails_totalamount'))) into @podetails_totalamount;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].image'))) into @podetails_imagepath;
+									Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.podetails[',i,'].delivery_details'))) into @delivery_details;
+									                                   # select @podetails_taxamount,@podetails_product_gid;
+
+                                   # set @podetails_taxamount = (( @podetails_qty * @podetails_unitprice ) *@podetails_taxamount)/100;
+                                   # select @podetails_taxamount;
+									#select @podetails_product_gid,@podetails_qty,@podetails_uom,@podetails_unitprice,
+									#	@podetails_amount,@poheader_gid,@podetails_taxamount,@podetails_totalamount;
+									 if @podetails_product_gid='' or @podetails_product_gid is null then
+										set message='podetails_product_gid is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+									 if @podetails_qty='' or @podetails_qty is null then
+										set message='podetails_qty is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+									  if @podetails_uom='' or @podetails_uom is null then
+										set message='podetails_uom is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+									  if @podetails_unitprice='' or @podetails_unitprice is null then
+										set message='podetails_unitprice is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+									   if @podetails_amount='' or @podetails_amount is null then
+										set message='podetails_amount is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+									   if @podetails_taxamount='' or @podetails_taxamount is null then
+										set message='podetails_taxamount is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if; 
+									 if @podetails_totalamount='' or @podetails_totalamount is null then
+										set message='podetails_totalamount is not given.';
+									 rollback;
+									 leave  sp_POProcessSPS_set;
+									 end if;
+								#select @podetails_imagepath;	 
+                                      if @podetails_imagepath<>'' or @podetails_imagepath is not null then 
+										 set query_column=concat(',podetails_imagepath');
+										 set query_value=concat(',''',@podetails_imagepath,''' ');
+									   end if;
+                                       
+                                       if @podetails_imagepath='' or @podetails_imagepath is  null then 
+										 set query_column='';
+										 set query_value='';
+									   end if;
+                              # select query_column,    query_value, @podetails_imagepath;  
+									set Query_insert=' ';
+									set Query_Insert=concat('INSERT INTO gal_trn_tpodetails
+																				   (podetails_poheader_gid, podetails_product_gid,
+																				   podetails_qty,podetails_uom , podetails_unitprice ,
+																				   podetails_amount ,podetails_taxamount ,podetails_totalamount ,
+																				   entity_gid, create_by  ',query_column,' )
+																					VALUES
+																					(',@poheader_gid,',',@podetails_product_gid,',
+																					',@podetails_qty,',''',@podetails_uom,''',''',@podetails_unitprice,''',
+																					''',@podetails_amount,''',''',@podetails_taxamount,''',''',@podetails_totalamount,''',
+																					',@entity_gid,',',ls_created_by,' ',query_value,' )');
+									#select Query_Insert;
+									set @p=Query_Insert;
+									prepare stmt from @p;
+									execute stmt;
+									select row_count() into ls_count;
+									select LAST_INSERT_ID() into @podetails_gid;
+                                   # SELECT @podetails_gid;
+									if @podetails_gid <> 0 then
+											select JSON_LENGTH(@delivery_details,'$')into @lj_filter_qtycount;
+				  
+											 if @lj_filter_qtycount='' or @lj_filter_qtycount is null then
+													set message='no data in json.';
+												   leave sp_POProcessSPS_set;
+											  end if;	
+											  set j=0;
+											  while j<@lj_filter_qtycount do
+													  #select @lj_filter_qtycount;
+														#select 2;
+																	
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].prccbs_prdetailsgid'))) into @prdetails_gid;													
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].product_gid'))) into @product_gid;													
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].prccbs_refgid'))) into @prccbs_refgid;													
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].prccbs_reftablegid'))) into @prccbs_reftablegid;													
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].ccbs_qty'))) into @ccbs_qty;													
+														Select JSON_UNQUOTE(JSON_EXTRACT(@delivery_details,CONCAT('$[',j,'].prccbs_gid'))) into @prccbs_gid;													
+														#select @poheader_gid,@podetails_gid,@prpoqty_prdetails_gid,@prpoqty_prccbs_gid,@prpoqty_qty,@entity_gid;
+						
+														 
+						
+																 
+																
+															#select@poheader_gid,@podetails_gid,@prdetails_gid,@prccbs_gid,@ccbs_qty,@entity_gid,ls_created_by;
+																
+																
+																set Query_insert=' ';
+																set Query_insert=concat('INSERT INTO gal_trn_tprpoqty
+																										(prpoqty_poheader_gid , prpoqty_podetails_gid ,
+																										prpoqty_prdetails_gid , prpoqty_prccbs_gid,
+																										prpoqty_qty , entity_gid , create_by)
+																										VALUES
+																										(',@poheader_gid,',',@podetails_gid,',
+																										  ',@prdetails_gid,',',@prccbs_gid,',
+																										  ',@ccbs_qty,',',@entity_gid,',',ls_created_by,')');
+																#select Query_Insert;
+                                                                #select 123;
+															   set @p=Query_Insert;
+															   prepare stmt from @p;
+															   execute stmt;
+																select row_count() into ls_count;
+																select LAST_INSERT_ID() into @prpoqty_gid;
+                                                                #SELECT @prpoqty_gid;
+																/*
+                                                                SELECT @poheader_gid,@podetails_gid,@product_gid,@prpoqty_gid,
+                                                                @ccbs_qty,@prccbs_refgid,@prccbs_reftablegid,@entity_gid,@ls_created_by;
+																*/
+                                                                if @prpoqty_gid <> 0 then
+																	 set Query_Insert=' ';
+																	 set Query_Insert=concat('INSERT INTO gal_trn_tpodelivery
+																												   (podelivery_poheader_gid, podelivery_podetails_gid, 
+																													podelivery_product_gid,podelivery_prpoqty_gid, podelivery_qty,
+																													podelivery_refgid,podelivery_reftablegid,
+																													podelivery_godown_gid,entity_gid,create_by)
+																													VALUES
+																													(',@poheader_gid,',',@podetails_gid,',
+																													  ',@product_gid,',',@prpoqty_gid,',',@ccbs_qty,',
+																													  ',@prccbs_refgid,',',@prccbs_reftablegid,',
+																													  ''1'',',@entity_gid,',',ls_created_by,')');
+																	#select Query_Insert; 
+                                                                    #select 1234;
+																	set @p=Query_Insert;
+																   prepare stmt from @p;
+																   execute stmt;
+																   select row_count() into ls_count;
+																	if ls_count>0 then
+																		set message='SUCCESS';
+																	else
+																		rollback;
+																		 set message='NOT SUCCESS';
+																	end if; 
+																end if;
+                                                               
+													    set j=j+1;
+										   end while;       
+								   else
+												set Message = 'FAIL in POdetails';
+
+									end if;
+                                    set i = i+ 1;
+							 end while;       
+					  else
+						   set Message = 'FAIL in tran';
+						  rollback;
+						   leave sp_POProcessSPS_set;
+					  end if;	
+				else
+						set Message = 'FAIL';
+						rollback;
+						 leave sp_POProcessSPS_set;
+			   end if;
+		end if;
+
+    end if;
+end

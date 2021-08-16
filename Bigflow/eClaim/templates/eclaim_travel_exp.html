@@ -1,0 +1,1436 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Expense{% endblock %}
+{% block content %}
+<style>
+.modal-lg{
+    width:1000px
+    }
+.md-virtual-repeat-container {
+    width: 400px;
+    }
+img {
+  cursor: -webkit-zoom-in;
+  cursor: -moz-zoom-in;
+}
+.container3 {
+    font-size: 12px;
+    background-color: white;
+    box-shadow: 0px 0px 10px 5px #c1d4dc;
+    padding-bottom: 15px;
+    height:100%;
+}
+</style>
+<style>
+  .required:after {
+    content:" *";
+    color: red;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/oclazyload/1.1.0/ocLazyLoad.js"></script>
+{% verbatim %}
+<div class="maincontent">
+    <div class="container1"
+         ng-app="eclaimapp"
+         ng-controller="eclaimctrl" ng-cloak
+         style="width:1400px;padding-right:15px;padding-left:15px;margin-right:auto;margin-left:auto;">
+        <md-subheader ng-show="user_type" class="md-accent">On BeHalf Employee - {{emp_name}}</md-subheader>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Travelling Expense</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <md-subheader class="md-accent">Employee</md-subheader>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Tour ID</label>
+                            <input disabled ng-model="tour_no" type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Name</label>
+                            <input disabled ng-model="emp_name" type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Designation</label>
+                            <input disabled ng-model="designation" type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Employee Grade</label>
+                            <input disabled ng-model="emp_grade" type="text"/>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form name="expense_valid" novalidate role="form">
+            <div class="row" class="col-md-12">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-3" class="text-left" ng-show="exp_add">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       ng-click="add_taveltype()">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Add Expense</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive ">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center required" scope="col">Departure Date</th>
+                        <th class="text-center required" scope="col">Departure Time (HH:MM)</th>
+                        <th class="text-center required" scope="col">Departure Place</th>
+                        <th class="text-center required" scope="col">Arrival Date</th>
+                        <th class="text-center required" scope="col">Arrival Time (HH:MM)</th>
+                        <th class="text-center required" scope="col">Place Of Visit</th>
+                        <th class="text-center required" scope="col">Total Ticket Amount</th>
+                        <th class="text-center required" scope="col">Ticket by Bank</th>
+                        <th class="text-center required" scope="col">Actual Mode of Travel</th>
+                        <th class="text-center required " scope="col">Class Of Travel</th>
+                        <th class="text-center" scope="col">Eligible Mode of Travel</th>
+                        <th class="text-center required" scope="col">Higher Mode Opted Due
+                            To Personal Reasons of Exigencies
+                        </th>
+                        <th class="text-center required" scope="col">Prior Permission
+                            Taken For Higher Mode Of Travel
+                        </th>
+                        <th class="text-center required" scope="col">Who Has Opted Higher Mode</th>
+                        <th class="text-center required " scope="col">No of Tickets / No of Dependents Travelling</th>
+                        <th class="text-center" scope="col">Dependents on Travelling</th>
+<!--                        <th class="text-center" scope="col">Eligible Amount</th>-->
+                        <th class="text-center required" scope="col">Claim Amount</th>
+                        <th class="text-center" scope="col">Vendor Name</th>
+                        <th class="text-center" scope="col">Vendor Code</th>
+                        <th class="text-center" scope="col">HSN Code</th>
+                        <th class="text-center" scope="col">Bank GST No</th>
+                        <th class="text-center" scope="col">Vendor GST No</th>
+                        <th class="text-center" scope="col" ng-show="gst_show">GST Percentage</th>
+                        <th class="text-center" scope="col" ng-show="approve">Approved Amount</th>
+<!--                        <th class="text-center" scope="col" ng-show="exp_add">Add Dependents</th>-->
+                        <th class="text-center" scope="col" ng-show="exp_add">Action</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="eclaim in eClaim_tavelexp.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center" style="width:300px;">
+                                <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                               ng-change="eligible_calc(eclaim,$index)"
+                                               ng-model="eclaim.depaturedate"
+                                               name="depaturedate"
+                                               md-max-date="eclaim.maxend" md-min-date="eclaim.minstart"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true"
+                                               style="width:150px;"></md-datepicker>
+                            </td>
+                            <td class="text-center" style="width:100px;">
+                                <!--                                <input  id="fr_time{{$index}}"-->
+                                <!--                                        ng-model="eclaim.fr_time"-->
+                                <!--                                        ng-required="true"-->
+                                <!--                                        ng-disabled = "applevel == 1 || applevel == 2"-->
+                                <!--                                        type="time">-->
+                                <!--                                -->
+                                <div uib-timepicker
+                                     ng-model="eclaim.fr_time"
+                                     name="depaturetime"
+                                     ng-required="true"
+                                     ng-disabled="applevel == 1 || applevel == 2"
+                                     ng-change="eligible_calc(eclaim,$index)" hour-step="hstep" minute-step="mstep"
+                                     show-meridian="ismeridian"></div>
+
+                            </td>
+                            <td class="text-center">
+                                <input class="form-control" maxlength="30"
+                                       ng-model="eclaim.depatureplace"
+                                       name="depatureplace"
+                                       ng-required="true"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       ng-blur="eligible_calc(eclaim,$index)"
+                                       placeholder="Departure Place"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center" style="width:300px;">
+                                <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                               ng-change="eligible_calc(eclaim,$index)"
+                                               name="arrivaldate"
+                                               ng-required="true"
+                                               ng-model="eclaim.arrivaldate"
+                                               md-max-date="eclaim.maxend" md-min-date="eclaim.depaturedate"
+                                               ng-required="true"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               style="width:100px;"></md-datepicker>
+                            </td>
+                            <td class="text-center" style="width:100px;">
+                                <!--                                <input id="to_time{{$index}}"-->
+                                <!--                                       ng-model="eclaim.to_time"-->
+                                <!--                                       ng-disabled = "applevel == 1 || applevel == 2"-->
+                                <!--                                       type="time">-->
+
+                                <div uib-timepicker
+                                     id="to_time{{$index}}"
+                                     ng-model="eclaim.to_time"
+                                     name="arrivaltime"
+                                     ng-required="true"
+                                     ng-disabled="applevel == 1 || applevel == 2"
+                                     ng-change="eligible_calc(eclaim,$index)"
+                                     hour-step="hstep" minute-step="mstep" show-meridian="ismeridian"></div>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-control" maxlength="30"
+                                       ng-model="eclaim.placeofvisit "
+                                       name="placeofvisit"
+                                       ng-required="true"
+                                       ng-blur="eligible_calc(eclaim,$index)"
+                                       ng-required="true"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       placeholder="Place To Visit"
+                                       style="width:100px"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-control"
+                                       maxlength="4"
+                                       ng-model="eclaim.totaltkttamt"
+                                       name="totaltkttamt"
+                                       numbers-only
+                                       ng-required="true"
+                                       placeholder="Total Ticket Amount"
+                                       style="width:80px"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-select md-container-class="popup_select"
+                                               ng-change="eligible_calc(eclaim,$index)"
+                                               ng-blur="tktbybank_calc(eclaim.tktbybank,$index)"
+                                               ng-model="eclaim.tktbybank"
+                                               name="tktbybank"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true">
+                                        <md-option ng-repeat="y in yes_no" ng-value="y.id">
+                                            {{y.data}}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+
+                                <input class="form-control"
+                                       maxlength="7"
+                                       ng-show="eclaim.tktref"
+                                       ng-model="eclaim.tktrefno"
+                                       placeholder=" Ticket Ref No"
+                                       style="width:80px"
+                                       ng-required="true"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-select md-container-class="popup_select"
+                                               ng-model="eclaim.actualtravel"
+                                               name="actualtravel"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true">
+                                        <md-option ng-repeat="g in travel_mode" ng-click="travelmode_change(g)" ng-value="g.id">
+                                            {{g.data}}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+                            </td>
+                            <td class="text-center">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-select md-container-class="popup_select"
+                                               ng-model="eclaim.class"
+                                               name="class"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true">
+                                        <md-option ng-repeat="y in travel_class" ng-value="y.id">
+                                            {{y.data}}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+                            </td>
+                            <td class="text-center">
+                                {{grade_elig.replace(",,"," ")}}
+                            </td>
+                            <td class="text-center">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-select md-container-class="popup_select"
+                                               ng-model="eclaim.highermodereasons"
+                                               name="highermodereasons"
+                                               ng-change="highermode_calc(eclaim,$index)"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true">
+                                        <md-option ng-repeat="y in yes_no" ng-value="y.id">
+                                            {{y.data}}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+                            </td>
+                            <td class="text-center">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-select md-container-class="popup_select"
+                                               ng-change="eligible_calc(eclaim,$index)"
+                                               ng-model="eclaim.priorpermission"
+                                               name="priorpermission"
+                                               ng-disabled="applevel == 1 || applevel == 2"
+                                               ng-required="true">
+                                        <md-option ng-repeat="y in yes_no" ng-value="y.id">
+                                            {{y.data}}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-control"
+                                       maxlength="20" ng-model="eclaim.highermodeopted"
+                                       placeholder="Higher Mode Opted"
+                                       ng-required="eclaim.higheropted"
+                                       name="highermodeopted"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       type="text"/>
+                            </td>
+
+                            <td class="text-center" style="width:200px;">
+                                <input class="form-control"
+                                       maxlength="2" ng-model="eclaim.noofdependents"
+                                       numbers-only
+                                       ng-required="true"
+                                       name="noofdependents"
+                                       ng-disabled="applevel == 1 || applevel == 2 || no_dependent"
+                                       placeholder="No of Dependents"
+                                       style="width:80px"
+                                       type="text"/>
+
+                            </td>
+                            <td class="text-center" style="width:200px;">
+                                <md-select ng-model="eclaim.selectedcount"
+                                           md-on-close="clearSearchTerm()"
+                                           ng-disabled="applevel == 1 || applevel == 2 || no_dependent"
+                                           data-md-container-class="selectdemoSelectHeader"
+                                           multiple>
+                                    <md-select-header class="demo-select-header">
+                                        <input ng-model="searchTerm"
+                                               type="search"
+                                               placeholder="Search for a Dependent.."
+                                               class="demo-header-searchbox md-text">
+                                    </md-select-header>
+                                    <md-optgroup label="Stream">
+                                        <md-option ng-value="data"
+                                                   ng-repeat="data in eClaim_dependent |
+                                                filter:searchTerm">{{data.dependentname}}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                                </md-input-container>
+                            </td>
+<!--                            <td class="text-center" style="width:200px;">-->
+<!--                                <input class="form-control"-->
+<!--                                       maxlength="4" ng-model="eclaim.eligibleamount"-->
+<!--                                       ng-pattern="/^[0-9,.]/"-->
+<!--                                       disabled-->
+<!--                                       name="eligibleamount"-->
+<!--                                       placeholder="claim amount"-->
+<!--                                       style="width:80px"-->
+<!--                                       type="text"/>-->
+<!--                            </td>-->
+                            <td class="text-center" style="width:200px;">
+                                <input class="form-control"
+                                       ng-required="true"
+                                       maxlength="8" ng-model="eclaim.claimedamount"
+                                       ng-pattern="/^[0-9,.]/"
+                                       name="claimedamount"
+                                       ng-blur="eligible_calc(eclaim,$index)"
+                                       ng-disabled="applevel == 1 || applevel == 2"
+                                       placeholder="claim amount"
+                                       style="width:80px"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center" style="width:300px">
+                                <input class="form-control"
+                                       maxlength="35" ng-model="eclaim.vendorname"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       placeholder="Vendor Name"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center" style="width:300px">
+                                <input class="form-control"
+                                       maxlength="15" ng-model="eclaim.vendorcode"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       placeholder="Vendor Code"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center">
+                                <md-autocomplete
+                                        md-item-text="item.hsn_code"
+                                        md-items="item in hsnsearch(eclaim.searchhsn)"
+                                        md-min-length=0
+                                        md-no-cache="true"
+                                        md-search-text="eclaim.searchhsn"
+                                        md-selected-item="eclaim.selectedhsn"
+                                        md-selected-item-change="select_hst(item,eclaim,$index)"
+                                        ng-disabled = "applevel == 1 || applevel == 2"
+                                        placeholder="HSN Code">
+                                    <md-item-template>
+                                        <span md-highlight-text="eclaim.searchhsn"> {{item.display}}</span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Tour Expense Type matching "{{searchtype}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </td>
+                            <td class="text-center">
+                                <md-autocomplete
+                                        md-item-text="item.gstno"
+                                        md-items="item in gstsearch(eclaim.searchgst)"
+                                        md-min-length=0
+                                        md-no-cache="true"
+                                        md-search-text="eclaim.searchgst"
+                                        md-selected-item="eclaim.selectedgst"
+                                        md-selected-item-change="select_gst(item,$index)"
+                                        ng-disabled = "applevel == 1 || applevel == 2"
+                                        placeholder="Bank GST No"
+                                        ng-show="eclaim.auto_gst">
+                                    <md-item-template>
+                                        <span md-highlight-text="eclaim.searchgst"> {{item.gstno}} - {{item.branch_name}}</span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Tour Expense Type matching "{{searchtype}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                                <a ng-click="add_gst($index)"><i class="material-icons">
+                                    add
+                                </i></a>
+                                <input class="form-control"
+                                       maxlength="15" ng-model="eclaim.bankgstno"
+                                       style="width:160px"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       ng-show="eclaim.entergst"
+                                       placeholder="Bank Gst No"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center" style="width:300px">
+                                <input class="form-control"
+                                       maxlength="15"
+                                       ng-model="eclaim.vendorgstno"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                       ng-blur="gst_calc(eclaim,$index)"
+                                       placeholder="GST No"
+                                       type="text"/>
+                            </td>
+                            <td class="text-center" ng-show="gst_show"  >
+                                <input class="form-control"
+                                       maxlength="15" ng-model="eclaim.cgst"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       numbers-only
+                                       ng-show="eclaim.scgst_show"
+                                       placeholder="CGST Percentage"
+                                       type="text"/>
+                                <input class="form-control"
+                                       maxlength="15" ng-model="eclaim.sgst"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       numbers-only
+                                       ng-show="eclaim.scgst_show"
+                                       placeholder="SGST Percentage"
+                                       type="text"/>
+                                <input class="form-control"
+                                       maxlength="15" ng-model="eclaim.igst"
+                                       ng-disabled = "applevel == 1 || applevel == 2"
+                                       style="width:100px"
+                                       numbers-only
+                                       ng-show="eclaim.igst_show"
+                                       placeholder="IGST Percentage"
+                                       type="text"/>
+                            </td>
+                            <td ng-show="approve" class="text-center" style="width:300px">
+                                <input class="form-control"
+                                       maxlength="10" ng-model="eclaim.appamt"
+                                       ng-pattern="/^[0-9,.]/"
+                                       ng-disabled="applevel == 1"
+                                       style="width:100px"
+                                       ng-blur="approveamt_tot(eclaim)"
+                                       placeholder="Amount"
+                                       type="text"/>
+                            </td>
+<!--                            <td class="text-center" ng-show="exp_add">-->
+<!--                                <a ng-click="add_dependent(eclaim)"-->
+<!--                                   style="width:20px;height:4px;"><i-->
+<!--                                        class="material-icons">-->
+<!--                                    add-->
+<!--                                </i></a>-->
+<!--                            </td>-->
+                            <td ng-show="exp_add" class="text-center">
+                                <md-button ng-disabled="eclaim.gid != 0" ng-click="remove_travel(eclaim)"><i class="material-icons">
+                                    close
+                                </i></md-button>
+                        </tr>
+                        <tr ng-show="data_len ==  0">
+                            <td class="warning" colspan="20">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="24">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="eClaim_tavelexp.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <!--                            <td class="text-left" colspan="2">-->
+                            <!--                                <span>Total Count:<br/> <b class="text-centre"> {{eClaim_tavelexp.length}}</b></span>-->
+                            <!--                            </td>-->
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div ng-show="enable_dependent">&nbsp;
+                <md-subheader class="md-accent">Add Dependent</md-subheader>
+                <div class="row table-responsive ">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <!--                            <th class="text-center" scope="col" style="width:150px;">Dependent ID</th>-->
+                            <th class="text-center" scope="col">Dependent Name</th>
+                            <th class="text-center" scope="col" style="width:150px;">Relationship</th>
+                            <th class="text-center" scope="col">Eligible Dependent</th>
+                            <th class="text-center" scope="col">Action</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="eclaim in eClaim_dependent.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <!--                                <td class="text-center">-->
+                                <!--                                    <input class="form-control" maxlength="30"-->
+                                <!--                                           ng-model="eclaim.dependentgid"-->
+                                <!--                                           ng-required="true"-->
+                                <!--                                           placeholder="Dependent ID"-->
+                                <!--                                           style="width:200px"-->
+                                <!--                                           type="text"/>-->
+                                <!--                                </td>-->
+                                <td class="text-center">
+                                    <input class="form-control" maxlength="30"
+                                           ng-model="eclaim.dependentname "
+                                           placeholder="Dependent Name"
+                                           style="width:200px"
+                                           type="text"/>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-control"
+                                           maxlength="30"
+                                           ng-model="eclaim.deprelation"
+                                           placeholder="Relationship"
+                                           style="width:200px"
+                                           type="text"/>
+                                </td>
+                                <td class="text-center">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <md-select md-container-class="popup_select"
+                                                   ng-model="eclaim.isdepelig"
+                                        >
+                                            <md-option ng-repeat="y in yes_no" ng-value="y.id">
+                                                {{y.data}}
+                                            </md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                </td>
+                                <td class="text-center">
+                                    <a ng-click="remove_dependent(eclaim)"><i class="material-icons">
+                                        close
+                                    </i></a>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="5">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="eClaim_dependent.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                                <td class="text-left" colspan="1">-->
+                                <!--                                    <span>Total Count:<br/> <b-->
+                                <!--                                            class="text-centre"> {{eClaim_dependent.length}}</b></span>-->
+                                <!--                                </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+<!--            <div class="row" ng-show="approve">-->
+<!--                <div class="col-md-4">-->
+<!--                </div>-->
+<!--                <div class="col-md-4 text-center">-->
+<!--                    <input class="form-control"-->
+<!--                           maxlength="10" ng-model="approvedamount"-->
+<!--                           ng-pattern="/^[0-9,.]/"-->
+<!--                           ng-disabled-->
+<!--                           placeholder="Approved Amount"-->
+<!--                           type="text"/>-->
+<!--                </div>-->
+<!--            </div>-->
+            &nbsp;
+            <div class="row" ng-show="enable_submit">
+                <div class="col-md-12 text-center">
+                    <md-button ng-show="exp_add" class="btn btn-info custbutton"
+                               ng-disabled="notallow"
+                               ng-click="expense_valid.$valid ? save_daily() : error_toast(expense_valid)"
+                               >Submit
+                        <md-tooltip>Submit</md-tooltip>
+                    </md-button>
+                    <md-button ng-show="applevel == 2" class="btn btn-info custbutton"
+                               ng-click="approve_update()"
+                               ng-disabled="apr_valid.$invalid || notallow">Approve
+                        <md-tooltip>Approve</md-tooltip>
+                    </md-button>
+                    <md-button ng-show="applevel == 0"
+                               class="md-raised" data-dismiss="modal"
+                               ng-href="eClaim/eclaim_expense">Back
+                        <md-tooltip>close</md-tooltip>
+                    </md-button>
+                    <md-button ng-show="applevel == 1 || applevel == 2"
+                               class="md-raised" data-dismiss="modal"
+                               ng-href="eClaim/eclaim_expense_dtl_aprvl">Back
+                        <md-tooltip>close</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </form>
+        <div ng-include="'eClaim/eClaim_ccbs_popup'"></div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+</style>
+<script>(function (global) {
+
+    if(typeof (global) === "undefined") {
+        throw new Error("window is undefined");
+    }
+
+    var _hash = "!";
+    var noBackPlease = function () {
+        global.location.href += "#";
+
+        // making sure we have the fruit available for juice (^__^)
+        global.setTimeout(function () {
+            global.location.href += "!";
+        }, 50);
+    };
+
+    global.onhashchange = function () {
+        if (global.location.hash !== _hash) {
+            global.location.hash = _hash;
+        }
+    };
+
+    global.onload = function () {
+        noBackPlease();
+
+        // disables backspace on page except on input fields and textarea..
+        document.body.onkeydown = function (e) {
+            var elm = e.target.nodeName.toLowerCase();
+            if (e.which === 8 && (elm !== 'input' && elm  !== 'textarea')) {
+                e.preventDefault();
+            }
+            // stopping event bubbling up the DOM tree..
+            e.stopPropagation();
+        };
+    }
+
+})(window);
+</script>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon','oc.lazyLoad'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+        $mdDateLocale.formattime = function(date) {
+            return $filter('date')(date, "HH:mm");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope, eclaimService,$http,$window, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+    var employee_data=JSON.parse(sessionStorage.getItem('eClaim'));
+    console.log(employee_data);
+    $scope.tour_gid = employee_data.tour_gid;
+    $scope.tour_no = employee_data.tour_no;
+    $scope.empgid = employee_data.emp_gid;
+    $scope.tour_requestdate = employee_data.tour_requestdate;
+    $scope.tour_startdate = new Date(employee_data.tour_startdate);
+    $scope.tour_enddate = new Date(employee_data.tour_enddate);
+    $scope.minstart = new Date($scope.tour_startdate.getFullYear(), $scope.tour_startdate.getMonth(), $scope.tour_startdate.getDate());
+    $scope.maxend = new Date($scope.tour_enddate.getFullYear(), $scope.tour_enddate.getMonth(), $scope.tour_enddate.getDate());
+    $scope.emp_name = employee_data.emp_name;
+    $scope.designation = employee_data.designation;
+    $scope.emp_grade = employee_data.emp_grade;
+
+    $scope.hstep = 1;
+    $scope.mstep = 5;
+    $scope.ismeridian = true;
+    $scope.Status = employee_data.Status;
+    $scope.notallow = false;
+    if($scope.Status =="APPROVED"){
+        $scope.notallow = true;
+    }
+
+    if(sessionStorage.getItem('eClaim_tavel')){
+        $scope.mode = [];
+       var travel_data =JSON.parse(sessionStorage.getItem('eClaim_tavel'));
+       angular.forEach(travel_data, function(item1) {
+        $scope.mode.push(item1);
+       });
+       var query ="TRVL" ;
+       $scope.mode = $filter('filter')($scope.mode, {
+                'expsensecode': query
+            });
+    }
+    $scope.approve = $scope.mode[0].approve;
+    $scope.exp_add = $scope.mode[0].exp_add;
+    $scope.applevel = $scope.mode[0].applevel;
+
+    loadeligble();
+    function loadeligble(){
+        var data = {
+            params: {
+                "Type":"ELIGIBLE_TRAVEL",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "GRADE": $scope.emp_grade
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_drop_get(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.grade_elig = $scope.main;
+        }).finally($scope.endloading);
+    }
+
+
+    $scope.choices = [{selectedtyp:"",remaks:""}];
+    $scope.eclaim = [];
+    $scope.eClaim_tavelexp =[];
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_pop = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('addpurpose')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    session_dataget();
+    function session_dataget(){
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "type": ""
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_session_get(data)
+        get_eclaim.then(function(result) {
+            $scope.session_type = result.data.type;
+            if($scope.session_type == "ONBEHALF"){
+                $scope.user_type = true;
+            }
+            else{
+                 $scope.user_type = false;
+            }
+        }).finally($scope.endloading);
+
+    }
+
+    $scope.eClaim_dependent = [];
+    $scope.no_dependent = false;
+    loaddependent();
+    function loaddependent(){
+        var data = {
+            params: {
+                "Type": "EMP_DEPENDENT",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Emp_gid": $scope.empgid
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_drop_get(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            if($scope.main){
+                if(result.data.MESSAGE == "NOT_FOUND" ){
+                    $scope.data_len = 0;
+                    $scope.no_dependent = true;
+                }
+                else{
+                    $scope.eClaim_dependent = $scope.main;
+                }
+            }
+            if($scope.eClaim_dependent.length == 0){
+                $scope.no_dependent = true;
+            }
+        });
+    }
+    $scope.searchTerm;
+      $scope.clearSearchTerm = function() {
+        $scope.searchTerm = '';
+      };
+      $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+
+    $scope.claimreq_gid = $scope.mode[0].claimreq_gid;
+    var type = "TRVL";
+    loadeclaim();
+    function loadeclaim(){
+<!--        $scope.loading();-->
+        var data = {
+            params: {
+                "Type": type,
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Claimreqgid": $scope.claimreq_gid
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_expense_get(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            if($scope.main){
+                if(result.data.MESSAGE == "NOT_FOUND" ){
+                    $scope.data_len = 0;
+                }
+                else{
+                    $scope.eClaim_tavelexp = $scope.main;
+                    angular.forEach($scope.eClaim_tavelexp, function(item1) {
+                        item1.fr_time = stringToDate(item1.depaturedate);
+                        item1.to_time = stringToDate(item1.arrivaldate);
+                        $scope.dep_data = item1.dependentgid.split(",");
+                        $scope.longdata = [];
+                        for(i =0;i< $scope.dep_data.length-1;i++){
+                            var depp_data = $filter('filter')($scope.eClaim_dependent, {
+                                "gid": $scope.dep_data[i],
+                            });
+                            $scope.searchTerm = depp_data[0].dependentname
+                            var final = {
+                                gid: depp_data[0].gid,
+                                dependentname:depp_data[0].dependentname,
+                                $$mdSelectId : parseInt(i)+1
+                                }
+                            $scope.longdata.push(final);
+
+                        }
+                        item1.selectedcount = $scope.longdata ;
+                        $scope.startdate = new Date(item1.depaturedate);
+                        $scope.enddate = new Date(item1.arrivaldate);
+                        item1.minstart = new Date($scope.startdate.getFullYear(), $scope.startdate.getMonth(), $scope.startdate.getDate());
+                        item1.maxend = $scope.maxend;
+                        $scope.minstart = item1.maxend;
+                        item1.searchgst = item1.bankgstno;
+                        item1.auto_gst = true;
+                        item1.searchhsn = item1.hsncode;
+                        var bnk_gst = item1.bankgstno.slice(0,2);
+                        var lo_gst = item1.vendorgstno.slice(0,2);
+                        if( bnk_gst == lo_gst ){
+                            $scope.gst_show = true;
+                            item1.scgst_show = true;
+                            item1.igst_show = false;
+                        }
+                        else{
+                            $scope.gst_show = true;
+                            item1.igst_show = true;
+                            item1.scgst_show = false;
+                        }
+
+                       });
+                    $scope.approvedamount = $scope.eClaim_tavelexp[0].approvedamount;
+                    $scope.enable_submit=true;
+                    $scope.gst_show = true;
+                    $scope.data_len = $scope.eClaim_tavel.length;
+                    $scope.pageLength = $scope.eClaim_tavel.length;
+                    $scope.Totalpages = Math.ceil($scope.eClaim_tavel.length / $scope.itemsPerPage);
+                }
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.approveamt_tot = function(e){
+        if(e.appamt <= e.claimedamount){
+             $scope.approvedamount  = 0;
+             angular.forEach($scope.eClaim_tavelexp, function(item1) {
+                    $scope.approvedamount  = parseFloat($scope.approvedamount) + parseFloat(item1.appamt);
+                });
+         }
+        else{
+            e.appamt = e.eligibleamount;
+            alert("Cannot change")
+        }
+    }
+
+    function stringToDate(stringDate) {
+        var date = new Date();
+        var splitDate = stringDate.split(' ');
+        var splitDate = splitDate[1].split(':');
+        date.setHours(splitDate[0], splitDate[1],splitDate[2]);
+        return date
+    }
+
+    $scope.add_gst = function(i){
+        $scope.eClaim_lodg[i].entergst = true;
+    }
+
+    $scope.yes_no = [{
+        id: '1',
+        data: 'YES'
+    }, {
+        id: '0',
+        data: 'NO'
+    }];
+    $scope.travel_class_all = [{
+        index:2,
+        id: 'ac_II_tier',
+        data: 'AC II Tier'
+    },{
+        index:2,
+        id: 'ac_III_tier',
+        data: 'AC III Tier'
+    }, {
+        index:2,
+        id: 'II_ac_scleeper',
+        data: 'II AC Sleeper'
+    },{
+        index:3,
+        id: 'economy_class',
+        data: 'Economy Class'
+        },
+    {
+        index:1,
+        id: 'bus',
+        data: 'Bus'
+        },
+    {
+        index:1,
+        id: 'auto',
+        data: 'Auto'
+        },
+    {
+        index:1,
+        id: 'taxi',
+        data: 'Taxi'
+        },
+    {
+        index:4,
+        id: 'boat',
+        data: 'Boat'
+        },
+    ];
+    $scope.travelmode_change = function(g) {
+        var result = $filter('filter')($scope.travel_class_all, {
+                'index': g.index
+            });
+            $scope.travel_class = result;
+    }
+
+    $scope.travel_mode = [{
+        id: 'Road',
+        index:1,
+        data: 'Road'
+    }, {
+        id: 'Train',
+        index:2,
+        data: 'Train'
+    },{
+        id: 'Air',
+        index:3,
+        data: 'Air'
+    },{
+        id: 'Sea',
+        index:4,
+        data: 'Sea'
+    }];
+    $scope.querySearchaccby = gotoyesno;
+    $scope.querySearchbod = gotoyesno;
+    $scope.querySearchdic = gotoyesno;
+        function gotoyesno(query) {
+            var result = $filter('filter')($scope.yes_no, {
+                'data': query
+            });
+            return result;
+        }
+
+    $scope.add_taveltype = function() {
+        data = {
+         gid:"0",
+         tourgid: $scope.tour_gid,
+         depaturedate: "",
+         depatureplace: "",
+         arrivaldate: "",
+         placeofvisit: "",
+         totaltkttamt: "",
+         tktbybank:"",
+         actualtravel:"",
+         eligibletravel:$scope.grade_elig,
+         highermodereasons:"",
+         priorpermission:"",
+         highermodeopted:"",
+         class:"",
+         noofdependents:0,
+         eligibleamount:0,
+         approvedamount:0,
+         claimedamount:0,
+         gstno:0,
+         auto_gst:true,
+         minstart:$scope.minstart,
+         maxend:$scope.maxend
+         }
+        $scope.eClaim_tavelexp.push(data);
+        $scope.enable_submit=true;
+        $scope.data_len = $scope.eClaim_tavelexp.length;
+    };
+
+    $scope.remove_travel = function(e) {
+        $scope.eClaim_tavelexp.pop(e);
+    }
+
+
+    $scope.hours_calc = function(e){
+        $scope.fr_time  = e.fr_time;
+        $scope.to_time  = e.to_time;
+    }
+    $scope.tktref = false;
+    $scope.tktbybank_calc = function(e,i){
+        if(e == 1){
+            $scope.eClaim_tavelexp[i].tktref = true;
+            $scope.tktref = true;
+        }
+        else{
+            $scope.eClaim_tavelexp[i].tktref = false;
+            $scope.eClaim_tavelexp[i].tktrefno = 0;
+            $scope.tktref = false;
+        }
+    }
+    $scope.eligible_calc = function(e,i){
+    }
+    //now commnd this function
+    $scope.eligible_calc1 = function(e,i){
+        if(e.depaturedate != undefined && e.depatureplace != undefined && e.depatureplace != "" && e.arrivaldate != undefined && e.placeofvisit != undefined && e.placeofvisit != "" ){
+            if(e.priorpermission == undefined ){
+                var priorpermission = "";
+            }
+            if(e.tktbybank == undefined ){
+            var tktbybank = "";
+            }
+            if(e.actualtravel == undefined ){
+            var actualtravel = "";
+            }
+            if(e.class == undefined ){
+            var classtype = "";
+            }
+            if(e.isleave == undefined ){
+            var isleave = "";
+            }
+            var priorpermission = e.priorpermission;
+            var tktbybank = e.tktbybank;
+            var actualtravel = e.actualtravel;
+            var classtype = e.class;
+            var isleave = e.isleave;
+            var data = {
+                params: {
+                    "Type": "ELIGIBLE_AMOUNT_TRAVEL",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "grade":$scope.emp_grade,
+                                "expensegid":$scope.mode[0].gid,
+                                "priorpermission": priorpermission,
+                                "tktbybank": tktbybank,
+                                "actualtravel": actualtravel,
+                                "class": classtype,
+                                "claimedamount": e.claimedamount,
+                                "depatureplace": e.depatureplace,
+                                "placeofvisit": e.placeofvisit,
+                                "depaturedate" :$filter('date')(new Date(e.depaturedate),'yyyy-MM-dd'),
+                                "arrivaldate" :$filter('date')(new Date(e.arrivaldate),'yyyy-MM-dd')
+                            }
+                        }
+                    }
+                }
+            }
+            $scope.loading();
+            var get_eclaim = eclaimService.ecalim_expense_post(data)
+            get_eclaim.then(function(result) {
+                $scope.main = result.data.DATA;
+                $scope.eClaim_tavelexp[i].eligibleamount = $scope.main.Eligible_amount;
+                $scope.eClaim_tavelexp[i].approvedamount = $scope.main.Athorised_amount;
+            }).finally($scope.endloading);
+
+            var v = i+1;
+            var len = $scope.eClaim_tavelexp.length;
+            if( v != len && v < len){
+                for(j=v; j<len; j++){
+                    if($scope.eClaim_tavelexp[j].depaturedate !=""  || $scope.eClaim_tavelexp[j].arrivaldate != ""){
+                        $scope.eClaim_tavelexp[j].depaturedate ="";
+                        $scope.eClaim_tavelexp[j].arrivaldate ="";
+                        error_toast(date_clubed,time_toast);
+                    }
+                    $scope.eClaim_tavelexp[j].minstart = new Date(e.arrivaldate.getFullYear(), e.arrivaldate.getMonth(), e.arrivaldate.getDate());
+                }
+            }
+            $scope.minstart = new Date(e.arrivaldate.getFullYear(),e.arrivaldate.getMonth(), e.arrivaldate.getDate());
+
+        }
+        $scope.endloading();
+    }
+    loadcitygst();
+    $scope.hsnsearch = gotohsn;
+        function gotohsn(query) {
+            var datas={"Params":{"Group":"GET_EMP_DATA","Type":"HSN","Sub_Type":"HSN_ALL",
+                     "FILTER":{"hsn_code" :query,
+                     },"Limit": 0 + "," + 30,}};
+            return $http.post(Appname + '/Get_Supplier/' , datas).then(function(data) {
+            console.log(data.data);
+                return data.data.DATA;
+              });
+
+        }
+    $scope.select_gst = function(e,i){
+        var g = e.gstno;
+        $scope.eClaim_tavelexp[i].bankgstno = g;
+    }
+
+    $scope.gst_show = false;
+    $scope.select_hst = function(e,d,i){
+        $scope.eClaim_tavelexp[i].hsncode = e.hsn_code;
+        if(d.gstno != 0 ){
+            $scope.gst_calc(d,i)
+        }
+    }
+
+    $scope.highermode_calc = function(e,i){
+        if(e.highermodereasons == 0){
+            e.priorpermission =0;
+            e.higheropted = false;
+        }
+        else{
+            e.higheropted = true;
+        }
+    }
+
+    $scope.gst_calc = function(e,i){
+        if (e.bankgstno != e.vendorgstno ){
+            var bnk_gst = e.bankgstno.slice(0,2);
+            var lo_gst =  e.vendorgstno.slice(0,2);
+            if( bnk_gst == lo_gst ){
+                $scope.gst_show = true;
+                var per = e.selectedhsn.hsn_igstrate/2;
+                $scope.eClaim_tavelexp[i].cgst = per;
+                $scope.eClaim_tavelexp[i].sgst = per;
+                $scope.eClaim_tavelexp[i].scgst_show = true;
+                $scope.eClaim_tavelexp[i].igst_show = false;
+            }
+            else{
+                $scope.gst_show = true;
+                $scope.eClaim_tavelexp[i].igst = e.selectedhsn.hsn_igstrate;
+                $scope.eClaim_tavelexp[i].igst_show = true;
+                $scope.eClaim_tavelexp[i].scgst_show = false;
+            }
+        }
+        else{
+            alert("Bank GST and Vendor GST are Same");
+            e.vendorgstno = '';
+        }
+    }
+
+    $scope.error_toast = function(e){
+        if(e.depaturedate.$error.required == true || e.depaturedate.$invalid == true){
+           error_toast(depaturedate,time_toast);
+        }
+        if(e.depaturetime.$error.required == true || e.depaturetime.$invalid == true){
+           error_toast(depaturetime,time_toast);
+        }
+        if(e.depatureplace.$error.required == true || e.depatureplace.$invalid == true){
+           error_toast(depatureplace,time_toast);
+        }
+        if(e.placeofvisit.$error.required == true || e.placeofvisit.$invalid == true){
+           error_toast(placeofvisit,time_toast);
+        }
+        if(e.arrivaldate.$error.required == true || e.arrivaldate.$invalid == true){
+            error_toast(arrivaldate,time_toast);
+        }
+        if(e.arrivaltime.$error.required == true || e.arrivaltime.$invalid == true){
+            error_toast(arrivaltime,time_toast);
+        }
+        if(e.totaltkttamt.$error.required == true || e.totaltkttamt.$invalid == true){
+            error_toast(totaltkttamt,time_toast);
+        }
+        if(e.tktbybank.$error.required == true || e.tktbybank.$invalid == true){
+            error_toast(tktbybank,time_toast);
+        }
+        if(e.actualtravel.$error.required == true || e.actualtravel.$invalid == true){
+            error_toast(actualtravel,time_toast);
+        }if(e.class.$error.required == true || e.class.$invalid == true){
+            error_toast(class_travel,time_toast);
+        }
+        if(e.highermodereasons.$error.required == true || e.highermodereasons.$invalid == true){
+            error_toast(highermodereasons,time_toast);
+        }
+        if(e.priorpermission.$error.required == true || e.priorpermission.$invalid == true){
+            error_toast(priorpermission,time_toast);
+        }
+        if(e.highermodeopted.$error.required == true || e.highermodeopted.$invalid == true){
+            error_toast(highermodeopted,time_toast);
+        }
+        if(e.noofdependents.$error.required == true || e.noofdependents.$invalid == true){
+            error_toast(noofdependents,time_toast);
+        }
+        if(e.eligibleamount.$error.required == true || e.eligibleamount.$invalid == true){
+            error_toast(eligibleamount,time_toast);
+        }
+        if(e.claimedamount.$error.required == true || e.claimedamount.$invalid == true){
+            error_toast(claimamount,time_toast);
+        }
+
+    }
+
+    $scope.approve_update = function(){
+        $scope.eClaim_approve = [];
+        angular.forEach($scope.eClaim_tavelexp, function(item1) {
+            data = {
+                gid:item1.gid,
+                tourgid:item1.tourgid,
+                claimreqgid:item1.claimreqgid,
+                approvedamount:item1.appamt,
+            }
+            $scope.eClaim_approve.push(data);
+        });
+        var data = {
+            params: {
+                "Type": "APPROVE_AMT",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                            "tourgid":$scope.tour_gid,
+                            "gid":$scope.claimreq_gid,
+                            "expensegid":$scope.mode[0].gid,
+                            "approvedamount":$scope.approvedamount,
+                        },
+                        "CHANGE": {
+                            "DATA": $scope.eClaim_approve
+                        }
+                    }
+                }
+            }
+        }
+        $scope.daily_data_service(data);
+    }
+
+    function loadcitygst(){
+        var data = {
+            params: {
+                "Type": "GST_GET",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_drop_get(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            if($scope.main){
+                if(result.data.MESSAGE == "NOT_FOUND" ){
+                }
+                else{
+                    $scope.eClaim_gst = $scope.main;
+                }
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.gstsearch = gotogst;
+        function gotogst(query) {
+            var result = $filter('filter')($scope.eClaim_gst, {
+                'gstno': query
+            });
+            return result;
+     }
+
+    $scope.save_daily = function(){
+    $scope.total_claimamt = 0;
+    angular.forEach($scope.eClaim_tavelexp, function(item1) {
+        item1.depaturedate = $filter('date')(new Date(item1.depaturedate),'yyyy-MM-dd')+ " " +item1.fr_time.getHours()+":"+item1.fr_time.getMinutes();
+        item1.arrivaldate = $filter('date')(new Date(item1.arrivaldate),'yyyy-MM-dd')+ " " +item1.to_time.getHours()+":"+item1.to_time.getMinutes();
+        if(item1.noofdependents != '0'){
+            if(item1.selectedcount.length > 0){
+                $scope.tot_dep = "";
+
+                angular.forEach(item1.selectedcount, function(item2) {
+                    var deeep = item2.gid.toString() +","
+                    $scope.tot_dep = deeep + $scope.tot_dep ;
+                });
+
+                item1.dependent = $scope.tot_dep ;
+            }
+            else{
+                item1.dependent = "0";
+            }
+        }
+        else{
+                item1.dependent = "0";
+            }
+        $scope.total_claimamt = parseInt($scope.total_claimamt) + parseInt(item1.claimedamount);
+       });
+        var data = {
+            params: {
+                "Type": "TRAVEL_EXP",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                            "tourgid":$scope.tour_gid,
+                            "gid":$scope.claimreq_gid,
+                            "expensegid":$scope.mode[0].expensegid,
+                            "claimedamount":$scope.total_claimamt,
+                            "requestorcomment":$scope.mode[0].requestorcomment
+                        },
+                        "CHANGE": {
+                            "DATA": $scope.eClaim_tavelexp
+                        }
+                    }
+                }
+            }
+        };
+        $scope.loading();
+        var eclaim_daily = eclaimService.ecalim_expense_post(data);
+        eclaim_daily.then(function(result) {
+            $scope.msg = result.data.MESSAGE
+            $scope.set_msg = $scope.msg.split(",");
+            if($scope.set_msg[0] == 'SUCCESS' ){
+                success_toast();
+                $scope.claimreq_gid = $scope.set_msg[1];
+                $scope.endloading();
+                loadeclaim();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+    $scope.daily_data_service = function(data){
+        $scope.loading();
+        var eclaim_daily = eclaimService.ecalim_expense_post(data);
+        eclaim_daily.then(function(result) {
+            $scope.msg = result.data.MESSAGE
+            $scope.set_msg = $scope.msg.split(",");
+            if($scope.set_msg[0] == 'SUCCESS' ){
+                success_toast();
+                $scope.claimreq_gid = $scope.set_msg[1];
+                $scope.endloading();
+                loadeclaim();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+});
+myApp.service("eclaimService", function($http) {
+
+    this.ecalim_expense_get = function(data) {
+        var response = $http.get(Appname + "/expense_detail/",data);
+        return response;
+    }
+    this.ecalim_expense_post = function(data) {
+        var response = $http.post(Appname + "/expense_detail/",data);
+        return response;
+    }
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    }
+    this.ecalim_session_get = function(data) {
+        var response = $http.post(Appname + "/session_get_expnese/",data);
+        return response;
+    }
+
+});
+</script>
+
+{% endblock %}

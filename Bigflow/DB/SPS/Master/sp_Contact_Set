@@ -1,0 +1,250 @@
+CREATE  PROCEDURE `galley`.`sp_Contact_Set`(IN `Action` varchar(16),IN `li_cont_gid` int,
+iN `ls_cont_refcode` VARCHAR(8),iN `li_cont_refgid` int,IN `li_contacttype_gid` varchar(9),IN `ls_cont_name` varchar(64),
+IN `li_desig_gid` varchar(9),IN `li_cont_l1` varchar(16),IN `li_cont_l2` varchar(16),IN `li_cont_m1` varchar(16),IN `li_cont_m2` varchar(16),
+IN `li_cont_email` varchar(128),IN `ld_cont_dob` varchar(16),IN `ld_cont_wd` varchar(16),
+IN `li_entity_gid` int,IN `ls_create_by` int, OUT `Message` varchar(1000))
+sp_Contact_Set:BEGIN
+
+#Vigneshwari       07-02-2018
+#meenakshi-added update query for contact_gid 10-02-20
+
+declare Cont_srch text;
+declare ls_error varchar(100);
+declare countRow int;
+declare errno int;
+declare msg varchar(1000);
+declare ls_no varchar(64);
+declare query1 varchar(128);
+declare query2 varchar(128);
+declare Query_Update text;
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+
+set ls_error = '';
+set @ls_ref_gid = '';
+set @tablename = '';
+set @code1 = '';
+set query1 = '';
+set query2 = '';
+
+if Action = 'Insert' then
+
+	if ls_cont_refcode = '' then
+		set ls_error = 'Ref code Not Given';
+	else
+		set @srch = concat('select case when isnull(ref_gid) then 0 else ref_gid end into @ls_ref_gid
+							from gal_mst_tref where ref_name = ''',ls_cont_refcode,'_contact''');
+        #select @srch;
+        PREPARE stmt FROM @srch;
+		EXECUTE stmt;
+		DEALLOCATE PREPARE stmt;
+
+        #select @ls_ref_gid;
+        if @ls_ref_gid = '' then
+			set ls_error = 'Given ref not in ref table';
+		end if;
+	end if;
+
+	if li_cont_refgid = 0 then
+		set ls_error = 'Reftable Gid Not Given';
+	else
+    #select ls_cont_refcode;
+		set @srch1 = concat('select ref_tablename into @tablename from gal_mst_tref where ref_name = ''',ls_cont_refcode,'_contact''');
+        #select @srch1;
+        PREPARE stmt FROM @srch1;
+		EXECUTE stmt;
+		DEALLOCATE PREPARE stmt;
+
+        set @tablename1 = substr(@tablename,10);
+        if @tablename = '' then
+			set ls_error = 'Given ref not in ref table';
+		else
+			set @sch = concat('select ' , @tablename1,'_code into @code1 from ',@tablename ,' where ',@tablename1,'_gid = ''',li_cont_refgid,'''');
+		#select @sch;
+		PREPARE stmt FROM @sch;
+		EXECUTE stmt;
+		DEALLOCATE PREPARE stmt;
+        #select @code1;
+		end if;
+
+	end if;
+
+	if li_contacttype_gid = 0 then
+		set ls_error = 'Contact Type Gid Not Given';
+	end if;
+
+	if li_desig_gid = 0 then
+		set ls_error = 'Designation Gid Not Given';
+	end if;
+
+    if li_cont_l1 <> '' then
+		set query1 = concat('Contact_landline ,',query1);
+        set query2 = concat('''',li_cont_l1,''',',query2);
+	end if;
+
+    if li_cont_l2 <> '' then
+		set query1 = concat('Contact_landline2 ,',query1);
+        set query2 = concat('''',li_cont_l2,''',',query2);
+	end if;
+
+    if li_cont_m1 <> '' then
+		set query1 = concat('Contact_mobileno ,',query1);
+        set query2 = concat('''' ,li_cont_m1,''',',query2);
+	end if;
+
+    if li_cont_m2 <> '' then
+		set query1 = concat('Contact_mobileno2 ,',query1);
+        set query2 = concat('''',li_cont_m2, ''',',query2);
+	end if;
+
+    if li_cont_email <> '' then
+		set query1 = concat('Contact_email ,',query1);
+        set query2 = concat('''',li_cont_email,''',',query2);
+	end if;
+
+      if ld_cont_dob <> '' then
+		set query1 = concat('Contact_DOB ,',query1);
+        set query2 = concat('''' ,ld_cont_dob, ''',',query2);
+	end if;
+
+	if ld_cont_wd <> '' then
+		set query1 = concat('Contact_WD ,',query1);
+        set query2 = concat('''' ,ld_cont_wd, ''',',query2);
+	end if;
+
+	if ls_error = '' then
+
+		start transaction;
+
+		set Cont_srch = concat('INSERT INTO gal_mst_tcontact (Contact_ref_gid, Contact_reftable_gid, contact_reftablecode,
+									Contact_contacttype_gid, Contact_personname, Contact_designation_gid,' ,query1,
+                                    ' entity_gid, create_by) VALUES (',@ls_ref_gid,',',li_cont_refgid,','''
+                                   ,@code1, ''',',li_contacttype_gid,',''',ls_cont_name,''',' ,li_desig_gid, ',
+                                    ',query2,'',li_entity_gid,','
+                                    ,ls_create_by, ')');
+
+
+		set @Cont_srch = Cont_srch;
+
+		#select @Cont_srch;  ### Remove It
+		PREPARE stmt FROM @Cont_srch;
+		EXECUTE stmt;
+		set countRow = (select ROW_COUNT());
+		DEALLOCATE PREPARE stmt;
+
+		if countRow >  0 then
+			select LAST_INSERT_ID() into @c ;
+            #select @c;
+            set Message = 'SUCCESS';
+
+            if Message = 'SUCCESS' AND @ls_ref_gid = 9 then
+
+             set @query_update = concat('update gal_mst_tcustomer set customer_contactgid = ',@c,' where Customer_gid=',li_cont_refgid,' ');
+             #select @query_update;
+             PREPARE stmt FROM @query_update;
+		     EXECUTE stmt;
+           end if;
+           set Message = concat(@c,',SUCCESS');
+
+		else
+			set Message = 'FAIL';
+
+			rollback;
+		end if;
+
+	else
+		set Message = ls_error;
+	end if;
+
+end if;
+
+if Action = 'Update' then
+	#select 2;
+
+	if li_cont_gid = 0 then
+		set ls_error = 'Contact Gid Not Given';
+        leave sp_Contact_Set;
+	end if;
+
+	if ls_error = '' then
+
+		start transaction;
+
+		set  Query_Update = Concat('update gal_mst_tcontact set  update_by = ',ls_create_by,',update_date = now()');
+
+                if li_contacttype_gid <> 0 then
+					set Query_Update = Concat(Query_Update, ',Contact_contacttype_gid = ''', li_contacttype_gid ,'''');
+                    elseif li_contacttype_gid <> '' then
+                    set Query_Update = Concat(Query_Update, ',Contact_contacttype_gid = '' ');
+                end if;
+
+                if ls_cont_name <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_personname = ''', ls_cont_name ,'''');
+                end if;
+
+                if li_desig_gid <> 0 then
+					set Query_Update = Concat(Query_Update, ',Contact_designation_gid = ''', li_desig_gid ,'''' );
+                    elseif li_desig_gid <> '' then
+                    set Query_Update = Concat(Query_Update, ',Contact_designation_gid = '' ');
+                end if;
+
+                if li_cont_l1 <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_landline = ''', li_cont_l1 ,'''' );
+                end if;
+
+				if li_cont_l2 <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_landline2 = ''', li_cont_l2 ,'''' );
+                end if;
+
+                if li_cont_m1 <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_mobileno = ''', li_cont_m1 ,'''' );
+                end if;
+
+                if li_cont_m2 <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_mobileno2 = ''', li_cont_m2 ,'''' );
+                end if;
+
+                if li_cont_email <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_email = ''', li_cont_email ,'''' );
+                end if;
+
+                if ld_cont_dob = 'null' then
+					set Query_Update = Concat(Query_Update, ',Contact_DOB = null' );
+				elseif ld_cont_dob <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_DOB = ''', ld_cont_dob ,'''' );
+                end if;
+
+                if ld_cont_wd = 'null' then
+					set Query_Update = Concat(Query_Update, ',Contact_WD = null' );
+                elseif ld_cont_wd <> '' then
+					set Query_Update = Concat(Query_Update, ',Contact_WD = ''', ld_cont_wd ,'''' );
+                end if;
+
+				set Query_Update = Concat(Query_Update, ' where contact_gid = ''', li_cont_gid ,'''');
+
+                #select Query_Update;
+
+                set @Query_Update = Query_Update;
+        		PREPARE stmt FROM @Query_Update;
+				EXECUTE stmt;
+				set countRow = (select ROW_COUNT());
+				DEALLOCATE PREPARE stmt;
+
+		if countRow > 0 then
+			set Message = 'SUCCESS';
+			commit;
+		else
+			set Message = 'FAIL';
+			rollback;
+		end if;
+	else
+		set Message = ls_error;
+	end if;
+end if;
+
+END

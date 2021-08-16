@@ -1,0 +1,373 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} InVoice Inward Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="appinwardsummary" ng-controller="ctrlinwardsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Invoice Inward Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4">
+                    <section class="pull-right" layout-align="center center pull-right">
+                        <md-data-table-pagination md-page="query.page" md-limit="query.limit"
+                                                  md-total="{{empsmry.length}}"/>
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <form role="form" name="inwardsummary_valid">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label>Inward Header Number </label>
+                                <input type="text" ng-model="inward_header_number"
+                                       ng-change="ACselectchange()" maxlength="16">
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label> Airway No</label>
+                                <input type="text" ng-model="airwayno"
+                                       ng-change="ACselectchange()" maxlength="16">
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="invdate"
+                                               md-hide-icons="calendar"
+                                               ng-change="ACselectchange()"
+                                               md-min-date="maxDate"
+                                               md-max-date="minDate" formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Status</label>
+                                <md-select ng-model="status"
+                                           ng-change="ACselectchange(status)">
+                                    <md-optgroup label="Status">
+                                        <md-option ng-repeat="status in AP_status"
+                                                   ng-value="status.status"
+                                                   ng-selected="status.status == clickstatus ">
+                                            {{ status.status }}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label> Employee Name</label>
+                                <input type="text" ng-model="emp_name"
+                                       ng-change="ACselectchange()" maxlength="16">
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-1 col-md-offset-1">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       ng-click="find_invoice_summary()">
+                                <md-icon>search</md-icon>
+                                <md-tooltip>Search</md-tooltip>
+                            </md-button>
+                        </div>
+                        <!--                        <div class="col-md-4 col-lg-4 col-sm-4">-->
+                        <!--                            <md-input-container class="md-block inputcontainer">-->
+                        <!--                                <label>Type</label>-->
+                        <!--                                <md-select ng-model="type"-->
+                        <!--                                           ng-change="ACselectchange(airwayno,courier,status,invdate,type)">-->
+                        <!--                                    <md-optgroup label="type">-->
+                        <!--                                        <md-option ng-repeat="type in channeltype"-->
+                        <!--                                                   ng-value="type.metadata_value"-->
+                        <!--                                        >-->
+                        <!--                                            {{ type.metadata_value }}-->
+                        <!--                                        </md-option>-->
+                        <!--                                    </md-optgroup>-->
+                        <!--                                </md-select>-->
+                        <!--                            </md-input-container>-->
+                        <!--                        </div>-->
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <div class="pull-right">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>Inward Header Number</th>
+                        <th>Date</th>
+                        <th>Courier Name</th>
+                        <th>Airway Bill</th>
+                        <th>Received By</th>
+                        <th>From</th>
+                        <th>Invoice Count</th>
+                        <th>packet</th>
+                        <th>Doc Type</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="header in inward_header">
+                        <td class="text-center" ng-model="dept_name">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>
+                            {{header.inwardheader_No}}
+                        </td>
+                        <td>
+                            {{header.inwardheader_date}}
+                        </td>
+                        <td>
+                            {{header.courier_name}}
+                        </td>
+                        <td>
+                            {{header.inwardheader_awbno}}
+                        </td>
+                        <td>
+                            {{header.employee_name}}
+                        </td>
+
+                        <td>
+                            {{header.inwardheader_from}}
+                        </td>
+                        <td>{{header.inwarddetails_count}}</td>
+                        <td>{{header.packet}}</td>
+                        <td>{{header.doc_type}}</td>
+                        <td>{{header.inwarddetails_status}}</td>
+
+                        <td class="text-center">
+                            <a ng-click="Add_Sr(header)" href=""
+                               ng-Show="header.inwarddetails_status == 'NEW' || header.inwarddetails_status == 'Partial' "><i
+                                    class="material-icons" style="material-icons.line-height:3px">send</i></a>
+
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="10">
+                            <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
+                                max-size="maxSize" ng-change="inventory_pagination()"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2" style="padding: 34px">
+                            <strong>Total Count:{{Total_Row}}</strong>
+
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+
+<script>
+    var app=angular.module('appinwardsummary',['ngMaterial','ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.controller('ctrlinwardsummary', ['$scope', '$filter', '$mdDateLocale', 'serviceinwentry', '$window', '$mdDialog', function($scope, $filter, $mdDateLocale, serviceinwentry, $window, $mdDialog) {
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.courier = '';
+    $scope.inwarddate = '';
+    $scope.status = '';
+    $scope.invdate = "";
+    $scope.ls_followup_date = new Date();
+
+    $scope.inward_header_number="";
+
+    $scope.minDate = new Date(
+        $scope.ls_followup_date.getFullYear(),
+        $scope.ls_followup_date.getMonth(),
+        $scope.ls_followup_date.getDate()
+    );
+
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')($scope.invdate, "dd-MMM-yyyy");
+    };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+
+
+
+    var filter_trn = {};
+
+
+<!--    var channel = serviceinwentry.ddl('invoiceheader', 'invoicetype');-->
+<!--    channel.then(function(result) {-->
+<!--            var channel_type = JSON.parse(result.data)-->
+
+<!--            $scope.channeltype = channel_type;-->
+
+<!--        },-->
+<!--        function(err) {-->
+<!--            alert('No data!.');-->
+<!--        }).finally();-->
+
+    summary();
+    $scope.find_invoice_summary=function(){
+        $scope.currentPage=1;
+        $scope.Total_Row=0;
+        summary();
+
+    }
+    $scope.inventory_pagination = function(){
+         if($scope.inward_header.length==0){
+                $scope.currentPage=1;
+         }
+        summary();
+
+    }
+
+    function summary() {
+        $scope.invdate=$filter('date')($scope.invdate,"yyyy-MM-dd");
+        var filter_final = {"InwardHeader_AWBNo":$scope.airwayno,"InwardHeader_No":$scope.inward_header_number,
+                         "InwardHeader_Date":$scope.invdate,"InwardDetails_Status":$scope.status,
+                        "Employee_Name":$scope.emp_name,"Page_Index":$scope.currentPage-1,"Page_Size":$scope.itemsPerPage,"FILTER": {}}
+        var header_set = serviceinwentry.getinwardservice('ALL', 'ALL', filter_final);
+        header_set.then(function(result) {
+
+                $scope.maintable = result.data;
+                <!--$filter('filter')(result.data, function(value) {-->
+                    <!--return value.doc_type === "Invoice" || value.doc_type === "PPX" || value.doc_type === "EMP Claim";-->
+                <!--});-->
+                $scope.inward_header = result.data;
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                        $scope.inward_header=[];
+                    }
+                    $scope.Total_Row=($scope.inward_header.length)+($scope.currentPage*10);
+<!--                if($scope.currentPage==1){-->
+<!--                        $scope.Total_Row=$scope.inward_header[0].Total_Row;-->
+<!--                    }-->
+
+                console.log($scope.inward_header);
+                 <!--$filter('filter')(result.data, function(value) {-->
+                    <!--return value.doc_type === "Invoice" || value.doc_type === "PPX" || value.doc_type === "EMP Claim";-->
+                <!--});-->
+
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+
+    }
+
+
+
+    $scope.AP_status = [{
+        status: "NEW"
+    }, {
+        status: "APPROVED"
+    }, {
+        status: "Completed"
+    }, {
+        status: "Partial"
+    }]
+
+    $scope.Add_Sr = function(detail) {
+       var aray = ["rejecthead", "Viewap_dtl","rejecthead", "Approvdtl","checkerdtl", "POjson","CHECKLIST", "makerdtl","makerdtl_ecf", "POdtl","POdtledit","POjson"];
+aray.forEach(function(key) { sessionStorage.removeItem(key) });
+        var inwarddtl = {
+            noofpockets: detail.inwarddetails_count,
+            inwarddetails_gid: detail.inwarddetails_gid,
+            doc_type: detail.doc_type
+        };
+        sessionStorage.setItem('inwarddtl', JSON.stringify(inwarddtl));
+        $window.location.href = "Inward_entry";
+    }
+
+    $scope.ACselectchange = function(status) {
+<!--        if (type == "PO" || type == "Non PO") {-->
+<!--            type = "Invoice"-->
+<!--        }-->
+
+        $scope.ddMMyyyy = $filter('date')($scope.invdate, 'dd-MMM-yyyy');
+
+        $scope.inward_header = $filter('filter')($scope.maintable, {
+            "inwardheader_awbno": $scope.airwayno,
+            "inwardheader_No":$scope.inward_header_number,
+            "inwarddetails_status": status,
+            "employee_name":$scope.emp_name,
+            "inwardheader_date": $scope.ddMMyyyy
+
+        });
+    }
+
+}]);
+app.service("serviceinwentry", function ($http) {
+
+   this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+    }
+
+       this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+    }
+
+      this.getcourier = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params:{'courier_gid': 0,'courier_name':''} });
+        return response;
+    }
+     this.getemployee=function(){
+        var response=$http.get(Appname+"/empddl/");
+        return response;
+     }
+
+
+
+    this.getinwardservice = function (action,type,li_filter) {
+        var responsee = $http.post(Appname+"/get_inwardsummary/",{params:{"Action":action,"Type":type,"lj_filters":li_filter}});
+        return responsee;
+    }
+});
+
+
+
+
+
+
+
+</script>
+{% endblock %}

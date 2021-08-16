@@ -1,0 +1,682 @@
+CREATE DEFINER=`root`@`%` PROCEDURE `sp_DispatchProcess_Set`(IN`ls_Action` varchar(32),
+IN `ls_Type` varchar(32),IN `ls_SubType` varchar(32),IN `lj_DispatchData` json,IN `lj_Carton` json,IN `lj_Classification` json,
+IN `ls_create_by` varchar(16) , OUT `Message` varchar(2048)
+)
+sp_DispatchProcess_Set:BEGIN
+# Ramesh Jan 18 2019
+# Action - Insert ,
+# Type - SET_INITIAL
+#edit Prakash 06-02-2019
+
+declare Query_Select varchar(5000);
+declare Query_Search varchar(1024);
+declare errno int;
+declare msg varchar(1000);
+declare countRow int;
+declare li_count int;
+declare i int;
+declare j int;
+declare k int;
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+    SET SESSION group_concat_max_len=4294967295;
+
+    start transaction;
+ if ls_Action = 'Insert' and  ls_Type = 'LABEL_PRINT'  then
+
+					if ls_SubType = 'SALES' then
+								select JSON_LENGTH(lj_DispatchData,'$.Inv_Header_gid') into @li_json_Inv_Label_count;
+                     elseif ls_SubType = 'PROCESS_DATA_SALES' then
+								select JSON_LENGTH(lj_DispatchData,'$') into @li_json_Inv_Label_count;
+                      else
+                           set Message = 'Incorrect Sub Type Was Provided.';
+                           leave sp_DispatchProcess_Set;
+                    End if;
+
+                    if @li_json_Inv_Label_count = 0 or @li_json_Inv_Label_count is null then
+							set Message = 'No Details In Json- Invoice For Label Generate.';
+                            leave sp_DispatchProcess_Set;
+                    End if;
+
+					set @REF_Name ='CARTON_INVOICE';
+                    ###Edit Ref_Gid from Given Ref Name---26-02-2019
+                    select fn_REFGid(@REF_Name) into @Ref_Gid;
+
+                     if @Ref_Gid = 0 or  @Ref_Gid = '' then
+                        set Message = 'Ref Gid Is Empty';
+                        leave sp_DispatchProcess_Set;
+                     end if;
+
+                    set @Multiple_Master_Carton_InvHeaderGid = 0;
+
+                    set i = 0 ;
+                    While i <= @li_json_Inv_Label_count -1 DO
+                            set Query_Search = '';
+                        	if ls_SubType = 'SALES' then
+									select JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$.Inv_Header_gid[',i,']'))) into @Inv_Header_gid;
+							elseif ls_SubType = 'PROCESS_DATA_SALES' then
+									select JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$[',i,'].Inv_Header_gid'))) into @Inv_Header_gid;
+                                   	select JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$[',i,'].Inv_Details_Gid'))) into @Inv_Details_Gid;
+                                   	select JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$[',i,'].Product_Carton_Gid'))) into @Product_Carton_Gid;
+                                    #### Validations
+                                    if @Inv_Header_gid is null or @Inv_Header_gid = 0 or @Inv_Header_gid = '' then
+										set Message = 'Invoice Header Gid Is Needed.';
+                                        leave sp_DispatchProcess_Set;
+                                    End if;
+
+                                    if @Inv_Details_Gid is null or @Inv_Details_Gid = 0 or @Inv_Details_Gid = '' then
+										set Message = 'Invoice Details Gid Is Needed.';
+                                        leave sp_DispatchProcess_Set;
+                                    End if;
+
+                                    if @Product_Carton_Gid is null or @Product_Carton_Gid = 0 or @Product_Carton_Gid = '' then
+										set Message = 'Product Carton Gid Is Needed.';
+                                        leave sp_DispatchProcess_Set;
+                                    End if;
+
+                                    set Query_Search = '';
+                                    set Query_Search = concat(' and b.invoicedetails_gid = ',@Inv_Details_Gid,' and d.prodcarton_gid = ',@Product_Carton_Gid,'  ');
+
+							End if;
+
+								if @Inv_Header_gid = 0 then
+										set Message = 'Error On Invoice Header Gid.';
+										leave sp_DispatchProcess_Set;
+								End if;
+                                #### Check for The Carton in Multiple Master Carton.
+									   set @Master_Count = 0  ;
+
+                                    if  ls_SubType = 'SALES' then
+										select count(c.prodcarton_gid) into @Master_Count
+										 from gal_trn_tinvoiceheader as a
+										inner join gal_trn_tinvoicedetails as b on b.invoicedetails_invoice_gid = a.invoiceheader_gid
+										inner join gal_map_tprodcarton as c on c.prodcarton_productgid = b.invoicedetails_product_gid
+										where a.invoiceheader_gid = @Inv_Header_gid
+										and a.invoiceheader_isremoved = 'N'
+										and b.invoicedetails_isremoved = 'N'
+										and c.prodcarton_isactive = 'Y' and c.prodcarton_isremoved = 'N'
+										group by invoicedetails_product_gid
+										having count(c.prodcarton_gid) >1
+										;
+                                    End if;
+
+
+                                #### Check Ends.
+
+                   if @Master_Count = 0 then
+
+                           	set @lj_carton_sales = 0;
+
+                            set Query_Select = '';
+                            set Query_Select = concat('Select  ifnull(concat(''{"HEADER":['',group_concat(JSON_OBJECT(''Inv_Header_Gid'',a.invoiceheader_gid,''Inv_Details_gid'',b.invoicedetails_gid,
+									''CartonP_Gid'',ifnull(d.prodcarton_productcartongid,0),
+									''Product_Weight'',c.product_weight,''Product_Name'',c.product_name,''Product_Quantity'',b.invoicedetails_qty,''Carton_Capacity'',ifnull(d.prodcarton_capacity,0),
+									''No_Of_Carton'',(floor((b.invoicedetails_qty/d.prodcarton_capacity)) + if(MOD(b.invoicedetails_qty,d.prodcarton_capacity)>0,1,0)),
+									''Dispatch_Gid'',ifnull(e.dispref_dispatchgid,0),
+									''Is_Carton_Split'',if(MOD(b.invoicedetails_qty,d.prodcarton_capacity)>0,''Y'',''N''),
+									''Split_Quantity'',MOD(b.invoicedetails_qty,d.prodcarton_capacity),
+									''Is_Carton_Null'',
+									 case
+										When prodcarton_capacity is null then ''Y''
+										Else ''N'' end
+										)),'']}''),'''')  into @lj_carton_sales
+									 from gal_trn_tinvoiceheader as a
+									inner join gal_trn_tinvoicedetails as b on b.invoicedetails_invoice_gid = a.invoiceheader_gid
+									inner join gal_mst_tproduct as c on c.product_gid = b.invoicedetails_product_gid
+									left join gal_map_tprodcarton as d on d.prodcarton_productgid = c.product_gid
+									left join gal_mst_tref as i on i.ref_name = ''DISPATCH_SALES'' and i.ref_isremoved = ''N''
+									left join dis_map_tdispref as e on e.dispref_refgid = i.ref_gid and e.dispref_refno = a.invoiceheader_no and e.dispref_isactive = ''Y''
+                                    and e.dispref_isremoved = ''N''
+									where  a.invoiceheader_isremoved = ''N'' and b.invoicedetails_isremoved = ''N'' and c.product_isactive = ''Y'' and c.product_isremoved = ''N''
+									and  invoiceheader_gid = ',@Inv_Header_gid,'  ',Query_Search,' and
+									b.invoicedetails_gid not in
+									(select z.cartondetails_reftablegid from gal_trn_tcartondetails as z where z.cartondetails_isactive = ''Y'' and z.cartondetails_isremoved = ''N''
+                                    and z.cartondetails_refgid = ',@Ref_Gid,')
+									 ') ;
+
+                            set @p = Query_Select;
+                           # select Query_Select;
+								PREPARE stmt FROM @p;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+								if li_count > 0 then
+									set Message = 'FOUND';
+								else
+									set Message = 'NOT_FOUND';
+								end if;
+                                ###select @lj_carton_sales;######
+                                #leave sp_DispatchProcess_Set;
+                          if @lj_carton_sales <> ''  then
+
+                                   select JSON_LENGTH(@lj_carton_sales,'$.HEADER') into @li_json_Product_count;
+
+										if @li_json_Product_count = 0 or @li_json_Product_count is null then
+												set Message = 'No Details In Json- Invoice For Label Generate.';
+												leave sp_DispatchProcess_Set;
+										End if;
+										set k = 0 ;
+                                        set @Carton_Box_No = 1;
+
+                                        ##### Check With carton Table and Increase The Carton Starting count :: Data in Loop Based on Inv Details.
+                                          if  ls_SubType = 'PROCESS_DATA_SALES' and i > 0   then
+													select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[0].Dispatch_Gid[0]'))) into @Dispatch_Gid;
+
+                                                    set @Carton_Max_Count_Process = 1 ;
+													select ifnull(max(cartonheader_boxcount),0) + 1  into @Carton_Max_Count_Process
+														from gal_trn_tcartonheader
+													where cartonheader_dispatchgid = @Dispatch_Gid and cartonheader_isactive = 'Y' and cartonheader_isremoved = 'N';
+
+													set @Carton_Box_No = @Carton_Max_Count_Process;
+
+                                                  #   select @Carton_Box_No,@Dispatch_Gid; #### Remove it
+
+                                          End if;
+
+
+										While k <= @li_json_Product_count -1 DO
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].No_Of_Carton[0]'))) into @No_Of_Carton;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Is_Carton_Null[0]'))) into @Is_Carton_Null;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Is_Carton_Split[0]'))) into @Is_Carton_Split;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Split_Quantity[0]'))) into @Split_Quantity;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Inv_Details_gid[0]'))) into @Inv_Details_gid;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Dispatch_Gid[0]'))) into @Dispatch_Gid;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Carton_Capacity[0]'))) into @Carton_Capacity;
+												select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].Product_Quantity[0]'))) into @Product_Quantity;
+                                                select JSON_UNQUOTE(JSON_EXTRACT(@lj_carton_sales, CONCAT('$.HEADER[',k,'].CartonP_Gid[0]'))) into @CartonP_Gid;
+
+												if @Carton_Capacity = 0 then
+																set Message = 'Error_Occured.Product Not Mapped With Carton or Carton Capacity Is Zero.';
+																rollback;
+																leave sp_DispatchProcess_Set;
+                                                End if;
+
+                                                ### Apr 23 2019 Alter. :: qty lesser than carton Capacity
+                                                if cast(@Product_Quantity as decimal ) < cast(@Carton_Capacity as decimal) then
+													set @Carton_Capacity = @Product_Quantity;
+                                                End if;
+                                               # select @Product_Quantity,@Carton_Capacity;
+
+														set j = 0 ;
+														While j<= @No_Of_Carton -1 DO
+														###select @No_Of_Carton;####
+																if @Is_Carton_Split = 'Y' and j = @No_Of_Carton -1 and j >0 then
+																		#	select concat('Split Here',j,'');
+																			set @lj_Carton_Header_ps = '{"HEADER":
+																					   {"Is_Header_Available":"N"
+																						}
+																						}';
+																			   set @lj_Carton_Details_ps = '';
+																			set @lj_Carton_Details_ps = concat('
+																					{
+																						 "DETAILS":
+																								  [
+																								   {
+																								   "Details_Dispatch_Gid":',@Dispatch_Gid,',
+																									"REF_Gid":',@Ref_Gid,',
+																								   "Reftable_Gid":',@Inv_Details_gid,',
+																								   "Details_Qty":',@Split_Quantity,',
+																								   "Barcode":"123",
+																								   "Weight":"5",
+																								   "Boxsize":"5",
+																								   "Box_No":"0",
+																								   "Qty_Split":"0",
+																								   "Qty_Split_Parent_Gid":"0"
+																									}
+																								   ]
+																						 }		');
+
+                                                                              set @Carton_Box_No = @Carton_Box_No - 1;
+                                                                              #select  @lj_Carton_Header_ps;######
+																	else
+																			set @lj_Carton_Header_ps = '';
+																			set @lj_Carton_Header_ps = concat('
+																			{"HEADER":
+																					   {
+																						"Header_Dispatch_Gid":',@Dispatch_Gid,',
+																						"Header_Qty":',@Carton_Capacity,',
+																						"Type":"TYPE",
+																						"Remark":"SALES",
+																						"Box_Count":',@Carton_Box_No,',
+                                                                                        "CartonP_Gid":',@CartonP_Gid,',
+																						"Is_Header_Available":"Y"
+																						}
+																				   }
+																			');
+
+                                                                          # select @Dispatch_Gid,@Carton_Capacity,@Carton_Box_No,@CartonP_Gid;
+																			#select  @lj_Carton_Header_ps; #### remove it
+																			set @lj_Carton_Details_ps = '';
+																			set @lj_Carton_Details_ps = concat('
+																					{
+																						 "DETAILS":
+																								  [
+																								   {
+																								   "Details_Dispatch_Gid":',@Dispatch_Gid,',
+																								   "REF_Gid":',@Ref_Gid,',
+																								   "Reftable_Gid":',@Inv_Details_gid,',
+																								   "Details_Qty":',@Carton_Capacity,',
+																								   "Barcode":"123",
+																								   "Weight":"5",
+																								   "Boxsize":"5",
+																								   "Box_No":',@Carton_Box_No,',
+																								   "Qty_Split":"0",
+																								   "Qty_Split_Parent_Gid":"0"
+																									}
+																								   ]
+																						 }		');
+																	End if;
+
+																	### Insert in DB - Call the SP
+                                                           #select @lj_Carton_Header_ps; ### Remove it
+                                                            #     select @lj_Carton_Details_ps;
+
+																	call sp_Carton_Set('Insert','LABEL_PRINT','SALES',
+																			   @lj_Carton_Header_ps,
+																				@lj_Carton_Details_ps,'{}',
+																				 lj_Classification,ls_create_by,@Message);
+																				 select @Message into @ls_Carton_Out_Message;
+
+																			if @ls_Carton_Out_Message <> 'SUCCESS' then
+																					set Message = concat('Error On Carton Insert',@ls_Carton_Out_Message);
+																					rollback;
+																					leave sp_DispatchProcess_Set;
+																			End if;
+
+																	set @Carton_Box_No = @Carton_Box_No+1;
+															   set j = j+1;
+														End While;
+											set k = k+1;
+                                        End While;
+						elseif @lj_carton_sales = '' then
+								#select @lj_carton_sales;
+								set Message = 'Error On Carton Details Generate.';
+                                leave sp_DispatchProcess_Set;
+					  End if; #### Check The lj Json from Query
+
+                      #Edit  02-02-2019	 again Edit 11-02-2019 Update Status In Header Table
+                          if @ls_Carton_Out_Message = 'SUCCESS' then
+
+								   set @SOiv_Details='';
+								   set @SOiv_Details=concat('{
+																   "INV_Header_Gid":[',@Inv_Header_gid,'],
+																   "Status":"PENDING_PRINT"
+																   }');
+								 call sp_SOInvoice_Set('Update', 'STATUS', '{}', '{}', '{}',
+																@SOiv_Details, '{}',ls_create_by,@Message1);
+										select @Message1 into @out_SOINV_Msg;
+										if @out_SOINV_Msg <> 'SUCCESS' then
+											set Message = concat('Error On SOInvoice Update',@out_SOINV_Msg);
+											rollback;
+											leave sp_DispatchProcess_Set;
+										end if;
+										if @out_SOINV_Msg = 'SUCCESS' then
+											 set Message = 'SUCCESS';
+										end if;
+						  end if;
+
+					elseif @Master_Count > 0 then
+
+                                if @Multiple_Master_Carton_InvHeaderGid = 0 then
+										set @Multiple_Master_Carton_InvHeaderGid = @Inv_Header_gid;
+                                 else
+                                        set @Multiple_Master_Carton_InvHeaderGid = concat(@Multiple_Master_Carton_InvHeaderGid,',',@Inv_Header_gid);
+                                End if;
+
+
+                     End if;  #### Checking Of the Master Carton
+
+							set i = i +1;
+							End While;
+
+									if Message = 'SUCCESS' then
+											commit;
+									End if;
+
+                            ###For the Multiple carton
+                            #select @Multiple_Master_Carton_InvHeaderGid;
+
+                            if @Multiple_Master_Carton_InvHeaderGid <> 0 then
+                                                                    set Query_Select = '';
+                            set Query_Select = concat('select a.invoiceheader_gid,b.invoicedetails_gid,c.customer_name,e.location_name,d.product_displayname,
+                                                            d.product_name,b.invoicedetails_qty,
+													concat(''['',group_concat(JSON_OBJECT(''Product_Carton_Gid'',f.prodcarton_gid,''Carton_Capacity'',f.prodcarton_capacity,
+													''Carton_Name'',g.product_displayname
+																					)),'']'')  as Master_Carton_Details
+													 from gal_trn_tinvoiceheader as a
+													inner join gal_trn_tinvoicedetails as b on b.invoicedetails_invoice_gid = a.invoiceheader_gid
+													inner join gal_mst_tcustomer as c on c.customer_gid = a.invoiceheader_customer_gid
+													inner join gal_mst_tproduct as d on d.product_gid = b.invoicedetails_product_gid
+													inner join gal_mst_tlocation as e on e.location_gid = c.customer_location_gid
+													inner join gal_map_tprodcarton as f on f.prodcarton_productgid = d.product_gid
+													inner join gal_mst_tproduct as g on g.product_gid = f.prodcarton_productcartongid
+													where a.invoiceheader_gid in (',@Multiple_Master_Carton_InvHeaderGid,')
+													and a.invoiceheader_isremoved = ''N''
+													and b.invoicedetails_isremoved = ''N''
+													and c.customer_isactive = ''Y'' and c.customer_isremoved = ''N''
+													and d.product_isactive = ''Y'' and d.product_isremoved = ''N''
+													and e.location_isremoved = ''N''
+													and g.product_isactive = ''Y'' and g.product_isremoved = ''N''
+													and f.prodcarton_isactive = ''Y'' and f.prodcarton_isremoved = ''N''
+													group by a.invoiceheader_gid,b.invoicedetails_gid,c.customer_name,e.location_name
+													 ') ;
+
+                            set @p = Query_Select;
+								PREPARE stmt FROM @p;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+								if li_count > 0 then
+									set Message = 'FOUND';
+								else
+									set Message = 'NOT_FOUND';
+								end if;
+
+											Select found_rows() into @Master_Carton_Details;
+
+										  if @Master_Carton_Details <> '' then
+												set Message = 'PROCESS_DATA';
+										   else
+												set Message = 'Error_Occured.Only One To One Product And Carton Mapped Data Saved.';
+												leave sp_DispatchProcess_Set;
+										  End if;
+
+								End if;
+
+
+elseif ls_Action = 'Update' and ls_Type = 'LABEL_PRINT_SPLIT' and ls_SubType = 'SALES' then
+                select JSON_LENGTH(lj_DispatchData,'$.HEADER') into @li_json_CartonHeader_count;
+
+                    if @li_json_CartonHeader_count = 0 or @li_json_CartonHeader_count is null then
+							set Message = 'No Details In Json- Invoice For Carton Split.';
+                            leave sp_DispatchProcess_Set;
+                    End if;
+                select JSON_LENGTH(lj_Carton,'$.DETAILS') into @li_json_CartonDetails_count;
+
+                   if @li_json_CartonDetails_count = 0 or @li_json_CartonDetails_count is null then
+							set Message = 'No Details In Json- Invoice For Carton Detail Split.';
+                            leave sp_DispatchProcess_Set;
+                    End if;
+
+            #### Call The SP.
+
+					#	select @lj_DispatchData;
+                      #  select @lj_Carton;
+										call sp_Carton_Set('Update','LABEL_SPLIT','SALES',
+													   lj_DispatchData,
+														lj_Carton,'{}',
+														 lj_Classification,ls_create_by,@Message);
+														 select @Message into @ls_Carton_Split_Out_Message;
+                                                 if @ls_Carton_Split_Out_Message = 'SUCCESS' then
+														set Message = 'SUCCESS';
+                                                  Else
+                                                        set Message = concat('FAIL','-',@ls_Carton_Split_Out_Message);
+                                                        rollback;
+                                                        leave sp_DispatchProcess_Set;
+                                                 End if;
+
+					if Message = 'SUCCESS' then
+						commit;
+                    End if;
+
+  elseif ls_Action = 'Update' and ls_Type = 'LABEL_PRINT_FLAG' and ls_SubType = 'CARTON' then
+					               #### Check data in Json Exists.
+							select JSON_LENGTH(lj_Carton,'$') into @li_json_Carton_count_ps;
+
+							if @li_json_Carton_count_ps is null or @li_json_Carton_count_ps = 0 then
+								set Message = 'No Data In Json - Carton For Label Print Flag.';
+								rollback;
+								leave sp_DispatchProcess_Set;
+							end if;
+					### Validation If Needed.
+					Select JSON_LENGTH(lj_Carton,'$.Carton_Header_Gid') into @INV_CartonHeader_Gids_Count_ps ;
+										if @INV_CartonHeader_Gids_Count_ps  = 0 then
+											set Message = 'No Data To Update Label Print Flag.';
+											leave sp_DispatchProcess_Set;
+										End if;
+
+						set i = 0 ;
+						WHILE i<=  @INV_CartonHeader_Gids_Count_ps -1 DO
+								select  JSON_EXTRACT(lj_Carton, CONCAT('$.Carton_Header_Gid[',i,']')) into @Carton_Header_Gids_ps;
+
+                                if @Carton_Header_Gids_ps is null or @Carton_Header_Gids_ps = 0 or @Carton_Header_Gids_ps = '' then
+												set Message = 'Error In Data To Update Label Print Flag.';
+												leave sp_DispatchProcess_Set;
+                                End if;
+
+                          set i = i+1;
+                          End While;
+
+							call sp_Carton_Set('UPDATE', 'LABEL_PRINT_FLAG', '',
+											'{}', '{}', lj_Carton, '{}', ls_create_by, @Message);
+								select @Message into @Out_Msg_Label_print ;
+
+                                if @Out_Msg_Label_print <> 'SUCCESS' then
+									set Message = concat('ERROR OCCURED',@Message);
+                                    rollback;
+                                    leave sp_DispatchProcess_Set;
+                                 else
+                                     set Message = 'SUCCESS';
+                                     commit;
+                                End if;
+
+ elseif ls_Action = 'Update' and ls_Type = 'CARTON_REMOVE' and ls_SubType = 'CARTON' then
+			 #### Check data in Json Exists.
+							select JSON_LENGTH(lj_Carton,'$') into @li_Remove_Carton_count_ps;
+
+							if @li_Remove_Carton_count_ps is null or @li_Remove_Carton_count_ps = 0 then
+								set Message = 'No Data In Json - Carton For Remove.';
+								rollback;
+								leave sp_DispatchProcess_Set;
+							end if;
+					### Validation If Needed.
+					Select JSON_LENGTH(lj_Carton,'$.Carton_Header_Gid') into @INV_CartonHeader_Gids_Count_ps ;
+										if @INV_CartonHeader_Gids_Count_ps  = 0 then
+													set Message = 'No Data To Remove Carton.';
+													leave sp_DispatchProcess_Set;
+										End if;
+
+						set i = 0 ;
+						WHILE i<=  @INV_CartonHeader_Gids_Count_ps -1 DO
+								select  JSON_EXTRACT(lj_Carton, CONCAT('$.Carton_Header_Gid[',i,']')) into @Carton_Header_Gids_ps;
+
+                                if @Carton_Header_Gids_ps is null or @Carton_Header_Gids_ps = 0 or @Carton_Header_Gids_ps = '' then
+												set Message = 'Error In Data To Remove Carton.';
+												leave sp_DispatchProcess_Set;
+                                End if;
+
+							set i = i+1;
+                          End While;
+
+                          ### call the SP
+                          call sp_Carton_Set('UPDATE', 'CARTON_REMOVE', '',
+							lj_Carton, '{}',
+							'{}', '{}', ls_create_by, @Message);
+
+                            select @Message into @Out_Message_CartonRemove;
+
+							    if @Out_Message_CartonRemove <> 'SUCCESS' then
+									set Message = concat('ERROR OCCURED',@Message);
+                                    rollback;
+                                    leave sp_DispatchProcess_Set;
+								else
+                                     set Message = 'SUCCESS';
+                                     commit;
+                                End if;
+
+ elseif ls_Action = 'Update' and  ls_Type = 'DISPATCH_UPDATE' and ls_SubType = 'PACKETS' then
+			#### Check :  When Weight and Packets Update
+             Select JSON_LENGTH(lj_DispatchData,'$.Dispatch_Gid') into @Dispatch_Gid_cnt ;
+					if @Dispatch_Gid_cnt  = 0 then
+								set Message = 'No Data To Update Dispatch.';
+								leave sp_DispatchProcess_Set;
+					End if;
+            set i=0;
+            while i <=@Dispatch_Gid_cnt - 1 do
+                   select  JSON_EXTRACT(lj_DispatchData, CONCAT('$.Dispatch_Gid[',i,']')) into @Dispatch_Gid;
+
+                                if @Dispatch_Gid is null or @Dispatch_Gid = 0 or @Dispatch_Gid = '' then
+												set Message = 'Error In Data To Update Dispatch.';
+												leave sp_DispatchProcess_Set;
+                                End if;
+
+					select max(cartonheader_boxcount) into @Packet
+                       from gal_trn_tcartonheader where cartonheader_dispatchgid = @Dispatch_Gid and cartonheader_isactive ='Y'
+					   group by cartonheader_dispatchgid;
+                      ####------edited by akshay packets sum------- May 23 2019
+						select sum(ifnull(invoicedetails_qty,0) * ifnull(product_weight,0)) into @Product_Weight
+								  from dis_trn_tdispatch as a
+								  inner join dis_map_tdispref as b on b.dispref_dispatchgid = a.dispatch_gid
+										and dispref_isactive ='Y' and dispref_isremoved = 'N'
+								  inner join gal_trn_tinvoiceheader as c on c.invoiceheader_no = b.dispref_refno
+										and invoiceheader_isremoved = 'N'
+								  inner join gal_trn_tinvoicedetails as d on d.invoicedetails_invoice_gid = c.invoiceheader_gid
+										and invoicedetails_isremoved = 'N'
+								  inner join gal_mst_tproduct as e on e.product_gid = d.invoicedetails_product_gid
+										and product_isactive ='Y' and product_isremoved = 'N'
+								  where dispatch_gid = @Dispatch_Gid and dispatch_isactive ='Y' and dispatch_isremoved = 'N'
+								  group by dispatch_gid
+								  ;
+
+						select (ifnull(max(cartonheader_boxcount),0)* ifnull((product_weight),0.00)) into @Box_Weight
+								 from dis_trn_tdispatch as a
+								 inner join gal_trn_tcartonheader as b on b.cartonheader_dispatchgid = a.dispatch_gid
+									   and cartonheader_isactive ='Y' and cartonheader_isremoved = 'N'
+								 inner join gal_trn_tcartondetails as c on b.cartonheader_gid = c.cartondetails_cartonheadergid
+									   and cartondetails_isactive ='Y' and cartondetails_isremoved = 'N'
+								 inner join gal_mst_tproduct as d on d.product_gid = b.cartonheader_productgid
+									   and product_isactive ='Y' and product_isremoved = 'N'
+								 where dispatch_gid =@Dispatch_Gid and dispatch_isactive ='Y' and dispatch_isremoved = 'N'
+								 ;
+
+					  if @Product_Weight  = '' then
+                         set Message = 'No PRODUCT WEIGHT';
+                         leave sp_DispatchProcess_Set;
+                      end if;
+
+                      if @Box_Weight  = '' then
+                         set Message = 'No Box  WEIGHT';
+                         leave sp_DispatchProcess_Set;
+                      end if;
+
+					  set @Total_Weight=@Product_Weight + @Box_Weight;
+                    call sp_Dispatch_Set('Update', '', 0, '', 0, '', '', '',
+                             @Packet,@Total_Weight, '', '', '', '', '', '',
+                             '', '', '', '', '', '', '',@Dispatch_Gid, '',0 , ls_create_by, @Message);
+				    select @Message into @Dispatch_Msg;
+                    if @Dispatch_Msg <> 'SUCCESS' then
+                       set Message = concat('ERROR IN DISPATCH ',@Dispatch_Msg);
+                    end if;
+
+                set i=i+1;
+            end while;
+		if @Dispatch_Msg = 'SUCCESS' then
+			set Message = 'SUCCESS';
+		else
+            set Message ='FAIL';
+            rollback;
+            leave sp_DispatchProcess_Set;
+		end if;
+
+ elseif  ls_Action = 'Update' and  ls_Type = 'DISPATCH_UPDATE' and ls_SubType = 'MANUAL_OUT_UPDATE' then
+
+			Select JSON_LENGTH(lj_DispatchData,'$.DISPATCH_MANUAL') into @Dispatch_cnt ;
+					if @Dispatch_cnt  = 0 and @Dispatch_cnt = '' then
+						set Message = 'No Data In  Dispatch_Manual_Update.';
+						leave sp_DispatchProcess_Set;
+                    end if;
+		  set i=0;
+		  while i <=@Dispatch_cnt - 1 do
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$.DISPATCH_MANUAL[',i,'].Dispatch_Gid[0]'))) into @Dispatch_Gid;
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_DispatchData, CONCAT('$.DISPATCH_MANUAL[',i,'].Actual_Weight[0]'))) into @Actual_Weight;
+
+                   IF @Dispatch_Gid = '' or @Dispatch_Gid = 0 then
+                      set Message = 'Dispatch Gid Is Empty';
+                      leave sp_DispatchProcess_Set;
+                   end if;
+
+                   IF @Actual_Weight = '' or @Actual_Weight = 0 then
+                      set Message = 'Actual Weight  Is Empty';
+                      leave sp_DispatchProcess_Set;
+                   end if;
+
+                   call sp_Dispatch_Set('Update', '', 0, '', 0, '', '', '',
+                             0,@Actual_Weight, '', '', '', '', '', '',
+                             '', '', '', '', '', '', '',@Dispatch_Gid, '',0 , ls_create_by, @Message);
+				   select @Message into @Dispatch_Msg;
+						if @Dispatch_Msg <> 'SUCCESS' then
+						   set Message = concat('ERROR IN DISPATCH ',@Dispatch_Msg);
+						end if;
+
+                set i=i+1;
+		   end while;
+
+				  if @Dispatch_Msg = 'SUCCESS' then
+						set Message = 'SUCCESS';
+				  else
+						set Message ='FAIL';
+						rollback;
+						leave sp_DispatchProcess_Set;
+				  end if;
+
+ elseif ls_Action = 'Update' and ls_Type = 'POD' and ls_SubType = 'SALES' then
+				#select 1;
+				Select JSON_LENGTH(lj_DispatchData,'$') into @POD_cnt ;
+                #select @POD_cnt;
+					if @POD_cnt  = 0 and @POD_cnt = '' then
+						set Message = 'No Data In  Dispatch POD AWB Update.';
+						leave sp_DispatchProcess_Set;
+                    end if;
+
+                    set lj_DispatchData = concat('{"DETAILS":',lj_DispatchData,'}');
+                    #select lj_DispatchData;
+                    #select lj_Carton;
+                    call sp_DispatchAll_Set('UPDATE','POD','SALES',lj_DispatchData,lj_Carton,lj_Classification,ls_create_by,@Message);
+                       select @Message into @Out_Msg_AWB;
+                       #select @Out_Msg_AWB;
+                       if @Out_Msg_AWB = 'File Updated' or @Out_Msg_AWB='Partially Updated' or @Out_Msg_AWB='None Record is Updated' then
+							set Message = @Out_Msg_AWB;
+                            commit;
+                        else
+							set Message =@Out_Msg_AWB;
+							rollback;
+							leave sp_DispatchProcess_Set;
+                       End if;
+
+  elseif ls_Action = 'Update' and ls_Type = 'POD_AMOUNT' and ls_SubType = 'SALES' then
+
+				Select JSON_LENGTH(lj_DispatchData,'$') into @POD_cnt ;
+                #select @POD_cnt;
+					if @POD_cnt  = 0 and @POD_cnt = '' then
+						set Message = 'No Data In  Dispatch POD AWB Update.';
+						leave sp_DispatchProcess_Set;
+                    end if;
+
+                    set lj_DispatchData = concat('{"DETAILS":',lj_DispatchData,'}');
+                    #select lj_DispatchData;
+                    #select lj_Carton;
+                    call sp_DispatchAll_Set('UPDATE','POD_AMOUNT','SALES',lj_DispatchData,lj_Carton,lj_Classification,ls_create_by,@Message);
+                       select @Message into @Out_Msg_AWB;
+                       #select 1;
+                       #select @Out_Msg_AWB;
+                       if @Out_Msg_AWB = 'File Updated' or @Out_Msg_AWB='Partially Updated' or @Out_Msg_AWB='None Record is Updated' then
+							set Message = @Out_Msg_AWB;
+                            commit;
+                        else
+							set Message =@Out_Msg_AWB;
+							rollback;
+							leave sp_DispatchProcess_Set;
+                       End if;
+
+
+ End if;
+
+END

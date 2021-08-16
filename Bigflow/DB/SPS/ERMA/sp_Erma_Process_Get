@@ -1,0 +1,496 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Erma_Process_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024))
+sp_Erma_Process_Get:BEGIN
+### Bala Feb 05 2020 - Created
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare Query_Status varchar(1024);
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#....
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+
+    BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+    END;
+
+   SET SESSION group_concat_max_len=4294967295;
+
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,'$.Entity_Gid[0]')) into @Entity_Gids;
+
+        if @Entity_Gids is  null or @Entity_Gids = '' then
+				set Message = 'Entity_Gid Is Not Given';
+                leave sp_Erma_Process_Get;
+        End if;
+
+IF ls_Type = 'BARCODE' and ls_Sub_Type = 'SUMMARY' then
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_RequestNo'))) into @BarCode_RequestNo;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Business_Name'))) into @Business_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Department_Name'))) into @Department_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+
+
+					set Query_Search = '';
+
+                    if @BarCode_RequestNo <> '' and @BarCode_RequestNo is not null  then
+                         set Query_Search = concat(Query_Search,' and A.barcode_requestno like ''','%',@BarCode_RequestNo,'%','''  ');
+                    End if;
+
+                    if @Business_Name <> '' and @Business_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and B.business_name like ''','%',@Business_Name,'%','''  ');
+                    End if;
+
+                    if @Department_Name <> '' and @Department_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and C.department_name  like ''','%',@Department_Name,'%','''  ');
+                    End if;
+
+                    if @BarCode_Type <> '' and @BarCode_Type is not null  then
+                         set Query_Search = concat(Query_Search,' and  A.barcode_type  like ''','%',@BarCode_Type,'%','''  ');
+                    End if;
+
+                   #select Query_Search;
+
+						set Query_Select = '';
+                        set Query_Select = concat(' select A.barcode_gid,A.barcode_requestno,A.barcode_storagevendor,
+														  A.barcode_type,A.barcode_count,A.barcode_status, A.barcode_businessgid,
+                                                          A.barcode_deptgid,A.barcode_requestremarks,A.barcode_despatchremarks,
+                                                          B.business_name,C.department_name,D.address_gid,D.address_1,D.address_2,D.address_3,
+                                                          D.address_pincode,E.district_gid,E.district_name,F.city_gid,F.City_Name,G.state_gid,G.state_name
+															   from erma_trn_tbarcode A
+														  inner join erma_mst_tbusiness B on B.business_gid=A.barcode_businessgid
+														  inner join erma_mst_tdepartment C on C.department_gid=A.barcode_deptgid
+														  inner join gal_mst_taddress D on D.address_gid=A.barcode_deliveryaddressgid
+														  inner join gal_mst_tdistrict E on E.district_gid=D.address_district_gid
+														  inner join gal_mst_tcity F on F.city_gid=D.address_city_gid
+														  inner join gal_mst_tstate G on G.state_gid=D.address_state_gid
+																where A.barcode_isactive=''Y'' and A.barcode_isremoved=''N'' and A.entity_gid in (',@Entity_Gids,')
+																and B.business_isactive=''Y'' and B.business_isremoved=''N'' and B.entity_gid in (',@Entity_Gids,')
+																and C.department_isactive=''Y'' and C.department_isremoved=''N'' and C.entity_gid in (',@Entity_Gids,')
+                                                                and D.entity_gid in (',@Entity_Gids,')
+                                                                ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+                                    leave sp_Erma_Process_Get;
+							  end if;
+
+ELSEIF ls_Type = 'BARCODE_ASSIGN' and ls_Sub_Type = 'SUMMARY' then
+
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_RequestNo'))) into @BarCode_RequestNo;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Business_Name'))) into @Business_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Department_Name'))) into @Department_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Status'))) into @ls_Status;
+
+
+                    set Query_Status='';
+
+                    if @ls_Status <> '' and @ls_Status is not null  then
+                         set Query_Status = concat(Query_Status,' and A.barcode_status=''',@ls_Status,'''  ');
+                    End if;
+
+
+					set Query_Search = '';
+
+                    if @BarCode_RequestNo <> '' and @BarCode_RequestNo is not null  then
+                         set Query_Search = concat(Query_Search,' and A.barcode_requestno like ''','%',@BarCode_RequestNo,'%','''  ');
+                    End if;
+
+                    if @Business_Name <> '' and @Business_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and B.business_name like ''','%',@Business_Name,'%','''  ');
+                    End if;
+
+                    if @Department_Name <> '' and @Department_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and C.department_name  like ''','%',@Department_Name,'%','''  ');
+                    End if;
+
+                    if @BarCode_Type <> '' and @BarCode_Type is not null  then
+                         set Query_Search = concat(Query_Search,' and  A.barcode_type  like ''','%',@BarCode_Type,'%','''  ');
+                    End if;
+
+                   #select Query_Search;
+
+						set Query_Select = '';
+                        set Query_Select = concat(' select A.barcode_gid,A.barcode_requestno,A.barcode_storagevendor,
+														  A.barcode_type,A.barcode_count,A.barcode_status, A.barcode_businessgid,
+                                                          A.barcode_deptgid,B.business_name,C.department_name
+															   from erma_trn_tbarcode A
+														  inner join erma_mst_tbusiness B on B.business_gid=A.barcode_businessgid
+														  inner join erma_mst_tdepartment C on C.department_gid=A.barcode_deptgid
+																where A.barcode_isactive=''Y'' and A.barcode_isremoved=''N'' and A.entity_gid in (',@Entity_Gids,')
+																and B.business_isactive=''Y'' and B.business_isremoved=''N'' and B.entity_gid in (',@Entity_Gids,')
+																and C.department_isactive=''Y'' and C.department_isremoved=''N'' and C.entity_gid in (',@Entity_Gids,')
+                                                                ',Query_Status,'
+                                                                ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+
+
+ELSEIF ls_Type = 'BARCODE_SERIES' and ls_Sub_Type = 'SUMMARY' then
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Storage_Vendor'))) into @Storage_Vendor;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_Series_Type'))) into @BarCode_Series_Type;
+
+					set Query_Search = '';
+
+                    if @Storage_Vendor <> '' and @Storage_Vendor is not null  then
+                         set Query_Search = concat(Query_Search,' and barcodeseries_storagevendor like ''','%',@Storage_Vendor,'%','''  ');
+                    End if;
+
+                    if @BarCode_Series_Type <> '' and @BarCode_Series_Type is not null  then
+                         set Query_Search = concat(Query_Search,' and barcodeseries_type like ''','%',@BarCode_Series_Type,'%','''  ');
+                    End if;
+
+						set Query_Select = '';
+                        set Query_Select = concat('select barcodeseries_gid, barcodeseries_storagevendor,
+														  barcodeseries_type, barcodeseries_from,
+														  barcodeseries_to,create_by
+													  from erma_mst_tbarcodeseries
+                                                      where barcodeseries_isactive=''Y''
+														   and barcodeseries_isremoved=''N''
+                                                           and entity_gid in (',@Entity_Gids,')
+                                                      ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+
+
+
+ELSEIF ls_Type = 'ARCHIVAL_REQUEST' and ls_Sub_Type = 'SUMMARY' then
+
+				#ARCHIVAL CONFIRM SUMMARY
+
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_RequestNo'))) into @BarCode_RequestNo;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Business_Name'))) into @Business_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Department_Name'))) into @Department_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Status'))) into @ls_Status;
+
+
+                    set Query_Status='';
+
+                    if @ls_Status <> '' and @ls_Status is not null  then
+                         set Query_Status = concat(Query_Status,' and A.barcode_status=''',@ls_Status,'''  ');
+                    End if;
+
+
+					set Query_Search = '';
+
+                    if @BarCode_RequestNo <> '' and @BarCode_RequestNo is not null  then
+                         set Query_Search = concat(Query_Search,' and A.barcode_requestno like ''','%',@BarCode_RequestNo,'%','''  ');
+                    End if;
+
+                    if @Business_Name <> '' and @Business_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and B.business_name like ''','%',@Business_Name,'%','''  ');
+                    End if;
+
+                    if @Department_Name <> '' and @Department_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and C.department_name  like ''','%',@Department_Name,'%','''  ');
+                    End if;
+
+                    if @BarCode_Type <> '' and @BarCode_Type is not null  then
+                         set Query_Search = concat(Query_Search,' and  A.barcode_type  like ''','%',@BarCode_Type,'%','''  ');
+                    End if;
+
+                   #select Query_Search;
+
+		set Query_Select = '';
+		set Query_Select = concat('select  A.archival_gid,A.archival_requestno,A.archival_cartonbarcodecount,
+										   A.archival_filebarcodecount,A.archival_storagevendor,A.create_by,
+										   B.business_name,C.department_name,D.product_name
+												from erma_trn_tarchival A
+										   inner join erma_mst_tbusiness B on B.business_gid=A.archival_businessgid
+										   inner join erma_mst_tdepartment C on C.department_gid=A.archival_deptgid
+										   inner join erma_mst_tproduct D on D.product_gid=A.archival_productgid
+												    where A.archival_isactive=''Y'' and A.archival_isremoved=''N''
+														 and A.entity_gid in (',@Entity_Gids,')
+														 and B.business_isactive=''Y'' and B.business_isremoved=''N''
+														 and B.entity_gid in (',@Entity_Gids,')
+														 and C.department_isactive=''Y'' and C.department_isremoved=''N''
+														 and C.entity_gid in (',@Entity_Gids,')
+														 and D.product_isactive=''Y'' and D.product_isremoved=''N''
+														 and D.entity_gid in (',@Entity_Gids,')
+											',Query_Status,'  ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+
+
+ELSEIF ls_Type = 'BARCODE' and ls_Sub_Type = 'GET' then
+
+							select JSON_LENGTH(lj_Filters,'$') into @lj_Filters;
+
+
+							if @lj_Filters = 0 or @lj_Filters is null  then
+								set Message = 'No Data In Json. ';
+							    leave sp_Erma_Process_Get;
+							End if;
+
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BARCODENO')))into @Barcode_No;
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.BARCODETYPE')))into @Barcode_Type;
+
+							if @Barcode_No='' or @Barcode_No is null then
+								set Message='Barcode No not given';
+								  leave sp_Erma_Process_Get;
+							end if;
+
+							if @Barcode_Type='' or @Barcode_Type is null then
+								set Message='Barcode Type not given';
+								leave sp_Erma_Process_Get;
+							end if;
+
+
+
+					select exists(select barcodedtl_gid
+								from erma_trn_tbarcodedtl
+                                        where barcodedtl_barcode=@Barcode_No
+											and barcodedtl_barcodetype=@Barcode_Type
+											and barcodedtl_isactive='Y' and barcodedtl_isremoved='N'
+											and entity_gid in (@Entity_Gids)) into @Barcode_No_Test;
+
+                      		if @Barcode_No_Test=0 then
+                                set Message=concat('INVALID ',@Barcode_No);
+								leave sp_Erma_Process_Get;
+							end if;
+
+					select barcodedtl_status,barcodedtl_archivalgid,barcodedtl_storagevendor
+											INTO @Barcodedtl_Status,@Archivalgid,@Storage_Vendor
+								from erma_trn_tbarcodedtl
+                                        where barcodedtl_barcode=@Barcode_No
+											and barcodedtl_isactive='Y' and barcodedtl_isremoved='N'
+											and entity_gid in (@Entity_Gids)
+                                            and barcodedtl_barcodetype=@Barcode_Type;
+
+
+                    select archival_requestno INTO @Archival_Request_No
+								from erma_trn_tarchival
+										where archival_gid=@Archivalgid
+											and archival_isactive='Y'
+                                            and archival_isremoved='N'
+                                            and entity_gid in (@Entity_Gids);
+
+
+							if @Barcodedtl_Status='USED' then
+								set Message=concat('USED IN ',@Archival_Request_No);
+								leave sp_Erma_Process_Get;
+                            else
+								set Message=concat('VALID',',',@Storage_Vendor,'');
+								leave sp_Erma_Process_Get;
+							end if;
+
+
+
+ELSEIF ls_Type = 'RETRIEVAL_VERIFICATION' and ls_Sub_Type = 'SUMMARY' then
+
+				#RETRIEVAL CONFIRM SUMMARY
+
+				SET @Business_Name='',@Department_Name='',@Product_Name='';
+
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Business_Name'))) into @Business_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Department_Name'))) into @Department_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Product_Name'))) into @Product_Name;
+
+
+
+                    set Query_Status='';
+
+                    if @ls_Status <> '' and @ls_Status is not null  then
+                         set Query_Status = concat(Query_Status,' and A.barcode_status=''',@ls_Status,'''  ');
+                    End if;
+
+
+					set Query_Search = '';
+
+                    if @BarCode_RequestNo <> '' and @BarCode_RequestNo is not null  then
+                         set Query_Search = concat(Query_Search,' and A.barcode_requestno like ''','%',@BarCode_RequestNo,'%','''  ');
+                    End if;
+
+                    if @Business_Name <> '' and @Business_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and C.business_name like ''','%',@Business_Name,'%','''  ');
+                    End if;
+
+                    if @Department_Name <> '' and @Department_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and D.department_name  like ''','%',@Department_Name,'%','''  ');
+                    End if;
+
+					if @Product_Name <> '' and @Product_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and E.product_name  like ''','%',@Product_Name,'%','''  ');
+                    End if;
+
+
+
+		set Query_Select = '';
+		set Query_Select = concat('select  A.retrieval_gid,A.retrieval_requestno,
+										   B.retrievaldtl_cartonbarcode,B.retrievaldtl_filebarcode,B.retrievaldtl_refno1,
+                                           B.retrievaldtl_refno2,B.retrievaldtl_refno3,
+                                           B.retrievaldtl_refno4,B.retrievaldtl_refno5,B.retrievaldtl_refno6,
+                                           C.business_name,D.department_name,E.product_name
+												from erma_trn_tretrieval A
+										   inner join erma_trn_tretrievaldtl B on B.retrievaldtl_retrieval_gid=A.retrieval_gid
+										   inner join erma_mst_tbusiness C on C.business_gid=A.retrieval_business_gid
+										   inner join erma_mst_tdepartment D on D.department_gid=A.retrieval_department_gid
+										   inner join erma_mst_tproduct E on E.product_gid=A.retrieval_product_gid
+													where A.retrieval_isactive=''Y'' and A.retrieval_isremoved=''N''
+														and A.entity_gid in (',@Entity_Gids,')
+														and B.retrievaldtl_isactive=''Y'' and B.retrievaldtl_isremoved=''N''
+														and B.entity_gid in (',@Entity_Gids,')
+														and C.business_isactive=''Y'' and C.business_isremoved=''N''
+														and C.entity_gid in (',@Entity_Gids,')
+														and D.department_isactive=''Y'' and D.department_isremoved=''N''
+														and D.entity_gid in (',@Entity_Gids,')
+														and E.product_isactive=''Y'' and E.product_isremoved=''N''
+														and E.entity_gid in (',@Entity_Gids,')
+											',Query_Status,'  ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+
+
+
+ELSEIF ls_Type = 'SCAN_IMAGE_DISPATCH' and ls_Sub_Type = 'SUMMARY' then
+
+				#RETRIEVAL CONFIRM SUMMARY
+
+				SET @Business_Name='',@Department_Name='',@Product_Name='';
+
+
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Business_Name'))) into @Business_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Department_Name'))) into @Department_Name;
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Product_Name'))) into @Product_Name;
+
+
+
+                    set Query_Status='';
+
+                    if @ls_Status <> '' and @ls_Status is not null  then
+                         set Query_Status = concat(Query_Status,' and A.barcode_status=''',@ls_Status,'''  ');
+                    End if;
+
+
+					set Query_Search = '';
+
+                    if @BarCode_RequestNo <> '' and @BarCode_RequestNo is not null  then
+                         set Query_Search = concat(Query_Search,' and A.barcode_requestno like ''','%',@BarCode_RequestNo,'%','''  ');
+                    End if;
+
+                    if @Business_Name <> '' and @Business_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and C.business_name like ''','%',@Business_Name,'%','''  ');
+                    End if;
+
+                    if @Department_Name <> '' and @Department_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and D.department_name  like ''','%',@Department_Name,'%','''  ');
+                    End if;
+
+					if @Product_Name <> '' and @Product_Name is not null  then
+                         set Query_Search = concat(Query_Search,' and E.product_name  like ''','%',@Product_Name,'%','''  ');
+                    End if;
+
+
+
+		set Query_Select = '';
+		set Query_Select = concat('select  A.retrieval_gid,A.retrieval_requestno,
+										   B.retrievaldtl_cartonbarcode,B.retrievaldtl_filebarcode,B.retrievaldtl_refno1,
+                                           B.retrievaldtl_refno2,B.retrievaldtl_refno3,
+                                           B.retrievaldtl_refno4,B.retrievaldtl_refno5,B.retrievaldtl_refno6,
+                                           C.business_name,D.department_name,E.product_name
+												from erma_trn_tretrieval A
+										   inner join erma_trn_tretrievaldtl B on B.retrievaldtl_retrieval_gid=A.retrieval_gid
+										   inner join erma_mst_tbusiness C on C.business_gid=A.retrieval_business_gid
+										   inner join erma_mst_tdepartment D on D.department_gid=A.retrieval_department_gid
+										   inner join erma_mst_tproduct E on E.product_gid=A.retrieval_product_gid
+													where A.retrieval_isactive=''Y'' and A.retrieval_isremoved=''N''
+														and A.entity_gid in (',@Entity_Gids,')
+														and B.retrievaldtl_isactive=''Y'' and B.retrievaldtl_isremoved=''N''
+														and B.entity_gid in (',@Entity_Gids,')
+														and C.business_isactive=''Y'' and C.business_isremoved=''N''
+														and C.entity_gid in (',@Entity_Gids,')
+														and D.department_isactive=''Y'' and D.department_isremoved=''N''
+														and D.entity_gid in (',@Entity_Gids,')
+														and E.product_isactive=''Y'' and E.product_isremoved=''N''
+														and E.entity_gid in (',@Entity_Gids,')
+											',Query_Status,'  ',Query_Search,'
+												 ');
+
+
+								set @Query_Select = Query_Select;
+			      		        #select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+
+END IF;
+
+END

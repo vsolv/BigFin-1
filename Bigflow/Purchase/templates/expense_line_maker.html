@@ -1,0 +1,223 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Expense Line Maker {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="exp_line_summary" ng-controller="Ctrl_exp_line_sum" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Expense Line Maker </h4>
+            </div>
+        </div>
+        </br>
+        <form name="exp_line_maker" novalidate>
+            <div class="row">
+
+                <div class="col-md-12">
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Expense Line Head</label>
+                            <input ng-model="exp_line_head" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Expense Line Description</label>
+                            <input ng-model="exp_line_desc" ng-required="true" no-cache="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Expense Line Group</label>
+                            <input ng-model="exp_line_grp" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Schedule16</label>
+                            <input ng-model="sch16" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Schedule16 Description</label>
+                            <input ng-model="sch16_desc" ng-required="true"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-2 col-md-offset-5" ng-if="!update">
+                    <md-button class="md-raised md-warn"
+                               value="submit"
+                               ng-click="create_exp_line()"
+                               ng-if="!update"
+                               ng-disabled="exp_line_maker.$invalid">
+                        Save
+                    </md-button>
+                </div>
+                <div class="col-md-2 col-md-offset-5" ng-if="update">
+                    <md-button class="md-raised md-warn"
+                               value="submit"
+                               ng-click="update_exp_line()"
+                               ng-if="update"
+                               ng-disabled="exp_line_maker.$invalid">
+                        Update
+                    </md-button>
+                </div>
+                <div class="col-md-2">
+                    <a href="expense_line_summary">
+                        <md-button class="md-raised" value="close"
+                                   aria-label="Close">Cancel
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+
+</style>
+<script>
+var myApp = angular.module('exp_line_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.controller('Ctrl_exp_line_sum', ['$scope','exp_line_sum_service','$mdDialog','$window','$filter', function($scope,exp_line_sum_service,$mdDialog,$window,$filter) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.maintable = [];
+
+        $scope.update="";
+        $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+
+
+        if (sessionStorage.getItem('exp_details') != null)
+        {
+            var exp_details_all = JSON.parse(sessionStorage.getItem('exp_details'));
+            debugger;
+            $scope.update = exp_details_all.view;
+            $scope.Expense_Gid=exp_details_all.exp_values.expense_gid;
+            $scope.exp_line_head=exp_details_all.exp_values.expense_head;
+            $scope.exp_line_desc=exp_details_all.exp_values.expense_linedesc;
+            $scope.exp_line_grp=exp_details_all.exp_values.expense_group;
+            $scope.sch16=exp_details_all.exp_values.expense_sch16;
+            $scope.sch16_desc=exp_details_all.exp_values.expense_sch16desc;
+
+
+        }
+
+
+
+        $scope.create_exp_line=function(){
+        debugger;
+            var datas={params:{"action":'INSERT',"type":"INSERT_EXPENSE_LINE",
+                           "filter":{"Expense_Head":$scope.exp_line_head,
+                                    "Expense_Linedesc":$scope.exp_line_desc,
+                                    "Expense_Group":$scope.exp_line_grp,
+                                    "Expense_Sch16":$scope.sch16,
+                                    "Expense_Sch16desc":$scope.sch16_desc
+                                    }
+                          }};
+            $scope.loading();
+            var exp_line_save = exp_line_sum_service.set_exp_line(datas);
+                 exp_line_save.then(function(result) {
+                 debugger;
+                      if (result.data[0] === "SUCCESS") {
+                            alert("Inserted Succesfully");
+                            $window.location.href = "expense_line_summary/";
+
+                            } else {
+                          alert(result.data[0]);
+                          }
+                      }, function(err) {
+                          alert('Data Not Inserted');
+                 });
+                 $scope.endloading();
+
+        }
+
+            $scope.update_exp_line=function(){
+        debugger;
+            var datas={params:{"action":'UPDATE',"type":"UPDATE_EXPENSE_LINE",
+                           "filter":{"Expense_Gid":$scope.Expense_Gid,
+                                    "Expense_Head":$scope.exp_line_head,
+                                    "Expense_Linedesc":$scope.exp_line_desc,
+                                    "Expense_Group":$scope.exp_line_grp,
+                                    "Expense_Sch16":$scope.sch16,
+                                    "Expense_Sch16desc":$scope.sch16_desc
+                                    }
+                          }};
+            $scope.loading();
+            var exp_line_update = exp_line_sum_service.set_exp_line(datas);
+                 exp_line_update.then(function(result) {
+                 debugger;
+                      if (result.data[0] === "SUCCESS") {
+                            alert("Updated Succesfully");
+                            $window.location.href = "expense_line_summary/";
+
+                            } else {
+                          alert(result.data[0]);
+                          }
+                      }, function(err) {
+                          alert('Data Not Inserted');
+                 });
+                 $scope.endloading();
+
+        }
+
+
+
+
+
+
+
+
+
+}]);
+
+myApp.service("exp_line_sum_service", function ($http) {
+
+     this.set_exp_line=function(datas){
+     debugger;
+         var response=$http.post(Appname+"/Expense_Detail_Set/",datas);
+         return response;
+     }
+
+
+});
+
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,378 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Schedule Report {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appschedule" ng-controller="Ctrlschedulereport" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Schedule Report </h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-2 col-sm-2 col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" ng-model="fr_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-lg-2 col-sm-2 col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>To Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="to_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-lg-3 col-sm-3 col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Employee Name</label>
+                    <md-select ng-model="search_emp">
+                        <md-optgroup label="Employee Name">
+                            <md-option ng-repeat="y in employe" ng-value="y.employee_gid">{{ y.employee_name }}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-lg-3 col-sm-3 col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Customer Name</label>
+                    <md-select ng-model="search_customer">
+                        <md-optgroup label="Customer Name">
+                            <md-option ng-repeat="t in customer" ng-value="t.customer_gid">{{ t.customer_name }} -
+                                {{t.location_name}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div ng-if="searchdetails" class="col-lg-10">
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Cluster</label>
+                        <md-select ng-model="search_clstr">
+                            <md-option><em>--Select--</em></md-option>
+                            <md-option ng-repeat="l in cluster" ng-value="l.cluster_gid">{{ l.cluster_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Customer Group </label>
+                        <md-select ng-model="search_custgrp">
+                            <md-option><em>--Select--</em></md-option>
+                            <md-option ng-repeat="g in custgrp" ng-value="g.customergroup_gid">{{ g.customergroup_name
+                                }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Customer Type</label>
+                        <md-select ng-model="search_custtype">
+                            <md-option><em>--Select--</em></md-option>
+                            <md-option ng-repeat="t in custtyp" ng-value="t.value">{{ t.text }}</md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3 col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Reschedule Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="re_date"></md-datepicker>
+                    </md-input-container>
+                    <div class="col-sm-3 col-xs-3 text-center">
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-sm-2 col-md-2">
+                <div class="btn-group searchLeave_icon" ng-init="searchdetails=false">
+                    <md-button class="md-icon-button md-primary" aria-label="Settings" ng-click="search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                    <md-button class="md-icon-button md-primary" aria-label="Settings"
+                               ng-click="searchdetails=!searchdetails">
+                        <md-icon>keyboard_arrow_down</md-icon>
+                        <md-tooltip>Advance Search</md-tooltip>
+                    </md-button>
+                    <md-button class="md-icon-button md-primary" id="expo" aria-label="Settings">
+                        <md-icon>insert_drive_file</md-icon>
+                        <md-tooltip>Excel file</md-tooltip>
+                    </md-button>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                <table class="dataTable table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>Executive Name</th>
+                        <th>Date</th>
+                        <th>Customer Name</th>
+                        <th>Schedule Type</th>
+                        <th>Outcome For The Visit</th>
+                        <th>Sale Order Amount</th>
+                        <th>Outstanding Amount</th>
+                        <th>Collected Amount</th>
+                        <th>Next F/Up or Reschedule</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="m in schedule_detail ">
+                        <td>{{$index + 1}}</td>
+                        <td>{{m.employee_name}}</td>
+                        <td>{{m.schedule_date | date:'MM/dd/yyyy'}}</td>
+                        <td>{{m.customer_name_x}}</td>
+                        <td>{{m.scheduletype_name}}</td>
+                        <td>{{m.followupreason_name}}</td>
+                        <td>{{m.soheader_total}}</td>
+                        <td>{{(m.Outstanding_amount != false) ? m.Outstanding_amount : ''}}</td>
+                        <td>{{(m.collection_amount != 0) ? m.collection_amount : '' }}</td>
+                        <td>{{m.schedule_followup_date| date:'MM/dd/yyyy'}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="10">
+                            <ul uib-pagination total-items="schedule_detail.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Appschedule', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    app.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+    app.controller('Ctrlschedulereport', ['$scope', '$http', 'schedulereportService', '$filter', '$window', '$mdDialog', function($scope, $http, schedulereportService, $filter, $window, $mdDialog) {
+        $scope.fr_date = new Date();
+        $scope.to_date = new Date();
+        $scope.maxDate = new Date($scope.fr_date.getFullYear(), $scope.fr_date.getMonth(), $scope.fr_date.getDate());
+        $scope.employe = [];
+        $scope.cluster = [];
+        $scope.custgrp = [];
+        $scope.customer = [];
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.loading();
+        var employee = schedulereportService.getemployee(0, '', 0, 'ALL')
+        employee.then(function(result) {
+            $scope.employe = result.data;
+        }, function() {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        <!--$scope.loading();-->
+        <!--var cluster = schedulereportService.getcluster()-->
+        <!--cluster.then(function(result) {-->
+        <!--$scope.cluster = JSON.parse(result.data);-->
+        <!--},function() {-->
+        <!--alert('No data!.');-->
+        <!--}).finally($scope.endloading);-->
+
+        var custgrp = schedulereportService.getcustgrp()
+        custgrp.then(function(result) {
+            $scope.custgrp = JSON.parse(result.data);
+        }, function() {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        var jsonData = "{}"
+        var customer = schedulereportService.getcustomer(jsonData)
+        customer.then(function(result) {
+                $scope.customer = result.data;
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+
+        $scope.search = function() {
+            var details = {
+                "fdata": formatDate($scope.fr_date),
+                "tdate": formatDate($scope.to_date),
+                "Emp_gid": $scope.search_emp,
+                "cust_gid": $scope.search_customer,
+                "clst_gid": $scope.search_clstr,
+                "custgrp_gid": $scope.search_custgrp,
+                "custtype_gid": $scope.search_custtype,
+                "resh_date": $scope.re_date
+            };
+
+            $scope.data_detail = [];
+            var reportget = schedulereportService.getreport(details)
+            reportget.then(function(result) {
+                    var result1 = JSON.parse(result.data);
+                    $scope.schedule_detail = result1;
+                },
+                function() {
+                    alert('No data');
+                });
+        };
+
+    }]);
+
+    app.service("schedulereportService", function($http) {
+
+        this.getemployee = function(gid, name, clusgid, cluster) {
+            var response = $http.get("/employee_get/", {
+                params: {
+                    "emp_gid": gid,
+                    "emp_name": name,
+                    "li_cluster_gid": clusgid,
+                    "cluster": cluster
+                }
+            });
+            return response;
+        }
+
+        this.getreport = function(details) {
+            var response = $http.get(Appname + "/Schedule_reportget/", {
+                params: {
+                    'details': details
+                }
+            });
+            return response;
+        }
+
+        <!--this.getcluster = function (d) {-->
+        <!--var response = $http.get(Appname+"/cluster_get/");-->
+        <!--return response;-->
+        <!--}-->
+
+        this.getcustgrp = function(d) {
+            var response = $http.get(Appname + "/get_custgroup/");
+            return response;
+        }
+
+        this.getcustomer = function(jsonData) {
+            var response = $http.get(Appname + "/customer_ddl/", {
+                params: {
+                    'jsonData': jsonData
+                }
+            });
+            return response;
+        }
+
+
+    });
+
+    $('#expo').click(function() {
+        var titles = [];
+        var data = [];
+
+        /*
+         * Get the table headers, this will be CSV headers
+         * The count of headers will be CSV string separator
+         */
+        $('.dataTable th').each(function() {
+            titles.push($(this).text());
+        });
+
+        /*
+         * Get the actual data, this will contain all the data, in 1 array
+         */
+        $('.dataTable td').each(function() {
+            data.push($(this).text());
+        });
+
+        /*
+         * Convert our data to CSV string
+         */
+        var CSVString = prepCSVRow(titles, titles.length, '');
+        CSVString = prepCSVRow(data, titles.length, CSVString);
+
+        /*
+         * Make CSV downloadable
+         */
+        var downloadLink = document.createElement("a");
+        var blob = new Blob(["\ufeff", CSVString]);
+        var url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.download = "data.csv";
+
+        /*
+         * Actually download CSV
+         */
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    });
+
+    /*
+     * Convert data array to CSV string
+     * @param arr {Array} - the actual data
+     * @param columnCount {Number} - the amount to split the data into columns
+     * @param initial {String} - initial string to append to CSV string
+     * return {String} - ready CSV string
+     */
+    function prepCSVRow(arr, columnCount, initial) {
+        var row = ''; // this will hold data
+        var delimeter = ','; // data slice separator, in excel it's `;`, in usual CSv it's `,`
+        var newLine = '\r\n'; // newline separator for CSV row
+
+        /*
+         * Convert [1,2,3,4] into [[1,2], [3,4]] while count is 2
+         * @param _arr {Array} - the actual array to split
+         * @param _count {Number} - the amount to split
+         * return {Array} - splitted array
+         */
+        function splitArray(_arr, _count) {
+            var splitted = [];
+            var result = [];
+            _arr.forEach(function(item, idx) {
+                if ((idx + 1) % _count === 0) {
+                    splitted.push(item);
+                    result.push(splitted);
+                    splitted = [];
+                } else {
+                    splitted.push(item);
+                }
+            });
+            return result;
+        }
+        var plainArr = splitArray(arr, columnCount);
+        // don't know how to explain this
+        // you just have to like follow the code
+        // and you understand, it's pretty simple
+        // it converts `['a', 'b', 'c']` to `a,b,c` string
+        plainArr.forEach(function(arrItem) {
+            arrItem.forEach(function(item, idx) {
+                row += item + ((idx + 1) === arrItem.length ? '' : delimeter);
+            });
+            row += newLine;
+        });
+        return initial + row;
+    }
+
+</script>
+{% endblock %}

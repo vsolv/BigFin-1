@@ -1,0 +1,86 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SupplierDetails_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024))
+sp_SupplierDetails_Get:BEGIN
+### SELVA March 25 2019
+
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare i int;
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+    
+    select fn_Classification('ENTITY_ONLY',lj_Classification) into @OutMsg_Classification ;
+        select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Entity_Gid[0]')) into @Entity_Gids;        
+        if @Entity_Gids is  null or @Entity_Gids = '' then
+				select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Message')) into @Message;
+				set Message = concat('Error On Classification Data - ',@Message);
+                leave sp_SupplierDetails_Get;
+        End if;
+        
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Supplier_gid[0]'))) into @Supplier_gid;
+
+if ls_Type = 'Suppplier' and ls_Sub_Type = 'GSTNO' then
+		  	set Query_Select = '';
+
+            
+            set Query_Select = concat('select address_state_gid,supplier_gstno as taxdetails_taxno from gal_mst_tsupplier as a
+                   inner join gal_mst_taddress as b on a.supplier_add_gid = b.address_gid 
+                    where supplier_gid = ',@Supplier_gid,' and 
+                supplier_isactive = ''Y'' and supplier_isremoved = ''N'' 
+                and  b.entity_gid in (',@Entity_Gids,')
+                 and a.entity_gid  in (',@Entity_Gids,') 
+							');
+                     	set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if;
+            
+            
+End if;
+
+
+if ls_Type = 'Suppplier' and ls_Sub_Type = 'DROPDOWN' then
+		  	set Query_Select = '';
+
+            
+            set Query_Select = concat('select concat(supplier_name,'' - '',supplier_branchname) as supplier_name,supplier_gid from gal_mst_tsupplier
+                            ');
+          #  where supplier_name  like ''%',@Supplier_gid,'%'' limit 10 ;
+
+				#			');
+                     	set @Query_Select = Query_Select;									                
+										#select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if;
+            
+            
+End if;
+
+END

@@ -1,0 +1,912 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Scheduled Visit{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="app" ng-controller="preschctrl as ctrl" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong> Day's Schedule - {{sch_date | date:'dd-MMM-yyyy'}}</strong></h4>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Client Name</label>
+                        <md-select ng-model="sltdclient" ng-change="chngclnt(sltdclient)">
+                            <md-optgroup label="Client Name">
+                                <md-option ng-repeat="c in clientname" ng-value="c.client_gid"> {{c.client_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-3">
+                <md-button class="md-icon-button md-primary" aria-label="Settings" ng-click="go_pre()">
+                    <md-icon>keyboard_arrow_left</md-icon>
+                    <md-tooltip>Previous</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-xs-6  text-center" ng-init="dateEnable=false" ng-click="dateEnable=true">
+                <div ng-hide="dateEnable"><h4> {{sch_date | date:'dd-MMM-yyyy'}}</h4></div>
+
+                <md-input-container class="md-block inputcontainer" ng-show="dateEnable">
+                    <label>Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="sch_date"
+                                   ng-change="dateChange()" md-min-date="minDate_search" md-max-date="maxDate"
+                                   ng-click="date"
+                                   formatDate></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-xs-3 text-right">
+                <md-button class="md-icon-button md-primary" aria-label="Settings" ng-click="go_next()">
+                    <md-icon>keyboard_arrow_right</md-icon>
+                    <md-tooltip>Next</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-md-offset-6" style="margin-top:5px">
+                <input class="searchtext" ng-model="searchquery" ng-enable="!selected.length"
+                       placeholder="Search Customer Name"/>
+                <md-button class="md-icon-button md-primary" ng-if="multi_resch"
+                           ng-click="reschedule_click(custdetails)">
+                    <md-icon>redo</md-icon>
+                    <md-tooltip>Reschedule</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12" ng-init="showdetails=false"
+                 ng-repeat="pre in final_detail  | orderBy:['location_name','Order_by','customer_name']   | filter:{'customer_name':searchquery}">
+                <div ng-class="pre.is_checked ==true? 'rowselect' : 'boxhover'"
+                     ng-click="row_click(pre,pre.schedule_customer_gid)">
+                    <h5 ng-class="pre.Order_by  != '1' ? 'highligter' : ''">
+                        <strong>{{ $index +1 }}. </strong>{{pre.display_name}}
+                        <span style="background:red;margin-left:5px;font-size:14px;"
+                              class="badge">{{pre.display_name1}}</span>
+                        <span class="sales-color" ng-click="directoutcome(pre.schedule_customer_gid)">
+                        <md-icon>assignment</md-icon>
+                        <md-tooltip>Unschedule Task</md-tooltip>
+                    </span>
+                        <span class="sales-color" ng-click="showComment(pre)">
+                            <md-icon>insert_comment</md-icon>
+                        <md-tooltip>Comments</md-tooltip>
+                    </span>
+                    </h5>
+                </div>
+
+                <div ng-show="pre.showdetails" class="material-icons">
+                    <div class="col-md-6">
+                        <div class="col-xs-1" ng-if="pre.sh_BOOKING != '0'">
+                    <span class="sales-color" ng-click="schedule_go(pre,'sales')">
+                        <span>shopping_cart</span>
+                        <md-tooltip>Sale</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1" ng-if="pre.sh_COLLECTION !='0'">
+                    <span class="collection-color" ng-click="schedule_go(pre,'collection')">
+                        <span>account_balance_wallet</span>
+                        <md-tooltip>Collection</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1" ng-if="pre.sh_SERVICE !='0'">
+                    <span class="service-color" ng-click="schedule_go(pre,'service')">
+                        <span>build</span>
+                        <md-tooltip>Service</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1" ng-if="pre.sh_STOCK !='0'">
+                    <span class="editlink" ng-click="schedule_go(pre,'stock')">
+                        <span>assignment</span>
+                        <md-tooltip>Stock</md-tooltip>
+                    </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="col-xs-1" ng-if="pre.sh_OTHERS !='0'">
+                    <span class="others-color" ng-click="others_click(pre)">
+                        <span>edit</span>
+                        <md-tooltip>Others</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1">
+                    <span class="others-color" ng-click="viewDetails(pre,'')">
+                        <span>visibility</span>
+                        <md-tooltip>View</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1">
+                    <span class="others-color" ng-click="history_click(pre.customer_name,pre.schedule_customer_gid)">
+                        <span>history</span>
+                        <md-tooltip>History</md-tooltip>
+                    </span>
+                        </div>
+                        <div class="col-xs-1">
+                    <span class="others-color" ng-click="reschedule_click(pre)">
+                        <span>redo</span>
+                        <md-tooltip>Reschedule</md-tooltip>
+                    </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="sheinclud">
+            <div class="col-lg-12 col-sm-12" ng-include="'comment'"></div>
+        </div>
+        <!--Modal View Details-->
+        <div ng-include="'viewDetails'"></div>
+
+        <div class="modal fade" id="his_view" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+             aria-labelledby="exampleModal" aria-hidden="true">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModal">
+                                    Last Visit of {{ Customer_name }}
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="modal-body" style="height:350px;overflow-y:auto">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <div class="modal-body" style="overflow-y: auto;height: 250px">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>Date</th>
+                                                <th>Schedule Type</th>
+                                                <th>Follow Up</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr ng-repeat="v in visit">
+                                                <td class="text-right">{{$index + 1}}</td>
+                                                <td>{{v.schedule_date | date:'dd-MMM-y'}}</td>
+                                                <td>{{v.scheduletype_name}}</td>
+                                                <td>{{v.followupreason_name}}</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!--ReSchedule-->
+        <div class="modal fade" id="res_view" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+             aria-labelledby="exModal" aria-hidden="true">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exModal">
+                                    Reschedule for {{ Customer_name }}
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <ng-form name="formreschedule">
+                                    <div class="col-lg-6 col-sm-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Rescheduled On</label>
+                                            <md-datepicker md-hide-icons="calendar" ng-required="true"
+                                                           md-min-date="minDate" md-open-on-focus md-max-date="maxDate"
+                                                           ng-model="ls_reschdul_date"
+                                                           formatDate></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-lg-6 col-sm-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Remarks</label>
+                                            <input type="text" maxlength="256" no-special-char ng-model="ls_Remarks"
+                                                   required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-12 ">
+                                        <div class="text-right">
+                                            <md-button ng-click="rescheduleSave(customerdetail)"
+                                                       class="btn btn-info custbutton">Submit
+                                                <md-tooltip>Save</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </ng-form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal fade" id="othr_view" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+             aria-labelledby="othrModal" aria-hidden="true">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="othrModal">
+                                    {{ Customer_name }}
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <ng-form name="formothers">
+                                    <div class="col-md-12">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Remarks</label>
+                                            <input type="text" maxlength="256" ng-model="ls_Remarks" required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-12 ">
+                                        <div class="text-right">
+                                            <md-button ng-click="other_Save(customerdetail)"
+                                                       class="btn btn-info custbutton">Submit
+                                                <md-tooltip>Save</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </ng-form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+
+<script>
+    var app = angular.module('app', ['ngMaterial', 'AppCommon']).config(function($httpProvider, $locationProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        $locationProvider.html5Mode(true);
+    });
+    app.controller('preschctrl', function($scope, $filter, pershechService, $mdDateLocale, $window,
+        $mdDialog, $rootScope, $mdToast, SerCommon, $element) {
+        $scope.custdetails = [];
+        $scope.outstanding = [];
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.Emp_gid = detail.employee_gid;
+        var td = detail.date
+        $scope.dbdate = convertdate(td);
+
+        $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+
+        $scope.ls_reschdul_date = convertdate(td);
+        $scope.minDate = new Date(
+            $scope.ls_reschdul_date.getFullYear(),
+            $scope.ls_reschdul_date.getMonth(),
+            $scope.ls_reschdul_date.getDate() + 1
+        );
+
+        $scope.minDate_search = new Date(
+            $scope.ls_reschdul_date.getFullYear(),
+            $scope.ls_reschdul_date.getMonth(),
+            $scope.ls_reschdul_date.getDate()
+        );
+
+        $scope.maxDate = new Date(
+            $scope.ls_reschdul_date.getFullYear(),
+            $scope.ls_reschdul_date.getMonth() + 1,
+            $scope.ls_reschdul_date.getDate() + 1
+        );
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.toast = function() {
+            $mdToast.show({
+                hideDelay: 3000,
+                position: 'bottom left',
+                templateUrl: 'toast'
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.final_detail = [];
+        if (sessionStorage.getItem('cus_details') != null && sessionStorage.getItem('cus_details') != "") {
+            var customer_detail = JSON.parse(sessionStorage.getItem('cus_details'));
+            var schedule_date = customer_detail.schedule_date;
+            $scope.sch_date = convertdate(td)
+            <!--sessionStorage.clear()-->
+        } else {
+            $scope.sch_date = convertdate(td);
+        }
+
+        var client = pershechService.getclient('')
+        client.then(function(result) {
+                $scope.clientname = [];
+                $scope.clientname = JSON.parse(result.data);
+            }),
+            function() {
+                alert('no data');
+            };
+
+        $scope.chngclnt = gotoClientChange;
+
+        function gotoClientChange(c) {
+
+            loaddata(c)
+        }
+
+        function loaddata(Cname) {
+            if (Cname == undefined) {
+                Cname = ''
+            } else {
+                Cname = $scope.sltdclient;
+            }
+            $scope.loading();
+            var scheduleload = pershechService.getcustomer(formatDate($scope.sch_date), {}, Cname)
+            scheduleload.then(function(result) {
+                var ee = []
+                $scope.final_detail = result.data;
+                if ($scope.final_detail.length > 0) {
+                    for (i = 0; i < $scope.final_detail.length; i++) {
+                        var gid = $scope.final_detail[i].schedule_customer_gid;
+                        ee.push(gid);
+                    }
+                }
+                $rootScope.ee = ee;
+                loaddataas();
+            }, function() {
+                alert('no data!.');
+            }).finally($scope.endloading);
+        };
+
+        $scope.final_detal = [];
+        $scope.statuss = [];
+
+        function loaddataas() {
+            $scope.dt = $filter('date')(new Date(td.split('-').join('/')), "yyyy-MM-dd");
+            var id = $rootScope.ee;
+            var jsondata = {
+                customer_gid: id,
+                "schedule_date": $scope.dt
+            }
+            var scheduleload = pershechService.getcust(jsondata)
+            scheduleload.then(function(result) {
+                $scope.final_detal = result.data;
+                $scope.statuss = $filter('filter')($scope.final_detal, function(item) {
+                    return (item.soheader_status == 'REJECTED')
+                })
+                $scope.titlee = [];
+                var er = [];
+                if ($scope.statuss.length > 0) {
+                    for (i = 0; i < $scope.final_detail.length; i++) {
+                        var gid = $scope.final_detail[i].schedule_customer_gid;
+                        for (j = 0; j < $scope.statuss.length; j++) {
+                            var gi = $scope.statuss[j].soheader_customer_gid;
+                            if ($scope.final_detail[i].schedule_customer_gid == $scope.statuss[j].soheader_customer_gid) {
+
+                                $scope.final_detail[i].display_name1 = "REJECTED"
+                                break;
+                            } else {
+                                $scope.final_detail[i].display_name1 != ""
+                            }
+                        }
+                    }
+                }
+            }, function() {
+                <!--alert('no data!.');-->
+            })
+        };
+
+        loaddata();
+        $scope.go_next = function() {
+            var date1 = $scope.sch_date;
+            date1.setDate(date1.getDate() + 1);
+            $scope.sch_date = new Date(date1);
+            loaddata();
+        };
+
+        $scope.go_pre = function() {
+            var date1 = $scope.sch_date;
+            var today = $scope.dbdate
+            if (date1.getMonth() == today.getMonth() && date1.getDate() == today.getDate() && date1.getYear() == today.getYear()) {
+                alert("Previous Date Can't edit");
+                return false;
+            } else {
+                date1.setDate(date1.getDate() - 1);
+                $scope.sch_date = new Date(date1);
+                loaddata();
+            }
+
+        };
+        $scope.dateChange = function() {
+            if ($scope.sch_date != null) {
+                var date = formatDate($scope.sch_date)
+                if (datediff(date, formatDate(convertdate(td))) > 0) {
+                    $scope.sch_date = $scope.dbdate
+                    alert("Previous Date Can't edit");
+                    return false;
+                }
+                loaddata();
+            } else {
+                alert('Please Enter Date.');
+                $scope.sch_date = new Date();
+            }
+            $scope.dateEnable = false;
+        };
+
+        $scope.schedule_go = function(cust_detl, type, ) {
+            $scope.loading();
+            if (formatDate(convertdate(td)) != formatDate($scope.sch_date)) {
+                alert('you cant give sale for future days!.');
+                $scope.endloading();
+                return false;
+            } else if ((cust_detl.status_BOOKING == 'CLOSED') && (!cust_detl.followupreason_name)) {
+                alert('This Record Rescheduled!.')
+                $scope.endloading();
+                return false;
+            }
+            var url_go, tschedule_gid;
+            if (type == 'sales') {
+                if ((cust_detl.followupreason_name == 'Sales')) {
+                    var r = confirm("'Sales closed!. Do You Want To Edit This Sales!");
+                    if (r == true) {
+                        url_go = "sales_order";
+                        tschedule_gid = cust_detl.sh_BOOKING;
+                    } else {
+                        $scope.endloading();
+                        return false;
+                    }
+                } else if (cust_detl.followupreason_name == 'Not Now') {
+                    alert("Schedule Closed!.")
+                    $scope.endloading();
+                    return false;
+                } else {
+                    url_go = "sales_order";
+                    tschedule_gid = cust_detl.sh_BOOKING;
+                }
+            } else if (type == 'collection') {
+                if (cust_detl.status_COLLECTION == 'OPEND' || 'CLOSED') {
+                    url_go = "pcollection";
+                    tschedule_gid = cust_detl.sh_COLLECTION;
+                } else {
+                    alert('Schedule Closed!.');
+                    $scope.endloading();
+                    return false;
+                }
+            } else if (type == 'service') {
+                if (cust_detl.status_SERVICE == 'OPEND') {
+                    url_go = "service";
+                    tschedule_gid = cust_detl.sh_SERVICE;
+                } else {
+                    alert('Schedule Closed!.');
+                    $scope.endloading();
+                    return false;
+                }
+            } else if (type == 'stock') {
+                if (cust_detl.status_STOCK == 'OPEND') {
+                    url_go = "stocktaken";
+                    tschedule_gid = cust_detl.sh_STOCK;
+                } else {
+                    alert('Schedule Closed!.');
+                    $scope.endloading();
+                    return false;
+                }
+            } else {
+                url_go = "#";
+                tschedule_gid = cust_detl.sh_SERVICE;
+            }
+            var customer = {
+                cus_gid: cust_detl.schedule_customer_gid,
+                cus_name: cust_detl.customer_name,
+                cus_group_gid:cust_detl.customer_group_gid,
+                schedule_gid: tschedule_gid,
+                schedule_date: formatDate($scope.sch_date)
+            };
+            sessionStorage.setItem('cus_details', JSON.stringify(customer));
+            $scope.endloading();
+
+            $window.location.href = url_go
+        }
+
+        $scope.reschedule_click = function(cus_details) {
+            $scope.loading()
+            var data;
+            if (cus_details.schedule_customer_gid != undefined) {
+                data = {
+                    Customer_Gid: [cus_details.schedule_customer_gid]
+                }
+                $scope.Customer_name = cus_details.customer_name
+            } else {
+                data = {
+                    Customer_Gid: cus_details
+                }
+                $scope.Customer_name = "Multiple"
+            }
+            if ($scope.Customer_name == "Multiple") {
+                if (data.Customer_Gid.length > 0) {
+                    $scope.customerdetail = data;
+                    $scope.ls_reschdul_date = "";
+                    $scope.ls_Remarks = "";
+                    $('#res_view').modal('show');
+                } else {
+                    alert('schedule closed for customers');
+                }
+            } else {
+                if (cus_details.status_BOOKING == 'CLOSED' || cus_details.status_COLLECTION == 'CLOSED' ||
+                    cus_details.status_OTHERS == 'CLOSED' ||
+                    cus_details.status_SERVICE == 'CLOSED' ||
+                    cus_details.status_STOCK == 'CLOSED') {
+                    alert('schedule closed');
+                } else {
+                    $scope.customerdetail = data;
+                    $scope.ls_reschdul_date = "";
+                    $scope.ls_Remarks = "";
+                    $('#res_view').modal('show');
+                }
+            }
+            $scope.endloading();
+        };
+
+        $scope.others_click = function(cus_details) {
+            $scope.loading()
+            var schedule_set = pershechService.getstatus(cus_details.schedule_customer_gid)
+            schedule_set.then(function(result) {
+                if (result.data.length > 0) {
+                    alert("You Have Added The Schedule!.");
+                } else {
+                    $scope.customerdetail = cus_details;
+                    $scope.Customer_name = cus_details.customer_name
+                    $scope.ls_reschdul_date = "";
+                    $scope.ls_Remarks = "";
+                    $('#othr_view').modal('show');
+                }
+            }, function() {
+                <!--alert('no data!.');-->
+            }).finally($scope.endloading);
+        };
+
+        $scope.history_click = function(cus_name, cus_gid) {
+            $scope.loading()
+            $scope.Customer_name = cus_name;
+            $('#his_view').modal('show');
+            var visit = pershechService.gethistory(cus_gid)
+            visit.then(function(result) {
+                $scope.visit = result.data;
+            }, function() {
+                <!--alert('no data!.');-->
+            }).finally($scope.endloading);
+        };
+
+        $scope.viewDetails = function(viewDetail,group) {
+            $scope.collection = [];
+            $scope.salesdetails = [];
+            $scope.loading()
+            $scope.viewDetail = viewDetail;
+
+            data={'ACTION':'Common','Outstanding_Type':'OUTSTANDING_REPORT_INVOICE_WISE','Outstanding_SubType':'BUCKET'};
+            data['Customer_Gid']=viewDetail.schedule_customer_gid;
+            data['CustGroup_Gid']=viewDetail.customer_group_gid;
+            data['Outstanding_Customer_Group_Gid']=0;
+            data['Customer_Name']='';
+            data['Employee_Gid']=$scope.Emp_gid;
+            data['CLASSIFICATION']= {"entity_gid": [$scope.entity_gid]};
+
+            if (group=='GroupWise' ) {
+                data['Outstanding_Customer_Group_Gid']=viewDetail.customer_group_gid;
+            }else{
+                $scope.rbtnCustomerGroup="CustomerWise";
+            }
+             var outstanding = pershechService.getoutstanding(data,30)
+                outstanding.then(function(result) {
+                    if(result.data.MESSAGE=="FOUND"){
+                        $scope.isGroupwise=(result.data.outstanding_hierarchy=='N'?true:false);
+                        $scope.salesdetails= result.data.sales_history;
+                        $scope.collection=result.data.collection_history;
+                        $scope.outstanding = result.data.outstanding_detail;
+                    }else{
+                        $scope.isGroupwise=true;
+                        $scope.salesdetails=[];
+                        $scope.collection=[];
+                        $scope.outstanding=[];
+                    }
+                }, function(err) {
+                    alert('Server Error!.');
+                }).finally($scope.endloading);
+
+                modalshow('mdl_view');
+
+        };
+
+        $scope.totalbilling = function(data) {
+                    var totall = 0;
+                    if (data.length == 0) {
+                        return totall;
+                    } else {
+                        for (var i = 0; i < data.length; i++) {
+                            totall = totall + data[i].pending;
+                        }
+                        return totall;
+                    }
+        }
+
+        $scope.rescheduleSave = function(customerdetail) {
+            if (!$scope.formreschedule.$valid) {
+                alert('Please enter required field!.');
+                return false;
+            };
+            var date = formatDate($scope.ls_reschdul_date);
+            var remark = $scope.ls_Remarks;
+            reschedule(0, date, remark, customerdetail, formatDate($scope.sch_date));
+            modalhide('res_view');
+        };
+
+        function reschedule(schedule_gid, date, remark, cust_gid, sch_date) {
+            var reSchedule_save = pershechService.getschedule(schedule_gid, date, remark, "Reschedule_all", cust_gid, sch_date);
+            reSchedule_save.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        $scope.custdetails.length = 0;
+                        alert('Schedule Changed Successfully!.');
+                        loaddata();
+                    } else {
+                        alert('Schedule Not Changed!.');
+                    };
+                }),
+                function() {
+                    <!--alert('no data!.');-->
+                };
+        };
+
+        $scope.other_Save = function(customerdetail) {
+            if (!$scope.formothers.$valid) {
+                alert('Please enter required field!.');
+                return false;
+            };
+            var schedule_gid = []
+            schedule_gid = customerdetail.schedule_gid.split(",");
+            var remark = $scope.ls_Remarks;
+            if (schedule_gid.length > 0) {
+                schedule_gid.forEach(function(item, index) {
+                    others(item, remark);
+                })
+            } else {
+                others(schedule_gid, remark);
+            }
+            modalhide('othr_view');
+            loaddata();
+        };
+
+        function others(schedule_gid, remark) {
+            var reSchedule_save = pershechService.getschedule(schedule_gid, '', remark, "OTHERS", 0, '');
+            reSchedule_save.then(function(result) {
+                    if (result.data > 0) {
+                        alert('Schedule Changed Successfully!.');
+                    } else {
+                        alert('Schedule Not Changed!.');
+                    };
+                }),
+                function() {
+                    <!--alert('no data!.');-->
+                };
+        };
+
+        $scope.row_click = function(dtl, cus_gid) {
+            var index = $scope.final_detail.indexOf(dtl)
+            $scope.final_detail[index].is_checked = !$scope.final_detail[index].is_checked;
+            $scope.final_detail[index].showdetails = !$scope.final_detail[index].showdetails;
+            $scope.multi_resch = true;
+            if (dtl.status_BOOKING == 'CLOSED' || dtl.status_COLLECTION == 'CLOSED' ||
+                dtl.status_OTHERS == 'CLOSED' ||
+                dtl.status_SERVICE == 'CLOSED' ||
+                dtl.status_STOCK == 'CLOSED') {} else {
+                if ($scope.final_detail[index].is_checked) {
+                    $scope.custdetails.push(cus_gid)
+                } else {
+                    var cindex = $scope.custdetails.indexOf(cus_gid);
+                    $scope.custdetails.splice(cindex, 1);
+                    if ($scope.custdetails.length == 0) {
+                        $scope.multi_resch = false
+                    }
+                }
+            }
+        };
+
+        $scope.directoutcome = function(customer_gid) {
+            $scope.loading();
+            window.location.replace('direct?gid=' + customer_gid);
+            $scope.endloading();
+        };
+
+        $scope.cmd = [];
+        $scope.showComment = function(data) {
+            $scope.loading();
+            $scope.cmd.customer_name=data.display_name
+            $scope.cmd.comment = '';
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.cmd.Emp_name = detail.employee_name;
+            $scope.Emp_gid = detail.employee_gid;
+            $scope.sheinclud = true;
+            $scope.ref_no = data.customer_gid;
+            getcmd($scope.ref_no);
+            modalshow('comment_view');
+            $scope.endloading();
+        }
+
+        function getcmd(refno) {
+            var JSON_data = {};
+            JSON_data = {
+                "Filters": [{
+                    "Comment_For": "COMMENT_CUSTOMER",
+                    "Ref_No": [refno],
+                }]
+            };
+            var cmd_detail = pershechService.getcmd('COMMENTS', 'TRANSACTION', JSON_data);
+            cmd_detail.then(function(result) {
+                $scope.cmd.comment_details = result.data;
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            });
+            $scope.cmd.comment = '';
+        }
+
+        $scope.comment = function(remarks) {
+            var JSON = {};
+            JSON = {
+                "Employee_Gid": $scope.Emp_gid,
+                "Date":formatStringDate(new Date(),'yyyy-mm-dd hh:mm'),
+                "Comment_For": "COMMENT_CUSTOMER",
+                "EACH": [{
+                    "Ref_No": $scope.ref_no,
+                    "Remark": remarks
+                }]
+            };
+
+            var cmd_detail = pershechService.setcmd('Insert', 'EACH', JSON);
+            cmd_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    getcmd($scope.ref_no);
+                } else {
+                    alert("Not Inserted successfully!.")
+                }
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            });
+        }
+    });
+
+    app.service("pershechService", function($http, $filter) {
+        this.getcustomer = function(date, jsondata, Cname) {
+            var response = $http.post(Appname + "/pre_schedule_get/", {
+                parms: {
+                    "action": "customerwise",
+                    "f_date": date,
+                    "jsondata": jsondata,
+                    "Client_gid": Cname
+                }
+            });
+            return response;
+        }
+
+        this.getcust = function(date) {
+                var response = $http.get(Appname + "/pre_schedule_status/", {
+                params: {
+                    "action": "schedule_status",
+                    "jsondata": date
+                }
+            });
+            return response;
+        }
+
+        this.getoutstanding = function(data,limit) {
+        var values={'data':data,'limit':limit}
+            var respons = $http.post(Appname + "/outstanding_get/", values );
+            return respons;
+        }
+        this.getoutstand = function(r) {
+            var respons = $http.post(Appname + "/outstanding_fet_get/", {
+                parms: {
+                    "customer_gid": r,
+                    "ACTION": "OutstandingCustomergroup"
+                }
+            });
+            return respons;
+        }
+
+        this.gethistory = function(h) {
+            var resp = $http.post(Appname + "/schedule_view_fet/", {
+                parms: {
+                    "customer_gid": h
+                }
+            });
+            return resp;
+        }
+
+        this.getschedule = function(schedule_gid, ls_reschdul_date, ls_Remarks, TYPE, cust_gid, sch_date) {
+            var response = $http.post(Appname + "/add_schedule/", {
+                parms: {
+                    schedule_gid,
+                    ls_reschdul_date,
+                    ls_Remarks,
+                    TYPE,
+                    cust_gid,
+                    sch_date
+                }
+            });
+            return response;
+        }
+        this.getstatus = function(e) {
+            var respons = $http.post(Appname + "/status_get/", {
+                parms: {
+                    "customer_gid": e
+                }
+            });
+            return respons;
+        }
+        this.getcmd = function(action, type, json) {
+            var response = $http.post(Appname + "/commentget/", {
+                params: {
+
+                    "action": action,
+                    "type": type,
+                    "json": json
+                }
+            });
+            return response;
+        };
+        this.setcmd = function(action, type, json) {
+            var response = $http.post(Appname + "/commentset/", {
+                params: {
+                    "action": action,
+                    "type": type,
+                    "json": json
+                }
+            });
+            return response;
+        };
+        this.getclient = function(client_gid) {
+            var response = $http.get(Appname + "/client_get/", {
+                params: {
+                    "client_gid": client_gid
+                }
+            });
+            return response;
+        }
+    });
+
+
+
+</script>
+{% endblock %}

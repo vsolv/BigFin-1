@@ -1,0 +1,425 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Intra Integrity Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appintegrity" ng-controller="Ctrlintegrity" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Intra Integrity Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Entry Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-open-on-focus
+                                       ng-model="entrydate"></md-datepicker>
+                    </md-input-container>
+                </div>
+                 <div class="col-md-2">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Module Name"
+                            md-input-maxlength=126
+                            md-item-text="item.metadata_value"
+                            md-items="item in gettemplate(searchTex)"
+                            md-min-length=0
+                            md-search-text="searchTex"
+                            md-selected-item="selectedItem"
+                            md-selected-item-change="modulegrpChange(item)"
+                            placeholder="Module Name">
+                        <md-item-template>
+                            <span md-highlight-text="searchTex"> {{item.metadata_value}}</span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Module Name matching "{{searchTex}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                      <div class="col-md-2 text-center">
+                    <md-button class="md-raised custbutton" ng-click="pushdatas()" ng-disabled="shwautoknck"
+                               value="submit">
+                       PUSH
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-lg-12 col-sm-12">
+                            <h4>Source Level Summary</h4>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                               md-progress="deferred">
+                            <thead class="header">
+                            <tr>
+                                <th>S.No</th>
+                                <th>Entry GL</th>
+                                <th>Transaction Date</th>
+                                <th>Module</th>
+                                <th>Amount</th>
+                                <th>Select</br>
+                                <input ng-click="selectAll()" ng-model="source.allItemsSelected" type="checkbox"></th>
+                            </tr>
+                            </thead>
+                            <tbody ng-init="totall = 0">
+                            <tr ng-style = "{color: src.colors}" ng-class="{selected: src.isChecked}"
+                                ng-repeat="src in source.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                                <td>
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td>{{src.intsource_refno}}</td>
+                                <td>{{src.entry_transactiondate | date:'dd-MMM-yyyy'}}</td>
+                                <td>{{src.intsource_desc}}</td>
+                                <td>{{src.intsource_amount}}</td>
+                                <td>{{src.intsource_exceptionamt}}</td>
+                                <td class="text-center"><input ng-change="filtersearch(src)" ng-click="selectEntity(src)"
+                                                       ng-model="src.isChecked"
+                                                       type="checkbox"></td>
+                            </tr>
+                            <tr ng-show="source.length == undefined || 0">
+                                <td class="warning" colspan="11">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="3">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage" max-size="maxSize"
+                                        ng-model="currentPage" total-items="source.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <td colspan="4">
+                                    Total Count:{{source.length}}<br>
+                                    Total Sum:<span>{{sum}}</span>
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-lg-12 col-sm-12">
+                            <h4>Destination Level Summary</h4>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                               md-progress="deferred">
+                            <thead class="header">
+                            <th>S.No</th>
+                            <th>Invoice Number</th>
+                            <th>Invoice Date</th>
+                            <th>Debit Gl</th>
+                            <th>Debit Amount</th>
+                            <th>Credit Gl</th>
+                            <th>Credit Amount</th>
+                            <th>Select</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-style ="{color: dest.colors }" ng-class="{selected: dest.isCheckd}"
+                                ng-repeat="dest in destination.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))">
+                                <td>
+                                    <center>{{((currentPag-1)*itemsPerPag)+$index+1}}</center>
+                                </td>
+                                <td>{{dest.intdestination_refno}}</td>
+                                <td>{{dest.invoiceheader_invoicedate |date:'dd-MMM-yyyy'}}</td>
+                                <td>{{dest.intdestination_desc}}</td>
+                                <td>{{dest.intdestination_amount}}</td>
+                                <td>{{dest.intdestination_exceptionamt}}</td>
+                                <td  class="text-right">{{dest.credit_amount | number}}</td>
+                                <td class="text-center"><input ng-click="selectEntiy(dest)"
+                                                               ng-model="dest.isCheckd"
+                                                               type="checkbox"
+                                ></td>
+                            </tr>
+                            <tr ng-show="destination.length == undefined || 0">
+                                <td class="warning" colspan="6">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="4">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPag" max-size="maxSiz"
+                                        ng-model="currentPag" total-items="destination.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <td colspan="2">
+                                    Total Count:{{destination.length}}
+                                    Total Sum:<span style="color:colrs">{{sumrght}}</span>
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                      <div class="col-md-12 text-center">
+                    <md-button class="md-raised custbutton" ng-click="manualknockoff()"
+                               ng-disabled="createform.$invalid"
+                               ng-if="!custgrp_update"
+                               value="submit">
+                        Manual Knock off
+                    </md-button>
+                    <md-button class="md-raised custbutton" ng-click="autoknockoff()" ng-disabled="shwautoknck"
+                               value="submit">
+                        Auto Knock off
+                    </md-button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appintegrity', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+  myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+    myApp.controller('Ctrlintegrity', ['$scope', 'testService', '$mdDialog', '$window', '$filter', '$element',function($scope, testService, $mdDialog, $window, $filter,$element) {
+          $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.currentPag = 1;
+        $scope.maxSiz = 3;
+        $scope.itemsPerPag = 10;
+        $scope.entrydate = new Date();
+
+        $scope.pushdatas = function(){
+        debugger;
+           var data = {
+           "params":{
+           "CLASSIFICATION":{
+                    "Entity_Gid": [1]},
+                    "DATA":{"Module_id":''+$scope.selectedItem.metadata_gid+'',
+                    "Module_date":formatStringDate($scope.entrydate, 'yyyy-mm-dd')
+                    },
+                    "FILE":{}}}
+         var data_int = {
+            Group: 'INTEGRITY_PUSHDATA',
+            Action: 'INSERT',
+            Type: 'Exceldumb_source',
+            data : data
+        };
+    pushdatas(data_int)
+        }
+
+          function pushdatas(data_int) {
+        var overalldtl = testService.gethosmry(data_int);
+        overalldtl.then(function(res) {
+        debugger;
+                $scope.destinion = res.data.MESSAGE;
+                if($scope.destinion == 'SUCCESS'){
+                alert($scope.destinion);
+                }
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+        }
+
+        $scope.manualknockoff = function(){
+        debugger;
+        var mapping = [];
+            for(i=0;i<$scope.source.length;i++){
+            srcrefnum = $scope.source[i].intsource_refno;
+                for(j=0;j<$scope.destination.length;j++){
+                destrefnum = $scope.destination[j].intdestination_refno;
+                if(($scope.source[i].isChecked == true)&&($scope.destination[j].isCheckd == true)){
+                    if(srcrefnum == destrefnum){
+                    src_gid = $scope.source[i].intsource_gid;
+                    dest_gid = $scope.destination[j].intdestination_gid;
+                    datas = {
+                    "src_gid":src_gid,
+                    "dest_gid":dest_gid
+                    }
+                    mapping.push(datas)
+                    }
+                    }
+                }
+            }
+
+              var data = {
+           "params":{
+           "CLASSIFICATION":{
+                    "Entity_Gid": [1]},
+                    "DATA":{"MAPPINGDATA":mapping},
+                    "FILE":{}}}
+         var data_int = {
+            Group: 'INTEGRITY_PUSHDATA',
+            Action: 'Insert',
+            Type: 'Integrity_Mapping',
+            data : data
+        };
+    pushdatas(data_int)
+        }
+
+        $scope.filtersearch = function(e){
+        debugger;
+            var src_refnum = e.intsource_refno;
+            var src_amnt = e.intsource_amount;
+            for(i=0;i<$scope.destination.length;i++){
+            dest_refnum = $scope.destination[i].intdestination_refno;
+            if(e.isChecked == true){
+                if(src_refnum == dest_refnum){
+                $scope.destination[i].isCheckd = true;
+                }
+                }
+                else if(e.isChecked == false){
+                 $scope.destination[i].isCheckd = false;
+
+                }
+            }
+        }
+
+        $scope.autoknockoff = function(){
+            debugger;
+            for(i=0;i<$scope.source.length;i++){
+            }
+        }
+
+       var data = {
+           "params":{
+           "Classification":{
+                    "Entity_Gid": [1]},
+                    "Filter":'{}'
+                    }}
+         var data_int = {
+            Type: 'DESTINATION',
+            Group: 'INTEGRITY_SUMMARY',
+            Sub_Type:'',
+            data : data
+        };
+        loadhodetail(data_int);
+        var data_int1 = {
+            Type: 'SOURCE',
+            Group: 'INTEGRITY_SUMMARY',
+            Sub_Type:'',
+            data : data
+        };
+        loadhodetail1(data_int1);
+
+    function loadhodetail(data_int) {
+        var overalldtl = testService.gethosmry(data_int);
+        overalldtl.then(function(res) {
+                $scope.destination = res.data;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    function loadhodetail1(data_int) {
+        var overalldtl = testService.gethosmry(data_int);
+        overalldtl.then(function(res) {
+                $scope.source = res.data;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+
+        var dat = {
+        "Table_name": "gal_mst_tmetadata",
+        "Column_1": "metadata_gid,metadata_value",
+        "Column_2": "",
+        "Where_Common": "metadata",
+        "Where_Primary": "columnname",
+        "Primary_Value": "templateheader_modulename",
+        "Order_by": "value"
+    }
+    var datas = {
+        Action: "",
+        Entity_Gid: 1,
+        data: dat
+    }
+    var getpartnerstatus = testService.getmetadata(datas)
+    getpartnerstatus.then(function (result) {
+        debugger;
+        $scope.modulename = result.data.DATA;
+    },
+    function (err) {
+        alert('No data!.');
+    }).finally();
+
+$scope.gettemplate = gototemplateget;
+    function gototemplateget(query) {
+        var result = $filter('filter')($scope.modulename, {
+            'metadata_value': query
+        });
+        return result;
+    }
+
+    $scope.autoknockoff = function(){
+    debugger;
+        for(i=0;i<$scope.hosmry.length;i++){
+            if($scope.hosmry[i].entry_gl > 0){
+            entry_gl = $scope.hosmry[i].entry_gl;
+            entry_amnt = $scope.hosmry[i].entry_amt;
+            }
+            for(j=0;j<$scope.bnkdet.length;j++){
+                if(($scope.bnkdet[j].credit_glno > 0)|| ($scope.bnkdet[j].debit_glno > 0)){
+                credit_gl = $scope.bnkdet[j].credit_glno;
+                credit_amt = $scope.bnkdet[j].credit_amount;
+                debit_gl = $scope.bnkdet[j].debit_glno;
+                debit_amt = $scope.bnkdet[j].debit_amount;
+                if((entry_gl == credit_gl)&&(entry_amnt == credit_amt)){
+                $scope.hosmry[i].colors = "green";
+                $scope.bnkdet[j].colors = "green";
+                }
+                if((entry_gl == debit_gl)&&(entry_amnt == debit_amt)){
+                $scope.hosmry[i].colors = "red";
+                $scope.bnkdet[j].colors = "red";
+                }
+                }
+            }
+        }
+    }
+
+    }]);
+    myApp.service("testService", function($http) {
+    this.gethosmry = function(custid) {
+        var respons = $http.post(Appname + "/mainentryget/",
+            custid
+        );
+        return respons;
+    }
+        this.pushdata = function(custid) {
+        var respons = $http.post(Appname + "/excelgen1/",
+            custid
+        );
+        return respons;
+    }
+        this.getmetadata = function(get_data) {
+        var response = $http.post(Appname + "/prodget/", get_data);
+        return response;
+    }
+    });
+
+</script>
+{% endblock %}

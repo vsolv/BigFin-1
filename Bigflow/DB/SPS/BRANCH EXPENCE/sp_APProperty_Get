@@ -1,0 +1,105 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APProperty_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024)
+)
+sp_APExpense_Get:BEGIN
+### Selva sep 19 2019
+## Type EXPENSE
+### SUb Type  =  COLUMN
+##
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare Query_Search1 varchar(1024);
+Declare i int;
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+declare Entity_Gid int;
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+if ls_Type = 'PROPERTY' and ls_Sub_Type = 'SUMMARY' then
+	    
+       
+		
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  ### GET By SIngle Product
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.status'))) into @property_status ;  ### GET By SIngle Product
+		Select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid ;
+      # select @property_status,@Entity_Gid;
+        set Query_Search = '';
+       # select 1;
+					if @property_gid is not null and  @property_gid <> 0 and @property_gid <> '' then
+							set Query_Search = concat(Query_Search,'and a.property_gid = ',@property_gid,' ');
+					End if;
+					
+					if @property_status <> '' then
+                   # select 45;
+							set Query_Search = concat(Query_Search,'and a.property_status = ''',@property_status,''' ');
+					End if;
+        # select Query_Search;           
+		set Query_Select = '';
+        set Query_Select = concat( 'SELECT property_landmark,address_gid,a.property_inchargegid,a.property_alternativeinchargegid,a.Property_controlby,a.property_gid,b.employee_name as inchargename
+                ,c.employee_name as alternativeincharge
+                ,e.employee_name as controlbyname,property_code,property_name,property_type,property_controloffice,property_status,property_remarks
+                ,address_1,address_2,address_3,address_pincode,address_district_gid,address_city_gid,address_state_gid,
+                (select concat(''['',group_concat(JSON_OBJECT(''branch_name'',branch_name,''branch_code'',branch_code )),'']'')from ap_map_tpropertybranch 
+                                                         inner join gal_mst_tbranch on propertybranch_branchgid = branch_gid and propertybranch_isactive = ''Y'' where propertybranch_propertygid = property_gid ) as propmap
+                FROM ap_mst_tproperty as a
+               left join gal_mst_temployee as b on a.property_inchargegid = b.employee_gid and b.employee_isremoved = ''N'' and b.employee_isactive =''Y''
+               left join gal_mst_temployee as c on a.property_alternativeinchargegid = c.employee_gid and c.employee_isremoved = ''N'' and c.employee_isactive =''Y''
+               left join gal_mst_taddress as d on d.address_gid = a.property_addressgid
+               left join gal_mst_temployee as e on a.Property_controlby =  e.employee_gid and e.employee_isremoved = ''N'' and e.employee_isactive =''Y''  	
+                  where a.entity_gid in (',@Entity_Gid,') ',Query_Search,' ');
+							set @Query_Select = Query_Select;									                
+								#select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								Select found_rows() into li_count;
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else
+									set Message = 'NOT_FOUND';
+							  end if;
+ elseif ls_Type = 'GET' and ls_Sub_Type = 'PROPERTY_BRANCH_MAPPING' then
+	##tamiloli 06/01/20	
+       #SELECT 1;
+       
+		Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  ### GET By SIngle Product
+		Select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid ;  ### GET By SIngle Product
+        #SELECT @property_gid;
+        
+        set @GID='';  
+	select group_concat(propertybranch_propertygid ) into @GID  from ap_map_tpropertybranch where propertybranch_propertygid=@property_gid ;
+        #select @GID;    
+              
+              if @GID='' or @GID is null then
+                 set message='PROPERTY_GID_NOT_FOUND';
+                 leave sp_APExpense_Get;
+               end if;
+        set Query_Select = '';
+		set Query_Select=concat('select branch_gid,branch_name,branch_stdcode
+								from ap_map_tpropertybranch a
+								inner join gal_mst_tbranch b on a.propertybranch_branchgid=b.branch_gid and
+                                    a.propertybranch_isactive=''Y'' and a.propertybranch_isremoved=''N'' and
+                                    b.branch_isactive=''Y'' and b.branch_isremoved=''N'' 
+								inner join ap_mst_tproperty c on a.propertybranch_propertygid=c.property_gid
+								where propertybranch_propertygid in (',@property_gid,') and
+                                 a.entity_gid in (',@Entity_Gid,')');
+        set @p = Query_Select;									                
+		#select @p; ### Remove It
+		PREPARE stmt FROM @p;
+		EXECUTE stmt;
+		Select found_rows() into li_count;
+			  if li_count > 0 then
+					set Message = 'FOUND';
+			  else
+					set Message = 'NOT_FOUND';
+			  end if;
+End if;
+END

@@ -1,0 +1,918 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Dealer Price Maker{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dealrmkr" ng-cloak ng-controller="Ctrldealr">
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="mdl1_present"
+             role="dialog" tabindex="-1">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            Update Details
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!--Leave details-->
+                            <form name="myFor">
+                                <div class="col-xs-12">
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer" ng-disabled="true">
+                                            <label>State Name</label>
+                                            <md-select md-container-class="popup_select" name="cname"
+                                                       ng-model="namestat" ng-disabled="true" required>
+                                                <md-option><em>--Select--</em></md-option>
+                                                <md-option
+                                                           ng-repeat="st in statesmry" ng-value="st.state_gid" ng-disabled="true"
+
+                                                >
+                                                    {{ st.state_name }}
+                                                </md-option>
+                                            </md-select>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <div class=" col-md-6">
+                                        <md-input-container class="md-block inputcontainer" >
+                                            <label>Current Multiples</label>
+                                            <input maxlength="8" name="pckt" name="number"
+                                                   ng-model="current_multi" ng-disabled="true"
+                                                   numbers-only required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class=" col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>New Multiples</label>
+                                            <input maxlength="8" name="pckt" name="number" ng-change="newchang()"
+                                                   ng-model="newmul"
+                                                   valid-number required/>
+<!--ng-pattern="/^[0-9]+(\.[0-9]{1,2})?$/"-->
+
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Effect From</label>
+                                            <md-datepicker md-hide-icons="calendar" md-min-date="maxDate"
+                                                           md-open-on-focus
+                                                           ng-model="efctfrm" required></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Effect To</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee"
+                                                           md-min-date="efctfrm"
+                                                           md-open-on-focus ng-model="effctto" required></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div align="center" class="row">
+                        <div class="col-md-12">
+                            <md-button aria-label="Close" class="md-raised custbutton" data-dismiss="modal"
+                                       ng-click="updt()"
+                                       value="close">Update
+                            </md-button>
+                            <md-button aria-label="Close" class="md-raised" data-dismiss="modal" ng-click="cls()"
+                                       value="close">Close
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Dealer Price Maker Summary</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            </br>
+            <div class="col-md-2">
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="State Name"
+                        md-item-text="item.state_name"
+                        md-items="item in statesearch(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText1"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable"
+                >
+
+                    <md-item-template>
+                        <span md-highlight-text="searchText1"> {{item.state_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No State Name matching "{{searchText1}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-2">
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="Product"
+                        md-item-text="item.product_name"
+                        md-items="item in prodsearch(searchTex)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchTex1"
+                        md-selected-item="selectedprod"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable"
+                >
+                    <md-item-template>
+                        <span md-highlight-text="searchTex1"> {{item.product_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Product Name matching "{{searchTex1}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Valid From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                   ng-model="from_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Valid To Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                   md-open-on-focus ng-model="to_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Status</label>
+                    <md-select ng-init="ddlstatus = review_stat[1].status" ng-model="ddlstatus">
+                        <md-optgroup label="Status">
+                            <md-option ng-repeat="st in review_stat" ng-value="st.status"> {{st.status}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchsmry()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="showpop()">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+            </div>
+
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>State Name</th>
+                        <th>Product</th>
+                        <th>Valid From</th>
+                        <th>Valid To</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Select</th>
+                        <!--<br>-->
+                        <!--<input ng-click="selectAll()" ng-model="empsmry.allItemsSelected" type="checkbox"></th>-->
+                        <th>Is Active</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in empsmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.state_name }}</td>
+                        <td class="text-center">{{emp.product_name}}</td>
+                        <td class="text-center">{{emp.dealerprice_validfrom}}</td>
+                        <td class="text-center">{{emp.dealerprice_validto}}</td>
+                        <td class="text-right">{{emp.dealerprice_amount | number:2}}</td>
+                        <td class="text-center">{{emp.dealerprice_status}}</td>
+                        <td class="text-center"><input ng-click="selectEntity(emp)"
+                                                       ng-model="emp.isChecked"
+                                                       type="checkbox" ng-disabled="emp.disabl"
+                        ></td>
+                        <td class="text-center">{{emp.dealerprice_isactive}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="12">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div align="center" class="row">
+            <div class="col-md-12">
+                <div class="col-md-12">
+                    <md-button class="md-raised custbutton" ng-click="showpop1()" ng-disabled="disableupdate">Bulk
+                        Update
+                    </md-button>
+                    <md-button class="md-raised custbutton" ng-click="bulksbmt()" ng-disabled="disbulk">Bulk Submit
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'popup1'"></div>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('dealrmkr', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrldealr', ['$timeout', '$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter',
+    function($timeout, $scope, testService, $mdDialog, $rootScope, $window, $filter) {
+       var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+
+        $scope.maxDate = new Date();
+        $scope.shwall = true;
+        $scope.currentmul=false;
+        $scope.disbulk = true;
+        $scope.disableupdate = true;
+        $scope.empsmry = [];
+        $scope.showfr = false;
+        $scope.showfr1 = true;
+        $scope.reject = true;
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $rootScope.showpop = function() {
+            modalshow('mdl_present');
+        }
+
+        $rootScope.showpop1 = function() {
+
+
+            modalshow('mdl1_present');
+        }
+
+        $scope.loading();
+        loaddata();
+        loadstate();
+        loadprod();
+        $scope.endloading()
+
+        function loaddata() {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                        State_Name: "",
+                        Product_Name: "",
+                        Valid_From: "",
+                        Valid_To: "",
+                        Status: 'APPROVED'
+                    },
+                    "CLASSIFICATION": {
+                        "entity_gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var data_int = {
+                Sub_Type: 'SUMMARY_APPROVED',
+                Type: 'SUMMARY',
+                Group: 'SUMMARY',
+                Employee_Gid: $scope.employgid,
+                Limit: 1500,
+                data: data
+            };
+            dealrprcesmry(data_int);
+        }
+
+        function dealrprcesmry(data_int) {
+            var get_employ = testService.getprcesmry(data_int)
+            get_employ.then(function(result) {
+                    $scope.maintable = result.data.DATA;
+                    $scope.empsmry = $scope.maintable
+                    for(i=0;i<$scope.empsmry.length;i++){
+                    if($scope.empsmry[i].dealerprice_statepricegid > 0){
+                    $scope.empsmry[i].disabl = false;
+                    }
+                    }
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.empsmry.length;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        $scope.statesearch = gotostate;
+        $scope.prodsearch = gotoprod;
+        $scope.product_Search = gotoproduct;
+
+        function gotostate(query) {
+            var result = $filter('filter')($scope.statesmry, {
+                'state_name': query
+            });
+            return result;
+        }
+
+        function gotoprod(query) {
+            var result = $filter('filter')($scope.prodnmee, {
+                'product_name': query
+            });
+            return result;
+        }
+
+        function gotoproduct(query) {
+            var result = $filter('filter')($scope.prodget, {
+                'product_displayname': query
+            });
+            return result;
+        }
+
+        function loadstate() {
+            var data = {
+                "Parms": {
+                    "Classification": {
+                        entity_gid: [$scope.entity_gid]
+                    },
+                    "Filter": {
+                        State_gid: ""
+                    }
+                }
+            }
+
+            var data_in = {
+                Subtype: 'MAKER',
+                Type: 'DDL',
+                Emp_Gid: $scope.employgid,
+                data: data
+            };
+            getstatenme(data_in);
+        }
+
+        function getstatenme(data_in) {
+            var get_state = testService.getstate(data_in)
+            get_state.then(function(result) {
+
+                    $scope.statesmry = result.data.DATA;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        function loadprod() {
+            var data = {
+                Table_name: 'gal_mst_tproduct',
+                Column_1: 'product_gid,product_name,product_displayname,product_unitprice',
+                Column_2: '',
+                Where_Common: 'product',
+                Where_Primary: 'tradingitem',
+                Primary_Value: 'Y',
+                Order_by: 'producttype_gid'
+            }
+
+            var data_prod = {
+                Action: '',
+                Entity_Gid: $scope.entity_gid,
+                data: data
+            };
+            getprodname(data_prod);
+        }
+
+        function getprodname(data_prod) {
+            var get_state = testService.getprod(data_prod)
+            get_state.then(function(result) {
+                    $scope.prodget = result.data.DATA;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        $scope.add = [];
+        $scope.clkstat = function(e) {
+            $scope.statgid = e.stateprice_gid;
+            $scope.statprc = e.stateprice_multiples;
+            if ($scope.prodprc > 0) {
+                $scope.add.rate = (($scope.statprc) * ($scope.prodprc));
+                $scope.add.additnl = '';
+            }
+        }
+
+        $scope.clkprod = function(e) {
+            $scope.prodgid = e.product_gid;
+            $scope.prodprc = e.product_unitprice;
+            $scope.add.rate = (($scope.statprc) * ($scope.prodprc));
+            $scope.add.additnl = '';
+        }
+
+        $scope.chngatl = function(add) {
+
+        if(parseFloat($scope.add.additnl)<-100.00)
+        {
+        alert("additional % is exceeding the maximum percentage");
+        $scope.add.prceamout='';
+        }
+        else if(parseFloat($scope.add.additnl)<=100.00)
+        {
+              $scope.add.prceamout = ((parseFloat($scope.add.rate) * parseFloat($scope.add.additnl)) / 100) + $scope.add.rate;
+            $scope.add.prceamout=$scope.add.prceamout.toFixed(2);
+        }
+        else if(parseFloat($scope.add.additnl)>100.00)
+        {
+        $scope.add.prceamout='';
+        alert("additional % is exceeding the maximum percentage")
+        }
+        else
+        {
+        $scope.add.prceamout='';
+        }
+
+        }
+
+        $scope.dealerprice=function(add)
+        {
+
+        if(parseFloat($scope.add.prceamout)>parseFloat($scope.add.rate))
+            {
+            $scope.greater=(parseFloat($scope.add.prceamout)-parseFloat($scope.add.rate))*100 /
+            $scope.add.rate;
+                if(parseFloat($scope.greater)>100.00)
+                {
+                 alert("Dealer Price Amount is exceeding 100% in additional percentage");
+                 $scope.add.additnl='';
+                }
+                else
+                {
+                $scope.add.additnl=$scope.greater.toFixed(2);
+                }
+
+
+            }
+        else if(parseFloat($scope.add.prceamout)<parseFloat($scope.add.rate))
+            {
+            $scope.smaller=(parseFloat($scope.add.rate)-parseFloat($scope.add.prceamout))*100/
+            $scope.add.rate;
+            $scope.add.additnl=-$scope.smaller.toFixed(2);
+
+            //alert(JSON.stringify(-$scope.smaller));
+            }
+        else if(parseFloat($scope.add.prceamout)==parseFloat($scope.add.rate)) {
+              $scope.equal=(parseFloat($scope.add.prceamout)-parseFloat($scope.add.prceamout))*100/
+              $scope.add.rate;
+              $scope.add.additnl= $scope.equal;
+
+              //alert(JSON.stringify($scope.equal));
+             }
+        else if($scope.add.prceamout == undefined)
+             {
+             $scope.add.additnl='';
+             }
+
+
+        }
+
+        $scope.review_status = [{
+            status: "YES",
+            value: 'Y'
+        }, {
+            status: "NO",
+            value: 'N'
+        }]
+
+        $scope.review_stat = [{
+            status: "REJECTED",
+            value: 'REJECTED'
+        }, {
+            status: "APPROVED",
+            value: 'APPROVED'
+        }
+        ]
+
+        $scope.searchsmry = function() {
+        $scope.loading();
+            if ($scope.selectedItem !== null) {
+                $scope.statenme = $scope.selectedItem.state_name;
+            } else {
+                $scope.statenme = "";
+            }
+            if ($scope.selectedprod !== null) {
+                $scope.prodname = $scope.selectedprod.product_name;
+            } else
+            {
+                $scope.prodname = "";
+            }
+
+            if ($scope.from_date == undefined && $scope.to_date == undefined) {
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            State_Name: $scope.statenme,
+                            Product_Name: $scope.prodname,
+                            Valid_From: '',
+                            Valid_To: '',
+                            Status: $scope.ddlstatus
+                        },
+                        "CLASSIFICATION": {
+                            "entity_gid": [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.from_date != undefined && $scope.to_date == undefined) {
+                $scope.to_date = new Date();
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            State_Name: $scope.statenme,
+                            Product_Name: $scope.prodname,
+                            Valid_From: formatStringDate($scope.from_date, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.to_date, 'yyyy-mm-dd'),
+                            Status: $scope.ddlstatus
+                        },
+                        "CLASSIFICATION": {
+                            "entity_gid": [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.to_date != undefined && $scope.from_date != undefined) {
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            State_Name: $scope.statenme,
+                            Product_Name: $scope.prodname,
+                            Valid_From: formatStringDate($scope.from_date, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.to_date, 'yyyy-mm-dd'),
+                            Status: $scope.ddlstatus
+                        },
+                        "CLASSIFICATION": {
+                            "entity_gid": [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.to_date != undefined && $scope.from_date == undefined) {
+                $scope.from_date = $scope.to_date;
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            State_Name: $scope.statenme,
+                            Product_Name: $scope.prodname,
+                            Valid_From: formatStringDate($scope.from_date, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.to_date, 'yyyy-mm-dd'),
+                            Status: $scope.ddlstatus
+                        },
+                        "CLASSIFICATION": {
+                            "entity_gid": [$scope.entity_gid]
+                        }
+                    }
+                }
+            }
+
+            var data_int = {
+                Sub_Type: 'SUMMARY_APPROVED',
+                Type: 'SUMMARY',
+                Group: 'SUMMARY',
+                Employee_Gid: $scope.employgid,
+                Limit: 1500,
+                data: data
+            };
+            dealrprcesmry(data_int);
+            $scope.endloading();
+        }
+
+        $scope.sbmitdet = function(add) {
+            if ($scope.add.rate == 0) {
+                alert("Your Selected State Name Has 0 Rate");
+                return false;
+            }
+
+            var data = {
+                "Params": {
+                    "DATA": {
+                        "DEALER_PRICE": [{
+                            Stateprice_Gid: $scope.statgid,
+                            Product_Gid: $scope.prodgid,
+                            Rate: parseFloat($scope.add.rate).toFixed(2),
+                            Additional_Value: parseFloat($scope.add.additnl).toFixed(2),
+                            Amount: parseFloat($scope.add.prceamout).toFixed(2),
+                            Status: 'PENDING',
+                            Remarks: '',
+                            Valid_From: formatStringDate(add.valdfrmdte, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate(add.valdtodate, 'yyyy-mm-dd'),
+                            Is_Active: $scope.add.actve,
+                        }]
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var datain = {
+                Group: 'MAKER',
+                Action: 'Insert',
+                Type: 'INITIAL',
+                Employee_Gid: $scope.employgid,
+                data: data
+            }
+            setpop(datain)
+        }
+
+        function setpop(datain) {
+            var set_state = testService.getprcesmry(datain)
+            set_state.then(function(result) {
+                    $scope.prodge = result.data.MESSAGE;
+                    if ($scope.prodge == "SUCCESS") {
+                        alert($scope.prodge+", data is moved to dealer approver summary");
+                        $window.location.href = "dealerpricemaker";
+                    } else {
+                        alert($scope.prodge);
+                    }
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        $scope.stateclck = function(e) {
+            $scope.crntmul = e.stateprice_multiples;
+            $scope.currentmul=true;
+
+        }
+
+        $scope.updt = function() {
+
+        $scope.temp_effect_from=$scope.efctfrm;
+        $scope.temp_effect_to=$scope.effctto;
+        $scope.loading();
+          for (var i = 0; i < $scope.empsmry.length; i++) {
+            if ($scope.empsmry[i].isChecked){
+            $scope.shwall = false;
+            $scope.shwnew = true;
+            $scope.empsmry[i].val = parseFloat($scope.newmul),
+            $scope.empsmry[i].dealerprice_status = "PENDING",
+            $scope.empsmry[i].rate = ($scope.empsmry[i].dealerprice_rate *$scope.empsmry[i].val),
+            $scope.empsmry[i].adtnl = (($scope.empsmry[i].rate*$scope.empsmry[i].dealerprice_additionalvalue)/100),
+            $scope.empsmry[i].dealerprice_amount = (($scope.empsmry[i].adtnl)+($scope.empsmry[i].rate)),
+            $scope.empsmry[i].dealerprice_validfrom=$filter('date')($scope.temp_effect_from, 'dd-MM-yyyy');
+            $scope.empsmry[i].dealerprice_validto=$filter('date')($scope.temp_effect_to, 'dd-MM-yyyy');
+            $scope.namestat = '';
+            $scope.crntmul = '';
+            $scope.efctfrm = '';
+            $scope.effctto = '';
+            $scope.myFor.$setPristine();
+            $scope.myFor.$setUntouched();
+            $scope.selectEntity();
+            $scope.endloading();
+            }
+            }
+            $scope.newmul = '';
+        }
+
+        $scope.cls = function() {
+            $scope.namestat = '';
+            $scope.crntmul = '';
+            $scope.newmul = '';
+            $scope.efctfrm = '';
+            $scope.effctto = '';
+            $scope.myFor.$setPristine();
+            $scope.myFor.$setUntouched();
+            $scope.currentmul=false;
+        }
+
+            var unique = function(origArr) {
+        var newArr = [],
+            origLen = origArr.length,
+            found, x, y;
+        for (x = 0; x < origLen; x++) {
+            found = undefined;
+            for (y = 0; y < newArr.length; y++) {
+                if (origArr[x] === newArr[y]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                newArr.push(origArr[x]);
+            }
+        }
+        return newArr;
+    }
+
+
+        $scope.selectEntity = function(data) {
+        //alert(JSON.stringify(data))
+
+            var  e =[];
+            var d= [];
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if($scope.empsmry[i].isChecked==true){
+
+                    var gid = $scope.empsmry[i].dealerprice_statepricegid;
+                    var multiples=$scope.empsmry[i].stateprice_multiples;
+                    $scope.namestat=gid;
+                    $scope.current_multi=multiples;
+                    for(var j = 0; j < $scope.empsmry.length; j++){
+                        if(gid == $scope.empsmry[j].dealerprice_statepricegid){
+                        $scope.empsmry[j].disabl = false;
+                        }
+                        else{
+                        $scope.empsmry[j].disabl = true;
+                        }
+                    }
+                }
+                if (($scope.empsmry[i].isChecked)&&($scope.empsmry[i].dealerprice_status == "APPROVED")) {
+                    $scope.disbulk = true;
+                    $scope.empsmry.allItemsSelected = false;
+                    $scope.disableupdate = false;
+                    return;
+                }
+                if (($scope.empsmry[i].isChecked)&&($scope.empsmry[i].dealerprice_status == "PENDING")) {
+                    $scope.disbulk = false;
+                    $scope.disableupdate = true;
+                    $scope.empsmry.allItemsSelected = false;
+                    return;
+                }
+                else if($scope.empsmry[i].isChecked == false){
+                    $scope.disbulk = true;
+                    $scope.disableupdate = true;
+                    $scope.empsmry.allItemsSelected = false;
+                for(var k = 0; k < $scope.empsmry.length; k++){
+                if($scope.empsmry[k].isChecked==true){
+                var chk = {chk :$scope.empsmry[i].isChecked
+                }
+               d.push(JSON.stringify(chk));
+               e = d.length
+               }
+                }
+                 if(e==0){
+               loaddata()
+               }
+                }
+            }
+    $scope.empsmry.allItemsSelected = false;
+        };
+
+
+        $scope.closepop = function() {
+            $scope.add.additnl = '';
+            $scope.add.rate = '';
+            $scope.add.statnme = '';
+            $scope.add.prodnme = '';
+            $scope.add.valdfrmdte = '';
+            $scope.add.valdtodate = '';
+            $scope.add.prceamout = '';
+            $window.location.href = "dealerpricemaker";
+        }
+
+        $scope.bulksbmt = function() {
+        $scope.loading();
+            $scope.bulky = [];
+            var data = [];
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].isChecked) {
+                    $scope.empsmry[i].dealerprice_validt = convertdate($scope.empsmry[i].dealerprice_validto);
+                    $scope.empsmry[i].dealerprice_validfro = convertdate($scope.empsmry[i].dealerprice_validfrom);
+                    data = {
+                        Stateprice_Gid: $scope.empsmry[i].dealerprice_statepricegid,
+                        Product_Gid: $scope.empsmry[i].dealerprice_productgid,
+                        Rate: parseFloat($scope.empsmry[i].rate).toFixed(2),
+                        Additional_Value: $scope.empsmry[i].adtnl,
+                        Amount: parseFloat($scope.empsmry[i].dealerprice_amount).toFixed(2),
+                        Status: 'PENDING',
+                        Remarks: '',
+                        Valid_From: formatStringDate($scope.empsmry[i].dealerprice_validfro, 'yyyy-mm-dd'),
+                        Valid_To: formatStringDate($scope.empsmry[i].dealerprice_validt, 'yyyy-mm-dd'),
+                        Is_Active: 'Y',
+                    }
+                    $scope.bulky.push(data);
+                }
+            }
+
+            var datas = {
+                "Params": {
+                    "DATA": {
+                        "DEALER_PRICE": $scope.bulky
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var datain = {
+                Group: 'MAKER',
+                Action: 'Insert',
+                Type: 'INITIAL',
+                Employee_Gid: $scope.employgid,
+                data: datas
+            }
+            setpop(datain)
+            $scope.endloading();
+        }
+
+        var get_employ = testService.getprodtfull('100', '')
+        get_employ.then(function(result) {
+                $scope.prodnmee = [];
+                $scope.prodnmee = result.data.DATA;
+                if ($scope.selectedcustgrp != undefined) {
+                    textvalue($scope.selectedcustgrp)
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+    }
+]);
+
+myApp.service("testService", function($http) {
+    this.getprcesmry = function(custid) {
+        var respons = $http.post(Appname + "/prcesmry/",
+            custid
+        );
+        return respons;
+    }
+    this.getstate = function(custid) {
+        var respons = $http.post(Appname + "/stateget/",
+            custid
+        );
+        return respons;
+    }
+    this.getprod = function(custid) {
+        var respons = $http.post(Appname + "/prodget/",
+            custid
+        );
+        return respons;
+    }
+    this.getprodtfull = function(lmt, prodnme) {
+        var response = $http.get(Appname + "/prodgett/", {
+            params: {
+                "Limit": lmt,
+                "Product_Name": prodnme
+            }
+        });
+        return response;
+    }
+});
+
+
+
+</script>
+{% endblock %}

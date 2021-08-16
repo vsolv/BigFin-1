@@ -1,0 +1,579 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Category{% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-cloak ng-controller="datectrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Category Change </h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Id</label>
+                            <input maxlength="30" ng-change="" ng-model="assetdetails_id" numbers-only
+                                   placeholder="Asset id"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Value</label>
+                            <input ng-change="" ng-model="assetdetails_value" placeholder="Asset Value"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Cap Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                           ng-change="selectdate()"
+                                           ng-model="assetdetails_cpdate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Category</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedcat"
+                                md-search-text="searchcat"
+                                md-selected-item-change="selectchange(item)"
+                                md-items="item in catsearch(searchcat)"
+                                md-item-text="item.assetcat_subcatname"
+                                md-min-length=0
+                                placeholder="Category">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Catagory matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Branch</label>
+                            <input ng-change="" ng-model="assetdetails_branch" placeholder="Branch"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th class="text-center" scope="col">Asset Transaction Id
+                        <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                    <th scope="col" class="text-center">Product Name</th>
+                    <th scope="col" class="text-center">Category</th>
+                    <th scope="col" class="text-center">Capitalization Date</th>
+                    <th scope="col" class="text-center">Asset Value</th>
+                    <th scope="col" class="text-center">Branch</th>
+                    <th scope="col" class="text-center">Location</th>
+                    <th scope="col" class="text-center">Status</th>
+                    <th class="text-center" scope="col">Select
+                        <input ng-click="selectall()"
+                               ng-model="checkall" ng-checked="checkall"
+                               type="checkbox">
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="ast in asset| orderBy:orderByField:reverseSort">
+                        <td class="text-right">
+                            <center>{{ast.index}}</center>
+                        </td>
+                        <td class="text-center" ng-click="imgshow($index)">{{ast.assetdetails_id}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.product_name}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.asset_cat_name}}
+                        </td>
+                        <td class="text-center">{{ast.assetdetails_capdate}}</td>
+                        <td class="text-right">{{ast.assetdetails_value | number :
+                            fractionSize}}
+                        </td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.branch_name}} -
+                            {{view.branch_code}}
+                        </td>
+                        <td class="text-left" ng-repeat="view in ast.lj_default_details">{{view.location_name}}</td>
+                        <td class="text-left">{{ast.assetdetails_requeststatus}}</td>
+                        <td class="text-center" style="width:10px;">
+                            <input
+                                    ng-click="selectEntity()"
+                                    ng-model="ast.isChecked" ng-checked="isChecked"
+                                    type="checkbox"> &nbsp &nbsp &nbsp
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage"
+                                ng-change="search()"
+                                total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="1">
+                            <label>Page Count:</label>
+                            <select type="text" style="width:100px;"
+                                    class="form-control" placeholder="count"
+                                    ng-model="itemsPerPage">
+                                <option ng-value="10">10</option>
+                                <option ng-value="20">20</option>
+                                <option ng-value="50">50</option>
+                                <option ng-value="100">100</option>
+                                <option ng-value="150">150</option>
+                                <option ng-value="200">200</option>
+                            </select>
+                        </td>
+                        <td colspan="1" class="text-left">
+                            <span>Total Count:<br/> <b> {{Total_Length}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div ng-show="reason">
+            <div class="col-md-3">
+            </div>
+            <div class="col-md-9">
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Category Change Reason</label>
+                            <input type="text" input maxlength="120" placeholder="Comments for Category Change "
+                                   ng-change="Check(asset_remarks)"
+                                   ng-model="asset_remarks" required/>
+                            <p ng-show="test">The Special Characters except 'Comma', 'Fullstop' and 'Exclamation Mark'
+                                not accepted.</p>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+
+<!--                        <md-input-container class="md-block inputcontainer">-->
+<!--                            <label> Category Change </label>-->
+<!--                            <md-select md-container-class="popup_select"-->
+<!--                                       ng-model="selectedItem">-->
+<!--                                <md-option ng-repeat="item in catgry"-->
+<!--                                           ng-click="acatchange_change(item.assetcat_subcatname)"-->
+<!--                                           ng-selected="item.asset_cat_gid "-->
+<!--                                           ng-value="item">{{-->
+<!--                                    item.assetcat_subcatname }}-->
+<!--                                </md-option>-->
+<!--                            </md-select>-->
+<!--                        </md-input-container>-->
+
+                           <div class="col-md-3" style="margin-top:12px">
+                        <md-autocomplete
+                                md-clear-button="true"
+                                md-input-maxlength=126
+                                md-item-text="item.assetcat_subcatname"
+                                md-items="item in querySearchs(searchbr)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-search-text="searchbr"
+                                md-selected-item="selectedbr"
+                                md-selected-item-change="acatchange_change(item)"
+                                placeholder="Category Change">
+                            <md-item-template>
+                                <span md-highlight-text="searchTe"> {{item.assetcat_subcatname}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch matching "{{searchbr}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+
+<!--                               <md-autocomplete md-item-text="item.assetcat_subcatname"-->
+<!--                                                         md-items="item in getcategory(searchText)"-->
+<!--                                                         md-min-length=0-->
+<!--                                                         md-no-cache="false"-->
+<!--                                                         md-search-text="searchText"-->
+<!--                                                         md-selected-item="selectedItem"-->
+<!--                                                         placeholder="Category"-->
+<!--                                                         required>-->
+<!--                                            <md-item-template>-->
+<!--                                                <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>-->
+<!--                                            </md-item-template>-->
+<!--                                            <md-not-found>-->
+<!--                                                No Bank Name matching "{{searchText}}" were found.-->
+<!--                                            </md-not-found>-->
+<!--                                        </md-autocomplete>-->
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <md-button class="btn btn-info custbutton" ng-click="Save(emp)"
+                           ng-disabled="enable_update">Submit
+                    <md-tooltip>Submit</md-tooltip>
+                </md-button>
+                <md-button class="md-raised" data-dismiss="modal" ng-href="fa_asset_catgry_plus">Back
+                    <md-tooltip>Close</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <!--Image start-->
+            <div ng-include="'fa_image_popup'"></div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+$scope.Check= function(x) {
+        var reg = /^[^`~@#$%\^&*()_+={}|[\]\\:';"<>?/]*$/;
+
+              if (!x.match(reg)) {
+              $scope.asset_remarks = x.substring(0, x.length-1);
+              $scope.test=true;
+
+              }
+              else
+              {
+               $scope.test=false;
+              }
+      };
+var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.get_drop_data = [];
+    $scope.drop_data =[];
+    $scope.enable_update = true;
+    var td = detail.date
+    $scope.data_len = 0;
+    $scope.cap_date = convertdate(td);
+    $scope.cpdate_change = convertdate(td);
+
+<!--    $mdDateLocale.formatDate = function(date) {-->
+<!--            return $filter('date')($scope.grndetails_recdate, "dd-MMM-yyyy");-->
+<!--      };-->
+    $scope.selectall = function () {
+        if($scope.checkall == true){
+            for (var i = 0; i < $scope.asset.length; i++) {
+			    $scope.asset[i].isChecked = true;
+			    $scope.enable_update = false;
+			    $scope.enable_reject = false;
+			    $scope.reason = true;
+		}
+		}
+		else if ($scope.checkall == false){
+            for (var i = 0; i < $scope.asset.length; i++) {
+			    $scope.asset[i].isChecked = false;
+		}
+		     $scope.enable_update = true;
+		     $scope.enable_reject = true;
+		     $scope.reason = false;
+        }
+	};
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.myfun = function(e) {
+        $scope.asset = $filter('filter')($scope.main, {
+            "assetdetails_id": e.asset_id,
+            "assetdetails_value": e.asset_value,
+            "product_name":e.asset_product,
+            "location_name": e.locationname,
+            "branch_name": e.asset_branch,
+        });
+
+
+    };
+$scope.catgry = [];
+    var get_drop = newservice.drop_data()
+        get_drop.then(function(result) {
+            $scope.catgry = result.data.DATA;
+<!--            $scope.get_drop_data = $scope.main;-->
+
+        });
+
+        $scope.loadUsers = function() {
+            return $timeout(function() {
+
+                $scope.users = $scope.get_drop_data;
+
+            }, 650);
+        };
+
+
+         $scope.querySearchs = function(e) {
+            var result = $filter('filter')($scope.catgry, {
+                'assetcat_subcatname': e
+            });
+            return result;
+        }
+<!--    $scope.getcategory = function(searchtext) {-->
+<!--            var result = $filter('filter')($scope.catgry, {-->
+<!--                'assetcat_subcatname': searchtext-->
+<!--            });-->
+<!--            return result;-->
+<!--        }-->
+
+    $scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+            }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+            }
+    }
+    $scope.selectdate = function() {
+        $scope.assetdetails_capdate = $filter('date')(new Date($scope.assetdetails_cpdate),'yyyy-MM-dd');
+    }
+    $scope.search = function() {
+        $scope.loading();
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Asset_Id": $scope.assetdetails_id,
+                    "Asset_Value": $scope.assetdetails_value,
+                    "Cap_Date": $scope.assetdetails_capdate,
+                    "Asset_Code": $scope.catagry,
+                    "Branch": $scope.assetdetails_branch,
+                    "Asset_Group":"N",
+                    "Page_Index":$scope.currentPage - 1,
+                    "Page_Size":$scope.itemsPerPage
+                },
+            }
+        };
+
+        var get_asset = newservice.asset_detail(data)
+        get_asset.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.asset = $scope.main;
+            if($scope.currentPage != 0){
+                var count = $scope.currentPage - 1;
+                count = count * $scope.itemsPerPage;
+            }
+            else{
+                count = 0;
+            }
+            for (i = 0; i < $scope.asset.length; i++) {
+                var t = i+1;
+                $scope.asset[i].index = count + t ;
+            };
+            $scope.Total_Length =$scope.asset[0].Total_Row;
+            $scope.data_len = $scope.asset.length;
+            $scope.Totalpages = Math.ceil($scope.Total_Length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.Total_Length;
+        }).finally($scope.endloading);
+
+    }
+    $scope.catsearch = gotocat;
+        function gotocat(query) {
+            var result = $filter('filter')($scope.catgry, {
+                'assetcat_subcatname': query
+            });
+            return result;
+        }
+
+$scope.selectEntity = function() {
+          $scope.asset_category = [];
+        for (var i = 0; i < $scope.asset.length; i++) {
+            if ($scope.asset[i].isChecked == true) {
+                $scope.enable_update = false;
+                $scope.reason = true;
+
+                var datas_asset_cate = ($scope.asset[i].lj_default_details[0].asset_cat_name).toString();
+                $scope.asset_category.push(datas_asset_cate);
+                 return
+            }
+            else if ($scope.asset[i].isChecked != true){
+		     $scope.enable_update = true;
+		     $scope.reason = false;
+        }
+
+        }
+    };
+$scope.imgshow = function(id){
+    if($scope.asset[id].assetdetails_imagepath != null){
+         modalshow('viewmodals');
+         $scope.asset_img =$scope.asset[id].assetdetails_imagepath;
+     }
+    }
+
+ $scope.acatchange_change = function(cat_select) {
+
+    var check_cateexists = $scope.asset_category.indexOf((cat_select.assetcat_subcatname).toString())
+           if (check_cateexists >= 0) {
+            alert('Cant Initialize Same Category Change.');
+            $scope.selectedbr = '';
+           }
+
+  }
+
+$scope.catogry_check = function() {
+        if($scope.selectedItem != undefined){
+            for (i = 0; i < $scope.asset.length; i++) {
+                if ($scope.asset[i].isChecked) {
+                   var cat_gid  =($scope.asset[i].assetcat_gid).toString();
+                     if($scope.selectedItem != cat_gid ){
+                        submit_data();
+                     }
+                     else{
+                            warning_toast(same_data,time_toast);
+                            return false;
+                    }
+                }
+            }
+        }
+        else{
+                 error_toast(not_enter_category,time_toast);
+            }
+    };
+
+
+
+$scope.Save = function(entity) {
+    if($scope.asset_remarks == undefined){
+        error_toast(not_enter_reason,time_toast);
+    }
+    else{
+        $scope.catogry_check();
+    }
+}
+function submit_data(){
+    $scope.cpdata = [];
+       for (i = 0; i < $scope.asset.length; i++) {
+            if ($scope.asset[i].isChecked) {
+                   var datas_asset =($scope.asset[i].assetdetails_gid).toString();
+                    $scope.cpdata.push(datas_asset);
+                 }
+               }
+            var data ={
+                    "Params": {
+                    "DETAILS": {
+                        "ASSET": {
+                            "Asset_Gid": $scope.cpdata,
+                            "AssetDetails_NewCat":($scope.selectedItem.assetcat_subcatname).toString(),
+                            "AssetDetails_NewCat_Gid":($scope.selectedItem.assetcat_gid).toString(),
+                            "Asset_Group_Id":""
+                            }
+                        },
+                     "CHANGE": {},
+                     "STATUS": {
+                         "Status":"TRANSFER",
+                         "Remark": ($scope.asset_remarks).toString(),
+                       },
+                }
+             }
+       $scope.main=[];
+       var datechange = newservice.catchange(data)
+        $scope.loading();
+       datechange.then(function(result) {
+                $scope.set_msg = result.data.MESSAGE;
+                if($scope.set_msg == 'SUCCESS' ){
+                    success_toast();
+                }
+                else{
+                    alert($scope.set_msg);
+                }
+
+               $window.location.href= "fa_asset_catgry_plus";
+           }).finally($scope.endloading),
+           function(err) {
+               alert('no data');
+               };
+   }
+
+
+});
+
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+        var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                "Sub_Type": "SEARCH",
+                "Type": "ASSET_DETAILS",
+                "Group": "FA_ASSET_TRAN_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+     this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+    }
+ this.catchange = function(details) {
+        var response = $http.post(Appname + "/writeoff_summary/", {
+            params: {
+               "Group": "FA_ASSET_TRAN",
+               "Action": "UPDATE",
+               "Type": "ASSET_CAT",
+               "Sub_Type": "MAKER",
+               "json": details,
+            }
+        });
+        return response;
+    }
+    this.asset_filter = function(filter) {
+        var response = $http.post("", {
+            params: {
+
+                "json": filter,
+
+            }
+        });
+
+        return response;
+    }
+});
+<!--Test 1 nov 16-->
+</script>
+{% endblock %}

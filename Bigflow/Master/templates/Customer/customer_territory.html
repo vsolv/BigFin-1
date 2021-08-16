@@ -1,0 +1,193 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Territory {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appterritry" ng-controller="Ctrlterritry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong>Territory </strong></h4>
+            </div>
+        </div>
+        <div class="row" ng-repeat="det in cluster_details">
+            <div class="col-md-6" ng-if="showindex($index)">
+                <md-subheader class="md-primary">{{det.hierarchy_layer}}</md-subheader>
+                <div style="padding-top:2px;">
+                    <md-radio-group ng-model="det.rbtncluster" class="md-primary" ng-change="rbtnChange($index,det)">
+                        <md-radio-button ng-show="cluster.childshow"  ng-repeat="cluster in det.clustlist" ng-value="cluster.cluster_gid"
+                                         aria-label="{{ cluster.cluster_name }}">
+                            {{cluster.cluster_name}}
+                        </md-radio-button>
+                        <md-radio-button value="0">ADD {{det.hierarchy_layer}}</md-radio-button>
+                    </md-radio-group>
+                </div>
+            </div>
+            <div ng-show="det.isEdit" class="col-md-6">
+                <form name="formCluster">
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Enter {{det.hierarchy_layer}}</label>
+                            <input type="text" no-special-char ng-model="det.txtClustername" name="cluster" required/>
+                        </md-input-container>
+                    </div>
+                    <md-button class="md-icon-button" aria-label="Share" ng-disabled="formCluster.$invalid">
+                        <md-icon class="material-icons editlink" ng-click="savecluster($index,det)">done
+                        </md-icon>
+                        <md-tooltip>Approve</md-tooltip>
+                    </md-button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('Appterritry', ['ngMaterial']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+myApp.directive('noSpecialChar', function() {
+    return {
+      require: 'ngModel',
+      restrict: 'A',
+      link: function(scope, element, attrs, modelCtrl) {
+        modelCtrl.$parsers.push(function(inputValue) {
+          if (inputValue == undefined)
+            return ''
+          cleanInputValue = inputValue.replace(/[^\w\s]/gi, '');
+          if (cleanInputValue != inputValue) {
+            modelCtrl.$setViewValue(cleanInputValue);
+            modelCtrl.$render();
+          }
+          return cleanInputValue;
+        });
+      }
+    }
+  });
+myApp.controller('Ctrlterritry', ['$scope', 'teritoryService','$filter', function($scope, teritoryService,$filter) {
+    $scope.cluster_details = [];
+
+    var territory = teritoryService.getcluster()
+        territory.then(function(result) {
+        $scope.cluster_details =result.data;
+        $scope.copyDetails = result.data;
+
+    },function() {
+        alert('No data!.');
+    }).finally();
+
+    $scope.showindex = function(index){
+        if(index == 0)
+        {
+            angular.forEach($scope.cluster_details[index].clustlist, function(user) {
+            user.childshow=true;
+        });
+           return true;
+        }
+        else if($scope.cluster_details[index-1].rbtncluster && $scope.cluster_details[index-1].rbtncluster > 0)
+        {
+            return true;
+        }
+            $scope.cluster_details[index].rbtncluster=null;
+            $scope.cluster_details[index].isEdit=false;
+            angular.forEach($scope.cluster_details[index].clustlist, function(user) {
+                user.childshow=false;
+            });
+
+        return false;
+
+    }
+
+    $scope.rbtnChange=function(index,t,copyDetails){
+         var parent_gid=0;
+         if(t.rbtncluster==0){
+            if (index == 0){
+                clearTextbox(index);
+                $scope.cluster_details[index].isEdit=true;
+                return false;
+            }
+            else{
+                parent_gid=$scope.cluster_details[index-1].rbtncluster;
+                if(!parent_gid || parent_gid == 0)
+                {
+                    $scope.cluster_details[index].rbtncluster=null;
+                    alert('Please select Parent Details!.');
+                    return false;
+                }
+                else
+                {
+                clearTextbox(index);
+                $scope.cluster_details[index].isEdit=true;
+                return false;
+                }
+            }
+        }
+        else{
+
+                clearTextbox(index);
+                $scope.cluster_details[index].isEdit=false;
+                var custer_gid=$scope.cluster_details[index].rbtncluster
+
+                angular.forEach($scope.cluster_details[index+1].clustlist, function(user) {
+                 if(user.cluster_parent_gid==custer_gid){
+                    user.childshow=true;
+                 }else{
+                   user.childshow=false;
+                 }
+
+                });
+            return false;
+        }
+    };
+
+    function clearTextbox(index){
+        $scope.cluster_details[index].txtClustername='';
+    }
+
+    $scope.savecluster=function(index,details){
+        var parent_gid=0;
+        if(index>0){
+            parent_gid=$scope.cluster_details[index-1].rbtncluster;
+        }
+
+        var savecluster=teritoryService.set_cluster('INSERT',details.rbtncluster
+            ,details.txtClustername,parent_gid,details.hierarchy_gid);
+        savecluster.then(function(res){
+            if(res.data>0){
+                $scope.cluster_details[index].clustlist.push({cluster_code:'',cluster_gid:res.data,cluster_name:details.txtClustername,cluster_parent_gid:parent_gid})
+                alert('Saved Successfully!.')
+                $scope.cluster_details[index].isEdit=false;
+                $scope.cluster_details[index].rbtncluster=null;
+            }else{
+                alert('Not saved successfully!.');
+            }
+        },function(err){
+            alert('Not saved successfully!.');
+        }).finally();
+    };
+
+}]);
+myApp.service("teritoryService", function($http) {
+        this.getcluster = function(c) {
+            var response = $http.get(Appname + "/getclusterdtl/");
+            return response;
+        }
+        this.set_cluster = function(action, gid, name, pgid, hgid) {
+            var response = $http.post(Appname + "/set_cluster/", {
+                parms: {
+                    "action": action,
+                    "li_clus_gid": gid,
+                    "ls_clus_name": name,
+                    "li_parent_gid": pgid,
+                    "li_hierarchy_gid": hgid
+                }
+            });
+            return response;
+        }
+});
+
+
+
+</script>
+{% endblock %}

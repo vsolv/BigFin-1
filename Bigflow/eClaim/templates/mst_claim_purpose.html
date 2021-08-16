@@ -1,0 +1,365 @@
+ {% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Claim Purpose{% endblock %}
+{% block content %}
+{% verbatim %}
+<style>
+ .md-virtual-repeat-container {
+  width: 300px;
+}
+    @media screen {
+  #printSection {
+      display: none;
+  }
+}
+@media print {
+  body * {
+    visibility:hidden;
+  }
+  #printSection, #printSection * {
+    visibility:visible;
+  }
+  #printSection {
+    position:absolute;
+    left:0;
+    top:0;
+  }
+}
+</style>
+<div class="maincontent">
+    <div class="container container1" ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <div>
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>Claim Purpose Master</h4>
+                </div>
+            </div>
+            <div class="row" class="col-md-12">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Purpose Name</label>
+                                <input maxlength="30" ng-change="myfun()" ng-model="purpose_name"
+                                       placeholder="Purpose Name"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Purpose Code</label>
+                                <input maxlength="30" ng-change="myfun()" ng-model="purpose_code"
+                                       placeholder="Purpose Code"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-button class="md-fab md-mini md-primary custbutton" ng-click="add_purpose()">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Add Purpose</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive ">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col">Purpose Code</th>
+                        <th class="text-center" scope="col">Purpose Name</th>
+                        <th class="text-center" scope="col">Action</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="eclaim in eClaim_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{eclaim.tourrequestreason_code}}</td>
+                            <td class="text-center">{{eclaim.tourrequestreason_name}}</td>
+                            <td class="text-center" ng-click="edit_pupose(eclaim)">
+                                <a href=""><i class="material-icons">
+                                    edit
+                                </i></a>
+                        </tr>
+                        <tr ng-show="data_len ==  0">
+                            <td class="warning" colspan="17">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="pageLength"
+                                    uib-pagination></ul>
+                            </td>
+                            <td class="text-left" colspan="1">
+                                <span>Total Count:<br/> <b class="text-centre"> {{pageLength}}</b></span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <!-- Add eClaim-->
+            <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+                 data-keyboard="false"
+                 id="addpurpose" role="dialog"
+                 style="height:auto;width:100%" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel">
+                                    <strong>Add Claim Purpose</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <form name="demoForm" novalidate>
+                                    <md-subheader class="md-accent">Purpose</md-subheader>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="col-md-3">
+                                                <md-input-container class="md-block inputcontainer">
+                                                    <label> Purpose Code</label>
+                                                    <input maxlength="6" ng-change="" ng-model="eclaim.purpose_code"
+                                                           placeholder="Purpose Code"
+                                                           type="text"/>
+                                                </md-input-container>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <md-input-container class="md-block inputcontainer">
+                                                    <label>Purpose Name</label>
+                                                    <input maxlength="30" ng-change="" ng-model="eclaim.purpose_name"
+                                                           placeholder="Purpose Name"
+                                                           type="text"/>
+                                                </md-input-container>
+                                            </div>
+                                            <div ng-show="only_update">
+                                                <div class="col-md-2" style="margin-top:3px;">
+                                                    <p>Purpose : Is_Active
+                                                        <span class="radioValue"
+                                                              ng-if="eclaim.active == 'Y' ? color='green':color='red'"
+                                                              style="color:{{color}}">
+                                                 <b>'{{eclaim.active}}'</b>
+                                                </span>
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-1">
+                                                    <md-radio-group ng-click="chk(eclaim.active)"
+                                                                    ng-init="eclaim.active = 'Y'"
+                                                                    ng-model="eclaim.active">
+
+                                                        <div class="col-md-1">
+                                                            <md-radio-button
+                                                                    class="md-primary"
+                                                                    value="Y">
+                                                                YES
+                                                            </md-radio-button>
+                                                        </div>
+                                                        <div class="col-md-1">
+                                                            <md-radio-button
+                                                                    class="md-primary"
+                                                                    value="N">
+                                                                NO
+                                                            </md-radio-button>
+                                                        </div>
+                                                    </md-radio-group>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12 text-center">
+                                            <md-button class="btn btn-info custbutton" ng-click="save(eclaim)"
+                                                       ng-show="only_save">Submit
+                                                <md-tooltip>Submit</md-tooltip>
+                                            </md-button>
+                                            <md-button class="btn btn-info custbutton" ng-click="update(eclaim)"
+                                                       ng-show="only_update">Update
+                                                <md-tooltip>Update</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-raised" data-dismiss="modal">Back
+                                                <md-tooltip>close</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope, eclaimService, $window, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.eclaim = [];
+    $scope.eClaim_data =[];
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.eclaim.active='Y';
+    $scope.only_save= true;
+    $scope.only_update= false;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_pop = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('addpurpose')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    loadcourier();
+    function loadcourier(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Group": "ECLAIM_MASTER_GET",
+                "Type": "CLAIM_REASON",
+                "Sub_Type": "REASON_DATA",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Purpose_Name": $scope.purpose_name,
+                            "Purpose_Code": $scope.purpose_code,
+                        }
+                    }
+                }
+            }
+        }
+        var get_hsn = eclaimService.ecalimpupose(data)
+        get_hsn.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.eClaim_data = $scope.main;
+            $scope.data_len = $scope.eClaim_data.length;
+            $scope.pageLength = $scope.eClaim_data.length;
+            $scope.Totalpages = Math.ceil($scope.eClaim_data.length / $scope.itemsPerPage);
+        }).finally($scope.endloading);
+    }
+    $scope.myfun = function() {
+        $scope.eClaim_data = $filter('filter')($scope.main, {
+            "tourrequestreason_name": $scope.purpose_name,
+            "tourrequestreason_code": $scope.purpose_code,
+        });
+    }
+   $scope.add_purpose = function(){
+        $scope.eclaim = [];
+        $scope.only_save= true;
+        $scope.only_update= false;
+        modalshow('addpurpose');
+    }
+
+
+    $scope.edit_pupose = function(ec){
+        $scope.eclaim.purpose_name = ec.tourrequestreason_name;
+        $scope.eclaim.purpose_code = ec.tourrequestreason_code;
+        $scope.eclaim.purpose_id = ec.tourrequestreason_gid;
+        $scope.eclaim.active = ec.tourrequestreason_isactive;
+        $scope.only_save= false;
+        $scope.only_update= true;
+        modalshow('addpurpose');
+    }
+    $scope.add = [];
+    $scope.save = function(eclaim) {
+        if(eclaim.purpose_name != undefined && eclaim.purpose_code != undefined ){
+            $scope.master_data(eclaim);
+        }
+        else{
+            error_toast(no_data,time_toast);
+            return false;
+        }
+    };
+    $scope.master_data = function(eclaim){
+     $scope.loading_pop();
+        var data = {
+            params: {
+                "Group": "ECLAIM_MASTER_SET",
+                "Action" : "INSERT",
+                "Type": "CLAIM_REASON",
+                "Sub_Type": "REASON_DATA",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                            "Purpose_Name":eclaim.purpose_name,
+                            "Purpose_Code":eclaim.purpose_code
+                        },
+                    }
+                }
+            }
+        }
+        $scope.master_data_service(data);
+    }
+    $scope.master_data_service = function(data){
+        var eclaim_master = eclaimService.ecalimpupose(data);
+        eclaim_master.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                modalhide('addpurpose');
+                loadcourier();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalimpupose = function(data) {
+        var response = $http.post(Appname + "/eClaim_master_data/",data);
+        return response;
+    }
+    this.html_gen = function(data) {
+        var response = $http.post(Appname + "/html_print/",data);
+        return response;
+    }
+});
+
+</script>
+
+{% endblock %}

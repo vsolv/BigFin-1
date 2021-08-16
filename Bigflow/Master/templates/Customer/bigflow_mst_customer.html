@@ -1,0 +1,293 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Customer {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appcustgrp" ng-controller="Ctrlcustgrp" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Customer Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4">
+                    <md-input-container ng-show="!selected.length" md-no-float="" class="md-block left">
+                        <input type="text" ng-model="searchquery" placeholder="Search by code,name..."
+                               ng-change="filtersearch()"/>
+                        <md-icon>
+                            <i class="material-icons">search</i>
+                        </md-icon>
+                    </md-input-container>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-href="customercreate"
+                               ng-model="create"
+                               ng-show="!selected.length">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-7 text-right">
+                    <div title="Branch Excel Details" excel-export export-data="exportDat" file-name="{{Namefile}}">
+                    </div>
+                    <div title="Pincode Excel Details" excel-export export-data="exportData"
+                         file-name="{{fileName}}"></div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Code</th>
+                        <th>Customer Name</th>
+                        <th>Display Name</th>
+                        <th>Location</th>
+                        <th>Customer Type</th>
+                        <th>Customer Subtype</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="custo in cust.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:searchquery ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center"><span class="editlink"
+                                                      ng-hide="{{(custo.customer_isactive=='Y') ? false : true}}"
+                                                      ng-click="view_data(custo.customer_gid,custo.customer_custgroup_gid,'edit')">{{custo.customer_code }}</span>
+                            <span ng-if="custo.customer_isactive=='Y' ? false : true">{{custo.customer_code }}</span>
+                        </td>
+                        <td class="text-center">{{custo.customer_name}}</td>
+                        <td class="text-center">{{custo.customer_billingname}}</td>
+                        <td class="text-center">{{custo.location_name}}</td>
+                        <td class="text-center">{{custo.customer_type}}</td>
+                        <td class="text-center">{{custo.customer_subtype}}</td>
+                        <td class="text-center">
+                            <i class="material-icons" ng-class="custo.customer_isactive=='Y'? 'editlink':''"
+                               ng-click="activeDeactive_click(custo.customer_isactive,custo.customer_gid)"
+                               title="{{custo.customer_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny</i>
+                            <i class="material-icons removelink" title="Remove"
+                               ng-hide="{{(custo.customer_isactive=='Y') ? false : true}}"
+                               ng-click="delete(custo.customer_gid)">delete</i>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="4">
+                            <ul uib-pagination total-items="cust.length" ng-model="currentPage" max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="4">
+                            Total Count:{{cust.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appcustgrp', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+    myApp.controller('Ctrlcustgrp', ['$scope', 'testService', '$mdDialog', '$window', '$filter', function($scope, testService, $mdDialog, $window, $filter) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.create = sessionStorage.removeItem('cust_details');
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+        var jsonData = "{}"
+        $scope.loading();
+        var get_customer = testService.getcusomter(jsonData)
+        get_customer.then(function(result) {
+                $scope.cust = [];
+                $scope.cust = JSON.parse(result.data);
+                $scope.main = $scope.cust
+                angular.forEach($scope.main, function(value, key) {
+                    $scope.exportDat.push([value.slno, value.customer_code, value.customer_name,
+                        value.location_name, value.customer_type, value.display_name, value.customer_subtype,
+                        value.customer_constitution, value.customer_salemode, value.GST, value.Contact_personname,
+                        value.Contact_landline, value.Contact_landline2, value.Contact_mobileno, value.Contact_mobileno2,
+                        value.Contact_email, value.Contact_DOB, value.Contact_WD, value.customer_landmark, value.customer_billingname
+                    ]);
+                    $scope.endloading();
+                });
+            }),
+            function() {
+                alert('no data');
+            };
+        $scope.pinsmry = [];
+        loaddata();
+
+        function loaddata() {
+            var get_pin = testService.custpinexcl()
+            get_pin.then(function(result) {
+                    $scope.maintable = JSON.parse(result.data)
+                    $scope.pinsmry = $scope.maintable
+                    angular.forEach($scope.pinsmry, function(value, key) {
+                        $scope.exportData.push([value.slno, value.pincode_no, value.City_Name, value.location_name, ""]);
+                    });
+                }, function(err) {})
+                .finally();
+        };
+
+        $scope.fileName = "pincode Details";
+        $scope.exportData = [];
+        $scope.exportData.push(["S No", "Pin Code", "City Name", "Location Name", ""]);
+        $scope.Namefile = "Branch Details";
+        $scope.exportDat = [];
+        $scope.exportDat.push(["S No", "Customer Code", "Customer Name", "Location Name", "Customer Type", "Display Name",
+            "Customer Subtype", "Customer Constitution", "Customer Salemode", "GST", "Contact PersonName", "Contact Landline",
+            "Contact Landline2", "Contact Mobilenumber", "Contact Mobilenumber2", "Contact Email", "Contact DateOfBirth", "Contact WeddingDay", "Customer Landmark", "Customer BillingName"
+        ]);
+
+        $scope.filtersearch = function() {
+            $scope.cust = $filter('filter')($scope.main, {
+                "customer_name": $scope.searchquery
+
+            });
+        }
+
+        $scope.view_data = function(cust_gid, custgrp_gid, e) {
+            var customer = {
+                cus_gid: cust_gid,
+                view: e
+            };
+            sessionStorage.setItem('cust_details', JSON.stringify(customer));
+            $window.location.href = "customercreate";
+        };
+
+        $scope.delete = function(dcust_gid) {
+            var cust_del = testService.delcusomter(dcust_gid, 'delete');
+            cust_del.then(function(result) {
+                    if (result.data === "SUCCESS") {
+                        alert("Deleted Succesfully");
+                        $window.location.href = "Custmer";
+                    } else {
+                        alert("Not Deleted");
+                        $window.location.href = "Custmer";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+        $scope.activeDeactive_click = function(is_active, cust_gid) {
+            if (is_active == 'Y') {
+                $scope.inactive(cust_gid)
+            } else {
+                $scope.active(cust_gid)
+            }
+        }
+
+        $scope.active = function(acust_gid) {
+            var cust_act = testService.delcusomter(acust_gid, 'active');
+            cust_act.then(function(result) {
+                    if (result.data === "SUCCESS") {
+                        alert("Activated Succesfully");
+                        $window.location.href = "Custmer";
+                    } else {
+                        alert("Not Activated");
+                        $window.location.href = "Custmer";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+        $scope.inactive = function(icust_gid) {
+            var cust_inact = testService.delcusomter(icust_gid, 'Inactive');
+            cust_inact.then(function(result) {
+                    if (result.data === "SUCCESS") {
+                        alert("InActivated Succesfully");
+                        $window.location.href = "Custmer";
+                    } else {
+                        alert("Not InActivated");
+                        $window.location.href = "Custmer";
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+    }]);
+
+    myApp.service("testService", function($http) {
+        this.getcusomter = function(jsonData) {
+            var response = $http.get(Appname + "/customer_get/", {
+                params: {
+                    'jsonData': jsonData
+                }
+            });
+            return response;
+        }
+
+        this.getcustexcl = function(jsonData) {
+            var response = $http.get(Appname + "/customer_getexcel/", {
+                params: {
+                    'jsonData': jsonData
+                }
+            });
+            return response;
+        }
+
+        this.custpinexcl = function() {
+            var response = $http.get(Appname + "/custpin_excel/", {});
+            return response;
+        }
+
+        this.getcusomtergrp = function(e) {
+            var response = $http.get(Appname + "/customergrp_get/", {
+                params: {
+                    'custgrp_gid': e
+                }
+            });
+            return response;
+        }
+
+        this.getcusomteredt = function(f) {
+            var response = $http.get(Appname + "/customeredt_get/", {
+                params: {
+                    'cust_gid': f
+                }
+            });
+            return response;
+        }
+
+        this.delcusomter = function(cust_gid, action) {
+            var response = $http.post(Appname + "/customerdel/", {
+                params: {
+                    'cust_gid': cust_gid,
+                    'Action': action
+                }
+            });
+            return response;
+        }
+    });
+</script>
+{% endblock %}

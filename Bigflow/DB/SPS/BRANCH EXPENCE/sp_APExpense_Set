@@ -1,0 +1,764 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APExpense_Set`(IN `ls_Action` varchar(64),IN `ls_Type` varchar(64),
+IN `lj_filter` json,IN `IS_Commit` char,IN `lj_Classification` json,
+IN `ls_create_by` varchar(16) , OUT `Message` varchar(2014)
+)
+sp_APExpense_Set:BEGIN
+### SELVA SEP 20 2018
+
+declare Updated_Row int;
+declare Query_Insert varchar(10000); 
+declare ccbs_Insert varchar(10000); 
+declare Query_Update varchar(9000);
+declare errno int;
+declare msg varchar(1000);
+declare countRow int;
+declare ls_count int;
+declare countRowccbs int;
+declare z,cc int;
+declare i int;
+declare l int;
+declare j int;
+declare x int;
+declare lj json;
+
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+    
+    SET SESSION group_concat_max_len=4294967295;
+    #### Check The Classification data Received or Not :: Validations.
+    
+     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid;
+             
+             if @Entity_Gid is  null or @Entity_Gid = 0 or @Entity_Gid = '' then
+					set Message = 'Entity Gid Is Needed.';
+                    leave sp_APExpense_Set;
+             End if;
+        
+        ## TO DO :: Also Check Entity Details Level
+start transaction;
+set autocommit = 0 ;
+if ls_Type = 'EXPENSE_TYPE' then
+   #  select 1; 
+		select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+     
+        if @lj_filter_count is null or @lj_filter_count = 0 then
+			set Message = 'No Data In Json - Filter.';
+            rollback;
+			leave sp_APExpense_Set;
+        end if;
+          
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Expensetype'))) into @expensetype ;
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Property_id'))) into @Property_id ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Fromdate'))) into @Fromdate ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Todate'))) into @Todate ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Recurring'))) into @Recurring ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Recurringdate'))) into @Recurringdate ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Amount'))) into @Amount ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Supplierid'))) into @Supplierid ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Status'))) into @Status_ ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.period'))) into @period ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Isgst'))) into @Isgst ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.hsnid'))) into @hsnid ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Istds'))) into @Istds ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchid'))) into @branchid ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.tds_id'))) into @tds_id ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.ccbs_detail'))) into @ccbs_detail ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.supplier_taxid'))) into @supplier_taxid ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Expensedata'))) into @Expensedata ;  
+		select JSON_LENGTH(lj_filter,'$.Expensedata') into @li_json_Expensedata_count;
+		select JSON_LENGTH(lj_filter,'$.ccbs_detail') into @li_ccbs_detail_count;
+		select JSON_LENGTH(lj_filter,'$.Expense_Details') into @li_Expense_Details_count;
+
+        if @li_ccbs_detail_count = 0 or @li_ccbs_detail_count  is null then
+			set Message = 'No ccbs record';
+            leave sp_APExpense_Set;
+        end if;
+        
+		set  @expense_no = 0; 
+		select max(expense_no) into  @expense_no from ap_trn_texpnsetran ;
+		if  @expense_no is null then
+		set  @expense_no =0;
+		end if;
+        set   @expense_no = @expense_no +1;
+        set z = 0 ;
+        if @li_json_Expensedata_count = 0 then
+          set   @expense_no = 0;
+        end if;
+		While z <= @li_json_Expensedata_count -1 Do
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expensedata[',z,'].columnname[0]'))) into @columnname;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expensedata[',z,'].columnvalue[0]'))) into @columnvalue;
+            #select @s;
+          select expensecolumn_gid into @columnid from ap_trn_texpnsecolumn where expensecolumn_type =@expensetype and expensecolumn_name = @columnname;
+			#select @expensetype,@columnid,@columnname,@columnvalue,
+				#                @Property_id,@expense_no;
+             set Query_Insert = '';
+					set Query_Insert = Concat('Insert into ap_trn_texpnsetran ( expensetype, expensecolumn_id, expensecolumn_name, 
+                    expensecolumn_value, expenseproperty_gid,expense_no,entity_gid,create_by)
+                        Values(''',@expensetype,''',',@columnid,',''',@columnname,''',''',@columnvalue,''',
+                        ''',@Property_id,''',''',@expense_no,''',',@Entity_Gid,',
+								',ls_create_by,')'
+											);		 
+                                            
+					set @Insert_Detail_query = Query_Insert;		
+				 #select Query_Insert; ## remove It
+					PREPARE stmt FROM @Insert_Detail_query;
+					EXECUTE stmt;  
+					set countRow = (select ROW_COUNT());
+					DEALLOCATE PREPARE stmt;                          
+                    
+                
+					if countRow >  0 then
+                       set Message = 'SUCCESS ';
+					else 
+                       set Message = 'FAIL';     
+						rollback;
+						leave sp_APExpense_Set;
+					end if;
+         set z = z+1;		
+		END WHILE;     
+        
+        if @Recurring = 1 then set @Recurring = 'Y';
+        else  set @Recurring = 'N'; set @Fromdate = curdate();set @Todate = curdate(); end if;     
+        
+        if @Isgst = 1 then  set @Isgst = 'Y';
+        else  set @Isgst = 'N';  set @hsnid = 0; end if;
+        
+        if @Istds = 1 then  set @Istds = 'Y'; if @Istds is null then select @Istds;set message = 'NO TDS data';leave sp_APExpense_Set;  end if;
+             
+        else  set @Istds = 'N';  set @tds_id = 0; end if;
+	 /*
+     select @Property_id,@expense_no,@Supplierid,@expensetype
+			,@Fromdate,@Todate,@Recurring,@Amount
+            ,@Recurringdate,@period,@Status_,@Isgst,@hsnid,@Istds,@tds_id,@branchid,@Entity_Gid
+								,ls_create_by;
+                                */
+       set Query_Insert = '';
+		set Query_Insert = Concat('Insert into ap_trn_tbranchexpense (   branchexpense_propertygid, branchexpense_expensecolumnid, branchexpense_supplierid, 
+				 branchexpense_type, branchexpense_fromdate, branchexpense_todate, 
+				 branchexpense_recurring, branchexpense_amount, branchexpense_recurringdate, branchexpense_recurringperiod,
+				 branchexpense_status, branchexpense_Isgst, branchexpense_hsngid,branchexpense_istds,branchexpense_suppliertaxid,branchexpense_branchid, entity_gid, 
+				 create_by)
+			Values(''',@Property_id,''',',@expense_no,',',@Supplierid,',''',@expensetype,''',
+			''',@Fromdate,''',''',@Todate,''',''',@Recurring,''',''',@Amount,''',
+            ''',@Recurringdate,''',''',@period,''',''',@Status_,''',''',@Isgst,''',',@hsnid,',''',@Istds,''',',@tds_id,',',@branchid,',',@Entity_Gid,',
+								',ls_create_by,')'
+								);	
+              select year(  @Fromdate) into @year_start;  
+              select month(  @Fromdate) into @month_start;  
+              select day(  @Fromdate) into @day_start;  
+              
+			#SELECT TIMESTAMPDIFF(MONTH,@Fromdate,@Todate) into @datediff;
+		 SELECT round(TIMESTAMPDIFF(DAY, @Fromdate, @Todate)*12/365.24) into @datediff; 
+
+		set @Insert_Detail_query = Query_Insert;		
+	 #select Query_Insert; ## remove It
+		PREPARE stmt FROM @Insert_Detail_query;
+		EXECUTE stmt;  
+		set countRow = (select ROW_COUNT());
+		DEALLOCATE PREPARE stmt;                          
+		set x = 0;
+		select LAST_INSERT_ID() into @brancexp_id ;
+
+	#select @brancexp_id;
+		if countRow >  0 then
+            #####ccbs#####
+            set cc = 0;
+			While cc <= @li_ccbs_detail_count -1 Do
+                set ccbs_Insert = '';
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].tbs_gid[0]'))) into @tbs_gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].tcc_gid[0]'))) into @tcc_gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].cat_gid[0]'))) into @cat_gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].subcat_gid[0]'))) into @subcat_gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].percentage[0]'))) into @percentage;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.ccbs_detail[',cc,'].amount[0]'))) into @amount_cc;
+				set ccbs_Insert = Concat('Insert into ap_trn_tbranchexpenseccbs (  branchexpenseccbs_branchexpensegid, branchexpenseccbs_cc,
+													branchexpenseccbs_bs,branchexpenseccbs_categorygid,branchexpenseccbs_subcategorygid,
+											 branchexpenseccbs_percent, branchexpenseccbs_amount, 
+											 entity_gid, create_by)
+									Values(',@brancexp_id,',',@tcc_gid,',',@tbs_gid,',',@cat_gid,',',@subcat_gid,',',@percentage,',',@amount_cc,',
+											  ',@Entity_Gid,',
+												',ls_create_by,')'
+												);		 
+						
+				set @ccbs_Insert = ccbs_Insert;		
+				#select ccbs_Insert; ## remove It
+				PREPARE stmt FROM @ccbs_Insert;
+				EXECUTE stmt;  
+				set countRowccbs = (select ROW_COUNT());
+                if countRowccbs >  0 then
+					   set Message = 'SUCCESS ';
+				else 
+					   set Message = 'FAIL ';     
+						rollback;
+						leave sp_APExpense_Set;
+				end if;         
+				set cc = cc+1;
+            end while;
+      #select @ondate,@status,@amount;      
+          set l=0;
+          while l<@li_Expense_Details_count do
+          
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expense_Details[',l,'].ondate'))) into @ondate;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expense_Details[',l,'].status'))) into @status;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expense_Details[',l,'].amount'))) into @amount;
+                
+                set Query_Insert = Concat('Insert into ap_trn_tbranchexpensedetails
+											(  branchexpensedetails_ondate,branchexpensedetails_branchexpensegid, branchexpensedetails_status,
+													branchexpensedetails_amount,
+											 entity_gid, create_by)
+									Values(''',@ondate,''',',@brancexp_id,',''',@status,''',''',@amount,''',
+											  ',@Entity_Gid,',
+												',ls_create_by,')');
+                
+				#select Query_Insert;
+				set @p=Query_Insert;
+				prepare stmt from @p;
+				execute stmt;
+				select row_count() into ls_count;
+          
+          set l=l+1;
+          end while;
+					  if ls_count>0 then
+						  set message='SUCCESS ';
+					  else
+							  set message='NOT SUCCESS ';
+						rollback;
+						leave sp_APExpense_Set;
+					  end if;
+		else 
+		   set Message = 'FAIL';     
+			rollback;
+			leave sp_APExpense_Set;
+		end if;
+End  if;
+
+if ls_Type = 'EXPENSE_MAP' then
+      
+		select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+        
+        if @lj_filter_count is null or @lj_filter_count = 0 then
+			set Message = 'No Data In Json - Filter.';
+            rollback;
+			leave sp_APExpense_Set;
+        end if;
+        
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Property_id'))) into @Property_id ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Expensedata'))) into @Expensedata ;  
+		select JSON_LENGTH(lj_filter,'$.Expensedata') into @li_json_Expensedata_count;
+        set z = 0 ;
+        While z <= @li_json_Expensedata_count -1 Do
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expensedata[',z,'].exptype_gid[0]'))) into @exptype_gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Expensedata[',z,'].Checked[0]'))) into @Checked;
+            #select @s;#select @expensetype,@columnid,@columnname,@columnvalue,
+            if @Checked =1 then
+				select count(*) into @expensecount from ap_map_tpropertyexp where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id;
+                if @expensecount >= 1 then 
+						select propertyexp_isactive  into @active from ap_map_tpropertyexp where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id limit 1;
+                       #select @active;
+                       if @active <> 'Y' then
+						    SET SQL_SAFE_UPDATES = 0;
+                            update ap_map_tpropertyexp set  propertyexp_isactive = 'Y' where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id ;
+							SET SQL_SAFE_UPDATES = 1;
+                          
+						    
+                       end if;
+						   set Message = 'SUCCESS';
+
+					  
+
+                 else
+							set Query_Insert = '';
+							set Query_Insert = Concat('Insert into ap_map_tpropertyexp ( propertyexp_expensegid, propertyexp_propertygid,
+							propertyexp_remarks,
+							 entity_gid, create_by)
+								Values(',@exptype_gid,',',@Property_id,',''  '',',@Entity_Gid,',
+								',ls_create_by,')'
+													);		 
+													
+							set @Insert_Detail_query = Query_Insert;		
+							#select Query_Insert; ## remove It
+							PREPARE stmt FROM @Insert_Detail_query;
+							EXECUTE stmt;  
+							set countRow = (select ROW_COUNT());
+							DEALLOCATE PREPARE stmt;                          
+							
+						
+							if countRow >  0 then
+							   set Message = 'SUCCESS';
+							else 
+							   set Message = 'FAIL';     
+								rollback;
+								leave sp_APExpense_Set;
+							end if;
+						  
+                  end if;
+            else 
+				select count(*) into @expensecount from ap_map_tpropertyexp where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id;
+				if @expensecount >= 1 then 
+						select propertyexp_isactive  into @active from ap_map_tpropertyexp where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id limit 1;
+                        if @active <> 'N' then
+						   SET SQL_SAFE_UPDATES = 0;
+                           update ap_map_tpropertyexp set  propertyexp_isactive = 'N' where propertyexp_expensegid =@exptype_gid and propertyexp_propertygid =@Property_id ;
+						   SET SQL_SAFE_UPDATES = 1;
+                        end if;
+							   set Message = 'SUCCESS';
+
+                 else
+						   set Message = 'SUCCESS';
+                end if;
+            end if;
+          
+         set z = z+1;		
+		END WHILE;    
+        
+
+End  if;
+if ls_Type = 'TYPECREATE' then
+      
+      if ls_Action = 'INSERT' then
+			select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+		 
+			if @lj_filter_count is null or @lj_filter_count = 0 then
+				set Message = 'No Data In Json - Filter.';
+				rollback;
+				leave sp_APExpense_Set;
+			end if;
+			  
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Expensetype'))) into @expensetype ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Category_gid'))) into @Category_gid ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Sub_Category_gid'))) into @Sub_Category_gid ;
+			
+			select count(*) into @ispresent from ap_mst_texptype where exptype_name = @expensetype;
+			#select @ispresent ;
+			if @ispresent >= 1 then 
+					set Message = 'Type Already Present';     
+					rollback;
+					leave sp_APExpense_Set;   
+									
+			else 
+				select max(exptype_code) into @exptype_code from ap_mst_texptype ;
+                if @exptype_code is null then 
+                  set @exptype_code = 0;
+                end if;
+				call sp_Generatecode_Get('WITHOUT_DATE', 'EX', '0000', @exptype_code, @Message);
+				 select @Message into @exptype_code;
+					  
+				 set Query_Insert = '';
+                # select @exptype_code,@expensetype,@Entity_Gid,ls_create_by;
+                 
+						set Query_Insert = Concat('Insert into ap_mst_texptype( exptype_code, exptype_name, exptype_categorygid,exptype_subcategorygid,
+						exptype_isactive, exptype_isremoved, entity_gid, create_by)  Values(''',@exptype_code,''',''',@expensetype,''',',@Category_gid,',',@Sub_Category_gid,',''Y'',''N'',
+							',@Entity_Gid,',''',ls_create_by,''')');
+					 set @Insert_Type_query = Query_Insert;		
+					 #select Query_Insert; ## remove It
+						PREPARE stmt FROM @Insert_Type_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt;                          
+						
+					
+						if countRow >  0 then
+						   set Message = 'SUCCESS';
+						else 
+						   set Message = 'FAIL';     
+							rollback;
+							leave sp_APExpense_Set;
+						end if;
+			end if;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Columndata'))) into @Columndata ;  
+			select JSON_LENGTH(lj_filter,'$.Columndata') into @li_json_Expensedata_count;
+			set z = 0 ;
+			While z <= @li_json_Expensedata_count -1 Do
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumn_name[0]'))) into @expensecolumn_name;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumn_displayname[0]'))) into @expensecolumn_displayname;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumninput_type[0]'))) into @expensecolumninput_type;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumninput_checked[0]'))) into @expensecolumninput_checked;
+			 
+				 set Query_Insert = '';
+						set Query_Insert = Concat('Insert into ap_trn_texpnsecolumn (  expensecolumn_type, expensecolumn_name, 
+						expensecolumn_displayname, expensecolumninput_type, expensecolumninput_checked)
+							Values(''',@expensetype,''',''',@expensecolumn_name,''',''',@expensecolumn_displayname,''',''',@expensecolumninput_type,''',
+							''',@expensecolumninput_checked,''')'
+												);		 
+												
+						set @Insert_Detail_query = Query_Insert;		
+					# select Query_Insert; ## remove It
+						PREPARE stmt FROM @Insert_Detail_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt;                          
+						
+					
+						if countRow >  0 then
+						   set Message = 'SUCCESS';
+						else 
+						   set Message = 'FAIL';     
+							rollback;
+							leave sp_APExpense_Set;
+						end if;
+			 set z = z+1;		
+			END WHILE;                  
+		End if;	
+        
+	    if ls_Action = 'UPDATE' then
+			select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+		 
+			if @lj_filter_count is null or @lj_filter_count = 0 then
+				set Message = 'No Data In Json - Filter.';
+				rollback;
+				leave sp_APExpense_Set;
+			end if;
+			  
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Expensetype'))) into @expensetype ;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.Columndata'))) into @Columndata ;  
+			select JSON_LENGTH(lj_filter,'$.Columndata') into @li_json_Expensedata_count;
+			set z = 0 ;
+			While z <= @li_json_Expensedata_count -1 Do
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumn_name[0]'))) into @expensecolumn_name;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumn_displayname[0]'))) into @expensecolumn_displayname;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumninput_type[0]'))) into @expensecolumninput_type;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].expensecolumninput_checked[0]'))) into @expensecolumninput_checked;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].IsDelete[0]'))) into @IsDelete;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].IsInsert[0]'))) into @IsInsert;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.Columndata[',z,'].Isedit[0]'))) into @Isedit;
+			        if @IsInsert = 'Y' then
+                   
+                    select  replace(@expensetype,' ', '_') into @typee;
+                                   
+
+						select  replace(@expensecolumn_displayname,' ', '_') into @display_name;	
+                        set @expensecolumn_name = Concat(@typee,@display_name);
+                        set Query_Insert = '';
+						set Query_Insert = Concat('Insert into ap_trn_texpnsecolumn (  expensecolumn_type, expensecolumn_name, 
+						expensecolumn_displayname, expensecolumninput_type, expensecolumninput_checked)
+							Values(''',@expensetype,''',''',@expensecolumn_name,''',''',@expensecolumn_displayname,''',''',@expensecolumninput_type,''',
+							''',@expensecolumninput_checked,''')'
+												);		 
+												
+						set @Insert_Detail_query = Query_Insert;		
+					 select Query_Insert; ## remove It
+						PREPARE stmt FROM @Insert_Detail_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt;                          
+						
+					
+						if countRow >  0 then
+						   set Message = 'SUCCESS';
+						else 
+						   set Message = 'FAIL';     
+							rollback;
+							leave sp_APExpense_Set;
+						end if;
+                      end if;  
+			 set z = z+1;		
+			END WHILE;                  
+		End if;
+
+End  if;
+
+if ls_Type = 'ECF_INSERT' then
+		  select count(branchexpensedetails_gid) into @expensedetails_gid_count from
+				ap_trn_tbranchexpensedetails
+                inner join ap_trn_tbranchexpense 
+                 on branchexpensedetails_branchexpensegid = branchexpense_gid
+                where branchexpensedetails_ondate = CURDATE()  and branchexpensedetails_status = 'pending'
+                and branchexpense_status = 'APPROVED';
+                
+				  set z = 0;
+                
+                if @expensedetails_gid_count = 0 then
+                   set Message = 'No  Expense To Process';
+                   leave sp_APExpense_Set;
+                end if;
+                
+               # select @expensedetails_gid_count ;
+                
+				While z <= @expensedetails_gid_count -1 Do
+                    select branchexpensedetails_gid into @id  from
+				ap_trn_tbranchexpensedetails
+                inner join ap_trn_tbranchexpense 
+                 on branchexpensedetails_branchexpensegid = branchexpense_gid
+                where branchexpensedetails_ondate = CURDATE()  and branchexpensedetails_status = 'pending'
+                and branchexpense_status = 'APPROVED' limit 1;
+                
+					#select branchexpensedetails_gid into @id from
+				 #     ap_trn_tbranchexpensedetails where branchexpensedetails_ondate = CURDATE()  and branchexpensedetails_status = 'pending' limit 1;#limit z,1;
+                   select @id;
+                   select fn_ExpenseProcess('HEADER_INSERT',@id,0,'{}','{}') into @lj_Header ;
+                    select @lj_Header;
+					set @lj_Header =  JSON_UNQUOTE(JSON_EXTRACT(@lj_Header, CONCAT('$.DATA')));                                        
+                    call sp_ECFInvoice_Set('INSERT','INVOICE_HEADER',@lj_Header,'{}','{}','{}',ls_create_by,@Entity_Gid,@Message);
+                                                  select @Message into @Out_Msg_invHeader;
+                    
+
+					set z = z+1;		
+                     #select @Out_Msg_invHeader;
+					if @Out_Msg_invHeader <> ''  and substring_index(@Out_Msg_invHeader,",",-1) = 'SUCCESS' then
+							  set @Inv_Header_GidMax = substring_index(@Out_Msg_invHeader,",",1) ;                                                          
+					else
+							  set Message = 'Error Occured On ECF Header Insert';
+							  leave sp_APExpense_Set;
+					End if;
+                    select @Inv_Header_GidMax;
+                    select @id;
+                    
+					select fn_ExpenseProcess('ECF_INVOICE_INSERT',@id,@Inv_Header_GidMax,'{}','{}') into @lj_invdetails ;
+                                            
+                                            select @lj_invdetails;
+                                            #select @ClaimHeader_ID_Max;
+                                            #select @Inv_Header_GidMax;
+                                            
+                                            
+					 if @lj_invdetails <> '' then
+							 set @Inv_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DETAILS')));
+							 set @Debit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DEBIT')));
+							 set @Credit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.CREDIT')));                                                     
+							 set @Status_Details = concat('{"Invoice_Header_Gid": ',@Inv_Header_GidMax,', "Status": "NEW"}');
+						else
+							set Message = 'Error On Invoice Details Data.';
+							leave sp_APExpense_Set;
+					 End if;
+                                select @Inv_Details ;
+							 select @Debit_Details ;
+							 select @Credit_Details ;                                                     
+							 select @Status_Details  ;           
+
+					 call  sp_ECFInvoiceSPS_Set('INSERT', 
+								'INVOICE_DETAILS', '{}',@Inv_Details,'{}',@Debit_Details,@Credit_Details,@Status_Details,
+								@Entity_Gid,ls_create_by,@Message);                                                        
+							select @Message into @Out_Msg_InvDetails;                                                                                                       
+									#select @Out_Msg_InvDetails;
+							if @Out_Msg_InvDetails = 'SUCCESS' then
+								set Message = 'SUCCESS';
+                                SET SQL_SAFE_UPDATES = 0;
+									update ap_trn_tbranchexpensedetails set  branchexpensedetails_status = 'ECF PROCESS' where branchexpensedetails_gid =@id ;
+								#SET SQL_SAFE_UPDATES = 1;
+							else
+								 set Message = @Out_Msg_InvDetails;
+							End if;
+                    
+                end while;
+                                
+
+end if;
+
+
+if ls_Type = 'ECF_UPDATE' then
+			Select JSON_LENGTH(lj_filter,CONCAT('$.DETAILS[0].branchexpensedetails_gid')) into @expensedetails_gid_count ;
+
+		  
+                
+				  set z = 0;
+                select @expensedetails_gid_count;
+                if @expensedetails_gid_count = 0 then
+                   set Message = 'No  Expense To Process';
+                   leave sp_APExpense_Set;
+                end if;
+                
+               # select @expensedetails_gid_count ;
+                
+				While z <= @expensedetails_gid_count -1 Do
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_filter, CONCAT('$.DETAILS[0].branchexpensedetails_gid[',z,']'))) into @id;
+
+                
+					#select branchexpensedetails_gid into @id from
+				 #     ap_trn_tbranchexpensedetails where branchexpensedetails_ondate = CURDATE()  and branchexpensedetails_status = 'pending' limit 1;#limit z,1;
+                   select @id;
+                   select fn_ExpenseProcess('HEADER_INSERT',@id,0,'{}','{}') into @lj_Header ;
+                    select @lj_Header;
+					set @lj_Header =  JSON_UNQUOTE(JSON_EXTRACT(@lj_Header, CONCAT('$.DATA')));                                        
+                    call sp_ECFInvoice_Set('INSERT','INVOICE_HEADER',@lj_Header,'{}','{}','{}',ls_create_by,@Entity_Gid,@Message);
+                                                  select @Message into @Out_Msg_invHeader;
+                    
+
+							
+                     #select @Out_Msg_invHeader;
+					if @Out_Msg_invHeader <> ''  and substring_index(@Out_Msg_invHeader,",",-1) = 'SUCCESS' then
+							  set @Inv_Header_GidMax = substring_index(@Out_Msg_invHeader,",",1) ;                                                          
+					else
+							  set Message = 'Error Occured On ECF Header Insert';
+							  leave sp_APExpense_Set;
+					End if;
+                    select @Inv_Header_GidMax;
+                    select @id;
+                    
+					select fn_ExpenseProcess('ECF_INVOICE_INSERT',@id,@Inv_Header_GidMax,'{}','{}') into @lj_invdetails ;
+                                            
+                                            select @lj_invdetails;
+                                            #select @ClaimHeader_ID_Max;
+                                            #select @Inv_Header_GidMax;
+                                            
+                                            
+					 if @lj_invdetails <> '' then
+							 set @Inv_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DETAILS')));
+							 set @Debit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.DEBIT')));
+							 set @Credit_Details = JSON_UNQUOTE(JSON_EXTRACT(@lj_invdetails, CONCAT('$.CREDIT')));                                                     
+							 set @Status_Details = concat('{"Invoice_Header_Gid": ',@Inv_Header_GidMax,', "Status": "NEW"}');
+						else
+							set Message = 'Error On Invoice Details Data.';
+							leave sp_APExpense_Set;
+					 End if;
+                                select @Inv_Details ;
+							 select @Debit_Details ;
+							 select @Credit_Details ;                                                     
+							 select @Status_Details  ;           
+
+					 call  sp_ECFInvoiceSPS_Set('INSERT', 
+								'INVOICE_DETAILS', '{}',@Inv_Details,'{}',@Debit_Details,@Credit_Details,@Status_Details,
+								@Entity_Gid,ls_create_by,@Message);                                                        
+							select @Message into @Out_Msg_InvDetails;                                                                                                       
+									#select @Out_Msg_InvDetails;
+							if @Out_Msg_InvDetails = 'SUCCESS' then
+								set Message = 'SUCCESS';
+                                SET SQL_SAFE_UPDATES = 0;
+									update ap_trn_tbranchexpensedetails set  branchexpensedetails_status = 'ECF PROCESS' where branchexpensedetails_gid =@id ;
+								#SET SQL_SAFE_UPDATES = 1;
+							else
+								 set Message = @Out_Msg_InvDetails;
+							End if;
+                                set z = z+1;       
+
+                end while;
+                                
+
+end if;
+
+if ls_Type = 'BRANCHDETAILS_UPDATE' then
+      
+		select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+     
+        if @lj_filter_count is null or @lj_filter_count = 0 then
+			set Message = 'No Data In Json - Filter.';
+            rollback;
+			leave sp_APExpense_Set;
+        end if;
+          
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_amount'))) into @branchexpensedetails_amount ;
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_ondate'))) into @branchexpensedetails_ondate ;
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_ishold'))) into @branchexpensedetails_ishold ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_remark'))) into @branchexpensedetails_remark ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_status'))) into @branchexpensedetails_status ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpensedetails_gid'))) into @branchexpensedetails_gid ;  
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.branchexpense_gid'))) into @branchexpense_gid ;  
+ 
+        if  @branchexpensedetails_gid = 0 then
+           			 set Query_Insert = '';
+						set Query_Insert = Concat('Insert into ap_trn_tbranchexpensedetails (  branchexpensedetails_ondate, branchexpensedetails_branchexpensegid, branchexpensedetails_status, branchexpensedetails_amount,
+                               branchexpensedetails_remark, branchexpensedetails_ishold, entity_gid, create_by)
+							Values(''',@branchexpensedetails_ondate,''',''',@branchexpense_gid,''',''',@branchexpensedetails_status,''',
+							''',@branchexpensedetails_amount,''',''',@branchexpensedetails_remark,''',''N'',',@Entity_Gid,',''',ls_create_by,''')'
+												);		 
+												
+						set @Insert_Detail_query = Query_Insert;		
+						#select Query_Insert; ## remove It
+						PREPARE stmt FROM @Insert_Detail_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt;                          
+						
+						if countRow >  0 then
+						   set Message = 'SUCCESS';
+						else 
+						   set Message = 'FAIL';     
+							rollback;
+							leave sp_APExpense_Set;
+						end if;
+
+        else
+        
+			set Query_Update = '';
+					
+					set Query_Update = concat('Update ap_trn_tbranchexpensedetails set update_by = ',ls_create_by,', ');
+					
+					if @branchexpensedetails_amount <> '' then
+						set Query_Update = concat(Query_Update, ' branchexpensedetails_amount = ''',@branchexpensedetails_amount,''', ');
+					End if;
+					
+					  if @branchexpensedetails_ishold is not null then
+						if @branchexpensedetails_ishold = 1 then set @branchexpensedetails_ishold = 'Y';
+						else  set @branchexpensedetails_ishold = 'N';  end if;   
+						set Query_Update = concat(Query_Update, ' branchexpensedetails_ishold = ''',@branchexpensedetails_ishold,''',');
+					End if;
+					
+					  if @branchexpensedetails_remark <> '' then
+						set Query_Update = concat(Query_Update, ' branchexpensedetails_remark = ''',@branchexpensedetails_remark,''', ');
+					End if; 
+					
+					if @branchexpensedetails_ondate <> '' then
+						set Query_Update = concat(Query_Update, ' branchexpensedetails_ondate = ''',@branchexpensedetails_ondate,''', ');
+					End if;
+									 
+					 
+			  
+				   set Query_Update = concat(Query_Update, 'Update_date = current_timestamp()  where branchexpensedetails_gid = ',@branchexpensedetails_gid,'  ' );
+					   
+					   
+					   
+						set @Query_Update = '';
+						set @Query_Update = Query_Update;		                
+					   select @Query_Update; ### Remove IT
+						PREPARE stmt FROM @Query_Update;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt;                         
+						
+						if countRow <= 0 then
+							set Message = 'Error On Update.';
+							rollback;
+							leave sp_APExpense_Set;
+						 elseif    countRow > 0 then
+							set Message = 'SUCCESS';
+						End if;
+            end if;
+  end if;      
+
+if ls_Type = 'STATUS_INSERT' then
+		select JSON_LENGTH(lj_filter,'$') into @lj_filter_count;
+     
+        if @lj_filter_count is null or @lj_filter_count = 0 then
+			set Message = 'No Data In Json - Filter.';
+            rollback;
+			leave sp_APExpense_Set;
+        end if;
+          
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.status'))) into @status_ ;
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_filter,CONCAT('$.ID'))) into @ID ;
+
+        ## Validate Json Data
+        
+			Update ap_trn_tbranchexpense set branchexpense_status = @status_, 
+			update_by = ls_create_by , Update_date = now()
+			where branchexpense_gid = @ID ;            
+            
+         set Updated_Row = (select ROW_COUNT());
+         
+       #  select Updated_Row; Remove it
+         
+         if Updated_Row = 0 then
+			set Message = 'Error On Status Update.';
+            leave sp_APExpense_Set;
+		 else
+           set Message = 'SUCCESS';
+         End if;
+
+ End if;
+ 
+      if IS_Commit='Y' then
+        set Message = 'SUCCESS';
+        commit;
+	  else 
+		rollback;
+        leave sp_APExpense_Set;
+	  end if;
+END

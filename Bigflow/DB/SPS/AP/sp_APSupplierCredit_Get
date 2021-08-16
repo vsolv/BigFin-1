@@ -1,0 +1,141 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APSupplierCredit_Get`(in `ls_Type` varchar(64),
+in `li_gid` int, in `li_entity_gid` int,out `Message` varchar(1000)
+)
+sp_APSupplierCredit_Get:BEGIN
+
+Declare Query_Select varchar(5000);
+Declare ls_count int;
+
+if ls_Type = 'SUPPLIER_DETAILS' then
+
+	if li_gid = 0 then
+		set Message = 'Supplier Gid Is Needed.';
+		leave sp_APSupplierCredit_Get;
+	End if;
+
+	set Query_Select = '';
+
+	set Query_Select = Concat('select c.paymode_gid,c.Paymode_name,c.paymode_glno,a.bankdetails_acno,a.bankdetails_bank_gid,b.bankbranch_ifsccode,b.bankbranch_name,a.bankdetails_beneficiaryname,
+				g.taxsubdetails_taxrate as suppliertax_taxrate,e.taxdetails_taxno,
+					
+						 g.taxsubdetails_isexcempted as ''IS_EXCEMPT''   , 
+					 
+					 date_format(g.taxsubdetails_excemfrom,''%d-%m-%Y'') as taxsubdetails_excemfrom,
+					 date_format(g.taxsubdetails_excemto,''%d-%m-%Y'') as taxsubdetails_excemto,
+					 g.taxsubdetails_excemthrosold as exempt_threshold_amount,
+					 g.taxsubdetails_isexcempted,g.taxsubdetails_excemrate as exempt_rate,
+					 h.taxrate_rate as tax_rate,f.supplier_gid,i.subtax_name as tds_tax_type,i.subtax_gid
+					,concat(''['',group_concat( JSON_OBJECT(''tds_tax_type'',i.subtax_name,''tax_rate'',h.taxrate_rate,
+                                                          ''exempt_rate'',g.taxsubdetails_excemrate,
+                                                          ''subdetails_gid'',g.taxsubdetails_gid,
+                                                          ''exempt_threshold_amount'',g.taxsubdetails_excemthrosold
+                                                           ,''ISEXEMPT'',case 
+															   when taxsubdetails_isexcempted = ''Y'' then ''Y''
+															   else ''N''
+															 End)),'']'' ) as tds_data
+					
+                    from gal_trn_tbankdetails as a 
+					left join gal_mst_tbankbranch as b on b.bankbranch_gid = a.bankdetails_bankbranch_gid and a.bankdetails_isactive = ''Y''
+					inner join gal_mst_tpaymode as c on c.paymode_gid = a.bankdetails_paymode_gid  and Paymode_name = ''NEFT''
+					inner join gal_mst_tsupplier as f on 
+													 a.bankdetails_reftable_code = f.Supplier_code and a.bankdetails_reftable_gid = f.supplier_gid
+					inner join gal_mst_tref as z on z.ref_name in (''SUPPLIER_TAX'')                 
+					left join gal_mst_ttaxdetails as e on e.taxdetails_ref_gid = z.ref_gid 
+					and e.taxdetails_reftablecode = f.Supplier_code and  taxdetails_isactive = ''Y'' and taxdetails_isremoved = ''N''
+					
+					left join (select * from 
+								  gal_mst_ttaxsubdetails as g where 
+							  g.taxsubdetails_isexcempted = ''Y'' and (current_date() between g.taxsubdetails_excemfrom and g.taxsubdetails_excemto)
+								union 
+								select * from 
+							   gal_mst_ttaxsubdetails as g where 
+							  g.taxsubdetails_isexcempted is null) as g on g.taxsubdetails_taxdetails_gid = e.taxdetails_gid
+					and
+                     e.taxdetails_isactive = ''Y'' and e.taxdetails_isremoved = ''N''
+					left join gal_mst_ttaxrate as h on h.taxrate_subtax_gid = g.taxsubdetails_subtax_gid 
+					and h.taxrate_isactive = ''Y'' and h.taxrate_isremoved = ''N''
+					 left join gal_mst_tsubtax as i on i.subtax_gid = g.taxsubdetails_subtax_gid and 
+					i.subtax_isactive = ''Y'' and i.subtax_isremoved = ''N''
+					
+					where  a.entity_gid = ',li_entity_gid,' and  a.bankdetails_reftable_gid = ',li_gid,'
+                      group by bankdetails_gid ' );
+					## Conditions for Ref Table
+					set @p = Query_Select;				
+			#select Query_Select; ## Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt; 
+					Select found_rows() into ls_count;
+					DEALLOCATE PREPARE stmt;
+
+				if ls_count = 0 then
+					set Message = 'NOT_FOUND';
+				else
+					set Message = 'FOUND';
+				end if;	
+                
+elseif   ls_Type = 'IMPRESED_DETAILS' then           
+    if li_gid = 0 then
+		set Message = 'IMPRESED Gid Is Needed.';
+		leave sp_APSupplierCredit_Get;
+	End if;
+	set Query_Select = '';
+
+	set Query_Select = Concat('select c.paymode_gid,bankbranch_ifsccode,c.paymode_glno,a.bankdetails_beneficiaryname, c.Paymode_name,
+				a.bankdetails_acno,b.bankbranch_name,a.bankdetails_bank_gid,''{}'' as tds_data
+                
+				from gal_trn_tbankdetails as a 
+				left join gal_mst_tbankbranch as b on b.bankbranch_gid = a.bankdetails_bankbranch_gid
+				inner join gal_mst_tpaymode as c on c.paymode_gid = a.bankdetails_paymode_gid
+				left join gal_mst_tbranch as f on f.branch_gid = a.bankdetails_reftable_gid and 
+                a.bankdetails_reftable_code = f.branch_code
+                inner join gal_mst_tref as z on z.ref_name in(''BRANCH_PAYMENT'')      and z.ref_gid = a.bankdetails_ref_gid               
+				where a.entity_gid = ',li_entity_gid,' and  a.bankdetails_reftable_gid = ',li_gid,'' );
+					## Conditions for Ref Table
+					set @p = Query_Select;				
+			  # select Query_Select; ## Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt; 
+					Select found_rows() into ls_count;
+					DEALLOCATE PREPARE stmt;
+
+				if ls_count = 0 then
+					set Message = 'NOT_FOUND';
+				else
+					set Message = 'FOUND';
+				end if;	
+else 
+
+    if li_gid = 0 then
+		set Message = 'EMPLOYEE Gid Is Needed.';
+		leave sp_APSupplierCredit_Get;
+	End if;
+
+	set Query_Select = '';
+
+	set Query_Select = Concat('select c.paymode_gid,bankbranch_ifsccode,c.paymode_glno,a.bankdetails_beneficiaryname, c.Paymode_name,
+				a.bankdetails_acno,b.bankbranch_name,a.bankdetails_bank_gid,''{}'' as tds_data
+                
+				from gal_trn_tbankdetails as a 
+				inner join gal_mst_tbankbranch as b on b.bankbranch_gid = a.bankdetails_bankbranch_gid
+				inner join gal_mst_tpaymode as c on c.paymode_gid = a.bankdetails_paymode_gid 
+                inner join gal_mst_temployee as f on f.employee_gid = a.bankdetails_reftable_gid and 
+                a.bankdetails_reftable_code = f.employee_code
+                inner join gal_mst_tref as z on z.ref_name in(''EMPLOYEE_PAYMENT'')                 
+				where a.entity_gid = ',li_entity_gid,' and  a.bankdetails_reftable_gid = ',li_gid,'' );
+					## Conditions for Ref Table
+					set @p = Query_Select;				
+			  #select Query_Select; ## Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt; 
+					Select found_rows() into ls_count;
+					DEALLOCATE PREPARE stmt;
+
+				if ls_count = 0 then
+					set Message = 'NOT_FOUND';
+				else
+					set Message = 'FOUND';
+				end if;	
+
+end if;                
+
+END

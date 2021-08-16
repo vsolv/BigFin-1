@@ -1,0 +1,661 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} EB Details  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>EB Details </h4>
+            </div>
+        </div>
+        <form name="eb_details" novalidate>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>EB Advance To Be Borne By</label>
+                            <md-select md-container-class="popup_select"
+                                       ng-required="true"
+                                       ng-model="all_data.eb_advance_bone_by">
+                                <md-option ng-repeat="y in eb_advance_borneby" ng-value="y.id">
+                                    {{y.data}}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>EB Service Provider</label>
+                            <input ng-model="all_data.eb_service_provider"
+                                   maxlength="60" required/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>EB Consumer No</label>
+                            <input ng-model="all_data.eb_connection_no" valid-number only-numbers
+                                   maxlength="60" required/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="EB Circle"
+                                         md-item-text="item.dropdowndetails_name"
+                                         md-items="item in get_eb_circle_data(search_eb)"
+                                         md-menu-class="md-virtual-repeat-container"
+                                         md-min-length=0
+                                         ng-required="true"
+                                         md-no-cache="true"
+                                         md-search-text="search_eb"
+                                         md-selected-item="all_data.eb_circle"
+                                         md-selected-item-change="eb_circle_changged(item.dropdowndetails_gid)">
+                            <md-item-template>
+                                <span md-highlight-text="search_eb"> {{item.dropdowndetails_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Data matching "{{search_eb}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-5"></div>
+                    <div class="col-md-4">
+                        <md-button class="md-raised custbutton" value="submit"
+                                   ng-disabled="eb_details.$invalid"
+                                   ng-hide="edit_eb=='Y'  || Page_Name=='Premises_Approval_Summary'"
+                                   ng-click="save_details('EB','NEW')">
+                            Save
+                        </md-button>
+
+                        <md-button class="md-raised " value="submit"
+                                   ng-disabled="eb_details.$invalid"
+                                   ng-hide="edit_eb=='N'  || Page_Name=='Premises_Approval_Summary'"
+                                   ng-click="save_details('EB','UPDATE')">
+                            Update
+                        </md-button>
+
+                        <md-button class="md-raised md-warn" value="close"
+                                   data-dismiss="modal" href="BranchExp/Br_Premises_Property_Details"
+                                   aria-label="Close">Cancel
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <br/>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <div class="row table-responsive">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                               md-progress="deferred">
+                            <thead class="header">
+                            <tr>
+                                <th>S.No</th>
+                                <th> EB Borne By</th>
+                                <th> EB Service Provied</th>
+                                <th> EB Consumer Number</th>
+                                <th>EB Circle</th>
+                                <th>Edit</th>
+                                <th>Add EB Advance</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr align="center"
+                                ng-repeat="eb in eb_data.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict">
+                                <td>
+                                    <center>
+                                        {{((currentPage-1)*itemsPerPage)+$index+1}}
+                                    </center>
+                                </td>
+                                <td>{{eb.eb_ebborne}}</td>
+                                <td>{{eb.eb_ebserviceprovider}}</td>
+                                <td>{{eb.eb_ebconnection_no}}</td>
+                                <td>{{eb.eb_circle_name}}</td>
+                                <td>
+                                    <span class="editlink material-icons"
+                                          ng-click="edit_eb_details(eb)">edit
+                                </span>
+                                </td>
+                                <td>
+                                    <span class="editlink material-icons"
+                                          ng-click="add_eb_advance(eb)">arrow_upward
+                                </span>
+                                </td>
+
+                            </tr>
+                            <tr ng-show="eb_data.length == 0">
+                                <td class="warning" colspan="11">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr align="center">
+                                <td colspan="5">
+                                    <ul uib-pagination
+                                        total-items="eb_details.length"
+                                        ng-model="currentPage"
+                                        max-size="maxSize"
+                                        class="pagination-sm"
+                                        boundary-links="true"
+                                        items-per-page="itemsPerPage"></ul>
+                                </td>
+                                <td colspan="2">
+                                    Total Records:{{eb_details.length}}
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="eb_advance_popup" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabels2">
+                            Add EB Advance
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click=""
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <br/>
+                        <form name="bank_form" novalidate>
+
+                            <div class="row">
+                                <div class="col-md-12">
+
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Advance Amount</label>
+                                            <input ng-model="all_data.eb_advance_amount" valid-number only-numbers
+                                                   maxlength="20" required/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Adance Date</label>
+                                            <md-datepicker md-hide-icons="calendar"
+                                                           ng-model="all_data.eb_advance_date"
+                                                           md-hide-icons="calendar" ng-click="date"
+                                                           md-min-date="maxDate"
+                                                           md-max-date="minDate" required></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Remark</label>
+                                            <input ng-model="all_data.eb_advance_remark"
+                                                   maxlength="255" required/>
+                                        </md-input-container>
+                                    </div>
+
+
+                                    <div class="col-md-3">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-disabled="bank_form.$invalid"
+                                                   ng-hide="eb_adv_edit=='Y' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-click="save_details('EB_ADVANCE','NEW')">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="submit"
+                                                   ng-disabled="bank_form.$invalid"
+                                                   ng-hide="eb_adv_edit=='N' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-click="save_details('EB_ADVANCE','UPDATE')">
+                                            Update
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="col-md-12">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <div class="row table-responsive">
+                                        <div class="col-md-12 col-lg-12 col-sm-12">
+                                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                                   md-progress="deferred">
+                                                <thead class="header">
+                                                <tr>
+                                                    <th>S.No</th>
+                                                    <th>EB Advance Amount</th>
+                                                    <th>EB Advance Date</th>
+                                                    <th>EB Advance Remark</th>
+                                                    <th>EB Advance Edit</th>
+
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr align="center"
+                                                    ng-repeat="advance in eb_advance_details.slice(((bank_currentPage-1)*bank_itemsPerPage),((bank_currentPage)*bank_itemsPerPage)) | filter:search:strict">
+                                                    <td>
+                                                        <center>
+                                                            {{((bank_currentPage-1)*bank_itemsPerPage)+$index+1}}
+                                                        </center>
+                                                    </td>
+                                                    <td>{{advance.ebadvance_amount}}</td>
+                                                    <td>{{advance.ebadvance_date | date:'dd-MMM-yyyy'}}</td>
+                                                    <td>{{advance.ebadvance_remarks}}</td>
+                                                    <td>
+                                                        <span class="editlink material-icons"
+                                                              ng-click="edit_eb_advance(advance)">edit
+                                                        </span>
+                                                    </td>
+
+
+                                                </tr>
+                                                <tr ng-show="eb_advance_details.length == 0">
+                                                    <td class="warning" colspan="11">
+                                                        No Records Found.
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                                <tfoot>
+                                                <tr align="center">
+                                                    <td colspan="4">
+                                                        <ul uib-pagination
+                                                            total-items="eb_advance_details.length"
+                                                            ng-model="bank_currentPage"
+                                                            max-size="bank_maxSize"
+                                                            class="pagination-sm"
+                                                            boundary-links="true"
+                                                            items-per-page="ibank_temsPerPage"></ul>
+                                                    </td>
+                                                    <td colspan="2">
+                                                        Total Records:{{eb_advance_details.length}}
+                                                    </td>
+                                                </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','premises_service','$mdDialog','$window','$filter','$http',
+function($scope,premises_service,$mdDialog,$window,$filter,$http) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+
+    $scope.bank_currentPage=1;
+    $scope.bank_maxSize=3;
+    $scope.bank_itemsPerPage=10;
+
+    $scope.all_data={};
+    $scope.Premises_Property_Gid=0;
+    $scope.landlord_gid=0;
+    $scope.edit_eb="N";
+    $scope.eb_gid=0;
+    $scope.ebadvance_gid=0;
+    $scope.eb_adv_edit="N";
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.eb_advance_borneby = [{id: 'Bank', data: 'Bank'}, {id: 'Landlord',data: 'Landlord'},
+                                 {id: 'Both',data: 'Both'}];
+
+    $scope.loading_bank = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('eb_advance_popup')),
+                clickOutsideToClose: false
+            });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+
+    var datas={"group":"PREMISES","action":"GET","type":"PREMISES_COMMON_DROPDOWN",
+                    "filter":{"dropdown_name": "EB Circle"}};
+
+    var get_eb_circle = premises_service.premises_process_get(datas);
+    get_eb_circle.then(function(result) {
+        var res=result.data;
+        $scope.eb_circle_data=res;
+        console.log($scope.eb_circle_data);
+    }, function(err) {
+      alert('No Data');
+    }).finally($scope.endloading);
+
+
+    $scope.get_eb_circle_data= change_eb_circle;
+        function change_eb_circle(query) {
+            var result = $filter('filter')($scope.eb_circle_data, {
+            'dropdowndetails_name':query,
+        });
+        return result;
+    }
+
+    $scope.eb_circle_changged=function(eb_circle){
+        if(eb_circle!=undefined){
+            $scope.eb_circle_gid=eb_circle;
+        }
+    }
+
+    $scope.get_Premises_Data = function(){
+        debugger;
+        var datas = {"action":"GET","type":"BRANCH_EXPENSE_GID",
+        "filter": {"Branch_Premises_Gid":"","Premises_Property_Gid":"","Branch_Premises_Page":""}}
+
+        var setcolumndata = premises_service.get_session_expense(datas);
+            setcolumndata.then(function(result) {
+            $scope.Branch_Premises_Gid=result.data.Branch_Premises_Gid;
+            $scope.Premises_Property_Gid=result.data.Premises_Property_Gid;
+            $scope.Premises_Property_Name=result.data.Premises_Property_Name;
+            $scope.Page_Name=result.data.Branch_Premises_Page;
+            console.log(result.data);
+            if($scope.Premises_Property_Gid!=0){
+                $scope.execute_premises=1;
+                $scope.get_EB_Details();
+            }
+            else{
+                alert("No Premises");
+            }
+        },
+       function(err) {
+            alert("No Premises Gid");
+       }).finally($scope.endloading);
+    }
+    $scope.get_Premises_Data();
+
+    $scope.get_EB_Details=function(){
+         var datas={"group":"PREMISES","action":"GET","type":"PREMISES_EB",
+                "filter":{"propertygid":$scope.Premises_Property_Gid}};
+         $scope.loading();
+        var get_eb = premises_service.premises_process_get(datas);
+        get_eb.then(function(result) {
+            $scope.endloading();
+            var res=result.data;
+            $scope.eb_data=res;
+            console.log($scope.eb_data);
+        }, function(err) {
+            $scope.endloading();
+          alert('No Data');
+        }).finally($scope.endloading);
+    }
+
+    $scope.edit_eb_details=function(eb){
+        $scope.edit_eb="Y";
+        $scope.eb_gid=eb.eb_gid;
+
+        $scope.all_data.eb_advance_bone_by=eb.eb_ebborne;
+        $scope.all_data.eb_service_provider=eb.eb_ebserviceprovider;
+        $scope.all_data.eb_circle=eb.eb_circle_name;
+        $scope.all_data.eb_connection_no=eb.eb_ebconnection_no;
+        $scope.eb_circle_gid=eb.eb_ebcircle;
+    }
+
+    $scope.edit_eb_advance=function(advance){
+        $scope.eb_adv_edit="Y";
+        $scope.ebadvance_gid=advance.ebadvance_gid;
+
+        $scope.all_data.eb_advance_amount=advance.ebadvance_amount;
+        $scope.all_data.eb_advance_date=advance.ebadvance_date;
+        $scope.all_data.eb_advance_remark=advance.ebadvance_remarks;
+
+    }
+
+    $scope.save_details=function(type,action){
+        debugger;
+        $scope.execute=1;
+        if(type=="EB" && action=="NEW"){
+            if($scope.Premises_Property_Gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_EB",
+                "filter":{"propertygid": $scope.Premises_Property_Gid,
+                 "eb_ebborne": $scope.all_data.eb_advance_bone_by,
+                 "eb_ebserviceprovider":$scope.all_data.eb_service_provider,
+                 "eb_ebcircle": $scope.eb_circle_gid,
+                 "eb_ebconnection_no":$scope.all_data.eb_connection_no}};
+            }
+            else{
+                alert("No Landlord");
+            }
+        }
+        else if(type=="EB" && action=="UPDATE"){
+            if($scope.eb_gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_EB",
+                "filter":{"eb_gid": $scope.eb_gid,
+                 "eb_ebborne": $scope.all_data.eb_advance_bone_by,
+                 "eb_ebserviceprovider":$scope.all_data.eb_service_provider,
+                 "eb_ebcircle": $scope.eb_circle_gid,
+                 "eb_ebconnection_no":$scope.all_data.eb_connection_no}};
+            }
+            else{
+                alert("No Landlord");
+            }
+        }
+
+        else if(type=="EB_ADVANCE" && action=="NEW"){
+            if($scope.eb_gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_EBADVANCE",
+                "filter":{"eb_gid": $scope.eb_gid,
+                 "ebadvance_amount": $scope.all_data.eb_advance_amount,
+                 "ebadvance_date":$filter('date')($scope.all_data.eb_advance_date, "yyyy-MM-dd"),
+                 "ebadvance_remarks": $scope.all_data.eb_advance_remark,
+                }};
+            }
+            else{
+                alert("No EB Gid");
+            }
+        }
+        else if(type=="EB_ADVANCE" && action=="UPDATE"){
+            if($scope.ebadvance_gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_EBADVANCE",
+                "filter":{"ebadvance_gid": $scope.ebadvance_gid,
+                 "ebadvance_amount": $scope.all_data.eb_advance_amount,
+                 "ebadvance_date":$filter('date')($scope.all_data.eb_advance_date, "yyyy-MM-dd"),
+                 "ebadvance_remarks": $scope.all_data.eb_advance_remark,
+                }};
+            }
+            else{
+                alert("No EB Gid");
+            }
+        }
+
+        if(type=="EB"){$scope.loading();}
+        else if(type=="EB_ADVANCE"){$scope.loading_bank();}
+
+        if($scope.execute==1){
+            var popup_data = premises_service.premises_process_set(datas);
+            popup_data.then(function(result) {
+                var res=result.data.MESSAGE;
+                 if (res=== "SUCCESS") {
+                    alert("SUCCESS");
+                     $scope.all_data={};
+                    if(type=="EB_ADVANCE"){
+                     $scope.eb_adv_edit="N";
+                        $scope.add_eb_advance($scope.eb_values);
+                    }
+                    else if(type=="EB"){
+                        $scope.get_EB_Details();
+                        $scope.edit_eb="N";
+                    }
+                 } else
+                 {
+                    alert(JSON.stringify(result.data));
+                 }
+            }, function(err) {
+              alert('Data Not Inserted');
+            }).finally($scope.endloading);
+        }
+
+    }
+
+    $scope.add_eb_advance=function(eb){
+        debugger;
+        $scope.eb_advance_details=[];
+        $scope.eb_gid=eb.eb_gid;
+        $scope.eb_values=eb;
+        $scope.all_data={};
+         $scope.eb_adv_edit="N";
+         var datas={"group":"PREMISES","action":"GET","type":"PREMISES_EBADVANCE",
+                "filter":{"eb_gid":$scope.eb_gid}};
+         $scope.loading_bank();
+        var get_advance_data = premises_service.premises_process_get(datas);
+        get_advance_data.then(function(result) {
+            $scope.endloading();
+            var res=result.data;
+            $scope.eb_advance_details=res;
+            console.log($scope.eb_advance_details);
+        }, function(err) {
+            $scope.endloading();
+          alert('No Data');
+        }).finally($scope.endloading);
+        modalshow('eb_advance_popup');
+
+    }
+
+
+
+
+}]);
+myApp.service("premises_service", function ($http) {
+
+    this.premises_process_set=function (data) {
+        var response=$http.post(Appname+"/Set_premises/",data);
+        return response;
+    }
+    this.get_session_expense = function (data) {
+        var response=$http.post(Appname+"/Session_Get_Expnese_Data/",data);
+        return response;
+    }
+
+    this.premises_process_get=function (data) {
+        var response=$http.post(Appname+"/Get_premises/",data);
+        return response;
+    }
+
+
+ });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

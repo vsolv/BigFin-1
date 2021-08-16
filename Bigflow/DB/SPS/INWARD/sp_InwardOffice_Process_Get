@@ -1,0 +1,276 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_InwardOffice_Process_Get`(in `Action` varchar(64),in `Type` varchar(64),
+in `lj_filters` json ,in `li_entity_gid` int, out `Message` varchar(1000)
+ )
+SP_INWARD_OFF_GET:BEGIN
+# Ramesh 
+
+# Action :: Header, Details,ALL,
+# Details :: ALL 
+
+Declare Query_Select varchar(5000);
+Declare Query_Search varchar(1000);
+Declare Query_Limit varchar(1000);
+Declare Query_Column varchar(1000);
+Declare Query_All varchar(5000);
+declare i int ;
+declare ls_count varchar(16);
+
+set Query_Search = '';
+
+set i = 0 ;
+
+	select  JSON_LENGTH(lj_filters, CONCAT('$')) into @Filter_count;                
+	
+			if @Filter_count > 0 then
+				#select  JSON_LENGTH(lj_filters, CONCAT('$.FILTER')) into @Filter_count;    
+				set Query_Search = '';
+				WHILE i <= @Filter_count - 1 Do			
+						
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].From_Date[0]'))) into @From_Date;
+					select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].Header_Gid[0]'))) into @Header_Gid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].AWB_NO[0]'))) into @AWB_NO;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].Courier_Gid[0]'))) into @Courier_Gid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].Status[0]'))) into @ls_Status;   
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.FILTER[',i,'].Doc_Type[0]'))) into @Doc_Type;   
+                    
+                        
+                        if @From_Date <> '' then
+							if  fn_DateValidation('IS_NOT_FUTURE','First',@From_Date,'') = 'INVALID' then
+								set Message = 'Invalid From Date.';
+								leave SP_INWARD_OFF_GET;
+							end if;  
+                        
+                     
+							if @From_Date <> '' then
+                            #select 3;
+								set Query_Search = concat(Query_Search,'and inwardheader_date like ''','%',@From_Date,'%',''' ');						
+							end if;     
+                         # select Query_Search;  
+						end if;
+                        
+                        if @Header_Gid <> 0 then
+							set Query_Search = concat(Query_Search,' and inwardheader_gid = ' ,@Header_Gid,' ');                        
+                        End if;
+                        
+                        if @AWB_NO <> '' then
+							set Query_Search = concat(Query_Search,' and inwardheader_awbno like ''','%',@AWB_NO,'%',''' ');
+                        end if;
+                        
+                        if @Courier_Gid <> '' or @Courier_Gid <> 0   then
+							set Query_Search = concat(Query_Search,' and inwardheader_couriergid = ',@Courier_Gid,' ');
+                        end if;
+                        
+					if @ls_Status <> '' and Action = 'HEADER_OFFICE' then						
+                        set Query_Search = concat(Query_Search, ' and inwardheader_gid in (select inwarddetails_inwardheadergid from inw_trn_tinwarddetails
+                            where inwarddetails_status = ''',@ls_Status,''' )');
+                     elseif @ls_Status <> '' and Action = 'ALL' then	       
+						set Query_Search = concat(Query_Search, ' and  inwarddetails_status like ''','%',@ls_Status,'%',''' ');
+					end if;
+                         
+                         
+                   if @Doc_Type <> '' then
+					set Query_Search = concat(Query_Search, ' and metadata_value like ''','%',@Doc_Type,'%',''' ');
+                   End if;
+			  
+				set i = i + 1;
+            
+				END WHILE;
+			
+			End if;
+
+	if Action = 'ALL' then          
+            
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.InwardHeader_AWBNo'))) into @InwardHeader_AWBNo;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.InwardHeader_No'))) into @InwardHeader_No;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.InwardHeader_Date'))) into @InwardHeader_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.InwardDetails_Status'))) into @InwardDetails_Status;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Employee_Name'))) into @Employee_Name;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Page_Index'))) into @Page_Index;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Page_Size'))) into @Page_Size;
+
+			if @InwardHeader_Date <> '' or @InwardHeader_Date <> 0   then
+				set Query_Search = concat(Query_Search,' and a.inwardheader_date = ''',@InwardHeader_Date,''' ');
+			end if;
+            
+            if @InwardHeader_No <> '' or @InwardHeader_No <> 0   then
+				set Query_Search = concat(Query_Search,' and a.inwardheader_No like ''','%',@InwardHeader_No,'%','''  ');
+			end if;
+            
+            if @InwardHeader_AWBNo <> '' or @InwardHeader_AWBNo <> 0   then
+				set Query_Search = concat(Query_Search,' and a.inwardheader_awbno like ''','%',@InwardHeader_AWBNo,'%','''  ');
+			end if;
+            
+            if @InwardDetails_Status <> '' or @InwardDetails_Status <> 0   then
+				set Query_Search = concat(Query_Search,' and c.inwarddetails_status like ''','%',@InwardDetails_Status,'%','''  ');
+			end if; 
+            
+            if @Employee_Name <> '' or @Employee_Name <> 0   then
+				set Query_Search = concat(Query_Search,' and d.employee_name like ''','%',@Employee_Name,'%','''  ');
+			end if;
+                        
+           
+			set @total_size= @Page_Index*@Page_Size;    
+			#select  @total_size,  @Page_Index,@Page_Size;
+			set Query_Limit='';
+			#select @Page_Index,@Page_Size;				
+			if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+		  
+							 set @total_size= @Page_Index*@Page_Size;
+							 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+			
+			else
+							#select 1;
+							set @Page_Index=2,@Page_Size=5;
+							#select @Page_Index,@Page_Size;
+							set @total_size= @Page_Index*@Page_Size;
+							#select @total_size;
+							set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+			End if;
+      #select Query_Limit;
+      
+			set Query_Column='';
+                     
+				if @Page_Index=0 and @Page_Size=10 then   
+					set Query_Column = (',@Total_Row as Total_Row');
+				else
+					set Query_Column='';
+				end if;  
+      
+      
+      
+            
+            ### Search Query.       
+            set Query_Select = '';
+            
+            set Query_Select = concat('Select inwardheader_gid,ifnull(c.inwarddetails_gid,0) as inwarddetails_gid,
+							inwardheader_channel,inwardheader_No,courier_gid,
+							DATE_FORMAT(inwardheader_date,''%d-%b-%Y'') as inwardheader_date,
+							inwardheader_awbno,inwardheader_noofpockets,
+							inwardheader_from,inwardheader_receivedby,inwardheader_remarks,b.courier_name,d.employee_name,
+                            ifnull(c.inwarddetails_doctype,0) as inwarddetails_doctype,
+                            ifnull(c.inwarddetails_count,0) as inwarddetails_count,
+                            ifnull(c.inwarddetails_remarks,0) as inwarddetails_remarks,inwarddetails_status,inwarddetails_doctype as doc_type  ',Query_Column,'
+							from inw_trn_tinwardheader as a
+							left join dis_mst_tcourier as b on b.courier_gid = a.inwardheader_couriergid 
+                            and b.courier_isactive = ''Y'' and b.courier_isremoved = ''N''
+                            left join inw_trn_tinwarddetails as c on c.inwarddetails_inwardheadergid = a.inwardheader_gid                            
+                            and c.inwarddetails_isactive = ''Y'' and c.inwarddetails_isremoved = ''N''							
+                            left join gal_mst_temployee as d on d.employee_gid = a.inwardheader_receivedby
+                      
+							where a.inwardheader_isactive = ''Y'' and a.inwardheader_isremoved = ''N''
+							and a.entity_gid = ',li_entity_gid,' ',Query_Search,'
+									 order by inwardheader_gid desc  ');
+                                     
+                                     
+                  if @Page_Index=0 and @Page_Size=10 then 
+                  # select 555;
+                        set @Query_Count = '';
+                        set @Query_Count = concat('select count(A.inwardheader_gid) into @Total_Row from (',Query_Select,') A ');
+                          	PREPARE stmt FROM @Query_Count;
+								EXECUTE stmt;
+							DEALLOCATE PREPARE stmt;	
+                  
+                  end if;                   
+                                    
+                 set @p =concat(Query_Select,Query_Limit);    
+					#select Query_Select;# Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt; 
+				   Select found_rows() into ls_count;
+					DEALLOCATE PREPARE stmt;                   
+            
+						if ls_count = 0 then
+							set Message = 'NOT_FOUND';
+						else
+							set Message = 'FOUND';
+						end if;
+
+
+	elseif Action = 'AWB_MAX' then
+		set Query_Select = '';
+            
+            set Query_Select = concat(' select ifnull(inwardheader_awbno,0) as inwardheader_awbno
+									from inw_trn_tinwardheader as a 
+									where a.inwardheader_gid = (select MAX(b.inwardheader_gid) from inw_trn_tinwardheader as b 
+									where b.inwardheader_isactive = ''Y'' and b.inwardheader_isremoved = ''N'' 
+									and b.inwardheader_channel = ''Hand Delivery''
+									) ;');
+                                    
+                                    
+				set @p = Query_Select;    
+                # select Query_Select;# Remove it
+				PREPARE stmt FROM @p;
+				EXECUTE stmt; 
+               Select found_rows() into ls_count;
+				DEALLOCATE PREPARE stmt;       
+                
+                
+			if ls_count = 0 then
+				set Message = 'NOT_FOUND';
+			else
+				set Message = 'FOUND';
+			end if;
+            
+      elseif Action ='HEADER_OFFICE' then
+      
+      
+      
+      
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Page_Index'))) into @Page_Index;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Page_Size'))) into @Page_Size;
+     # select @Page_Size,@Page_Index;
+      
+			set @total_size= @Page_Index*@Page_Size;    
+			#select  @total_size,  @Page_Index,@Page_Size;
+			set Query_Limit='';
+			#select @Page_Index,@Page_Size;				
+			if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+		  
+							 set @total_size= @Page_Index*@Page_Size;
+							 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+			
+			else
+							#select 1;
+							set @Page_Index=2,@Page_Size=5;
+							#select @Page_Index,@Page_Size;
+							set @total_size= @Page_Index*@Page_Size;
+							#select @total_size;
+							set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+			End if;
+      
+      #select @total_size;
+      #select Query_Limit;
+      
+			set Query_Select = '';
+            
+            set Query_Select = concat('Select inwardheader_gid,inwardheader_channel,inwardheader_No,courier_gid,
+							DATE_FORMAT(inwardheader_date,''%d-%b-%Y'') as inwardheader_date,
+							inwardheader_awbno,inwardheader_noofpockets,
+							inwardheader_from,inwardheader_receivedby,inwardheader_remarks,b.courier_name,d.employee_name                            
+							from inw_trn_tinwardheader as a
+							left join dis_mst_tcourier as b on b.courier_gid = a.inwardheader_couriergid 
+                            and b.courier_isactive = ''Y'' and b.courier_isremoved = ''N''                            							
+                            left join gal_mst_temployee as d on d.employee_gid = a.inwardheader_receivedby
+							where a.inwardheader_isactive = ''Y'' and a.inwardheader_isremoved = ''N''
+							and a.entity_gid = ',li_entity_gid,' ',Query_Search,' 
+									order by inwardheader_gid desc  ',Query_Limit,'  ');
+                                    
+                 set @p = Query_Select;    
+           #   select Query_Select;# Remove it
+				PREPARE stmt FROM @p;
+				EXECUTE stmt; 
+               Select found_rows() into ls_count;
+				DEALLOCATE PREPARE stmt;                   
+            
+            if ls_count = 0 then
+				set Message = 'NOT_FOUND';
+			else
+				set Message = 'FOUND';
+			end if;
+
+		
+    End if;
+
+	 
+
+END

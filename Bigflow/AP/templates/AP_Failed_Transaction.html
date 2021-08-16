@@ -1,0 +1,1406 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}  Failed Transaction Summary{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4> Failed Transaction</h4>
+            </div>
+        </div>
+        <div class="row">
+            <form role="form" name="inwardsummary_valid">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>CR No</label>
+                                <input ng-model="invoiceheader_crno"
+                                       ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,Crno)"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Type</label>
+                                <md-select ng-model="selectedtype" multiple="">
+                                    <md-optgroup label="Invocie Types">
+                                        <md-option ng-value="invoice.metadata_value"
+                                                   ng-repeat="invoice in Invoice_Types"
+                                        >
+                                            {{invoice.metadata_value}}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label> Supplier Name</label>
+                                <input type="text" ng-model="supplier_name"
+                                       ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,crno)"
+                                       maxlength="16">
+                            </md-input-container>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-3">
+                            <md-autocomplete
+                                    ng-disabled="ECFcheckboxModel.value"
+                                    md-clear-button="true" md-floating-label="Branch"
+                                    md-input-maxlength=126
+                                    md-item-text="item.branch_detail"
+                                    md-items="item in get_branch(searchbrancheName)"
+                                    md-selected-item-change="branchNameChanged(item)"
+                                    md-min-length=0 md-search-text="searchbrancheName"
+                                    ng-model="itemss" md-no-cache="true" size="5"
+                                    md-selected-item="selected_branch">
+                                <md-item-template>
+                                    <span md-highlight-text="searchbrancheName"> {{item.branch_detail}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Branch Name matching "{{search Branch Name}}"
+                                    were
+                                    found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Number</label>
+                                <input ng-model="invoicenum"
+                                       ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,crno)"
+                                />
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Amount</label>
+                                <input ng-model="invoiceamt"
+                                       ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,crno)"
+                                       numbers-only maxlength="10"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>From Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="from_date"
+                                               md-hide-icons="calendar"
+                                               ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,crno)"
+                                               md-min-date="maxDate"
+                                               md-max-date="minDate" formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label> To Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="to_date"
+                                               md-hide-icons="calendar"
+                                               ng-change="ACselectchange(supplier_name,invoicenum,invoiceamt,from_date,crno)"
+                                               md-min-date="maxDate"
+                                               md-max-date="minDate" formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="true"
+                                             md-floating-label="Employee"
+                                             md-item-text="item.employee_name"
+                                             md-items="item in getemployee_srch(searchemp)"
+                                             md-menu-class="md-virtual-repeat-container"
+                                             md-min-length=0
+                                             md-no-cache="true"
+                                             md-search-text="searchemp"
+                                             md-selected-item="selectedemp"
+                                             md-selected-item-change="employee_change(item.employee_gid)"
+                                             ng-disabled="Customer_disab"
+                                             ng-init="count=0">
+                                <md-item-template>
+                                    <span md-highlight-text="searchTex"> {{item.employee_name}} - {{item.employee_code}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Employee matching "{{searchTex}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-6">
+
+                        </div>
+                        <!--                        <div class="col-md-1">-->
+                        <!--                            <md-button class="md-fab md-mini md-primary custbutton"-->
+                        <!--                                       href="get_Accounting_Entry_Data?action=GET&type=AP_INVOICEHEADER_GET&invoiceheader_crno={{invoiceheader_crno}}&selectedtype={{selectedtype}}&status={{status}}&supplier_name={{supplier_name}}&branch_gid={{branch_gid}}&invoicenum={{invoicenum}}&invoiceamt={{invoiceamt}}&from_date={{from_date}}&to_date={{to_date}}">-->
+                        <!--                                <md-icon>get_app</md-icon>-->
+                        <!--                                <md-tooltip>Download XL</md-tooltip>-->
+                        <!--                            </md-button>-->
+                        <!--                        </div>-->
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       ng-click="find_maker_summary()">
+                                <md-icon>search</md-icon>
+                                <md-tooltip>Search</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-warn"
+                                       ng-click="clear_seach()">
+                                <md-icon>search_off</md-icon>
+                                <md-tooltip>Clear Search</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>CR No</th>
+                        <th>Invoice Type</th>
+                        <th>Supplier Name</th>
+                        <th>Employee Name</th>
+                        <th>Invoice No</th>
+                        <th>Invoice Date</th>
+                        <th>Invoice Amount</th>
+                        <th>Status</th>
+                        <th>Payment Status</th>
+                        <th>Change Status</th>
+                        <th>View Transaction Error</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sum in maker_summary">
+                        <td class="text-center" ng-model="dept_name">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td ng-click="checker_page(sum)"><a href="">
+                            {{sum.invoiceheader_crno}}</a>
+                        </td>
+                        <td> {{sum.invoiceheader_invoicetype}}</td>
+                        <td> {{sum.supplier_branchname}}</td>
+                        <td> {{sum.employee_name}}</td>
+                        <td>{{sum.invoiceheader_invoiceno}}</td>
+                        <td>{{sum.invoiceheader_invoicedate_full | date:'dd-MMM-yyyy'}}</td>
+                        <td align="right">{{sum.invoiceheader_amount}}</td>
+                        <td>{{sum.invoiceheader_status}}</td>
+                        <td align="center">
+                            <a href="" ng-click="view_payment(sum)"> VIEW PAYMENT </a>
+                        </td>
+                        <td class="text-center">
+                            <a href=""><i class="material-icons" ng-click="change_status(sum)"
+                                          style="material-icons.line-height:3px">send</i></a>
+                        </td>
+                        <td align="center">
+                            <span class="editlink material-icons" style="color:green;"
+                                  ng-click="call_error_details(sum)">arrow_upward
+                            </span>
+                        </td>
+                    </tr>
+                    <tr ng-show="maker_summary.length == 0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="10">
+                            <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
+                                max-size="maxSize" ng-change="pageChanged()"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="change_status_show_AP" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="view_files">
+                            Change Status- AP INIT
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <br/>
+                    <div class="body">
+                        <form name="status_form" novalidate>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <h4>CR No:{{cr_number}}</h4>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete md-clear-button="true"
+                                                         md-floating-label="Change Status To"
+                                                         md-item-text="item.status"
+                                                         md-items="item in getStatus_AP(search_status)"
+                                                         md-menu-class="md-virtual-repeat-container"
+                                                         md-min-length=0
+                                                         md-no-cache="true"
+                                                         ng-required="true"
+                                                         md-search-text="ap_search_status"
+                                                         md-selected-item="ap_selected_status"
+                                                         md-selected-item-change="Status_Change_AP(item)">
+                                            <md-item-template>
+                                                <span md-highlight-text="ap_search_status"> {{item.status}}</span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Status matching "{{ap_search_status}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                    <div class="col-md-3" ng-show="final_status_ap=='APPROVED'">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>CBS REF NO</label>
+                                            <input ng-model="ap_cbsref"
+                                                   maxlength="20"/>
+                                        </md-input-container>
+                                    </div>
+                                    <!--                                    <div class="col-md-3"-->
+                                    <!--                                         ng-show="final_status=='PAYMENT' || final_status=='AMOUNT TRAN'">-->
+                                    <!--                                        <md-input-container class="md-block inputcontainer">-->
+                                    <!--                                            <label>PV NO</label>-->
+                                    <!--                                            <input ng-model="ap_pvno"-->
+                                    <!--                                                   maxlength="20"/>-->
+                                    <!--                                        </md-input-container>-->
+                                    <!--                                    </div>-->
+
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-4">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-click="save_status_ap()"
+                                                   ng-disabled="status_form.$invalid || save_button_show==0">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" ng-click="clear_data()"
+                                                   aria-label="Close">Clear
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="change_status_show_AMOUNT_TRAN" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="amount_tran">
+                            Change Status - AMOUNT TRAN
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <br/>
+                    <div class="body">
+                        <form name="amount_tran_status_form" novalidate>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <h4>CR No:{{cr_number}}</h4>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete md-clear-button="true"
+                                                         md-floating-label="Change Status To"
+                                                         md-item-text="item.status"
+                                                         md-items="item in getStatus_AMOUNT_TRAN(search_status)"
+                                                         md-menu-class="md-virtual-repeat-container"
+                                                         md-min-length=0
+                                                         md-no-cache="true"
+                                                         ng-required="true"
+                                                         md-search-text="amount_tran_search_status"
+                                                         md-selected-item="amount_tran_selected_status"
+                                                         md-selected-item-change="Status_Change_AMOUNT_TRAN(item)">
+                                            <md-item-template>
+                                                <span md-highlight-text="amount_tran_search_status"> {{item.status}}</span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Status matching "{{amount_tran_search_status}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-4">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-click="save_status_amoun_tran()"
+                                                   ng-disabled="!amount_tran_selected_status || save_button_show==0">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" ng-click="clear_data()"
+                                                   aria-label="Close">Clear
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="change_status_show_PAY" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="payment">
+                            Change Status - PAY INIT
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <br/>
+                    <div class="body">
+                        <form name="payment_status_form" novalidate>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <h4>CR No:{{cr_number}}</h4>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete md-clear-button="true"
+                                                         md-floating-label="Change Status To"
+                                                         md-item-text="item.status"
+                                                         md-items="item in getStatus_PAY(search_status)"
+                                                         md-menu-class="md-virtual-repeat-container"
+                                                         md-min-length=0
+                                                         md-no-cache="true"
+                                                         ng-required="true"
+                                                         md-search-text="pay_search_status"
+                                                         md-selected-item="pay_selected_status"
+                                                         md-selected-item-change="Status_Change_PAY(item)">
+                                            <md-item-template>
+                                                <span md-highlight-text="pay_search_status"> {{item.status}}</span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Status matching "{{pay_search_status}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                    <div class="col-md-3"
+                                         ng-show="final_status_pay=='AMOUNT TRAN' || final_status_pay=='PAYMENT'">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>CBS REF NO</label>
+                                            <input ng-model="pay_cbsref"
+                                                   maxlength="20"/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3"
+                                         ng-show="final_status_pay=='AMOUNT TRAN' || final_status_pay=='PAYMENT'">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>PV NO</label>
+                                            <input ng-model="pay_pvno"
+                                                   maxlength="20"/>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-4">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-click="save_status_payment()"
+                                                   ng-disabled="payment_status_form.$invalid || save_button_show==0">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" ng-click="clear_data()"
+                                                   aria-label="Close">Clear
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="change_status_show_NEFT_DD_TXNF" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="payment_dd_neft_txnf">
+                            Change Status - DD NEFT TXNF
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <br/>
+                    <div class="body">
+                        <form name="amount_tran_status_form" novalidate>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <h4>CR No:{{cr_number}}</h4>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete md-clear-button="true"
+                                                         md-floating-label="Change Status To"
+                                                         md-item-text="item.status"
+                                                         md-items="item in getStatus_NEFT_DD_TXNF(neft_dd_txnf_search_status)"
+                                                         md-menu-class="md-virtual-repeat-container"
+                                                         md-min-length=0
+                                                         md-no-cache="true"
+                                                         ng-required="true"
+                                                         md-search-text="neft_dd_txnf_search_status"
+                                                         md-selected-item="neft_dd_txnf_selected_status"
+                                                         md-selected-item-change="Status_Change_NEFT_DD_TXNF(item)">
+                                            <md-item-template>
+                                                <span md-highlight-text="pay_search_status"> {{item.status}}</span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Status matching "{{neft_dd_txnf_search_status}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-4">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-click="save_status_neft_dd_txnf()"
+                                                   ng-disabled="amount_tran_status_form.$invalid || save_button_show==0">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" ng-click="clear_data()"
+                                                   aria-label="Close">Clear
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="view_payment_details" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabels2">
+                            Payment Details
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>PV No</th>
+                                                <th>Pay Mode</th>
+                                                <th>Header Date</th>
+                                                <th>Cheque Number</th>
+                                                <th>Cheque Date</th>
+                                                <th>Header Amount</th>
+                                                <th>Header Details Amount</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr align="center"
+                                                ng-repeat="pay in all_payment_file_data">
+                                                <td>
+                                                    <center>
+                                                        {{((currentPage2-1)*itemsPerPage2)+$index+1}}
+                                                    </center>
+                                                </td>
+                                                <td>{{pay.paymentheader_pvno}}</td>
+                                                <td>{{pay.paymentheader_paymode}}</td>
+                                                <td>{{pay.paymentheader_date}}</td>
+                                                <td>{{pay.paymentheader_chqno}}</td>
+                                                <td>{{pay.paymentheader_chqdate}}</td>
+                                                <td>{{pay.paymentheader_amount}}</td>
+                                                <td>{{pay.paymentdetails_amount}}</td>
+                                            </tr>
+                                            <tr ng-show="all_payment_file_data.length == 0">
+                                                <td class="warning" colspan="12">
+                                                    No Records Found.
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                            <tfoot>
+                                            <tr align="center">
+                                                <td colspan="7">
+                                                    <ul uib-pagination
+                                                        total-items="Total_Rows2"
+                                                        ng-model="currentPage2"
+                                                        max-size="maxSize2"
+                                                        class="pagination-sm"
+                                                        boundary-links="true"
+                                                        items-per-page="itemsPerPage2"></ul>
+                                                </td>
+                                                <td colspan="2">
+                                                    Total Count:{{Total_Rows2}}
+                                                </td>
+                                            </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="view_error_details" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="error_details">
+                            Error Details
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <br>
+                        <div class="row">
+                            <div class="col-md-1"></div>
+                            <div class="col-md-10">
+                                <textarea rows="25%" cols="140%" name="comment" disabled>{{error_details.invoiceheader_callbackerror}}</textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    {% endverbatim %}
+
+    <script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element','$http',
+    function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog, $element,$http) {
+        $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+        $scope.currentPage2 = 1;
+        $scope.maxSize2 = 3;
+        $scope.itemsPerPage2 = 10;
+
+        $scope.courier = '';
+        $scope.Summarydate = '';
+        $scope.selectedtype=[];
+        $scope.maker_summary=[];
+        $scope.Total_Row=0;
+        $scope.save_button_show=1;
+
+        $scope.ls_followup_date = new Date();
+        $scope.minDate = new Date(
+            $scope.ls_followup_date.getFullYear(),
+            $scope.ls_followup_date.getMonth(),
+            $scope.ls_followup_date.getDate()
+        );
+
+        sessionStorage.removeItem('checkerdtl');
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.loading_change_status_show_ap = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('change_status_show_AP')),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.loading_change_status_show_PAY = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('change_status_show_PAY')),
+                clickOutsideToClose: false
+            });
+        };
+        $scope.loading_change_status_show_NEFT_DD_TXNF = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('change_status_show_NEFT_DD_TXNF')),
+                clickOutsideToClose: false
+            });
+        };
+        $scope.loading_change_status_show_AMOUNT_TRAN = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('change_status_show_AMOUNT_TRAN')),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.channelddl = [{
+            metadata_value: "PO ",
+        }, {
+            metadata_value: "Non PO"
+        }, {
+            metadata_value: "ADVANCE"
+        }, {
+            metadata_value: "EMP Claim"
+        }]
+
+        var channel = servicesummary.ddl('invoiceheader', 'invoicetype');
+        channel.then(function(result) {
+                var channel_data = JSON.parse(result.data)
+                    //  $scope.channelddl = channel_data;
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally();
+
+        var supplier = servicesummary.getdropdown("supplier");
+        supplier.then(function(supplier) {
+            var supplier = JSON.parse(supplier.data);
+            $scope.invoicesupplier_list = supplier;
+
+        }, function() {
+            alert("Record Not Found");
+
+        });
+
+        function amount_toinr(amount) {
+            var x = amount;
+            x = x.toString();
+            var afterPoint = '';
+            if (x.indexOf('.') > 0)
+                afterPoint = x.substring(x.indexOf('.'), x.length);
+            x = Math.floor(x);
+            x = x.toString();
+            var lastThree = x.substring(x.length - 3);
+            var otherNumbers = x.substring(0, x.length - 3);
+            if (otherNumbers != '')
+                lastThree = ',' + lastThree;
+            var res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + afterPoint;
+            return res;
+        }
+
+        $scope.checker_page=function(detail){
+            var checkerdtl = {
+                type: detail.invoiceheader_invoicetype,
+                invoiceheader_gid: detail.invoiceheader_gid,
+                supplier_gid: detail.supplier_gid,
+                type_of_page:"QUERY"
+            };
+            sessionStorage.setItem('checkerdtl', JSON.stringify(checkerdtl));
+            $window.location.href = "billentry_checker";
+        }
+
+        summary();
+        $scope.total_row_execute=0;
+        $scope.pageChanged = function(){
+             if($scope.maker_summary.length==0){
+                $scope.currentPage=1;
+             }
+              if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.get_total_row_maker_summary();
+              }
+             summary();
+        }
+        $scope.find_maker_summary=function(){
+            $scope.Total_Row=0;
+            $scope.currentPage=1;
+            $scope.total_row_execute=0;
+            summary();
+        }
+        $scope.selected_branch="";
+        function summary() {
+            debugger;
+             $scope.branch_gid="";
+            if($scope.selected_branch!=undefined){
+                $scope.branch_gid=$scope.selected_branch.branch_gid;
+            }
+            $scope.send_invoice_type=$scope.selectedtype.join();
+            $scope.from_date=$filter('date')($scope.from_date,"yyyy-MM-dd");
+            $scope.to_date=$filter('date')($scope.to_date,"yyyy-MM-dd");
+
+            var datas={params:{"action":"GET","type":"INVOICE_FAILED_SUMMARY",
+            "filter":{"InvoiceHeader_Status":"AP INITIATED,PAY INITIATED,TXN FAILED,NEFT INITIATED,DD INITIATED,AMOUNT TRAN","InvoiceHeader_Gid":"","InvoiceHeader_InvoiceType":$scope.send_invoice_type,
+            "InvoiceHeader_InvoiceDate":"","fromdate":$scope.from_date,"todate":$scope.to_date,"invoiceheader_branchgid":$scope.branch_gid,
+            "InvoiceHeader_CRNo":$scope.invoiceheader_crno,"invoiceheader_employeegid":$scope.employee_gid,
+            "InvoiceHeader_InvoiceNo":$scope.invoicenum,"InvoiceHeader_Amount":$scope.invoiceamt,"Supplier_Name":$scope.supplier_name,
+            "Page_Index":$scope.currentPage-1,"Page_Size":$scope.itemsPerPage}}};
+
+            var summary = servicesummary.get_approval_summary(datas);
+            summary.then(function(result) {
+                    $scope.maker_summary = result.data;
+                    $scope.maintable = result.data;
+                    if($scope.maker_summary.length==0){
+                        $scope.Total_Row=0;
+                    }
+                    if($scope.total_row_execute==0){
+                        if($scope.maker_summary.length==10){
+                            $scope.Total_Row=($scope.maker_summary.length)+($scope.currentPage*10);
+                        }
+                        else{
+                            $scope.Total_Row=$scope.maker_summary.length;
+                        }
+                    }
+                    angular.forEach($scope.maker_summary, function(value, key) {
+                        var inramount = amount_toinr($scope.maker_summary[key].invoiceheader_amount)
+                        $scope.maker_summary[key].invoiceheader_amount = inramount
+                        if (value.invoiceheader_invoicetype == "PO") {
+                            $scope.maker_summary[key].invoiceheader_invoicetype = "PO "
+                        }
+                    })
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+        }
+        $scope.ACselectchange = function() {
+            $scope.ddMMyyyy = $filter('date')($scope.from_date, 'dd-MM-yyyy');
+            $scope.maker_summary = $filter('filter')($scope.maintable, {
+                "supplier_branchname": $scope.supplier_name,
+                "invoiceheader_invoiceno": $scope.invoicenum,
+                "invoiceheader_amount": $scope.invoiceamt,
+                "invoiceheader_invoicedate": $scope.ddMMyyyy,
+                "invoiceheader_crno":$scope.invoiceheader_crno,
+            });
+        }
+        $scope.get_total_row_maker_summary=function(){
+            debugger;
+            $scope.branch_gid="";
+            if($scope.selected_branch!=undefined){
+                $scope.branch_gid=$scope.selected_branch.branch_gid;
+            }
+            $scope.send_invoice_type=$scope.selectedtype.join();
+            $scope.from_date=$filter('date')($scope.from_date,"yyyy-MM-dd");
+            $scope.to_date=$filter('date')($scope.to_date,"yyyy-MM-dd");
+
+            var datas={params:{"action":"GET","type":"INVOICE_FAILED_SUMMARY_COUNT",
+            "filter":{"InvoiceHeader_Status":"AP INITIATED,PAY INITIATED,TXN FAILED,NEFT INITIATED,DD INITIATED,AMOUNT TRAN","InvoiceHeader_Gid":"","InvoiceHeader_InvoiceType":$scope.send_invoice_type,
+            "InvoiceHeader_InvoiceDate":"","fromdate":$scope.from_date,"todate":$scope.to_date,"invoiceheader_branchgid":$scope.branch_gid,
+            "InvoiceHeader_CRNo":$scope.invoiceheader_crno,"invoiceheader_employeegid":$scope.employee_gid,
+            "InvoiceHeader_InvoiceNo":$scope.invoicenum,"InvoiceHeader_Amount":$scope.invoiceamt,"Supplier_Name":$scope.supplier_name,
+            "Page_Index":0,"Page_Size":$scope.itemsPerPage}}};
+            var summary = servicesummary.get_approval_summary(datas);
+            summary.then(function(result) {
+                    $scope.maker_summary_count = result.data;
+                    if($scope.maker_summary.length==0){
+                        $scope.Total_Row=0;
+                    }
+                    $scope.Total_Row=$scope.maker_summary_count[0].count;
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+        }
+
+        $scope.invoicehistory = function(detail) {
+            var history = {
+                invoiceheader_gid: detail.invoiceheader_gid,
+            };
+            sessionStorage.setItem('history', JSON.stringify(history));
+            $window.location.href = "AP_History ";
+        }
+
+
+        $scope.get_branch = function(query) {
+            var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                               "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                            "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+
+                         return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+
+                            var final_values=data.data.DATA;
+                            console.log(final_values);
+                            return final_values;
+                          });
+        }
+
+        $scope.getemployee_srch= function(searchText) {
+            var datas = {
+                params: {
+                    "Group": "GET_EMP_DATA",
+                    "Limit" : 0 + "," + 30,
+                    "Type": "EMPLOYEE",
+                    "Sub_Type": "EMPLOYEE_ALL",
+                    "json" : {
+                        "Params": {
+                                "FILTER": {
+                                    "Employee_name":searchText,
+                                },
+                            }
+                        }
+                    }
+                }
+            return $http.post(Appname + '/employee_mst_data/' , datas).then(function(data) {
+            console.log(data.data);
+                return data.data.DATA;
+              });
+        };
+
+
+        $scope.employee_gid="";
+        $scope.employee_change =function(emp_gid){
+            if(emp_gid!=undefined){
+                $scope.employee_gid=emp_gid;
+            }
+        }
+
+
+        var channel = servicesummary.get_invoice_types('invoiceheader', 'invoicetype');
+            channel.then(function(result) {
+                    var Invoice = JSON.parse(result.data)
+                    $scope.Invoice_Types =Invoice;
+                    console.log($scope.Invoice_Types);
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally();
+
+        $scope.change_statu_type_AP=[{"status":"CHECKER"},{"status":"APPROVED"}];
+        $scope.change_statu_type_PAY=[{"status":"APPROVED"},{"status":"AMOUNT TRAN"},{"status":"PAYMENT"}];
+        $scope.change_statu_type_AMOUNT_TRAN=[{"status":"PAYMENT"}];
+        $scope.change_statu_type_NEFT_DD_TXNF=[{"status":"AMOUNT TRAN"},{"status":"PAYMENT"}];
+
+        $scope.getStatus_AP = get_statuss;
+            function get_statuss(query) {
+                var result = $filter('filter')($scope.change_statu_type_AP, {
+                'status':query,
+            });
+            return result;
+        }
+        $scope.final_status="";
+        $scope.Status_Change_AP=function(status){
+            if(status!=undefined){
+                $scope.final_status_ap=status.status;
+
+            }
+        }
+
+        $scope.getStatus_PAY = get_status;
+            function get_status(query) {
+                var result = $filter('filter')($scope.change_statu_type_PAY, {
+                'status':query,
+            });
+            return result;
+        }
+
+        $scope.final_status_PAY="";
+        $scope.Status_Change_PAY=function(status){
+            if(status!=undefined){
+                $scope.final_status_pay=status.status;
+            }
+        }
+        $scope.getStatus_NEFT_DD_TXNF = get_status_DD_NEFT_TXNF;
+            function get_status_DD_NEFT_TXNF(query) {
+                var result = $filter('filter')($scope.change_statu_type_NEFT_DD_TXNF, {
+                'status':query,
+            });
+            return result;
+        }
+
+        $scope.final_status_NEFT_DD_TXNF="";
+        $scope.Status_Change_NEFT_DD_TXNF=function(status){
+            if(status!=undefined){
+                $scope.final_status_NEFT_DD_TXNF=status.status;
+            }
+        }
+
+        $scope.getStatus_AMOUNT_TRAN = get_status_AMOUNT_TRAN;
+            function get_status_AMOUNT_TRAN(query) {
+                var result = $filter('filter')($scope.change_statu_type_AMOUNT_TRAN, {
+                'status':query,
+            });
+            return result;
+        }
+
+        $scope.final_status_AMOUNT_TRAN="";
+        $scope.Status_Change_AMOUNT_TRAN=function(status){
+            if(status!=undefined){
+                $scope.final_status_AMOUNT_TRAN=status.status;
+            }
+        }
+
+
+        $scope.Header_gid=0;
+        $scope.change_status=function(detail){
+        debugger;
+            $scope.clear_data();
+            $scope.save_button_show=1;
+            $scope.final_status="";
+            $scope.type_of_status=detail.invoiceheader_status;
+            $scope.Header_gid=detail.invoiceheader_gid;
+            if($scope.Header_gid!=0 && $scope.Header_gid!=undefined){
+                $scope.cr_number=detail.invoiceheader_crno;
+            }
+            if($scope.type_of_status=="AP INITIATED"){
+                modalshow('change_status_show_AP');
+            }
+            if($scope.type_of_status=="PAY INITIATED"){
+                modalshow('change_status_show_PAY');
+            } if($scope.type_of_status=="AMOUNT TRAN"){
+                modalshow('change_status_show_AMOUNT_TRAN');
+            }
+            if($scope.type_of_status=="TXN FAILED" || $scope.type_of_status=="NEFT INITIATED" || $scope.type_of_status=="DD INITIATED"){
+                modalshow('change_status_show_NEFT_DD_TXNF');
+            }
+        }
+
+        $scope.save_status_ap=function(){
+            $scope.execute=1;
+            debugger;
+            if($scope.cr_number=="" || $scope.cr_number==undefined){
+                $scope.execute=0;
+                alert("CR Number Missing");
+            }
+            if($scope.Header_gid=="" || $scope.Header_gid==undefined){
+                $scope.execute=0;
+                alert("Header Gid Missing");
+            }
+            if($scope.final_status_ap=="APPROVED"){
+                if($scope.ap_cbsref=="" || $scope.ap_cbsref==undefined){
+                   $scope.execute=0;
+                   alert("CBS Ref Number Missing");
+                }
+                else{
+                    var type="INVOICE_HEADER_UPDATE"
+                    var json={"HEADER": [{"Invoice_Header_Gid":$scope.Header_gid,"refno":$scope.ap_cbsref,
+                    "status_":$scope.final_status_ap,"crno":$scope.cr_number}]}
+
+                    $scope.loading_change_status_show_ap();
+                    $scope.save_button_show=0;
+                    if($scope.final_status_ap=="APPROVED"){
+                        var dedube_summary = servicesummary.pay_init_approvalset(type,json);
+                        dedube_summary.then(function(result) {
+                            if (result.data == 'SUCCESS') {
+                                alert("SUCCESS");
+                                modalhide("change_status_show_AP");
+                                summary();
+                                $scope.clear_data();
+                            }
+                            else{
+                            alert(JSON.stringify(result.data));
+                            }
+                        },
+                        function(err) {
+                            alert('Not Updated!.');
+                        }).finally($scope.endloading);
+                    }
+                    else{
+                        var dedube_summary = servicesummary.approvalset(type,json);
+                        dedube_summary.then(function(result) {
+                            if (result.data == 'SUCCESS') {
+                                alert("SUCCESS");
+                                modalhide("change_status_show_AP");
+                                summary();
+                                $scope.clear_data();
+                            }
+                            else{
+                            alert(JSON.stringify(result.data));
+                            }
+                        },
+                        function(err) {
+                            alert('Not Updated!.');
+                        }).finally($scope.endloading);
+
+                    }
+                }
+            }
+            if($scope.final_status_ap=="CHECKER"){
+                var type="STATUS";
+                var json = {"Invoice_Header_Gid":$scope.Header_gid,"Status":$scope.final_status_ap,
+                        "neftstatus": "PASS","crno":$scope.cr_number}
+                $scope.loading_change_status_show_ap();
+                $scope.save_button_show=0;
+                var dedube_summary = servicesummary.approvalset(type,json);
+                dedube_summary.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert("SUCCESS");
+                        modalhide("change_status_show_AP");
+                        summary();
+                        $scope.clear_data();
+                    }
+                    else{
+                    alert(JSON.stringify(result.data));
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+            }
+        }
+
+        $scope.save_status_payment=function(){
+            debugger;
+            $scope.execute=1;
+            if($scope.final_status_pay=="APPROVED"){
+                var json = {"Invoice_Header_Gid":$scope.Header_gid,"Status":$scope.final_status_pay,
+                            "neftstatus": "PASS","crno":$scope.cr_number}
+            }
+             if($scope.final_status_pay=="AMOUNT TRAN" || $scope.final_status_pay=="PAYMENT"){
+                if($scope.pay_cbsref=="" || $scope.pay_cbsref==undefined){
+                    $scope.execute=0;
+                    alert("CBS REF Number Missing");
+                }
+                if($scope.pay_pvno=="" || $scope.pay_pvno==undefined){
+                    $scope.execute=0;
+                    alert("PV Number Missing");
+                }
+                if($scope.execute==1){
+                    var json = {"Invoice_Header_Gid":$scope.Header_gid,"Status":$scope.final_status_pay,
+                            "neftstatus": "PASS","crno":$scope.cr_number,"cbsno":$scope.pay_cbsref,
+                            "pvno":$scope.pay_pvno}
+                }
+            }
+            if($scope.execute==1){
+                var type="STATUS";
+                $scope.save_button_show=0;
+                $scope.loading_change_status_show_PAY();
+                var dedube_summary = servicesummary.approvalset(type,json);
+                dedube_summary.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert("SUCCESS");
+                        modalhide("change_status_show_PAY");
+                        summary();
+                        $scope.clear_data();
+                    }
+                    else{
+                    alert(JSON.stringify(result.data));
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+            }
+            else{
+                alert("Fill All Details");
+            }
+        }
+
+        $scope.save_status_neft_dd_txnf=function(){
+            debugger;
+            $scope.execute=1;
+            if($scope.final_status_NEFT_DD_TXNF=="AMOUNT TRAN" || $scope.final_status_NEFT_DD_TXNF=="PAYMENT"){
+                    var json = {"Invoice_Header_Gid":$scope.Header_gid,"Status":$scope.final_status_NEFT_DD_TXNF,
+                               "neftstatus": "PASS","crno":$scope.cr_number,"cbsno":"N","pvno":"N"}
+            }
+            if($scope.execute==1){
+                var type="STATUS";
+                $scope.save_button_show=0;
+                $scope.loading_change_status_show_NEFT_DD_TXNF();
+                var dedube_summary = servicesummary.approvalset(type,json);
+                dedube_summary.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert("SUCCESS");
+                        modalhide("change_status_show_NEFT_DD_TXNF");
+                        summary();
+                        $scope.clear_data();
+                    }
+                    else{
+                    alert(JSON.stringify(result.data));
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+            }
+            else{
+                alert("Fill All Details");
+            }
+        }
+
+        $scope.save_status_amoun_tran=function(){
+            debugger;
+            $scope.execute=1;
+             if($scope.final_status_AMOUNT_TRAN=="PAYMENT"){
+                var json = {"Invoice_Header_Gid":$scope.Header_gid,"Status":$scope.final_status_AMOUNT_TRAN}
+            }
+            if($scope.execute==1){
+                var type="STATUS";
+                $scope.save_button_show=0;
+                $scope.loading_change_status_show_AMOUNT_TRAN();
+                var dedube_summary = servicesummary.approvalset(type,json);
+                dedube_summary.then(function(result) {
+                    if (result.data == 'SUCCESS') {
+                        alert("SUCCESS");
+                        modalhide("change_status_show_PAY");
+                        summary();
+                        $scope.clear_data();
+                    }
+                    else{
+                    alert(JSON.stringify(result.data));
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+            }
+            else{
+                alert("Fill All Details");
+            }
+        }
+
+
+        $scope.clear_data=function(){
+            $scope.final_status="";
+            $scope.ap_pvno="";
+            $scope.ap_cbsref="";
+            $scope.ap_selected_status="";
+
+            $scope.pay_pvno="";
+            $scope.pay_cbsref="";
+            $scope.pay_selected_status="";
+            $scope.amount_tran_selected_status="";
+        }
+
+        $scope.view_payment=function(header){
+            var datas={params:{"action":"GET","type":"AP_INVOICE_PAYMENT_GET",
+                "filter":{"invoiceheader_gid":header.invoiceheader_gid,
+                "Page_Index":0,"Page_Size":10000}}};
+             $scope.loading();
+             var payment_data = servicesummary.get_approval_summary(datas);
+             payment_data.then(function(result) {
+
+                    $scope.all_payment_file_data = result.data;
+                     modalshow('view_payment_details');
+                    if($scope.currentPage2==1){
+                        $scope.Total_Rows2=$scope.all_payment_file_data[0].Total_Row;
+                    }
+
+             },
+             function(err) {
+                alert('No data!.');
+             }).finally($scope.endloading);
+        }
+
+        $scope.call_error_details=function(error){
+            $scope.error_details=error;
+            modalshow('view_error_details');
+        }
+
+        $scope.clear_seach=function(){
+            $scope.selectedtype=[];
+            $scope.supplier_name="";
+            $scope.invoicenum="";
+            $scope.invoiceamt="";
+            $scope.from_date="";
+            $scope.to_date="";
+            $scope.invoiceheader_crno="";
+            $scope.selected_branch="";
+            $scope.branch_gid="";
+            $scope.selectedemp="";
+            $scope.employee_gid="";
+        }
+
+
+    }
+]);
+
+app.service("servicesummary", function ($http) {
+
+   this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+   }
+
+   this.getdropdown = function (tablename) {
+        var responsee = $http.post(Appname+"/Dropdown_details/",{params:{"tablename":tablename,"gid":0,"name":''}});
+        return responsee;
+   }
+
+   this.getemployee=function(){
+        var response=$http.get(Appname+"/empddl/");
+        return response;
+   }
+
+   this.get_approval_summary=function(data){
+        var response=$http.post(Appname+"/get_onward_data/",data);
+        return response;
+   }
+
+   this.get_invoice_types=function(tablename,columnname){
+            var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+            return response;
+   }
+<!--   this.approvalset=function(type,status_json){-->
+<!--        var response=$http.post(Appname+"/Dynamic_Invoiceheader_set/",{params:{"action":"UPDATE","type":type,"header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});-->
+<!--        return response;-->
+<!--   }-->
+
+<!--   this.approval_header_set=function(type,header_json){-->
+<!--        var response=$http.post(Appname+"/Dynamic_Invoiceheader_set/",{params:{"action":"UPDATE","type":type,"header_json":header_json,"debit_json":{},"detail_json":{},"status_json":{}}});-->
+<!--        return response;-->
+<!--   }-->
+
+    this.approvalset=function(type,status_json){
+        var response=$http.post(Appname+"/Dynamic_Status_Update/",{params:{"action":"UPDATE","type":type,"header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
+        return response;
+   }
+
+    this.pay_init_approvalset=function(type,header_json){
+        var response=$http.post(Appname+"/Dynamic_Invoiceheader_set/",{params:{"action":"UPDATE","type":type,"header_json":header_json,"debit_json":{},"detail_json":{},"status_json":{}}});
+        return response;
+   }
+
+
+   this.approval_header_set=function(type,header_json){
+        var response=$http.post(Appname+"/Dynamic_Status_Update/",{params:{"action":"UPDATE","type":type,"header_json":header_json,"debit_json":{},"detail_json":{},"status_json":{}}});
+        return response;
+   }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+    {% endblock %}

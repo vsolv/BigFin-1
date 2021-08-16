@@ -1,0 +1,422 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Catalog Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprmaker" ng-controller="Ctrlprmaker" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Catalog Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4">
+                    <md-input-container ng-show="!selected.length" md-no-float="" class="md-block left">
+                         <label>Supplier</label>
+                        <input type="text" ng-model="addprmakers.partnertype" ng-change="prmakerproductname(addprmakers)"
+                               placeholder="Search By Name..."/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-4">
+                    <md-input-container ng-show="!selected.length" md-no-float="" class="md-block left">
+                         <label>Product</label>
+                        <input type="text" ng-model="addprmakers.producttype" ng-change="prmakerproductname(addprmakers)"
+                               placeholder="Search By Product Name..."/>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-hide="showform" ng-click="createNew()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-4">
+                    <section class="pull-right" layout-align="center center pull-right">
+                        <md-data-table-pagination md-page="query.page" md-limit="query.limit"
+                                                  md-total="{{prmaker.length}}"/>
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="showform">
+            <form name="myForm">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                         <md-input-container class="md-block inputcontainer">
+                                <label>Supplier </label>
+                                <md-select ng-model="addprmaker.partnertype" ng-change="profileproductname(addprmaker)">
+                                    <md-option ng-repeat="partner in prpartner" ng-value=" partner.partner_gid">{{
+                                        partner.partner_name }}
+                                    </md-option>
+                                </md-select>
+                            </md-input-container>
+                    </div> <div class="col-md-3">
+                         <md-input-container class="md-block inputcontainer">
+                                <label>Supplier Branch</label>
+                                <md-select ng-model="addprmaker.partnerbranch" ng-change="profileproductnames(addprmaker.partnerbranch)">
+                                    <md-option ng-repeat="branch in prpartners" ng-value=" branch.partnerbranch_gid">{{
+                                        branch.partnerbranch_name }}-{{branch.partnerbranch_code}}
+                                    </md-option>
+                                </md-select>
+                            </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                         <md-input-container class="md-block inputcontainer">
+                                <label>Product Type </label>
+                                <md-select
+                                           ng-model="addprmaker.producttype">
+                                    <md-option ng-repeat="r in catalog_product" ng-value=" r.product_gid ">{{
+                                        r.product_name }}
+                                    </md-option>
+                                </md-select>
+                            </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Unit Price</label>
+                            <input type="text" name="number" placeholder="Enter Amount" valid-number
+                                   autocomplete="off"
+                                   maxlength="11" ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                   ng-model="addprmaker.amt" required/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Packing Price</label>
+                            <input name="number" placeholder="Enter Amount" valid-number
+                                   autocomplete="off"
+                                   maxlength="11" ng-pattern="/^[0-9]$/"
+                                   ng-model="addprmaker.pack_amt"/>
+                        </md-input-container>
+                    </div>
+                   <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Valid From</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                               md-open-on-focus ng-model="addprmaker.validfrom"></md-datepicker>
+                            </md-input-container>
+                        </div>
+                                   <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Valid To</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                               md-open-on-focus ng-model="addprmaker.validto"></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Delivery Days </label>
+                                            <input ng-model="addprmaker.deliverydays" type="text" valid-number>
+                                        </md-input-container>
+                                    </div>
+                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Capacity </label>
+                                            <input ng-model="addprmaker.capacity" type="text" valid-number>
+                                        </md-input-container>
+                                    </div>
+
+                    <div class="col-md-3"><br>
+                        <md-button class="md-raised custbutton" value="submit" ng-hide="showupdate"
+                                   ng-click="Saveprmaker(addprmaker)"
+                                   ng-disabled=" myForm.user.$invalid || myForm.addr.$invalid">
+                            Submit
+                        </md-button>
+
+                    </div>
+   </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Supplier Name</th>
+                        <th>Branch Name</th>
+                        <th>Product</th>
+                        <th>Unit Price</th>
+                        <th>Parking Price</th>
+                        <th>ValidFrom</th>
+                        <th>ValidTo</th>
+                        <th>Delivery Days</th>
+                        <th>Capacity</th>
+                        <th>Status</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="y in checkerdetails.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict "/>
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        </td>
+                        <td class="text-center">{{y.partner_name }}</td>
+                        <td class="text-center">{{y.partnerbranch_name }}</td>
+                        <td class="text-center">{{y.product_name }}</td>
+                        <td class="text-center">{{y.mpartnerproduct_unitprice}}</td>
+                        <td class="text-center">{{y.mpartnerproduct_packingprice}}</td>
+                        <td class="text-center">{{y.mpartnerproduct_validfrom| date:'dd-MMM-yyyy'}}</td>
+                        <td class="text-center">{{y.mpartnerproduct_validto| date:'dd-MMM-yyyy'}}</td>
+                         <td class="text-center">{{y.mpartnerproduct_deliverydays}}</td>
+                         <td class="text-center">{{y.mpartnerproduct_capacitypw}}</td>
+                        <td class="text-center">{{y.mpartnerproduct_status}}</td>
+
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul uib-pagination total-items="checkerdetails.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+
+                        </td>
+                        <td colspan="3">
+                            Total Count:{{checkerdetails.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Appprmaker', ['ngMaterial', 'ui.bootstrap','AppCommon']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+    })
+    app.controller('Ctrlprmaker', ['$scope', '$window', 'Servicedrctsale', '$mdDialog', '$filter','$http','$mdDateLocale','SerCommon','$element',
+    function($scope, $window, Servicedrctsale, $mdDialog,$filter,$http,$mdDateLocale,SerCommon,$element) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+         var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.entity_gid = detail.entity_gid;
+        $scope.create_by = detail.employee_gid;
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+  $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+$scope.createNew = function() {
+            $scope.disabled=false;
+            $scope.showform = true;
+            $scope.editdisabled = false;
+            $scope.myForm.$setPristine();
+            $scope.myForm.$setUntouched();
+             $scope.addprmaker=[];
+            $scope.addprmaker.amt= "";
+            $scope.addprmakerpack_amt= "";
+            $scope.addprmaker.validfrom="";
+            $scope.addprmaker.validto="";
+            $scope.addprmaker.deliverydays="";
+            $scope.addprmaker.capacity="";
+            $scope.showupdate = false;
+            $scope.addprmaker=[];
+}
+$scope.profileproductnames=function(e){
+      var data = {
+                    "Params": {
+                        "Filter": {"PartnerBranch_Gid":e},
+                        "Classification": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+                    }
+                }
+                var tproduct = {
+                    Group: 'GetProduct_Details',
+                    Action: 'catalog_productget',
+                    data: data
+                }
+            $scope.catalog_product = [];
+            var getprproduct = Servicedrctsale.getproduct_service(tproduct)
+            getprproduct.then(function (result) {
+                $scope.catalog_product = result.data.DATA;
+                //alert(JSON.stringify($scope.catalog_product));
+            }, function (err) {
+                // alert('No data!.');
+            }).finally();
+
+      }
+
+            $scope.prmakerproductname = function(e){
+            $scope.checkerdetails = $filter('filter')($scope.searchcheckerdetails,{
+            "partner_name": e.partnertype,
+            "product_name": e.producttype
+            });
+}
+             var  datan = {
+                    "Table_name": "atma_mst_tpartner",
+                    "Column_1": "partner_gid,partner_name",
+                    "Column_2": "",
+                    "Where_Common": "partner",
+                    "Where_Primary": "",
+                    "Primary_Value": "",
+                    "Order_by": "gid"
+                }
+            var
+                partnermaker = {
+                    Action: "",
+                    Entity_Gid: $scope.entity,
+                    data: datan
+                }
+            $scope.prpartner = [];
+            var getprmaker = Servicedrctsale.getpartnermaker(partnermaker)
+            getprmaker.then(function (result) {
+                $scope.prpartner = result.data.DATA;
+            }, function (err) {
+                // alert('No data!.');
+            }).finally();
+            $scope.Saveprmaker = function (addprmaker) {
+
+            //alert(JSON.stringify(addprmaker))
+            var data = {
+                "Params": {
+                    "Mpartnerproduct_Partner_gid": addprmaker.partnertype,
+                    "Mpartnerproduct_Partnerbranch_gid": addprmaker.partnerbranch,
+                    "Mpartnerproduct_Product_gid": addprmaker.producttype,
+                    "Mpartnerproduct_Unitprice": addprmaker.amt,
+                    "Mpartnerproduct_Packingprice": addprmaker.pack_amt,
+                    "Mpartnerproduct_Validfrom": addprmaker.validfrom,
+                    "Mpartnerproduct_Validto": addprmaker.validto,
+                    "Mpartnerproduct_Deliverydays": addprmaker.deliverydays,
+                    "Mpartnerproduct_Capacitypw": addprmaker.capacity,
+                },
+                "Classification": {
+                    "Create_By": $scope.create_by,
+                    "Entity_Gid": $scope.entity_gid,
+                },
+            }
+            var total = {
+                Group: 'PRMAKER Details',
+                Action: 'INSERT',
+                Type: 'PRMAKER Details',
+                data: data
+            }
+            $scope.prmakerinsert = [];
+            var set_prmakerinsert = Servicedrctsale.pprmaker(total)
+            set_prmakerinsert.then(function (result) {
+                 //alert(JSON.stringify(result.data));
+                 $scope.prmakerinserts = result.data.MESSAGE;
+                 if( $scope.prmakerinserts == "SUCCESSFULLY INSERTED"){
+                 alert("SUCCESSFULLY INSERTED");
+                 $scope.showform=false;
+                 getmakerdata();
+                 }else{
+                 alert(JSON.stringify( $scope.prmakerinserts));
+                }
+                }),
+                function (err) {
+                    alert('no data');
+                    alert(JSON.stringify(result.data));
+                };
+        }
+        $scope.profileproductname=function(e){
+        var  datan = {
+                    "Table_name": "atma_mst_tpartnerbranch",
+                    "Column_1": "partnerbranch_gid,partnerbranch_name,partnerbranch_code",
+                    "Column_2": "",
+                    "Where_Common": "partnerbranch",
+                    "Where_Primary": "partnergid",
+                    "Primary_Value": e.partnertype,
+                    "Order_by": "gid"
+                }
+            var
+                partnermaker = {
+                    Action: "",
+                    Entity_Gid: $scope.entity,
+                    data: datan
+                }
+            $scope.prpartners = [];
+            var getprmaker = Servicedrctsale.getpartnerbranchmaker(partnermaker)
+            getprmaker.then(function (result) {
+                $scope.prpartners = result.data.DATA;
+                //alert(JSON.stringify($scope.prpartners));
+            }, function (err) {
+                // alert('No data!.');
+            }).finally();
+        }
+getmakerdata();
+function getmakerdata(){
+        var data = {
+        "Params": {
+         },
+         "Classification": {
+            "Entity_Gid":$scope.entity_gid,
+         },
+    }
+    var details = {
+        Group: 'Checker_Get',
+        Action: 'PENDING_REJECTED',
+        Type:"",
+        data: data,
+    }
+    var get_checkerdetails = Servicedrctsale.checkergetService(details)
+    get_checkerdetails.then(function(result) {
+        $scope.checkerdetails = result.data.DATA;
+        $scope.searchcheckerdetails=$scope.checkerdetails;
+        //alert(JSON.stringify($scope.checkerdetails))
+    }),
+    function(err) {
+        alert('no data');
+    };
+
+}
+    }]);
+    app.service("Servicedrctsale", function($http) {
+    this.getpartnermaker = function (partnermaker) {
+               var respons = $http.post(Appname + "/prodget/", partnermaker);
+    return respons;
+    }
+    this.getpartnerbranchmaker = function (partnermaker) {
+               var respons = $http.post(Appname + "/prodget/", partnermaker);
+    return respons;
+    }
+    this.getprmakeract = function (tproduct) {
+            var respons = $http.post(Appname + "/prodget/", tproduct);
+    return respons;
+    }
+    this.pprmaker = function (total) {
+    var response = $http.post(Appname + "/prmakerset/", total);
+    return response;
+    }
+    this.getprmakerdb = function (dprmaker) {
+    var respons = $http.post(Appname + "/prmaker_get/", dprmaker);
+    return respons;
+    }
+    this.getproduct_service = function (dprmaker) {
+    var respons = $http.post(Appname + "/prmaker_get/", dprmaker);
+    return respons;
+    }
+     this.checkergetService = function(get_data) {
+        var response = $http.post(Appname + "/atma_CheckerDetails/", get_data);
+        return response;
+    }
+    });
+</script>
+{% endblock %}

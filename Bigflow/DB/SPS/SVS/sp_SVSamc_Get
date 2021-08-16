@@ -1,0 +1,244 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SVSamc_Get`(IN ls_action varchar(64),IN ls_type varchar(64),
+IN lj_Filters json,IN lj_Classification json, OUT Message varchar(1024))
+BEGIN
+##TAMILOLI
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(6144);
+Declare Query_Column varchar(6144);
+Declare Query_Limit varchar(6144);
+declare ls_count int;
+  
+
+
+ 
+  if ls_action='GET' and ls_type='AMC_HEADER_DETAIL' then
+
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.AmcHeader_Status'))) into @AmcHeader_Status;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.AmcHeader_Gid'))) into @AmcHeader_Gid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.AmcHeader_Type'))) into @AmcHeader_Type;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.AmcHeader_Status'))) into @AmcHeader_Status;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Employee_Name'))) into @Employee_Name;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Supplier_Name'))) into @Supplier_Name;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Index'))) into @Page_Index;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Size'))) into @Page_Size;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                    #select @Entity_Gid;
+                    
+                    set Query_Search ='';
+                    
+                    if @AmcHeader_Status <> '' then	
+					   set Query_Search = concat(Query_Search,' and  amcheader_status  =''',@AmcHeader_Status,''' ');
+					end if;
+                    
+					if @AmcHeader_Gid <> '' then
+						set Query_Search = concat(Query_Search,' and  amcheader_gid = ',@AmcHeader_Gid,' ');
+					End if;
+                    
+                    if @AmcHeader_Type <> '' then
+						set Query_Search = concat(Query_Search,' and  amcheader_type =',@AmcHeader_Type,' ');
+					End if;
+                    
+                    if @AmcHeader_Status <> '' then
+						set Query_Search = concat(Query_Search,' and  amcheader_status like ''','%',@AmcHeader_Status,'%',''' ');
+					End if;
+                    
+                    if @Employee_Name <> '' then
+						set Query_Search = concat(Query_Search,' and  employee_name like ''','%',@Employee_Name,'%',''' ');
+					End if; 
+                    
+                    if @Supplier_Name <> '' then
+						set Query_Search = concat(Query_Search,' and  supplier_name like ''','%',@Supplier_Name,'%',''' ');
+					End if;
+                    #SELECT query_search;
+                    #select @Page_Index,@Page_Size;
+                    
+                    set Query_Limit='';
+                    if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+						
+                        # select @Page_Index,@Page_Size;
+						 
+                         set @total_size= @Page_Index*@Page_Size;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+					end if;
+                    
+                    set Query_Column='';
+                     
+					if @Page_Index=0 and @Page_Size=10 then   
+						set Query_Column = (',@Total_Row as Total_Row');
+					end if; 
+					
+                    #select Query_Limit;     
+                    
+					set Query_Select='';
+					set Query_Select=concat('select a.amcheader_gid,a.amcheader_type,a.amcheader_code,a.amcheader_name,a.amcheader_isactive,
+															   date_format( a.amcheader_periodfrom,''%Y-%m-%d'') as amcheader_periodfrom,
+															   date_format(a.amcheader_periodto,''%Y-%m-%d'') as amcheader_periodto,
+															   a.amcheader_serviceperiod,a.amcheader_amctotalamt,a.amcheader_status,
+															   c.employee_name,d.supplier_name,
+																(select concat(''['' ,group_concat( JSON_OBJECT(''amcdetails_assetdetailid'',amcdetails_assetdetailid,
+                                                                                                                 ''product_name'',product_name,
+                                                                                                                 ''branch_name'',branch_name)),'']'')
+																	 from  svs_trn_tamcheader sub_a
+																	 inner join svs_trn_tamcdetails sub_b on sub_a.amcheader_gid=sub_b.amcdetails_amcheadergid and 
+																											 sub_a.amcheader_isactive=''Y'' and sub_a.amcheader_isremoved=''N'' and	
+                                                                                                             sub_b.amcdetails_isactive=''Y'' and sub_b.amcdetails_isremoved=''N''
+																	 inner join fa_trn_tassetdetails sub_c on sub_b.amcdetails_assetdetailid= sub_c.assetdetails_gid and
+																											 sub_c.assetdetails_isactive=''Y'' and sub_c.assetdetails_isremoved=''N''
+																	 inner join gal_mst_tbranch e1 on sub_c.assetdetails_branchgid=e1.branch_gid and
+																				e1.branch_isactive=''Y'' and e1.branch_isremoved=''N''
+																	 inner join gal_mst_tproduct sub_d on sub_c.assetdetails_productgid=sub_d.product_gid and
+																												sub_d.product_isactive=''Y'' and sub_d.product_isremoved=''N''
+																	where sub_a.amcheader_gid=a.amcheader_gid) as  asset_detail  ',Query_Column,'
+											from svs_trn_tamcheader a
+											left join svs_trn_tamcdetails b on a.amcheader_gid=b.amcdetails_amcheadergid and
+																			   a.amcheader_isactive=''Y'' and a.amcheader_isremoved=''N'' and
+                                                                               b.amcdetails_isactive=''Y'' and b.amcdetails_isremoved=''N''
+											left join gal_mst_temployee c on a.create_by=c.employee_gid and
+																			   c.employee_isactive=''Y'' and c.employee_isremoved=''N''
+											left join gal_mst_tsupplier d on a.amcheader_suppliergid=d.supplier_gid and 
+																			    d.supplier_isactive=''Y'' and d.supplier_isremoved=''N''
+											where 
+														a.entity_gid in (',@Entity_Gid,') ',Query_Search,'
+                                                         group by a.amcheader_gid ');
+                      
+                      if @Page_Index=0 and @Page_Size=10 then 
+						   #select 555;
+							set @Query_Count = '';
+							set @Query_Count = concat('select count(A.amcheader_gid) into @Total_Row from (',Query_Select,') A ');
+								PREPARE stmt FROM @Query_Count;
+									EXECUTE stmt;
+								DEALLOCATE PREPARE stmt;
+                                #select @Query_Count;
+					  end if;
+                      
+                      
+					  #select Query_Select;
+					  set @p= concat(Query_Select,Query_Limit);
+                     # select @p;
+					  prepare stmt from @p;
+					  execute stmt;
+					  select found_rows() into ls_count;
+					 # select ls_count;
+					   if ls_count >0 then
+							 set message='FOUND';
+						else
+							set message='NOT FOUND-sp_SVSamc_Get.';
+					  end if;
+                              
+  elseif ls_action='GET' and ls_type='AMC_HEADER' then 
+            #SELECT 3;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.AmcHeader_Gid'))) into @AmcHeader_Gid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.AmcHeader_Code'))) into @AmcHeader_Code;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.SupplierGid'))) into @SupplierGid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.EmployeeGid'))) into @EmployeeGid;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.AmcHeader_AmcTotalAmt'))) into @AmcHeader_AmcTotalAmt;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_Name'))) into @Supplier_Name;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Index'))) into @Page_Index;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Size'))) into @Page_Size;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+					#select @AmcHeader_Gid,@Entity_Gid;
+                    
+                    set Query_Search ='';
+                    
+                    if @AmcHeader_Code <> '' then	
+					   set Query_Search = concat(Query_Search,' and  amcheader_code  =''',@AmcHeader_Code,''' ');
+					end if;
+                    
+                    if @SupplierGid <> '' then	
+					   set Query_Search = concat(Query_Search,' and  a.amcheader_suppliergid  = ',@SupplierGid,' ');
+					end if;
+                    
+                    if @EmployeeGid <> '' then	
+					   set Query_Search = concat(Query_Search,' and  a.amcheader_rmemployeegid  = ',@EmployeeGid,' ');
+					end if;
+                    
+                    if @AmcHeader_AmcTotalAmt <> '' then	
+					   set Query_Search = concat(Query_Search,' and  a.amcheader_amctotalamt  = ''',@AmcHeader_AmcTotalAmt,''' ');
+					end if;
+                    
+                    if @Supplier_Name <> '' then	
+					   set Query_Search = concat(Query_Search,' and  supplier_name  = ',@Supplier_Name,' ');
+					end if;
+                    
+                    
+					set Query_Limit='';
+                    if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+						
+                        # select @Page_Index,@Page_Size;
+						 
+                         set @total_size= @Page_Index*@Page_Size;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+					end if;
+                    #select Query_Limit;
+                    set Query_Column='';
+                     
+					if @Page_Index=0 and @Page_Size=10 then   
+						set Query_Column = (',@Total_Row as Total_Row');
+					end if; 
+
+                    #select Query_Column;
+                   #SELECT Query_Search;
+					set Query_Select=' ';
+                    set Query_Select=concat('select a.amcheader_code,a.amcheader_type,a.amcheader_suppliergid,a.amcheader_serviceperiod,
+											date_format(a.amcheader_periodfrom,''%Y-%m-%d'') as amcheader_periodfrom,date_format(a.amcheader_periodto,''%Y-%m-%d'') as amcheader_periodto,a.amcheader_rmemployeegid,a.amcheader_name,
+											a.amcheader_rmname,a.amcheader_amctotalamt,g.supplier_name,
+											concat(''['',(select concat(group_concat( JSON_OBJECT(														
+															''assetcat_gid'',assetcat_gid,
+															''amcdetails_assetdetailid'',amcdetails_assetdetailid,
+															''amcdetails_amcamt'',amcdetails_amcamt,
+                                                           ''amcdetails_remarks'',amcdetails_remarks,
+                                                           ''branch_name'',branch_name,
+                                                           ''product_name'',product_name)))  
+													from svs_trn_tamcdetails b1
+													inner join fa_mst_tassetcat c1 on b1.amcdetails_assetcatgid=c1.assetcat_gid and 
+																b1.amcdetails_isactive=''Y'' and b1.amcdetails_isremoved=''N'' and
+																c1.assetcat_isactive=''Y'' and c1.assetcat_isremoved=''N''		
+                                                    inner join  fa_trn_tassetdetails d1 on b1.amcdetails_assetdetailid=d1.assetdetails_id and           
+																d1.assetdetails_isactive=''Y'' and d1.assetdetails_isremoved=''N''
+													inner join gal_mst_tbranch e1 on d1.assetdetails_branchgid=e1.branch_gid and
+																				e1.branch_isactive=''Y'' and e1.branch_isremoved=''N''
+													inner join gal_mst_tproduct p on d1.assetdetails_productgid=p.product_gid and
+																				p.product_isactive=''Y'' and p.product_isremoved=''N''
+													where a.amcheader_gid=b1.amcdetails_amcheadergid),'']'') as asset_detail  ',Query_Column,'
+                                            from svs_trn_tamcheader a 
+											inner join svs_trn_tamcdetails b on a.amcheader_gid=b.amcdetails_amcheadergid and
+													a.amcheader_isactive=''Y'' and a.amcheader_isremoved=''N'' and 
+													b.amcdetails_isactive=''Y'' and b.amcdetails_isremoved=''N''
+											inner join fa_trn_tassetdetails c on c.assetdetails_id=b.amcdetails_assetdetailid AND
+													c.assetdetails_isactive=''Y'' and c.assetdetails_isremoved=''N''
+											inner join gal_mst_tbranch d on c.assetdetails_branchgid=d.branch_gid and
+													d.branch_isactive=''Y'' and d.branch_isremoved=''N''
+											inner join gal_mst_tsupplier g on a.amcheader_suppliergid=g.supplier_gid and
+													g.supplier_isactive=''Y'' and g.supplier_isremoved=''N'' 
+											where a.amcheader_gid=',@AmcHeader_Gid,' and
+												a.entity_gid in  (',@Entity_Gid,')  ',Query_Search,'
+											    group by a.amcheader_gid');
+                                                
+                                                
+					
+                    if @Page_Index=0 and @Page_Size=10 then 
+						   #select 555;
+							set @Query_Count = '';
+							set @Query_Count = concat('select count(A.amcheader_code) into @Total_Row from (',Query_Select,') A ');
+								PREPARE stmt FROM @Query_Count;
+									EXECUTE stmt;
+								DEALLOCATE PREPARE stmt;
+                                #select @Query_Count;
+					end if;
+                   # select @Query_Count;
+                                               
+                   # select Query_Select;
+					set @p= concat(Query_Select,Query_Limit);
+                    #select @p;
+					prepare stmt from @p;
+					execute stmt;
+					select found_rows() into ls_count;
+					 # select ls_count;
+						   if ls_count >0 then
+							 set message='FOUND';
+						   else
+							 set message='NOT FOUND-sp_SVSamc_Get.';
+						  end if;			 
+
+  END IF;
+END

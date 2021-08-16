@@ -1,0 +1,837 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Amort Schedule Creation {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <form name="invoice_form" novalidate>
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>Amort Schedule Creation</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Invoice Code</label>
+                            <input ng-model="invoice_number" ng-disabled="true">
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Invoice Detail Amount</label>
+                            <input ng-model="invoice_amount" disabled>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>From</label>
+                            <md-datepicker md-hide-icons="calendar"
+                                           ng-model="from_date"
+                                           md-hide-icons="calendar" ng-click="date" md-max-date=""
+                                           md-min-date="" formatDate></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Number of Month</label>
+                            <input ng-model="no_of_month" numbers-only>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-1">
+                        <md-button class="md-fab md-mini md-primary"
+                                   ng-click="find_to_date(from_date)" ng-disabled="!no_of_month">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Add</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>To Date</label>
+                            <md-datepicker md-hide-icons="calendar"
+                                           ng-model="to_dates"
+                                           md-hide-icons="calendar" ng-click="date" md-max-date="maxDate" disabled
+                                           md-min-date="minDate" formatDate></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Invoice TAX Amount</label>
+                            <input ng-model="TAX" disabled>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Total Amount</label>
+                            <input ng-model="invoiceheader_taxableamt" disabled>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Per Month</label>
+                            <input ng-model="per_month" disabled>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Per Day</label>
+                            <input ng-model="per_day" disabled>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-9"></div>
+                    <div class="col-md-1" style=" bottom: -20px;">
+                        <a href="" ng-click="CCBS_ADD(tab.title)"><i
+                                class="material-icons">
+                            arrow_upward
+                        </i>CCBS</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                           md-progress="deferred">
+                        <thead class="header">
+                        <tr>
+                            <th>S NO</th>
+                            <th>From Date</th>
+                            <th>To Date</th>
+                            <th>Amount</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="dates in all_date.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict"
+                            align="center">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{dates.from_date_value |date:'dd-MMM-yyyy'}}</td>
+                            <td>{{dates.to_date_value |date:'dd-MMM-yyyy'}}</td>
+                            <td>
+                                <input align="right" style="width:120px" type="text"
+                                       ng-model="dates.per_month" class="form-control"
+                                       ng-change="getTotal()">
+                            </td>
+                            <td><a><i class="material-icons" style="color:red;"
+                                      ng-click="delete_ammort_rows($index)">
+                                delete
+                            </i></a></td>
+                        </tr>
+                        <tr ng-show="all_date.length ==  0">
+                            <td class="warning" colspan="12">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="4">
+                                <ul uib-pagination total-items="all_date.length" ng-model="currentPage"
+                                    max-size="maxSize"
+                                    class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="2">
+                                Total Count:{{all_date.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <h4><b>Invoice Total Amount:{{invoice_amount}}</b></h4>
+                        <h4 ng-hide="total_amount!=invoice_amount" style="color:green;"><b>Total
+                            Amount:{{total_amount}}</b></h4>
+                        <h4 ng-hide="total_amount==invoice_amount" style="color:red;"><b>Total
+                            Amount:{{total_amount}}</b></h4>
+                    </div>
+                    <div class="col-md-2 col-md-offset-2">
+                        <md-button class="md-raised custbutton"
+                                   value="submit"
+                                   ng-click="save_schedule_data()"
+                                   ng-disabled="total_amount!=invoice_amount">
+                            SUBMIT
+                        </md-button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="AP_Ammort_Schedule_Summary/">
+                            <md-button class="md-raised" value="close"
+                                       aria-label="Close">Cancel
+                            </md-button>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+        <div class="modal fade" id="mdl_ccbs" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:80%;">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="text-center" id="s">
+                            CCBS Details
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="row">
+                        <form role="form" name="column_valid">
+                            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                                <div class=" text-right" ng-click="add_ccbs()">
+                                    <a href=""> <i class="material-icons">
+                                        add
+                                    </i></a>
+                                </div>
+                                <table class="table table-bordered">
+                                    <thead class="header">
+                                    <tr>
+                                        <th>S NO</th>
+                                        <th>Category</th>
+                                        <th>Sub Category</th>
+                                        <th>BS</th>
+                                        <th>CC</th>
+                                        <th>Percentage</th>
+                                        <th>Remarks</th>
+                                        <th>Delete</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody ng-init="totall = 0">
+                                    <tr ng-repeat="ccbs in ccbscredit">
+                                        <td class="text-center">
+                                            {{$index+1}}
+                                        </td>
+
+                                        <td>
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Choose Category"
+                                                    md-input-maxlength=126
+                                                    md-item-text="cat.category_name"
+                                                    md-items="cat in getCategoryName(searchCatName)"
+                                                    md-selected-item-change="CategoryChanged(cat.category_gid)"
+                                                    md-min-length=0
+                                                    md-search-text="searchCatName"
+                                                    ng-model="items"
+                                                    md-no-cache="true"
+                                                    size="5"
+                                                    md-selected-item="ccbs.cat">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchPropertyName"> {{cat.category_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Property Name matching "{{search Property Name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </td>
+                                        <td>
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Choose SubCategory"
+                                                    md-input-maxlength=126
+                                                    md-item-text="subcat.subcategory_name"
+                                                    md-items="subcat in getSubCategoryName(searchSubCatName)"
+                                                    md-selected-item-change="SubCategoryChanged(subcat.subcategory_gid)"
+                                                    md-min-length=0
+                                                    md-search-text="searchSubCatName"
+                                                    ng-model="subcat"
+                                                    md-no-cache="true"
+                                                    size="5"
+                                                    md-selected-item="ccbs.subcat">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchSubCatName"> {{subcat.subcategory_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Property Name matching "{{search SubCategory Name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </td>
+                                        <td>
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Choose BS"
+                                                    md-input-maxlength=126
+                                                    md-item-text="bs.tbs_name"
+                                                    md-items="bs in getbs(searchBS)"
+                                                    md-selected-item-change="bsChanged(bs.tbs_gid)"
+                                                    md-min-length=0
+                                                    md-search-text="searchBS"
+                                                    ng-model="bs"
+                                                    md-no-cache="true"
+                                                    size="5"
+                                                    ng-required="true"
+                                                    md-selected-item="ccbs.bs">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchTex"> {{bs.tbs_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No BS Name matching "{{search BS}}" were
+                                                    found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </td>
+                                        <td>
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Choose CC"
+                                                    md-input-maxlength=126
+                                                    md-item-text="cc.tcc_name"
+                                                    md-items="cc in getcc(searchCC)"
+                                                    md-selected-item-change="ccChanged(cc.tcc_gid)"
+                                                    md-min-length=0
+                                                    md-search-text="searchCC"
+                                                    ng-model="cc"
+                                                    md-no-cache="true"
+                                                    size="5"
+                                                    ng-required="true"
+                                                    md-selected-item="ccbs.cc">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchTex"> {{cc.tcc_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No CC Name matching "{{search CC}}" were
+                                                    found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </td>
+                                        <td class="text-center" width="50px;">
+                                            <input class="textboxgeneral"
+                                                   valid-number
+                                                   maxlength="3" only-numbers
+                                                   ng-change="percentage_validate($index,ccbscredit[$index].percentage)"
+                                                   ng-model="ccbs.percentage"/>
+                                        </td>
+                                        <td class="text-center" width="200px;"><input class="textboxgeneral"
+                                                                                      ng-model="ccbs.remarks"/>
+                                        </td>
+
+                                        <td><a><i class="material-icons"
+                                                  ng-click="delete_column($index)">
+                                            delete
+                                        </i></a></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised" value="close" data-dismiss="modal"
+                                           ng-click="close_popup()"
+                                           aria-label="Close">OK
+                                </md-button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+
+
+</style>
+
+{% endverbatim %}
+
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+   });
+
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog, $element) {
+
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.minDate=new Date();
+    $scope.all_date=[];
+    $scope.total_amount=0;
+    $scope.included_tax=0;
+
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date;
+    var employgid = detail.employee_gid;
+    $scope.models = {};
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_popup = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('mdl_ccbs')),
+            clickOutsideToClose: false
+        });
+    };
+
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+     if (sessionStorage.getItem('ammort') != null)
+     {
+        var ammort_data = JSON.parse(sessionStorage.getItem('ammort'));
+        console.log(ammort_data);
+        $scope.update = ammort_data.view;
+        $scope.invoice_header_gid=ammort_data.ammort_all_data.invoiceheader_gid;
+        $scope.from_date=ammort_data.ammort_all_data.invoiceheader_invoicedate,
+        $scope.invoice_number=ammort_data.ammort_all_data.invoiceheader_invoiceno,
+        $scope.invoice_amount=ammort_data.ammort_all_data.invoicedetails_amount;
+        $scope.invoiceheader_taxableamt=ammort_data.ammort_all_data.invoiceheader_taxableamt;
+        $scope.supplier_gid=ammort_data.ammort_all_data.supplier_gid;
+        $scope.TAX=ammort_data.ammort_all_data.TAX;
+        $scope.divided_tax=parseFloat(($scope.TAX/2).toFixed(2));
+        $scope.invoice_amount_with_tax=$scope.divided_tax+$scope.invoice_amount;
+
+     }
+     else{
+        alert("No Amort Datas");
+     }
+
+    $scope.find_to_date=function(from_date){
+        debugger;
+
+        $scope.from_dates=new Date($scope.from_date);
+        $scope.all_date=[];
+        $scope.total_amount=0;
+        $scope.to_date=new Date(from_date);
+        $scope.to_dates=load_FromData();
+        var last_firstDay="";
+        function load_FromData(){
+            return new Date(
+           $scope.to_date.getFullYear(),
+           $scope.to_date.getMonth()+parseInt($scope.no_of_month),
+           $scope.to_date.getDate());
+        }
+
+        $scope.per_months=$scope.invoiceheader_taxableamt/$scope.no_of_month;
+        $scope.per_month=parseFloat($scope.per_months.toFixed(2));
+
+
+        var date = new Date(from_date), y = $scope.from_dates.getFullYear(), m = $scope.from_dates.getMonth();
+        var lastDay = new Date(y, m + 1, 0);
+
+        var month_last_day=$filter('date')(lastDay, "dd");
+        var month_start_day=$filter('date')($scope.from_dates, "dd");
+        var first_month_name=$filter('date')($scope.from_dates, "MMM");
+
+        //var first_month_key=first_month_name+" "+month_start_day+" "+"To"+" "+month_last_day;
+
+        var total_first_month=parseInt(month_last_day)-parseInt(month_start_day);
+        total_first_month+=1;
+        $scope.per_days=$scope.per_month/month_last_day;
+        $scope.per_day=parseInt($scope.per_days.toFixed(2));
+
+
+        var total_frist_month_amount=0;
+        if(total_first_month==0){
+            total_frist_month_amount=$scope.per_day;
+        }
+        else
+        {
+            total_frist_month_amount=total_first_month*$scope.per_day;
+        }
+        var total_frist_month_amounts=parseFloat(total_frist_month_amount.toFixed(2));
+
+        //var dates=$filter('date')($scope.from_dates, "dd-MMM-yyyy");
+        //$scope.all_date.push({"date":first_month_key,"per_month":total_frist_month_amounts});
+        $scope.no_of_months=(parseFloat($scope.no_of_month)) +1;
+
+        var no_of_months_without_last_month=$scope.no_of_months-1;
+        var last_month_amounts=$scope.per_month-total_frist_month_amount;
+        var last_month_amount=parseFloat(last_month_amounts.toFixed(2));
+
+        $scope.from_dates.setDate(28);
+
+        if(month_start_day==1){$scope.new_no_of_months=$scope.no_of_months-1;}
+        else{$scope.new_no_of_months=$scope.no_of_months;}
+
+        for(var i=1;i<$scope.new_no_of_months;i++){
+            $scope.to_datess=load_FromDatas(i);
+            var from_date_val=$filter('date')($scope.to_datess, "yyyy-MM-dd");
+            var to_date_val=$filter('date')($scope.to_datess, "yyyy-MM-dd");
+
+            var date = new Date(to_date_val), y = date.getFullYear(), m = date.getMonth();
+            var firstDay = new Date(y, m, 1);
+
+            if(i==$scope.no_of_months){
+               last_firstDay=firstDay;
+               $scope.all_date.push({"from_date_value":last_firstDay,"to_date_value":firstDay,"per_month":last_month_amount});
+            }else if(i==1){
+                if(month_start_day==1){
+                    $scope.all_date.push({"from_date_value":$scope.from_date,"to_date_value":firstDay,"per_month":$scope.per_month});
+                }
+                else{
+                    $scope.all_date.push({"from_date_value":$scope.from_date,"to_date_value":firstDay,"per_month":total_frist_month_amounts});
+                }
+                last_firstDay=firstDay;
+            }
+            else{
+                $scope.all_date.push({"from_date_value":last_firstDay,"to_date_value":firstDay,"per_month":$scope.per_month});
+                last_firstDay=firstDay;
+            }
+        }
+
+
+        var last_month_last_day = $filter('date')(last_firstDay, "dd");
+        var last_date_todate=$filter('date')($scope.to_dates, "dd");
+        if(last_date_todate==1){
+            if(month_start_day==1 || last_month_last_day==1)
+            {
+                $scope.all_date.push({"from_date_value":last_firstDay,"to_date_value":$scope.to_dates,"per_month":$scope.per_month});
+            }
+            else
+            {
+                $scope.all_date.push({"from_date_value":last_firstDay,"to_date_value":$scope.to_dates,"per_month":last_month_amount});
+            }
+        }
+        else{
+            $scope.all_date.push({"from_date_value":last_firstDay,"to_date_value":$scope.to_dates,"per_month":last_month_amount});
+        }
+
+        for(j=0;j<$scope.all_date.length;j++){
+            $scope.total_amount+=parseFloat($scope.all_date[j].per_month);
+
+        }
+        round($scope.total_amount,0);
+
+        function load_FromDatas(i){
+            return new Date(
+           $scope.from_dates.getFullYear(),
+           $scope.from_dates.getMonth()+i,
+           $scope.from_dates.getDate());
+        }
+
+    }
+
+    $scope.getTotal = function(){
+        $scope.total_amount = 0;
+
+        for(var i = 0; i < $scope.all_date.length; i++){
+
+            $scope.total_amount += parseFloat($scope.all_date[i].per_month);
+        }
+         round($scope.total_amount,0);
+    }
+
+    function round(value, precision) {
+      if (Number.isInteger(precision)) {
+        var shift = Math.pow(10, precision);
+        $scope.total_amount=(Math.round( value * shift + 0.00000000000001 ) / shift);
+        return (Math.round( value * shift + 0.00000000000001 ) / shift);
+      } else {
+        $scope.total_amount=Math.round(value);
+        return Math.round(value);
+      }
+    }
+
+    $scope.delete_column = function(index){
+             $scope.ccbscredit.splice(index, 1);
+    }
+    $scope.delete_ammort_rows = function(index){
+          $scope.all_date.splice(index, 1);
+          $scope.getTotal();
+    }
+
+
+
+    $scope.percentage_validate = function(index, value) {
+    debugger;
+             var sum = 0;
+            angular.forEach($scope.ccbscredit, function(value, key) {
+                sum += parseFloat(value.percentage);
+                if (sum > 100) {
+                    value.percentage = 0;
+                    value.amount = 0;
+                   alert("Percentage Exists")
+                }
+            });
+        }
+
+    $scope.save_schedule_data=function(){
+    debugger;
+        $scope.from_date=$filter('date')($scope.from_date, "yyyy-MM-dd");
+        $scope.to_dates=$filter('date')($scope.to_dates, "yyyy-MM-dd");
+        $scope.ammort_datas=[];
+        //$scope.all_date_new=$scope.all_date.length+1;
+        for(var i=0;i<$scope.all_date.length;i++){
+            var invoice_new_number=$scope.invoice_number+"-"+(i+1);
+            $scope.to_date_values=$filter('date')($scope.all_date[i].to_date_value, "yyyy-MM-dd");
+            $scope.from_date_values=$filter('date')($scope.all_date[i].from_date_value, "yyyy-MM-dd");
+            var val={"AmmortDetail_FromDate":$scope.from_date_values,
+                     "AmmortDetail_ToDate":$scope.to_date_values,
+                     "AmmortDetails_ecfHeaderGid":0,
+                     "AmmortDetail_Status":"PENDING",
+                     "AmmortDetails_InvoiceNo":invoice_new_number,
+                     "AmmortDetails_SupplierGid":$scope.supplier_gid,
+                     "AmmortDetails_ecfAmount":$scope.all_date[i].per_month,
+                     "AmmortDetails_Hold":"N",
+                     "AmmortDetails_Completed":"N"
+                    };
+            $scope.ammort_datas.push(val);
+        }
+        $scope.ccbs=[];
+        $scope.total=0;
+        for(var j=0;j<$scope.ccbscredit.length;j++){
+            if($scope.ccbscredit[j].cat!=null && $scope.ccbscredit[j].subcat!=null && $scope.ccbscredit[j].cc!=null && $scope.ccbscredit[j].bs!=null){
+                var values={"Ammortccbs_CategoryGid":$scope.ccbscredit[j].cat.category_gid,
+                            "Ammortccbs_SubcategoryGid":$scope.ccbscredit[j].subcat.subcategory_gid,
+                            "Ammortccbs_bsGid":$scope.ccbscredit[j].bs.tbs_gid,
+                            "Ammortccbs_ccGid":$scope.ccbscredit[j].cc.tcc_gid,
+                            "Ammortccbs_Percent":$scope.ccbscredit[j].percentage,
+                            "Ammortccbs_Remarks":$scope.ccbscredit[j].remarks
+                }
+            }
+            $scope.ccbs.push(values);
+            $scope.total+=parseFloat($scope.ccbscredit[j].percentage);
+        }
+        if($scope.total==100){
+            var datas={params:{"action":"INSERT","type":"AMMORT_SCHEDULE_SET",
+            "filter":{"Ammort_InvoiceHeaderGid":$scope.invoice_header_gid,"Ammort_SupplierGid":$scope.supplier_gid,
+            "Ammort_Amount_Branch":$scope.invoiceheader_taxableamt,"Ammort_FromDate":$scope.from_date,"Ammort_ToDate":$scope.to_dates,ccbs:$scope.ccbs,
+            detail:$scope.ammort_datas}}};
+
+            $scope.loading();
+            var ammort = servicesummary.set_schedule_ammort(datas);
+            ammort.then(function(result) {
+                var res = result.data;
+                debugger;
+                if(res=="SUCCESS"){
+                   alert("Successfully Amort Schedule Created...");
+                   $window.location.href = "AP_Ammort_Schedule_Summary/";
+                }
+                else{
+                    alert(res);
+                }
+            }, function(err) {
+               alert(res);
+            }).finally($scope.endloading);
+        }
+        else{
+            alert("Total CCBS Percentage Not Equal to 100%");
+        }
+    }
+
+    $scope.CCBS_ADD = function(value){
+            $scope.click_titles=value;
+            modalshow('mdl_ccbs');
+    }
+
+    $scope.ccbscredit = [];
+    $scope.add_ccbs = function(value){
+       $scope.ccbscredit.push({
+
+       })
+    }
+
+    var data = {
+            "Table_name": "ap_mst_tcategory",
+            "Column_1": "category_gid, category_code, category_no, category_name, category_glno, category_isactive",
+            "Column_2": "",
+            "Where_Common": "category",
+            "Where_Primary": "",
+            "Primary_Value": "",
+            "Order_by": "gid"
+        }
+
+        var patch = {
+            Action: "",
+            Entity_Gid: $scope.entity_gid,
+            data: data
+        }
+
+        var getcat = servicesummary.getcategory(patch);
+            getcat.then(function(result) {
+            debugger;
+                $scope.category_all = result.data;
+                $scope.category_all_copy=$scope.category_all;
+                console.log($scope.category_all);
+            }, function(err) {
+                alert('No data!.');
+        }).finally();
+
+        $scope.getCategoryName = Change_Cate_Name;
+        function Change_Cate_Name(query) {
+           var result = $filter('filter')($scope.category_all, {
+           'category_name': query
+             });
+           return result;
+        }
+        $scope.CategoryChanged=function(cat_gid){
+        debugger;
+           $scope.cat_gid=cat_gid;
+            var data={"FILTER":{"category_gid":[$scope.cat_gid]}}
+            var datam={
+                        "Group":"CCBS_MASTER",
+                        "Type":"ccbs_category",
+                        "Sub_type":"get",
+                        "data":data
+            }
+         $scope.loading_popup();
+         var sub_category_get=servicesummary.get_subcategory(datam);
+             sub_category_get.then(function(result)
+             {
+              $scope.sub_category_all = result.data;
+                $scope.sub_category_all_copy=$scope.category_all;
+                console.log($scope.sub_category_all);
+            }, function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+        };
+
+        $scope.getSubCategoryName = Change_SubCate_Name;
+        function Change_SubCate_Name(query) {
+           var result = $filter('filter')($scope.sub_category_all, {
+           'subcategory_name': query
+             });
+           return result;
+        }
+
+        $scope.SubCategoryChanged=function(sub_cat_gid){
+            $scope.sub_cat_gid=sub_cat_gid;
+        }
+        $scope.loading_popup();
+        var bs = servicesummary.bsdata();
+            bs.then(function(result) {
+            debugger;
+                $scope.all_bs = result.data;
+                $scope.all_bs1 = result.data;
+                console.log($scope.all_bs);
+                },
+                    function(err) {
+                        alert(result);
+            }).finally($scope.endloading);
+
+    $scope.getbs = bs_name;
+       function bs_name(query) {
+           var result = $filter('filter')($scope.all_bs, {
+           'tbs_name': query
+             });
+           return result;
+   }
+
+   $scope.bsChanged=function(tbs_gid){
+   debugger;
+        $scope.tbs_gid=tbs_gid;
+        $scope.loading_popup();
+        if($scope.tbs_gid!=0 && $scope.tbs_gid!=undefined){
+           var cc = servicesummary.ccdata(tbs_gid);
+            cc.then(function(result) {
+            debugger;
+                $scope.all_cc = result.data;
+                $scope.all_cc1 = result.data;
+                console.log($scope.all_cc);
+            },function(err) {
+                    alert(result);
+            }).finally($scope.endloading);
+
+        }
+        $scope.endloading();
+
+   };
+   $scope.getcc = cc_name;
+       function cc_name(query) {
+           var result = $filter('filter')($scope.all_cc, {
+           'tcc_name': query
+             });
+           return result;
+    }
+
+    $scope.ccChanged=function(tcc_gid){
+        $scope.tcc_gid=tcc_gid;
+    }
+
+
+
+}]);
+app.service("servicesummary", function ($http) {
+
+    this.get_sale_summary=function(data){
+        var response=$http.post(Appname+"/get_onward_data/",data);
+        return response;
+    }
+
+    this.set_schedule_ammort=function(datas){
+        var response=$http.post(Appname+"/set_ammort/",datas);
+        return response;
+    }
+
+    this.getcategory = function(patch){
+        var respons = $http.post(Appname + "/get_tablevalue/", patch);
+        return respons;
+    }
+
+    this.get_subcategory = function(patch){
+        var respons = $http.post(Appname + "/get_subcate_data/", patch);
+        return respons;
+    }
+
+    this.bsdata = function () {
+                var response = $http.post(Appname+"/get_ccbs_data/",{params:{"action":"Get","type":"Metadata","sub_type":"BS_DATA",
+                               "filter":{}}});
+                return response;
+    }
+
+    this.ccdata = function (bs_gid) {
+                var response = $http.post(Appname+"/get_ccbs_data/",{params:{"action":"Get","type":"Metadata","sub_type":"CC_DATA",
+                               "filter":{"bs_gid":bs_gid}}});
+                return response;
+    }
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

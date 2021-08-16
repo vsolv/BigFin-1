@@ -1,0 +1,517 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Pending PO{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+   <div ng-app="pendingpo" ng-controller="pending_po" class="container container1" ng-cloak>
+      <div class="row">
+         <div class="row-header col-lg-12 col-sm-12">
+            <h4>Open PO</h4>
+         </div>
+      </div>
+      <div class="row">
+         <div class="col-md-12">
+            <div class="col-md-4" style="">
+               <md-autocomplete
+                       md-clear-button="true"
+                       md-floating-label="Supplier Name "
+                       md-item-text="item.supplier_name"
+                       md-items="item in querySearch(searchText)"
+                       md-min-length=0
+                       md-no-cache="true"
+                       md-search-text="searchText"
+                       md-selected-item="supp"
+                       md-selected-item-change="ACselectchange(item)"
+                       ng-disabled="Customer_disable"
+               >
+                  <md-item-template>
+                     <span md-highlight-text="searchText"> {{item.supplier_name}} </span>
+                  </md-item-template>
+                  <md-not-found>
+                     No matching "{{searchText}}" were found.
+                  </md-not-found>
+               </md-autocomplete>
+            </div>
+            <div class="col-md-4">
+               <md-input-container class="md-block inputcontainer">
+                  <label>PO Number</label>
+                  <input type="text" ng-model="ponumber" maxlength="64>=1" ng-required="value">
+               </md-input-container>
+            </div>
+            <div class="col-md-4">
+               <md-autocomplete
+                       md-clear-button="true"
+                       md-floating-label="Product"
+                       md-item-text="item.product_name"
+                       md-items="item in prodsearch(searchTex1)"
+                       md-min-length=0
+                       md-no-cache="true"
+                       md-search-text="searchTex1"
+                       md-selected-item="selectedprod"
+                       md-selected-item-change="ACselectchange(item)"
+                       ng-disabled="Customer_disable"
+               >
+                  <md-item-template>
+                     <span md-highlight-text="searchTex1"> {{item.product_name}} </span>
+                  </md-item-template>
+                  <md-not-found>
+                     No Product Name matching "{{searchTex1}}" were found.
+                  </md-not-found>
+               </md-autocomplete>
+            </div>
+         </div>
+      </div>
+      <div class="row">
+         <div class="col-md-12">
+            <div class="col-md-3">
+               <md-input-container class="md-block">
+                  <label>From Date</label>
+                  <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" ng-model="from_date"></md-datepicker>
+               </md-input-container>
+            </div>
+            <div class="col-md-3">
+               <md-input-container class="md-block ">
+                  <label>To Date</label>
+                  <md-datepicker md-hide-icons="calendar" md-min-date="searchquery_StartDate"
+                                 ng-model="to_date"></md-datepicker>
+               </md-input-container>
+            </div>
+            <div class="col-md-4" style="margin-top:12px">
+               <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchDetails()">
+                  <md-icon>search</md-icon>
+                  <md-tooltip>Search</md-tooltip>
+               </md-button>
+            </div>
+         </div>
+      </div>
+      <div class="row  table-responsive">
+         <div class="col-lg-12 col-sm-12">
+            <table class="table  table-striped table-bordered table-condensed table-hover" id="gd_pssummary">
+               <thead class="header">
+               <tr>
+                  <th>S.No</th>
+                  <th>PO No<span ng-click="pol()" ng-init="count=0">wsfed</span>
+
+
+                  </th>
+                  <th ng-click=date()>PO Date</th>
+                  <th>Supplier Name<span ng-click="sol()"><i class="material-icons">change_history</i>
+                     
+                     <span class="sortorder" ng-show="propertyName === 'supplier_name'"
+                           ng-class="{reverse: reverse}"></span>
+                  </th>
+
+                  <th ng-click="product()">Product Name</th>
+                  <th ng-click="qty()">Ordered Quantity</th>
+                  <th ng-click="podelivery()">Already Received Quantity</th>
+                  <th ng-click="remain()">Remaining Quantity</th>
+                  <th>Action</th>
+               </tr>
+               </thead>
+               <tbody>
+               <tr class="text-center"
+                   ng-repeat="user in Openpo.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                  <td class="text-center"> {{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                  <td>
+                     <span>{{user.poheader_no}}</span>
+                  </td>
+                  <td>
+                     <span>{{ user.poheader_date }}</span>
+                  </td>
+                  <td>
+                     <span>{{user.supplier_name}}</span>
+                  </td>
+                  <td>
+                     <span>{{user.product_name}}</span>
+                  </td>
+                  <td>
+                     <span>{{user.total_qty}}</span>
+                  </td>
+                  <td ng-show="hide_pending"><span>{{user.podelivery_qty}}</span></td>
+                  <td ng-hide="hide_pending">
+                     <span>{{user.allreceive_qty}}</span>
+                  </td>
+                  <td ng-hide="hide_pending">
+                     <span>{{user.rem_qty}}</span>
+                  </td>
+                  <td align="center">
+                     <a title="View" ng-click="showview(user)" align="center">
+                        <i class="material-icons">visibility</i>
+                     </a>
+                  </td>
+               </tr>
+               </tbody>
+               <tfoot>
+               <tr>
+                  <td colspan="10">
+                     <ul uib-pagination total-items="Openpo.length" ng-model="currentPage"
+                         max-size="maxSize" class="pagination-sm" boundary-links="true"
+                         items-per-page="itemsPerPage"></ul>
+                  </td>
+               </tr>
+               </tfoot>
+            </table>
+            <div class="col-lg-12 col-sm-12 text-right">
+               <md-button class="md-raised" href="openpo_getexcel" ng-click="a()">
+                  ExportData
+               </md-button>
+            </div>
+         </div>
+      </div>
+      <div ng-include="'openpoedit'"></div>
+   </div>
+</div>
+</div>
+    {% endverbatim %}
+
+<script >
+   var app = angular.module('pendingpo', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function(
+    $httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+app.controller('pending_po', ['$element', '$timeout', '$scope', '$rootScope', 'pending_posummary', '$mdDialog', '$filter', function($element, $timeout, $scope, $rootScope, pending_posummary, $mdDialog, $filter) {
+
+    $scope.ponumber = '';
+    $scope.supplier_gid = '';
+
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+
+    $scope.reverseSort = false;
+    //$scope.poheader = poheader;
+    //sorting function
+    //$scope.poheader_no=$scope.Openpo.poheader_no;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.pol = function(count) {
+
+        $scope.Openpo = $filter('orderBy')($scope.Openpo, 'poheader_no');
+        $scope.sal = $scope.Openpo;
+    }
+
+
+    $scope.date = function() {
+
+        $scope.pol()
+        $scope.Openpo = $filter('orderBy')($scope.sal, ['poheader_no', 'poheader_date']);
+        $scope.sald = $scope.Openpo;
+
+    }
+
+    $scope.sol = function() {
+        $scope.pol()
+        $scope.date()
+        $scope.Openpo = $filter('orderBy')($scope.sald, ['poheader_no', 'poheader_date', 'supplier_name']);
+        $scope.sal1 = $scope.Openpo;
+    }
+
+    $scope.product = function() {
+        $scope.pol()
+        $scope.sol()
+        $scope.Openpo = $filter('orderBy')($scope.sal1, ['poheader_no', 'poheader_date', 'supplier_name', 'product_name']);
+        $scope.sal2 = $scope.Openpo;
+    }
+
+    $scope.qty = function() {
+        $scope.pol()
+        $scope.product()
+        debugger;
+        $scope.Openpo = $filter('orderBy')($scope.sal2, ['poheader_no', 'poheader_date', 'supplier_name', 'product_name', 'total_qty']);
+
+    }
+
+    $scope.podelivery = function() {
+        $scope.pol()
+        $scope.qty()
+        debugger;
+        $scope.Openpo = $filter('orderBy')($scope.sal2, ['poheader_no', 'poheader_date', 'supplier_name', 'product_name', 'total_qty', 'podelivery_qty']);
+    }
+    $scope.remain = function() {
+        $scope.pol()
+        $scope.podelivery()
+        debugger;
+        $scope.Openpo = $filter('orderBy')($scope.sal2, ['poheader_no', 'poheader_date', 'supplier_name', 'product_name', 'total_qty', 'podelivery_qty', 'rem_qty']);
+    }
+
+
+    //session
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.podate = ''
+    //$scope.Openpo = [];
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+
+
+
+
+    $scope.querySearch = gotoGetdata;
+    $scope.prodsearch = gotoprod;
+
+    function gotoprod(query) {
+
+        var result = $filter('filter')($scope.prodnmee, {
+            'product_name': query
+        });
+        return result;
+    }
+
+
+    var get_employ = pending_posummary.getprodtfull('100', '')
+    get_employ.then(function(result) {
+
+            $scope.prodnmee = [];
+            $scope.prodnmee = result.data.DATA;
+            if ($scope.selectedcustgrp != undefined) {
+                textvalue($scope.selectedcustgrp)
+            }
+        }),
+        function() {
+            alert('no data');
+        };
+
+    //sorting
+    $scope.propertyName = 'supplier_name';
+    $scope.reverse = true;
+    //if($sccope.propertyName='')
+
+    $scope.sortBy = function(propertyName) {
+
+        debugger;
+        $scope.reverse = ($scope.propertyName === propertyName) ? !$scope.reverse : false;
+        $scope.propertyName = propertyName;
+    };
+
+
+    //$scope.maxDate = new Date();
+    $scope.prodsearch = gotoprod;
+    function gotoGetdata(query) {
+
+        var result = $filter('filter')($scope.invoicesupplier_list, {
+            'supplier_name': query
+        });
+        return result;
+    }
+
+
+    var data = {
+
+        Supplier_Gid: '',
+        Po_No: '',
+        Product_Gid: '',
+        From_Date: '',
+        To_Date: ''
+    };
+
+    var data_int = {
+
+        Type: 'SUMMARY',
+        SubType: 'OPENPO',
+
+        darta: data
+    };
+
+    //get_openpo details
+    $scope.loading();
+    var Openpo = pending_posummary.get_pendingdata(data_int);
+    Openpo.then(function(result) {
+          $scope.Openpo_data = JSON.parse(result.data)
+          $scope.Openpo = $scope.Openpo_data;
+            $scope.endloading();
+
+        },
+        function(err) {
+            alert('No data!.');
+        }).finally();
+
+
+    //supplier-name dropdown
+
+    var supplier = pending_posummary.getdropdown("supplier");
+    supplier.then(function(supplier) {
+        var supplier = JSON.parse(supplier.data);
+
+        $scope.invoicesupplier_list = supplier;
+
+    }, function() {
+        alert("Record Not Found")
+    });
+    //filter section
+    $scope.POfilter = function() {
+        $scope.Openpo = $filter('filter')($scope.Openpo_data, {
+
+            "poheader_no": $scope.ponumber,
+            "supplier_gid": $scope.supplier_gid,
+            "poheader_date": $scope.podate
+        }, );
+    }
+
+    //product
+    function getprodname(data_prod) {
+
+        var get_state = testService.getprod(data_prod)
+        get_state.then(function(result) {
+                $scope.prodget = result.data.DATA;
+            }, function(err) {
+                alert('No data!.');
+            })
+            .finally();
+    };
+    //popup
+    $rootScope.showview = function(em) {
+        debugger;
+        modalshow('mdl_present');
+        $scope.poheader_no = em.poheader_no;
+        $scope.product_name = em.product_name;
+        $scope.pname = em.partner_name;
+        $scope.supplier_name = em.supplier_name;
+        $scope.poheader_date = em.poheader_date;
+        $scope.poheader_amount = em.poheader_amount
+    }
+    //search
+    $scope.searchDetails = function() {
+        searchdata()
+    }
+
+    function searchdata() {
+
+        if ($scope.ponumber) {
+            $scope.pono = $scope.ponumber;
+        } else {
+            $scope.pono = $scope.ponumber;
+        }
+        if ($scope.supp) {
+            $scope.supplier = $scope.supp.supplier_gid;
+        } else {
+            $scope.supplier = ''
+        }
+        if ($scope.selectedprod) {
+            $scope.pod = $scope.selectedprod.product_gid;
+        } else {
+            $scope.pod = ''
+        }
+        if ($scope.to_date != undefined && $scope.from_date != undefined) {
+
+            $scope.validfrom = formatStringDate($scope.from_date, 'yyyy-mm-dd');
+            $scope.validto = formatStringDate($scope.to_date, 'yyyy-mm-dd');
+        } else if ($scope.to_date != undefined && $scope.from_date == undefined) {
+
+            $scope.from_date = $scope.to_date;
+            $scope.validfrom = formatStringDate($scope.from_date, 'yyyy-mm-dd');
+            $scope.validto = formatStringDate($scope.to_date, 'yyyy-mm-dd');
+
+
+        } else if ($scope.to_date == undefined && $scope.from_date != undefined) {
+            $scope.to_date = new Date();
+            $scope.validfrom = formatStringDate($scope.from_date, 'yyyy-mm-dd');
+            $scope.validto = formatStringDate($scope.to_date, 'yyyy-mm-dd');
+
+        } else {
+            $scope.validfrom = '';
+            $scope.validto = '';
+
+        }
+
+        var data = {
+
+            Supplier_Gid: $scope.supplier,
+            Po_No: $scope.ponumber,
+            Product_Gid: $scope.pod,
+            From_Date: $scope.validfrom,
+            To_Date: $scope.validto
+        };
+        var data_int = {
+            Type: 'SUMMARY',
+            SubType: 'OPENPO',
+
+            darta: data
+        };
+
+
+        var Openpo = pending_posummary.get_pendingdata(data_int);
+        Openpo.then(function(result) {
+
+                $scope.Openpo_data = JSON.parse(result.data)
+
+                $scope.Openpo = $scope.Openpo_data;
+                $scope.Openpo = $filter('orderBy')($scope.Openpo_data, '-poheader_date');
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally();
+    }
+
+}]);
+//service part
+app.service("pending_posummary", function($http) {
+
+    //geting the pending_po details
+    this.get_pendingdata = function(data_int) {
+        var responsee = $http.post(Appname + "/pending_posummary/", data_int);
+        return responsee;
+    }
+    //supplier Name
+    this.getdropdown = function(tablename) {
+        var responsee = $http.post(Appname + "/Dropdown_detail_ap/", {
+            params: {
+                "tablename": tablename,
+                "gid": 0,
+                "name": ''
+            }
+        });
+        return responsee;
+    }
+
+    this.getexcel = function(data_int) {
+        var response = $http.get(Appname + "/openpo_getexcel/", {
+            data_int
+        });
+        return response;
+    }
+
+
+    this.gotoproduct = function(custid) {
+        var respons = $http.post(Appname + "/prodget/",
+            custid
+        );
+        return respons;
+    }
+
+    this.getprodtfull = function(lmt, prodnme) {
+        var response = $http.get(Appname + "/prodgett/", {
+            params: {
+                "Limit": lmt,
+                "Product_Name": prodnme
+            }
+        });
+        return response;
+    }
+
+});
+</script>
+    {% endblock %}

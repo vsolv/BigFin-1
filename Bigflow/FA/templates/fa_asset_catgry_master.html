@@ -1,0 +1,732 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Category Summary {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-cloak ng-controller="datectrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Category Summary</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label> SubCategory</label>
+                    <md-select md-container-class="popup_select"
+                               ng-change="subcategorychange(Assetcategory.assetcat_gid)"
+                               ng-model="Assetcategory.assetcat_gid">
+
+                        <md-option ng-repeat="d in subcategorydetails"
+                                   ng-value="d.assetcat_gid ">{{
+                            d.assetcat_subcatname }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Depreciation Type</label>
+                    <md-select md-container-class="popup_select" ng-change="deptypechange(Assetcategory.deptmenttype)"
+                               ng-model="Assetcategory.deptmenttype">
+                        <md-option ng-repeat="item in departmenttype" ng-value="item.data">
+                            {{item.data}}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-md-2">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-href="fa_asset_catgry_master_plus">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create Category</md-tooltip>
+                </md-button>
+            </div>
+            <div class="col-md-2">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="category_setting()">
+                    <md-icon>more_vert</md-icon>
+                    <md-tooltip>Create Category Setting</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <br/>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th class="text-center" scope="col">S.No</th>
+                    <th class="text-center" scope="col">Asset Subcategory</th>
+                    <th class="text-center" scope="col">Subcategory</th>
+                    <th class="text-center" scope="col">Category</th>
+                    <th class="text-center" scope="col">Life Time</th>
+                    <th class="text-center" scope="col">Depreciation Type</th>
+                    <th class="text-center" scope="col">Depreciation CA Rate</th>
+                    <th class="text-center" scope="col">Depreciation ITC Rate</th>
+                    <th class="text-center" scope="col">Depreciation MGMT Rate</th>
+                    <th class="text-center" scope="col">Depreciation CA GL</th>
+                    <th class="text-center" scope="col">Depreciation ITC GL</th>
+                    <th class="text-center" scope="col">Depreciation MGMT GL</th>
+                    <th class="text-center" scope="col">Depreciation CA RefGL</th>
+                    <th class="text-center" scope="col">Depreciation ITC RefGL</th>
+                    <th class="text-center" scope="col">Depreciation MGMT RefGL</th>
+                    <th class="text-center" scope="col">Barcode Repeat</th>
+                    <th class="text-center" scope="col">Action</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in cat_mst.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-right">{{emp.assetcat_subcatname}}</td>
+                        <td class="text-left">{{emp.subcategory_name}}</td>
+                        <td class="text-left">{{emp.category_name}}</td>
+                        <td class="text-right">{{emp.assetcat_lifetime}} Months</td>
+                        <td class="text-left">{{emp.assetcat_deptype}}</td>
+                        <td class="text-right">{{emp.assetcat_deprate_ca}}</td>
+                        <td class="text-right">{{emp.assetcat_deprate_itc}}</td>
+                        <td class="text-right">{{emp.assetcat_deprate_mgmt}}</td>
+                        <td class="text-right">{{emp.assetcat_depgl_ca}}</td>
+                        <td class="text-right">{{emp.assetcat_depgl_itc}}</td>
+                        <td class="text-right">{{emp.assetcat_depgl_mgmt}}</td>
+                        <td class="text-right">{{emp.assetcat_depresgl_ca}}</td>
+                        <td class="text-right">{{emp.assetcat_depresgl_itc}}</td>
+                        <td class="text-right">{{emp.assetcat_depresgl_mgmt}}</td>
+                        <td class="text-left">{{emp.assetcat_barcoderequired}}</td>
+                        <td class="text-center"><span class="editlink" ng-click="viewdet(emp)">View</span></td>
+                    </tr>
+                    <tr ng-show="warning">
+                        <td class="warning" colspan="17">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="14">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2">
+                            <span>Total Count:<br/> <b class="text-centre"> {{pageLength}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--popup page start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Asset Cat GL Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+
+
+                            <div class="row" class="col-md-10">
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Mgmt Dep GL"
+                                                    md-input-maxlength=126
+                                                    md-item-text="item.gl_no"
+                                                    md-items="item in querySearchgl(searchgl)"
+                                                    md-min-length=0
+                                                    md-no-cache="true"
+                                                    md-search-text="searchgl"
+                                                    md-selected-item="ast.selectedgl"
+                                                    md-selected-item-change="selectchange_ast_gl(item)"
+                                                    placeholder="Mgmt Dep GL Number"
+                                            >
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchTe"> {{item.gl_no}} </span>
+                                                </md-item-template>
+                                                <md-not-found>No GL Number matching "{{searchTe}}" were
+                                                    found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-autocomplete
+                                                    md-clear-button="true"
+                                                    md-floating-label="Mgmt Dep Reserve GL"
+                                                    md-input-maxlength=126
+                                                    md-item-text="item.gl_no"
+                                                    md-items="item in querySearchgl(searchglref)"
+                                                    md-min-length=0
+                                                    md-no-cache="true"
+                                                    md-search-text="searchglref"
+                                                    md-selected-item="ast.selectedglref"
+                                                    md-selected-item-change="selectchange_ast_gl(item)"
+                                                    placeholder="Mgmt Dep Res GL Number"
+                                            >
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchTe"> {{item.gl_no}} </span>
+                                                </md-item-template>
+                                                <md-not-found>No GL Number matching "{{searchTe}}" were
+                                                    found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="btn btn-info custbutton" ng-click="Update_asstcat()"
+                                       ng-disabled="disable_update_ast_cat">Update
+                                <md-tooltip>Update</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--popup page Image start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal1" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel1">
+                                <strong>Asset Image</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="body">
+                    <div class="modal-body popup-body">
+                        <div class="row">
+                            <div class="col-lg-12 col-sm-12">
+                                <div class="text-center">
+                                    <img src="{{ asset_img }}" style="width:400px;height:400px"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--popup page Setting start-->
+        <div aria-hidden="" aria-labelledby="exampleModalLabel"
+             class="modal fade"
+             data-backdrop="" data-keyboard="false"
+             id="cat_setting">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabelss">
+                                <strong>Depreciation Setting</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <div class="col-md-2">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete
+                                                md-clear-button="true"
+                                                md-input-maxlength=126
+                                                md-item-text="item.metadata_value"
+                                                md-items="item in querySearch(searchrate)"
+                                                md-min-length=0
+                                                md-no-cache="true"
+                                                md-search-text="searchrate"
+                                                md-selected-item="selectedrate"
+                                                md-selected-item-change="selectchange(item)"
+                                                placeholder="Depreciation Type">
+                                            <md-item-template>
+                                                <span md-highlight-text="searchTe"> {{item.metadata_value}} </span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Depreciation Type matching "{{searchTe}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete
+                                                md-clear-button="true"
+                                                md-input-maxlength=126
+                                                md-item-text="item.gl_no"
+                                                md-items="item in querySearchgl(searchgl)"
+                                                md-min-length=0
+                                                md-no-cache="true"
+                                                md-search-text="searchgl"
+                                                md-selected-item="selectedgl"
+                                                md-selected-item-change="selectchange(item)"
+                                                placeholder="GL Number">
+                                            <md-item-template>
+                                                <span md-highlight-text="searchTe"> {{item.gl_no}} </span>
+                                            </md-item-template>
+                                            <md-not-found>No GL Number matching "{{searchTe}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-autocomplete
+                                                md-clear-button="true"
+                                                md-input-maxlength=126
+                                                md-item-text="item.gl_no"
+                                                md-items="item in querySearchgl(searchglref)"
+                                                md-min-length=0
+                                                md-no-cache="true"
+                                                md-search-text="searchglref"
+                                                md-selected-item="selectedglref"
+                                                md-selected-item-change="selectchange(item)"
+                                                placeholder="GL Ref Number">
+                                            <md-item-template>
+                                                <span md-highlight-text="searchTe"> {{item.gl_no}} </span>
+                                            </md-item-template>
+                                            <md-not-found>No GL Ref Number matching "{{searchTe}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <md-button class="btn btn-info custbutton" ng-click="Save_dep_gl()"
+                                           ng-disabled="enable_update">Submit
+                                    <md-tooltip>Approve</md-tooltip>
+                                </md-button>
+                                <md-button class="md-raised" data-dismiss="modal">Back
+                                    <md-tooltip>close</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--popup page End-->
+
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.add = [];
+    $scope.drop_data =[];
+    $scope.cat_mst =[];
+    $scope.get_drop_data=[];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    var td = detail.date
+    $scope.disable_update_ast_cat = true;
+    $scope.cap_date = convertdate(td);
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+     $scope.subcategory=[{id: 'A', data: 'A'}, {id:'B', data:'B'}, {id:'C', data:'C'}]
+     $scope.departmenttype = [{
+    id: 'A',
+    data: 'WDV'
+    }, {
+        id: 'B',
+        data: 'SLM'
+    }];
+
+     $scope.barcoderepeat = [{
+        id: 'Y',
+        data: 'YES'
+    }, {
+        id: 'N',
+        data: 'NO'
+    }];
+        datan ={
+                "Table_name":"fa_mst_tassetcat",
+                "Column_1":"assetcat_gid,assetcat_subcatname",
+                "Column_2":"",
+                "Where_Common":"assetcat",
+                "Where_Primary":"",
+                "Primary_Value":"",
+                "Order_by":"subcatname"
+               }
+
+
+            var
+                drop_l = {
+                    Action: "",
+                    Entity_Gid: $scope.entity,
+                    data: datan
+                }
+            $scope.subcategorydetails = [];
+            var getsubcategory = newservice.getassetsubcat(drop_l)
+            getsubcategory.then(function (result) {
+                $scope.subcategorydetails = result.data.DATA;
+                //alert(JSON.stringify($scope.subcategorydetails));
+            }, function (err) {
+                // alert('No data!.');
+            }).finally();
+
+    loaddata();
+    function loaddata() {
+         var data = {
+           "Params": {
+                "FILTER": {},
+               }
+         }
+          var detaildata = {
+           "Group": "FA_ASSET_CATEGORY",
+           "Type": "DEP_SETTINGS",
+           "Sub_Type": "MST",
+           "json": data,
+       }
+       var set_cat_rategl = newservice.dep_rate_gl(detaildata)
+       $scope.loading();
+       set_cat_rategl.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE;
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+            }
+            else{
+<!--                alert($scope.set_msg);-->
+            }
+           }).finally($scope.endloading);
+    }
+
+            $scope.subcategorychange = function(e) {
+                  $scope.subcat_gid = e;
+            }
+
+            $scope.deptypechange = function(e) {
+               $scope.depttype = e;
+            }
+
+    $scope.search = function(){
+      loadcat()
+      }
+
+    loadcat();
+    function loadcat() {
+         var data = {
+            "Params": {
+                "FILTER": {
+                            "SubCat_Gid":$scope.subcat_gid,
+                            "Depre_Type":$scope.depttype
+                },
+            }
+         }
+          var detaildata = {
+           "Group": "FA_ASSET_CATEGORY",
+           "Type": "ASSETCAT",
+           "Sub_Type": "SUMMARY",
+           "json": data,
+       }
+       var set_cat_rategl = newservice.dep_rate_gl(detaildata)
+       $scope.loading();
+       set_cat_rategl.then(function(result) {
+            $scope.main = result.data.DATA;
+           if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.cat_mst = $scope.main;
+            $scope.pageLength = $scope.cat_mst.length;
+            $scope.Totalpages = Math.ceil($scope.pageLength / $scope.itemsPerPage);
+           }).finally($scope.endloading);
+    }
+
+    $scope.Save_dep_gl = function(){
+        if($scope.selectedrate != undefined){
+                 if($scope.selectedgl != undefined){
+                    if($scope.selectedglref != undefined){
+                        $scope.done_depgl();
+                    }
+                    else{
+                     error_toast(not_enter_glnoref,time_toast);
+                    }
+            }
+            else{
+            error_toast(not_enter_glno,time_toast);
+            }
+        }
+        else{
+        error_toast(not_enter_deptype,time_toast);
+        }
+    }
+    $scope.done_depgl = function(){
+         var data = {
+           "Params": {
+                "DETAILS": {
+                       "Dep_Setting_Type":$scope.selectedrate.metadata_value,
+                       "Dep_Setting_gl":$scope.selectedgl.gl_no,
+                       "Dep_Setting_Resrv_gl":$scope.selectedglref.gl_no,
+                    },
+               }
+         }
+          var detaildata = {
+           "Group": "FA_CATEGORY_SET",
+           "Type": "DEP_SETTINGS",
+            "Sub_Type": "MST",
+            "Action": "INSERT",
+            "Employee_Gid": employgid,
+           "json": data,
+       }
+       var set_cat_rategl = newservice.dep_rate_gl(detaildata)
+       $scope.loading();
+       set_cat_rategl.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE;
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+               $window.location.href="fa_asset_catgry_summary";
+           }).finally($scope.endloading);
+    }
+    $scope.viewdet = function(e) {
+          $scope.asset_cat_gid = 0;
+          $scope.asset_cat_gid = e.assetcat_gid;
+          modalshow('viewmodal');
+          $scope.asset_gl_data_load();
+
+      if (e.assetcat_depgl_mgmt != ''  ){
+<!--          alert(e.assetcat_depgl_mgmt);-->
+         $scope.ast.selectedgl = {
+          'gl_no':e.assetcat_depgl_mgmt
+         };
+
+          $scope.ast.selectedglref = {
+          'gl_no':e.assetcat_depresgl_mgmt
+         };
+      }
+
+    }
+
+  $scope.selectchange_ast_gl = function(data) {
+    if ($scope.ast.selectedgl.gl_no != '') {
+      $scope.disable_update_ast_cat = false;
+    }
+    if ($scope.ast.selectedglref.gl_no != '') {
+      $scope.disable_update_ast_cat = false;
+    }
+  }
+
+    $scope.Update_asstcat = function() {
+
+              var data = {
+              "Params": {
+                   "DETAILS": {
+                          "AssetCatGid":$scope.asset_cat_gid,
+                          "Dep_GL":$scope.ast.selectedgl.gl_no,
+                          "Dep_Res_GL":$scope.ast.selectedglref.gl_no,
+                       },
+                  }
+            }
+             var detaildata = {
+               "Group": "FA_CATEGORY_SET",
+               "Type": "GL_NO",
+               "Sub_Type": "MST",
+               "Action": "UPDATE",
+               "Employee_Gid": employgid,
+               "json": data,
+          }
+          var set_cat_rategl = newservice.dep_gl(detaildata)
+          $scope.loading();
+          set_cat_rategl.then(function(result) {
+               $scope.set_msg = result.data.MESSAGE;
+               if($scope.set_msg == 'SUCCESS' ){
+                   success_toast();
+               }
+               else{
+                   alert($scope.set_msg);
+               }
+                  $window.location.href="fa_asset_catgry_summary";
+              }).finally($scope.endloading);
+
+
+    }
+
+     $scope.imgshow = function(id){
+         modalshow('viewmodal1');
+         $scope.asset_img =$scope.asset[id].assetdetails_imagepath;
+     }
+      $scope.category_setting = function(id){
+        var get_dep_rate = newservice.dep_data($scope.entity_gid)
+        get_dep_rate.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_dep_data = $scope.main;
+        });
+        var get_gl_no = newservice.gl_data($scope.entity_gid)
+        get_gl_no.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.get_glno_data = $scope.main;
+        });
+         modalshow('cat_setting');
+     }
+
+     $scope.asset_gl_data_load = function(){
+
+       var get_dep_rate = newservice.dep_data($scope.entity_gid)
+        get_dep_rate.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_dep_data = $scope.main;
+        });
+
+<!--         Remove above not neede-->
+
+        var get_gl_no = newservice.gl_data($scope.entity_gid)
+         $scope.loading();
+        get_gl_no.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_glno_data = $scope.main;
+<!--            alert(JSON.stringify($scope.get_glno_data));-->
+        }).finally($scope.endloading);
+     }
+
+    $scope.querySearch = gotodep;
+        function gotodep(query) {
+            var result = $filter('filter')($scope.get_dep_data, {
+                'metadata_value': query
+            });
+            return result;
+        }
+    $scope.querySearchgl = gotoglno;
+        function gotoglno(query) {
+<!--            alert('Tri');-->
+            var result = $filter('filter')($scope.get_glno_data, {
+                'gl_no': query
+            });
+            return result;
+        }
+$scope.myfun = function(e) {
+ var d = new Date($scope.asset_cat);
+        var asset_capdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    $scope.main = $filter('filter')($scope.asset, {
+        "product_displayname": e.asset_product,
+        "aassetcatchange_cat": e.asset_cat,
+        "cap_date": e.asset_capdate,
+        "assetlocation_name": e.asset_locationname,
+        "branch_name": e.asset_branch,
+
+    });
+}
+});
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+        var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                "Sub_Type": "SUMMARY",
+                "Type": "CAT_DETAILS",
+                "Group": "FA_ASSET_TRAN_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+    this.getassetsubcat = function (drop_l) {
+        var response = $http.post(Appname + "/drop_data/", drop_l);
+    return response;
+    }
+    this.dep_data = function(entity) {
+        var response = $http.post(Appname + "/dep_ratedata/", {
+         params: {
+               "Entity_Gid": entity,
+            }
+        });
+        return response;
+     }
+     this.gl_data = function(entity) {
+        var response = $http.post(Appname + "/glno_data/", {
+         params: {
+               "Entity_Gid": entity,
+            }
+        });
+        return response;
+     }
+     this.dep_rate_gl = function(detaildata) {
+       var response = $http.post(Appname + "/fa_category/", detaildata);
+       return response;
+     }
+
+     this.dep_gl = function(detaildata) {
+       var response = $http.post(Appname + "/fa_category/", detaildata);
+       return response;
+     }
+
+});
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,244 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Employee_Get`(IN `emp_gid` int , IN `emp_name` varchar(64),IN `li_cluster_gid` int,
+IN `ls_all_cluster` varchar(32),IN `ls_isexecutive` char(1),IN `lj_classification` JSON,OUT `Message` varchar(1024))
+tr_emp:BEGIN
+
+# Vigneshwari : Edit : October 08 2018 ## entity gid
+##3 Ramesh edit March 2019
+# karthiga :edit : employee_isactive - ALL -18 Oct 2019
+
+declare Query_Search varchar(1000);
+declare query1 text;
+declare Query_group varchar(100);
+declare Query_Select text;
+
+declare entity_gid varchar(64);
+declare client_gid varchar(64);
+declare j int;
+
+declare employee_gids varchar(1024);
+declare emp_gid_sp varchar(1024);
+
+set Query_Select = '';
+
+select JSON_LENGTH(lj_classification, '$') into @li_jsonclass_count;
+
+if @li_jsonclass_count <=0 then
+	set Message = 'Entity Gid or Client Gid Not Given';
+    leave tr_emp;
+end if;
+
+set j = 0 ;
+    select  JSON_LENGTH(lj_classification, CONCAT('$.entity_gid')) into @entity_cnt; 
+    
+    if @entity_cnt <> 0 then
+		WHILE j<= @entity_cnt - 1 Do
+			
+            select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.entity_gid[',j,']'))) into @entity_gid;
+            
+            if @entity_cnt  <> '' then
+				 if @entity_gid <> 0 then
+					if entity_gid <> '' then
+						set entity_gid = concat(entity_gid,',',@entity_gid);     
+					else
+                        set entity_gid = @entity_gid;     
+                    end if;
+
+				end if;
+     
+			end if;     
+            set j = j + 1;
+            
+        END WHILE;
+    end if;
+#select entity_gid  ;#REGEXP '^[0-9]|[,]+$';
+select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.client_gid[0]'))) into @client_gid;
+
+set j = 0 ;
+    select  JSON_LENGTH(lj_classification, CONCAT('$.client_gid')) into @client_cnt; 
+    if @client_cnt <> 0 then
+		WHILE j<= @client_cnt - 1 Do
+			
+            select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.client_gid[',j,']'))) into @client_gid;
+            if @client_cnt  <> '' then
+				 if @client_gid <> 0 then
+					if client_gid <> '' then
+						set client_gid = concat(client_gid,',',@client_gid);     
+					else
+                        set client_gid = @client_gid;     
+                    end if;
+
+				end if;
+     
+			end if;     
+            set j = j + 1;
+            
+        END WHILE;
+    else 
+		set client_gid = '';
+    end if;
+#select client_gid;
+
+				if client_gid <> '' then
+					set @clientgid = concat(' and customer_clientgid in (',client_gid,')');
+				else
+					set @clientgid ='';
+				end if;
+
+				if entity_gid = '' then
+					set Message = 'Entity Gid Is Needed.';
+					leave tr_emp;
+				End if;
+
+				if emp_gid <> 0 then
+				set Query_Search = concat(' and employee_gid = ' , emp_gid );
+				else
+				set Query_Search = '';
+				end if;
+
+				if emp_name <> '' then
+				set Query_Search = concat(Query_Search,' and employee_name like ''%' , emp_name , '%'' ');
+				end if;
+
+				if ls_all_cluster = 'CLUSTER' and  li_cluster_gid < 0 then
+				set Message = 'Cluster id is Required.';
+				leave tr_emp;
+				end if;
+
+if ls_all_cluster = 'ALL' then
+			set query1 = concat(' SELECT concat(br.branch_name,'' - '',br.branch_code) as brname,employee_gid ,employee_code , employee_name, employee_pwd , 
+             DATE_FORMAT(employee_pwdchangedate,''%W, %M %e, %Y @ %h:%i %p'')  as employee_pwdchangedate,
+             employee_gender,DATE_FORMAT(employee_dob,''%d-%b-%Y'') as employee_dob,
+             DATE_FORMAT(employee_doj,''%d-%b-%Y'') as employee_doj,employee_dept_gid,employee_designation_gid,
+             employee_supervisor_gid,employee_mobileno,employee_isactive,employee_emailid,employee_add_gid,c.state_name
+             FROM gal_mst_temployee  as a
+             inner join gal_mst_taddress as b on b.address_gid = a.employee_add_gid
+             left join gal_mst_tbranch  as br on br.branch_gid = a.branch_gid
+			inner join gal_mst_tstate as c on c.state_gid = b.address_state_gid
+             where a.entity_gid in(',entity_gid,') 
+               and c.state_isremoved = ''N'' ' )  ;
+
+			set @p = concat(query1 , Query_Search);
+			#select @p;
+			PREPARE stmt FROM @p;
+			EXECUTE stmt;
+			DEALLOCATE PREPARE stmt;
+
+
+elseif ls_all_cluster = 'PARENT' then
+                         #### Not in USE
+                         #### It Gives ALL EMployess related to  that cluster
+						set query1 = '';
+						set Query_Search = '';
+						set @idlist = '';
+						 set query1 = concat(query1,' Select a.empcluster_employee_gid as employee_gid,b.employee_code,b.employee_name ,
+													  b.employee_pwd , DATE_FORMAT(employee_pwdchangedate,''%W, %M %e, %Y @ %h:%i %p'')  
+													  as employee_pwdchangedate,employee_gender,
+													  employee_dob,employee_doj,employee_dept_gid,employee_designation_gid,employee_supervisor_gid,
+									 employee_mobileno,employee_emailid,employee_add_gid
+										 from gal_map_empcluster as a
+							inner join gal_mst_temployee as b on b.employee_gid = a.empcluster_employee_gid
+							where a.entity_gid in (',entity_gid,') and a.empcluster_cluster_gid in (
+							SELECT cluster_gid FROM
+							(SELECT cluster_gid,cluster_name,cluster_parent_gid,
+									CASE WHEN cluster_gid = ', li_cluster_gid, ' THEN @idlist := CONCAT(cluster_gid)
+										 WHEN FIND_IN_SET(cluster_parent_gid,@idlist) THEN @idlist := CONCAT(@idlist,'','',cluster_gid)
+									END as checkId
+							 FROM gal_mst_tcluster as z where z.entity_gid in (',entity_gid,') 
+							 ORDER BY cluster_gid ASC)
+							 as T
+							WHERE  checkId IS NOT NULL
+							)
+							and a.empcluster_isremoved = ''N'' and a.empcluster_isactive = ''Y'' and current_date() between a.empcluster_validfrom and a.empcluster_validto');
+						set Query_group = '	group  by empcluster_employee_gid' ;
+
+							set @p = concat(query1 , Query_group);
+						   #select @p;
+							PREPARE stmt FROM @p;
+							EXECUTE stmt;
+							DEALLOCATE PREPARE stmt;
+
+
+elseif ls_all_cluster = 'HIERARCHY' then
+					if emp_gid = 0 then
+							set Message = 'Employee ID is Needed.';
+							leave tr_emp;
+					end if;  
+		  
+			
+			 if emp_gid  <> 0 then
+				set emp_gid_sp = '';
+				call sp_GetNextEmp(emp_gid,lj_classification,@Message);
+				select @Message into emp_gid_sp;
+			  
+				if emp_gid_sp <> '' then
+					set employee_gids = concat(emp_gid,',',emp_gid_sp);
+				else
+					set employee_gids = emp_gid;
+				end if;
+			 
+			 end if;     
+			# select employee_gids;  ## Remove IT
+		 
+
+			set Query_Select = Concat('
+				Select employee_name,hierarchy_layer,employee_gid,employee_supervisor_gid,hierarchy_order 
+				from gal_mst_temployee as a
+				inner join gal_mst_thierarchy on hierarchy_gid = employee_hierarchygid
+				where a.entity_gid in (',entity_gid,') and employee_gid in (',employee_gids,') 
+				and employee_isactive =''Y'' and  employee_isremoved = ''N'' and hierarchy_isremoved = ''N''
+				order by hierarchy_order asc 
+			');
+
+				
+			set @H = Query_Select;   
+			## select Query_Select; ## Remove
+			PREPARE stmt FROM @H;
+			EXECUTE stmt;
+	DEALLOCATE PREPARE stmt;
+
+elseif ls_all_cluster = 'EMPLOYEE_EDIT' then
+						if emp_gid = 0 then
+							set Message = 'Employee ID is Needed.';
+							leave tr_emp;
+						else
+							set @qry_srch = concat(' and employee_gid = ',emp_gid);
+						end if;
+
+						set Query_Select = Concat('SELECT employee_gid,employee_add_gid,employee_dept_gid,employee_designation_gid,employee_mobileno,
+											employee_supervisor_gid,employee_supervisor,employee_type,dept_name,designation_name,employee_name,
+											DATE_FORMAT(employee_doj,''%d-%b-%Y'') as employee_doj,DATE_FORMAT(employee_dob,''%d-%b-%Y'') as employee_dob,
+											employee_code,employee_dor,employee_gender,employee_emailid,address_1,
+											address_2,address_3,address_city_gid,address_district_gid,address_state_gid,address_pincode,contact_gid,
+											Contact_ref_gid,Contact_reftable_gid,contact_reftablecode,Contact_contacttype_gid,Contact_designation_gid,
+											DATE_FORMAT(Contact_DOB,''%d-%b-%Y'') as Contact_DOB,Contact_email,Contact_landline,Contact_landline2,Contact_mobileno,Contact_mobileno2,
+											Contact_personname,DATE_FORMAT(Contact_WD,''%d-%b-%Y'') as Contact_WD,hierarchy_layer,hierarchy_gid,branch_gid
+											FROM gal_mst_temployee as a 
+											left join gal_mst_tdesignation on employee_designation_gid = designation_gid and designation_isremoved = ''N'' 
+											and designation_isactive = ''Y''
+											left join gal_mst_tdept on employee_dept_gid = dept_gid and dept_isremoved = ''N'' and dept_isactive = ''Y''
+											left join gal_mst_tcontact on Contact_reftable_gid = employee_gid and Contact_ref_gid = 15
+											left join gal_mst_taddress on employee_add_gid = address_gid
+											left join gal_mst_thierarchy on hierarchy_gid = employee_hierarchygid
+											where a.entity_gid in (',entity_gid,') and employee_isremoved = ''N''',@qry_srch);
+							
+						set @H = Query_Select;   
+                        #select Query_Select;
+						PREPARE stmt FROM @H;
+						EXECUTE stmt;
+						DEALLOCATE PREPARE stmt;
+
+elseif  ls_all_cluster = 'EMP_MAP_CLUSTER_SUPERVISOR' then
+   
+		   Select b.employee_gid,b.employee_name 
+			from gal_map_empcluster as a
+			inner join gal_mst_temployee as b on b.employee_gid = a.empcluster_employee_gid
+			where a.empcluster_isactive = 'Y' and a.empcluster_isremoved = 'N' and
+			now() between a.empcluster_validfrom and a.empcluster_validto
+			and b.employee_isactive = 'Y' and b.employee_isremoved = 'N'
+			and empcluster_cluster_gid = li_cluster_gid;
+
+            
+
+	end if;
+
+END

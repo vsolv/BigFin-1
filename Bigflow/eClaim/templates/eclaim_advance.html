@@ -1,0 +1,2125 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Advance{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <md-subheader ng-show="user_type" class="md-accent">On BeHalf Employee - {{onbehalf_emp}}</md-subheader>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Advance</h4>
+            </div>
+        </div>
+        <form name="tour_valid" role="form">
+            <div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <md-subheader class="md-accent">Tour Expense</md-subheader>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer" ng-show="tour.gid != 0">
+                                <input disabled maxlength="30" ng-model="tour_no"
+                                       placeholder="Tour No"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Request Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_requestdate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-2" ng-show="paystatus">
+                            <h5>Payment Status :</h5>
+                        </div>
+                        <div class="col-md-1" ng-show="paystatus">
+                            <h5 style="color:blue;">{{invoiceheader_status}}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <md-subheader class="md-accent">Tour Details</md-subheader>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container>
+                                <label>Tour Reason</label>
+                                <input maxlength="30"
+                                       disabled
+                                       ng-model="tour_reason"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour Start Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_startdate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour End Date </label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour_enddate"
+                                           disabled>
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       ng-click="add_taveltype(choice)"
+                                       ng-disabled="applevel == 1 || adv_status == 'RETURN' || adv_status == 'PENDING' ">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Add Tour Details</md-tooltip>
+                            </md-button>
+                        </div>
+                        <!--                        <div class="col-md-2" ng-show="adv_status =='APPROVED'">-->
+                        <!--                            <md-button class="btn btn-info custbutton"-->
+                        <!--                                       ng-click="paymentstatus()">Status-->
+                        <!--                                <md-tooltip>Payment Status</md-tooltip>-->
+                        <!--                            </md-button>-->
+                        <!--                        </div>-->
+                    </div>
+                </div>
+                <div class="row table-responsive ">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Reason</th>
+                            <th class="text-center" scope="col">Advance Amount</th>
+                            <th class="text-center" scope="col">Approve Amount</th>
+                            <th class="text-center" scope="col">CRN No</th>
+                            <th class="text-center" scope="col">Status</th>
+                            <th class="text-center" scope="col">PDF</th>
+                            <th class="text-center" scope="col">Action</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="adv in advance_details.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="30"
+                                           class="form-control"
+                                           ng-disabled="applevel == 1 || adv.status == '1' ||adv.status == '2' "
+                                           ng-model="adv.reason"
+                                           ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                           placeholder="Reason"
+                                           name="reason{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.reason{{$index}}.$error.pattern">Special char Error</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="10"
+                                           class="form-control"
+                                           ng-disabled="applevel == 1 || adv.status == '1' || adv.status == '2'"
+                                           ng-pattern="/^[0-9,.]/"
+                                           ng-blur="adv_amtchange(adv)"
+                                           ng-model="adv.advanceamount"
+                                           placeholder="Advance Amount"
+                                           name="advanceamount{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.advanceamount{{$index}}.$error.pattern">Only numbers</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="10"
+                                           class="form-control"
+                                           ng-model="adv.appamount"
+                                           ng-show="adv.status == '0'"
+                                           ng-pattern="/^[0-9,.]/"
+                                           ng-blur="app_amtchange(adv)"
+                                           placeholder="Approved Amount"
+                                           type="text"/>
+                                    <input maxlength="10"
+                                           class="form-control"
+                                           ng-model="adv.appamount"
+                                           numbers-only
+                                           disabled
+                                           ng-show="adv.status == '1'|| adv.status == '2' || adv.status == '3' "
+                                           ng-blur="app_amtchange(adv)"
+                                           placeholder="Approved Amount"
+                                           type="text"/>
+                                </td>
+                                <td class="text-center">
+                                    {{adv.crnno}}
+                                </td>
+                                <td class="text-center">
+                                    <p ng-show="adv.status == '0'">
+                                        Tour Advance Pending</p>
+                                    <p ng-show="adv.status == '1'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="adv.status == '2'">
+                                        Tour Advance Rejected</p>
+                                </td>
+                                <td class="text-center">
+                                    <md-button ng-show="adv.status == '1'" class="md-fab md-mini md-primary custbutton"
+                                               ng-click="get_pdf(adv.invoiceheadergid)">
+                                        <md-icon>insert_drive_file</md-icon>
+                                        <md-tooltip>Add Tour Details</md-tooltip>
+                                    </md-button>
+                                </td>
+                                <td class="text-center">
+                                    <!--                                    <a ng-click="remove_travel(tourdtl)"><i-->
+                                    <!--                                            ng-disabled="applevel == 1"-->
+                                    <!--                                            class="material-icons">-->
+                                    <!--                                        close-->
+                                    <!--                                    </i></a>-->
+                                    <a ng-click="adv.gid != 0 || applevel == 1 || adv.status == '1' || adv_status == 'REJECTED' ? empty() : remove_travel(tourdtl)"><i
+                                            class="material-icons">
+                                        close
+                                    </i></a>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="2">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="advance_details.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <td class="text-left" colspan="1">
+                                    <span>Total Advance Amount:<br/> <b class="text-centre"> {{totaladvance}}</b></span>
+                                </td>
+                                <td class="text-left" colspan="1"
+                                    ng-show="applevel == 1 || adv_status =='APPROVED'|| adv_status =='CANCEL' || ">
+                                    <span>Total Approved Amount:<br/> <b
+                                            class="text-centre"> {{totaladvanceapp}}</b></span>
+                                </td>
+                                <td class="text-left" colspan="4">
+                                </td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" class="col-md-12">
+                    <md-subheader class="md-accent">CCBS</md-subheader>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <md-button class="btn btn-info custbutton"
+                                           class="md-raised"
+                                           ng-click="add_ccbs($index,eclaim)">CCBS
+                                    <md-tooltip>Add CCBS</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-show="applevel == 0" class="col-md-12">
+                    <md-subheader class="md-accent">To Approve</md-subheader>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <label>Branch</label>
+                                <md-autocomplete
+                                        md-item-text="item.branch_name"
+                                        md-items="item in brsearch(searchbr)"
+                                        md-min-length=0
+                                        md-search-text="searchbr"
+                                        md-selected-item="selectedbr"
+                                        md-selected-item-change="branchchange(item)"
+                                        ng-required="true"
+                                        placeholder="Branch">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.branch_code}} {{item.branch_name}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Branch matching "{{searchbr}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div class="col-md-3">
+                                <label>Employee</label>
+                                <md-autocomplete
+                                        md-item-text="item.employee_name"
+                                        md-items="item in empsearch(searchemp)"
+                                        md-min-length=0
+                                        md-search-text="searchemp"
+                                        md-selected-item="selectedemp"
+                                        md-selected-item-change="empchange(item)"
+                                        ng-required="true"
+                                        placeholder="Employee">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.employee_name}} {{item.employee_code}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Employee matching "{{searchemp}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div class="col-md-3">
+                                <label>Remarks</label>
+                                <textarea
+                                        ng-disabled="applevel == 1"
+                                        ng-model="remarks"
+                                        ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                        style="width:500px"
+                                        maxlength="500"
+                                        name="remarks"
+                                        placeholder="Remarks"
+                                        ng-required="true"
+                                        type="text">
+                                        </textarea>
+                                <span class="error" style="color:red"
+                                      ng-show="tour_valid.remarks.$error.pattern">Special char Error</span>
+                                {{myForm.$error}}
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button ng-show="allowdate" ng-hide="enable_submit" class="btn btn-info custbutton"
+                                       ng-click="tour_valid.$valid ? submit_data() : error_toast(tour_valid)"
+                                       ng-disabled="tour_valid.$invalid || advance_details.length == 0">Submit
+                                <md-tooltip>Submit</md-tooltip>
+                            </md-button>
+                            <md-button ng-show="tourtype != 'CANCEL'"
+                                    class="md-raised" ng-href="eClaim/eclaim_advance_request"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+
+                            <md-button ng-show="tourtype == 'CANCEL'"
+                                    class="md-raised" ng-href="eClaim/eclaim_cancel"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div ng-show="reject_reason">
+            <form name="submit_valid" novalidate role="form">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Reject Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for reject"
+                                      style="width:500px"
+                                      name="comments"
+                                      maxlength="500"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      ng-model="comments" required>
+                            </textarea>
+                            <span class="error" style="color:red"
+                                  ng-show="submit_valid.comments.$error.pattern">Special char Error</span>
+                            {{myForm.$error}}
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button"
+                                       ng-disabled="submit_valid.$invalid"
+                                       aria-label="Reject"
+                                       ng-click="reject_tour()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Reject</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div ng-show="approve_reason">
+            <form name="submit_valid" novalidate role="form">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Approve Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for Approve"
+                                      style="width:500px"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      maxlength="500"
+                                      ng-model="comments" required>
+                            </textarea>
+                            <span class="error" style="color:red"
+                                  ng-show="submit_valid.remarks.$error.pattern">Special char Error</span>
+                            {{myForm.$error}}
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button"
+                                       ng-disabled="submit_valid.$invalid"
+                                       aria-label="Reject"
+                                       ng-click="direct_approve()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Approve</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div ng-show="return_reason">
+            <form name="submit_valid" novalidate role="form">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Return Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for Return"
+                                      style="width:500px"
+                                      maxlength="500"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      ng-model="comments" required>
+                            </textarea>
+                            <span class="error" style="color:red"
+                                  ng-show="submit_valid.remarks.$error.pattern">Special char Error</span>
+                            {{myForm.$error}}
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button"
+                                       ng-disabled="submit_valid.$invalid"
+                                       aria-label="Reject"
+                                       ng-click="direct_return()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Return</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row" ng-show="applevel == 1 || approver">
+            <div class="row" ng-show="update_amt">
+                <div class="col-md-12 text-center">
+                    <md-button class="btn btn-info custbutton" ng-click="update_data()">
+                        Update for Approve Amount
+                        <md-tooltip>Update</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+            <div class="col-md-12 text-center">
+                <md-button class="btn btn-info custbutton" ng-click="approve(em)"
+                           ng-disabled="enable_update">Approve
+                    <md-tooltip>Approve</md-tooltip>
+                </md-button>
+                <md-button type="button" value="Reject"
+                           ng-click="reject()"
+                           ng-disabled="enable_reject"
+                           class="md-raised md-warn">Reject
+                </md-button>
+                <md-button type="button" value="Return"
+                           ng-show="tourtype != 'CANCEL'"
+                           ng-click="return(em)"
+                           ng-disabled="enable_return"
+                           class="md-raised md-primary">Return
+                </md-button>
+                <md-button ng-show="tourtype != 'CANCEL'" type="button" value="Back"
+                           ng-href="eClaim/eclaim_advance_approval"
+                           class="md-raised">Back
+                </md-button>
+
+                 <md-button ng-show="tourtype == 'CANCEL'" type="button" value="Back"
+                           ng-href="eClaim/eclaim_cancel_approval"
+                           class="md-raised">Back
+                </md-button>
+            </div>
+        </div>
+        <div ng-show="approvaldata" class="row">
+            <div class="col-md-12">
+                <md-subheader class="md-accent">Approval Flow</md-subheader>
+                <div class="row table-responsive ">
+                    <div class="col-md-8 col-lg-8 col-sm-8">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Employee</th>
+                            <th class="text-center" scope="col">Raisedby</th>
+                            <th class="text-center" scope="col">Type</th>
+                            <th class="text-center" scope="col">Date</th>
+                            <th class="text-center" scope="col">Comment</th>
+                            <th class="text-center" scope="col">Status</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="apprl in get_approval_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-left">{{apprl.employee_name}} - {{apprl.employee_code}}</td>
+                                <td class="text-left" ng-show="apprl.onbehalof == '0'">{{apprl.employee_name}} -
+                                    {{apprl.employee_code}}
+                                </td>
+                                <td class="text-left" ng-show="apprl.onbehalof != '0'">{{apprl.onbehalof_employeename}}
+                                    - {{apprl.onbehalof_employeecode}}
+                                </td>
+                                <td class="text-left">Tour Advance</td>
+                                <td class="text-left">{{apprl.approveddate}}</td>
+                                <td class="text-left">{{apprl.appcomment}}</td>
+                                <td class="text-left">
+                                    <p ng-show="apprl.status == 'REJECTED'">
+                                        Tour Advance Rejected</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'TOURADV'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'ADVANCECANCEL'">
+                                        Tour Advance Approved</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.apptype == 'TOURADV' ">
+                                        Tour Advance Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.apptype == 'ADVANCECANCEL' ">
+                                        Tour Advance Cancel Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'RETURN'">
+                                        Tour Advance Returned From Approver</p>
+                                    <p ng-show="apprl.status == 'REQUESTED'">
+                                        Tour Advance Submitted</p>
+                                    <p ng-show="apprl.status == 'CANCEL REQUEST'">
+                                        Tour Advance Cancel Submitted</p>
+                                </td>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="7">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="eClaim_tavels.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                        <td class="text-left" colspan="1">-->
+                                <!--                            <span>Total Count:<br/> <b class="text-centre"> {{eClaim_tavels.length}}</b></span>-->
+                                <!--                        </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--ccbs popup-->
+        <div aria-hidden="" aria-labelledby="exampleModalLabel"
+             class="modal fade"
+             data-backdrop="" data-keyboard="false"
+             id="viewmodals">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>CCBS</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                    </div>
+                    <br/>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <b ng-show="applevel == 0">Value: &#8377; {{claimamount }}</b>
+                                <b ng-show="applevel != 0">Value: &#8377; {{app_amount}}</b>
+                            </div>
+                            <div class="col-md-3">
+                                <b>Tour No : {{tour_no}}</b>
+                            </div>
+                        </div>
+                    </div>
+                    <form name="expense_valid" novalidate role="form">
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-sm-12">
+                                        <div class="row table-responsive">
+                                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <fieldset data-ng-repeat="choice in choices_ccbs">
+                                                    <div class="row">
+                                                        <div class="col-md-3">
+                                                            <label>BS</label>
+                                                            <md-autocomplete
+                                                                    ng-required="true"
+                                                                    md-clear-button="true"
+                                                                    md-input-maxlength=126
+                                                                    ng-disabled="choice.status == '1' || choice.status == '2'"
+                                                                    md-item-text="item.bs_name"
+                                                                    md-items="item in querySearchbs(choice.bsname)"
+                                                                    md-min-length=0
+                                                                    md-no-cache="true"
+                                                                    md-search-text="choice.bsname"
+                                                                    md-selected-item="choice.selectedbs"
+                                                                    md-selected-item-change="bschange(item,choice)"
+                                                                    placeholder="Select BS">
+                                                                <md-item-template>
+                                                                    <span md-highlight-text="searchTe">{{item.bs_name}} - {{item.bs_code}}  </span>
+                                                                </md-item-template>
+                                                                <md-not-found>
+                                                                    No BS matching "{{searchTe}}" were found.
+                                                                </md-not-found>
+                                                            </md-autocomplete>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label>CC</label>
+                                                            <md-autocomplete
+                                                                    md-clear-button="true"
+                                                                    md-input-maxlength=126
+                                                                    md-item-text="item.cc_name"
+                                                                    ng-disabled="choice.status == '1' || choice.status == '2'"
+                                                                    md-items="item in querySearchcc(choice.ccname)"
+                                                                    md-min-length=0
+                                                                    md-no-cache="true"
+                                                                    md-search-text="choice.ccname"
+                                                                    md-selected-item="choice.selectedcc"
+                                                                    md-selected-item-change="ccchange(item,choice)"
+                                                                    placeholder="Select CC">
+                                                                <md-item-template>
+                                                                    <span md-highlight-text="searchTe">{{item.cc_name}} - {{item.cc_code}} </span>
+                                                                </md-item-template>
+                                                                <md-not-found>
+                                                                    No CC matching "{{searchTe}}" were found.
+                                                                </md-not-found>
+                                                            </md-autocomplete>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <md-input-container class="md-block inputcontainer">
+                                                                <label>Expense Amount</label>
+                                                                <input type="text" ng-model="choice.amount"
+                                                                       name="" ng-required="true"
+                                                                       numbers-only
+                                                                       ng-disabled="choice.status == '1' || choice.status == '2'"
+                                                                       placeholder="Enter Expense Amount"
+                                                                       ng-blur="percen_calc($index,choice.amount)">
+                                                            </md-input-container>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <md-input-container class="md-block inputcontainer">
+                                                                <label>Percentage</label>
+                                                                <input type="text"
+                                                                       ng-model="choice.percentage"
+                                                                       ng-required="true"
+                                                                       ng-disabled="choice.status == '1' || choice.status == '2'"
+                                                                       name=""
+                                                                       maxlength="3"
+                                                                       min="1" max="100"
+                                                                       numbers-only
+                                                                       placeholder="Enter Percentage"
+                                                                       ng-blur="amount_calc($index,choice.percentage)">
+                                                            </md-input-container>
+                                                        </div>
+                                                        <div class="col-md-1">
+                                                            <md-button class="md-fab md-mini md-primary custbutton"
+                                                                       ng-show="$last"
+                                                                       ng-disabled="applevel == 1 || choice.status == '1' || choice.status == '2'"
+                                                                       ng-click="removeChoice()">
+                                                                <md-icon>close</md-icon>
+                                                                <md-tooltip>Remove</md-tooltip>
+                                                            </md-button>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                                        <md-button class="md-fab md-mini md-primary custbutton" ng-disabled="add_asset"
+                                                   ng-click="addNewChoice()">
+                                            <md-icon>add</md-icon>
+                                            <md-tooltip>Create Asset</md-tooltip>
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <md-button ng-show="applevel == 0" class="btn btn-info custbutton" ng-click="ccbs_save()"
+                                           ng-disabled="expense_valid.$invalid">
+                                    Submit
+                                    <md-tooltip>Submit</md-tooltip>
+                                </md-button>
+
+                                <md-button ng-show="applevel != 0" class="btn btn-info custbutton" ng-click="ccbs_update()"
+                                           ng-disabled="expense_valid.$invalid">
+                                    Submit
+                                    <md-tooltip>Submit</md-tooltip>
+                                </md-button>
+                                <md-button class="md-raised" data-dismiss="modal">Back
+                                    <md-tooltip>close</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Show Pdf Design-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="show_pdf" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel2">
+                                <strong>Show TCF Pdf </strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div>
+                                    <div class="col-md-12 col-lg-12 col-sm-12 x" id="HTMLtoPDF">
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr height="10px">
+                                                <td class="header" colspan="9" width="70%" style="height:40px"><h3
+                                                        class="text-center">Expense Claim
+                                                    Form - {{invoice_type}}</h3></td>
+                                                <td colspan="3" width="30%">
+                                                    <img src="{{logo_path}}"
+                                                         style="width:400px;height:80px"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;"
+                                               ng-repeat="head in invoice_header">
+                                            <tr height="10px">
+                                                <td class="text-center" rowspan="2" width="30%">
+                                                    <label>{{head.invoiceheader_crno}}</label></td>
+                                                <td class="header" width="15%"><label> Employee ID</label></td>
+                                                <td class="text-left" width="25%">{{head.employee_code}}</td>
+                                                <td class="header" width="15%"><label> Invoice Type</label></td>
+                                                <td class="text-left" width="10%">{{head.invoiceheader_invoicetype}}
+                                                </td>
+                                                <td class="header" width="30%"><label>ECF Date</label></td>
+                                            </tr>
+                                            <tr height="10px">
+                                                <td class="header"><label> Name</label></td>
+                                                <td class="text-left" width="200px">{{head.employee_name}}</td>
+                                                <td class="header"><label> Expense Type</label></td>
+                                                <td class="text-left">Claim</td>
+                                                <td width="25%" class="text-center">{{head.invoiceheader_invoicedate}}
+                                                </td>
+                                            </tr>
+                                            <tr height="10px">
+                                                <td rowspan="4">
+                                                    <img src="{{head.bar_code_path}}" style="width:250px"/>
+                                                </td>
+                                                <td class="header"><label> Title</label></td>
+                                                <td class="text-left" width="200px">Senior Executive Operations</td>
+                                                <td class="header"><label> Amort</label></td>
+                                                <td class="text-left">No</td>
+                                                <td class="header"><label> ECF Amount</label></td>
+                                            </tr>
+                                            <tr height="10px">
+
+                                                <td class="header"><label> Department</label></td>
+                                                <td class="text-left">Operations</td>
+                                                <td class="header"><label> For Ex</label></td>
+                                                <td class="text-left">No</td>
+                                                <td class="text-right">{{head.invoiceheader_amount | number :
+                                                    fractionSize}}
+                                                </td>
+                                            </tr>
+                                            <tr height="10px">
+                                                <td class="header"><label> Location Code</label></td>
+                                                <td class="text-left">{{head.branch_code}}</td>
+                                                <td class="header"><label> Utility</label></td>
+                                                <td class="text-left">No</td>
+                                                <td class="header"><label> Invoice No</label></td>
+                                            </tr>
+                                            <tr height="10px">
+
+                                                <td class="header"><label> PO / WO No.</label></td>
+                                                <td class="text-left">-</td>
+                                                <td class="header"><label>Payment Adjustment</label></td>
+                                                <td class="text-left">No</td>
+                                                <td class="text-center">{{invoiceno}}</td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed "
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="15"><label class="text-center">Invoice
+                                                    Details </label></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="header" colspan="3"><label class="text-center">Invoice
+                                                    Item</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Invoice
+                                                    Description</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Vendor
+                                                    Name</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Invoice
+                                                    Date </label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Invoice
+                                                    Amount </label></td>
+                                            </tr>
+                                            <tr ng-repeat="dtl in invoice_details">
+                                                <td colspan="3" class="text-left" width="15%">
+                                                    {{dtl.invoicedetails_item}}
+                                                </td>
+                                                <td colspan="3" class="text-left" width="15%">
+                                                    {{dtl.invoicedetails_desc}}
+                                                </td>
+                                                <td colspan="3" class="text-center" width="30%">{{dtl.supplier_name}}
+                                                </td>
+                                                <td colspan="3" class="text-center" width="10%">
+                                                    {{dtl.invoiceheader_invoicedate}}
+                                                </td>
+                                                <td colspan="3" class="text-right" width="10%">
+                                                    {{dtl.invoicedetails_totalamt | number : fractionSize}}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="12"><label>INVOICE
+                                                    TOTAL </label></td>
+                                                <td colspan="3" class="text-right"><label>{{totalinvoice | number :
+                                                    fractionSize}}</label></td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="24"><label class="text-center">Expense /
+                                                    Asset Details </label></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="header" colspan="3"><label class="text-center"> Nature of
+                                                    Expense / Asset Description </label></td>
+                                                <td class="header" colspan="3"><label
+                                                        class="text-center">Category</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Sub
+                                                    Category</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Product
+                                                    Code</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Business
+                                                    Segment</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Cost
+                                                    Center</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">CCBS
+                                                    Percentage</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Debit
+                                                    Amount</label></td>
+                                            </tr>
+                                            <tr ng-repeat="dbt in debit_data">
+                                                <td colspan="3" class="text-left" width="20%">Bank Charges</td>
+                                                <td colspan="3" class="text-left" width="15%">{{dbt.category_name}}</td>
+                                                <td colspan="3" class="text-left" width="15%">
+                                                    {{dbt.subcategory_name}}</label></td>
+                                                <td colspan="3" class="text-left" width="10%">PRD0078</td>
+                                                <td colspan="3" class="text-left" width="20%">{{dbt.tbs_name}}</td>
+                                                <td colspan="3" class="text-left" width="20%">{{dbt.tcc_name}}</td>
+                                                <td colspan="3" class="text-left" width="10%">{{dbt.ccbsdtl_percent}}
+                                                    %
+                                                </td>
+                                                <td colspan="3" class="text-right" width="10%">{{dbt.debit_amount |
+                                                    number : fractionSize}}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="21"><label> DEBIT
+                                                    TOTAL </label></td>
+                                                <td colspan="3" class="text-right"><label>{{totaldebit | number :
+                                                    fractionSize}}</label></td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="12"><label class="text-center">Payment
+                                                    Details </label></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="header" colspan="3"><label class="text-center">Beneficiary
+                                                    Name</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Pay
+                                                    Mode </label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Bank A/C No /
+                                                    Payment Ref No</label></td>
+                                                <td class="header" colspan="3"><label class="text-center">Credit
+                                                    Amount </label></td>
+                                            </tr>
+                                            <tr ng-repeat="crt in credit_data">
+                                                <td colspan="3" class="text-left" width="40%">
+                                                    {{crt.bankdetails_beneficiaryname}}
+                                                </td>
+                                                <td colspan="3" class="text-left" width="10%">{{crt.Paymode_name}}</td>
+                                                <td colspan="3" class="text-center" width="20%">
+                                                    {{crt.bankdetails_acno}}
+                                                </td>
+                                                <td colspan="3" class="text-right" width="10%">{{crt.credit_amount |
+                                                    number : fractionSize}}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="9"><label class="text-center">CREDIT
+                                                    TOTAL </label></td>
+                                                <td colspan="3" class="text-right"><label>{{totalcredit | number :
+                                                    fractionSize}}</label></td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="6"><label class="text-center">Amount in
+                                                    Words</label></td>
+                                                <td class="header" colspan="6"><label class="text-center">ECF
+                                                    Remarks</label></td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="6" class="text-center" width="40%">{{totalAmountInWords}}
+                                                </td>
+                                                <td colspan="6" class="text-center" width="60%"> -</td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;&nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="12"><label
+                                                        class="text-center">Declaration</label></td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="6" class="header" class="text-center" width="30%">Raiser
+                                                    Declaration
+                                                </td>
+                                                <td colspan="6" class="header" class="text-center" width="30%">Approver
+                                                    Declaration
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="6" class="text-center" width="30%">I hereby confirm that
+                                                    the expense is wholly incurred on behalf of the bank and is not used
+                                                    for any personal purpose.
+                                                </td>
+                                                <td colspan="6" class="text-center" width="30%">I hereby confirm that
+                                                    the expense is wholly incurred on behalf of the bank and has been
+                                                    duly verified & approved by me.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        &nbsp;
+                                        <table border="1" class="table table-striped table-bordered table-condensed"
+                                               style="padding: 4px;">
+                                            <tr>
+                                                <td class="header" colspan="12"><label
+                                                        class="text-center">ECF Authorization Details</label></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Employee
+                                                    Name
+                                                </td>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Action
+                                                    Date
+                                                </td>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Remarks
+                                                </td>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Status
+                                                </td>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Approver
+                                                    Name
+                                                </td>
+                                                <td class="header" colspan="2" class="text-center" width="30%">Approved
+                                                    By
+                                                </td>
+                                            </tr>
+                                            <tr ng-repeat="tran in tran_data">
+                                                <td colspan="2" class="text-center" width="20%">{{tran.employee_name}}
+                                                </td>
+                                                <td colspan="2" class="text-center" width="20%">{{tran.tran_fromdate}}
+                                                </td>
+                                                <td colspan="2" class="text-center" width="20%">{{tran.tran_remarks}}
+                                                </td>
+                                                <td colspan="2" class="text-center" width="20%">{{tran.tran_status}}
+                                                </td>
+                                                <td colspan="2" class="text-center" width="28%">{{tran.approvername}}
+                                                </td>
+                                                <td colspan="2" class="text-center" width="30%">{{tran.approvedby}}</td>
+                                            </tr>
+                                        </table>
+                                        <p> * This is an electronically generated form and does not require
+                                            signature.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 text-center">
+                                    <md-button class="btn btn-info custbutton" ng-click="pdf_download()">Download
+                                        <md-tooltip>Download</md-tooltip>
+                                    </md-button>
+                                    <md-button class="md-raised" data-dismiss="modal">Back
+                                        <md-tooltip>close</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope, eclaimService,$http, $window, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_popup = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('viewmodals'))
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var employee_data=JSON.parse(sessionStorage.getItem('eClaim_advance'));
+    console.log(employee_data);
+    var date = new Date(detail.date);
+    $scope.today_date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    $scope.tour_gid = employee_data.tour_gid;
+    $scope.emp_gid = employee_data.emp_gid;
+    $scope.tour_no = employee_data.tour_no;
+    $scope.tour_requestdate = employee_data.tour_requestdate;
+    $scope.tour_startdate = employee_data.tour_startdate;
+    $scope.tour_enddate = employee_data.tour_enddate;
+    var enddate = employee_data.tour_enddate;
+    var enddate = new Date(enddate);
+    $scope.emp_name = employee_data.emp_name;
+    $scope.onbehalf_emp = employee_data.onbehalf_emp;
+    $scope.designation = employee_data.designation;
+    $scope.emp_grade = employee_data.emp_grade;
+    $scope.applevel = employee_data.applevel;
+    $scope.gid = employee_data.gid;
+    $scope.adv_status = employee_data.Status;
+    $scope.adv_type = employee_data.type;
+    $scope.approvalgid = employee_data.approvalgid;
+    $scope.totaladvance = 0;
+    $scope.totaladvanceapp = 0;
+    $scope.comments = "";
+    $scope.tour_reason = employee_data.reason;
+    $scope.tourtype = employee_data.type;
+    $scope.tourend_date = new Date(enddate.getFullYear(), enddate.getMonth(), enddate.getDate());
+    if($scope.tourend_date >= $scope.today_date ){
+        $scope.allowdate = true;
+    }
+    else {
+        error_toast(Advancedate_error,time_toast);
+        $scope.allowdate = false;
+    }
+
+    $scope.error_toast = function(e){
+        if(e.remarks.$error.required == true || e.remarks.$invalid == true){
+           error_toast(remarks,time_toast);
+        }
+    }
+
+    loadadvance();
+    function loadadvance(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "TOUR_ADVANCE_GET",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Tour_gid":$scope.tour_gid
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.advance_details = [];
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "FOUND"){
+                $scope.searchemp = $scope.main[0].approval_empname;
+                $scope.searchbr = $scope.main[0].approval_branch;
+                $scope.tour_reason = $scope.main[0].tourreason;
+                $scope.approvedby = $scope.main[0].approvedby;
+                $scope.remarks = $scope.main[0].appcomment;
+                 angular.forEach($scope.main, function(item1) {
+                    data = {
+                        "gid": item1.gid,
+                        "tourgid": item1.tourgid,
+                        "advanceamount" : item1.reqamount,
+                        "appamount" : item1.appamount,
+                        "reason" : item1.reason,
+                        "status" : item1.status,
+                        "invoiceheadergid" : item1.invoiceheadergid,
+                        "crnno" : item1.crnno
+                    }
+                    if(item1.status != 1 || item1.status != 2){
+                        $scope.itnary_amount = item1.reqamount
+                        $scope.app_amount = item1.appamount
+                    }
+                    $scope.totaladvance = $scope.totaladvance + item1.reqamount;
+                    if(item1.status == 1){
+                        $scope.totaladvanceapp = $scope.totaladvanceapp + item1.appamount;
+                    }
+                    $scope.advance_details.push(data)
+
+                });
+
+            }
+
+        }).finally($scope.endloading);
+        if($scope.adv_status == "APPROVED" || $scope.adv_status =="REJECTED"|| $scope.adv_status == "RETURN"){
+            $scope.enable_update = true;
+            $scope.enable_reject = true;
+            $scope.enable_return = true;
+            $scope.enable_submit = true;
+        }
+        if($scope.adv_status == "APPROVED" || $scope.adv_status =="REJECTED"){
+            $scope.enable_submit = true;
+        }
+        else if($scope.adv_status == "RETURN"){
+            $scope.enable_submit = false;
+        }
+    }
+
+    session_dataget();
+    function session_dataget(){
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "type": ""
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_session_get(data)
+        get_eclaim.then(function(result) {
+            $scope.session_type = result.data.type;
+            if($scope.session_type == "ONBEHALF"){
+                $scope.user_type = true;
+            }
+            else{
+                 $scope.user_type = false;
+            }
+        });
+
+    }
+
+<!--    loadbranch();-->
+    function loadbranch(){
+        var data = {
+            params: {
+                "Type": "GET_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Limit_Start":0,
+                            "Limit_End":30,
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_branch_data = $scope.main;
+        });
+    }
+
+    $scope.branchdata = function(v){
+        var data = {
+            params: {
+                "Type": "EMP_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Branch_Gid":v
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_employee = $scope.main;
+        });
+    }
+    $scope.brsearch = gotobranch;
+        function gotobranch(query) {
+             if(query == "undefined"){
+                query = "";
+                }
+            var datas = {
+                params: {
+                    "Type": "GET_BRANCH",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "Limit_Start":0,
+                                "Limit_End":30,
+                                "branch_name":"",
+                                "branch_code":"",
+                                "branch_detail":query
+                            }
+                        }
+                    }
+                }
+            }
+             return $http.get(Appname + '/eclaim_dropdata/' , datas).then(function(data) {
+                var final_values=data.data.DATA;
+<!--                console.log(final_values);-->
+                return final_values;
+             });
+    }
+    $scope.branchchange = function(v){
+        var data = {
+            params: {
+                "Type": "APPROVER_LIST",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Branch_Gid":v.branch_gid,
+                            "App_Type":"TOURADV"
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_employee_data = $scope.main;
+        });
+    }
+    $scope.paystatus = false;
+    $scope.paymentstatus = function(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "PAYMENT_STATUS",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Invoice_Header_Gid":$scope.invoiceheadergid
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.invoiceheader_status = $scope.main[0].invoiceheader_status;
+            $scope.paystatus = true;
+         }).finally($scope.endloading);
+    }
+    $scope.empsearch = gotoemp;
+        function gotoemp(query) {
+            var result = $filter('filter')($scope.get_employee_data, {
+                'employee_name': query
+            });
+            return result;
+    }
+
+    $scope.empchange = function(e){
+        $scope.approvedby = e.employee_gid
+    }
+
+    $scope.update_data = function(){
+    $scope.loading();
+    angular.forEach($scope.advance_details, function(item1) {
+        item1.approval = $scope.approvedby;
+        item1.reqamount = item1.advanceamount;
+        item1.remarks = $scope.remarks;
+        item1.tourgid = $scope.tour_gid;
+        });
+        var data = {
+            params: {
+                "Type": "TOUR_ADVANCE",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                            "DATA":$scope.advance_details
+                        },
+                    }
+                }
+            }
+        }
+        var eclaim_daily = eclaimService.ecalim_data(data);
+        eclaim_daily.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                $window.location.reload();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.submit_data = function(){
+        if($scope.adv_type == "CANCEL"){
+            $scope.loading();
+            var data = {
+                params: {
+                    "Type": "TOUR_CANCEL",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "tourgid":$scope.tour_gid,
+                              "approvedby":$scope.approvedby,
+                              "appcomment":$scope.remarks,
+                              "applevel":1,
+                              "apptype":"ADVANCECANCEL"
+                            },
+                        }
+                    }
+                }
+            }
+            var eclaim_daily = eclaimService.ecalim_data(data);
+            eclaim_daily.then(function(result) {
+                $scope.set_msg = result.data.MESSAGE
+                if($scope.set_msg == 'SUCCESS' ){
+                    success_toast();
+                    if($scope.applevel == 0){
+                        $window.location.href = "eClaim/eclaim_cancel_request";
+                    }
+                    else{
+                        $window.location.href = "eClaim/eclaim_cancel";
+                    }
+                }
+                else{
+                    alert($scope.set_msg);
+                }
+            }).finally($scope.endloading);
+        }
+        else{
+            if($scope.CCBS.length !=0){
+                if($scope.adv_status != "PENDING"){
+                    $scope.validation = "True";
+                    var len = $scope.advance_details.length -1;
+                    $scope.advance_detailsgid = $scope.advance_details[len].gid;
+                    $scope.advance_detailsamt = $scope.advance_details[len].advanceamount;
+                    var sum = 0;
+                    angular.forEach($scope.CCBS, function(item2) {
+                        if (item2.claimreqgid == $scope.advance_detailsgid){
+                            sum = sum + item2.amount;
+                        }
+                    });
+                    if (sum != parseInt($scope.advance_detailsamt || sum == 0 )){
+                        $scope.validation = "False";
+                    }
+                     if($scope.validation == "True" ){
+                         $scope.loading();
+                         angular.forEach($scope.advance_details, function(item1) {
+                            if(item1.gid =="0"){
+                                item1.approval = $scope.approvedby;
+                                item1.reqamount = item1.advanceamount;
+                                item1.appamount = item1.advanceamount;
+                                item1.remarks = $scope.remarks;
+                            }
+                            else{
+                                item1.approval = $scope.approvedby;
+                                item1.reqamount = item1.advanceamount;
+                                item1.appamount = item1.appamount;
+                                item1.remarks = $scope.remarks;
+                            }
+                         });
+                        var data = {
+                            params: {
+                                "Type": "TOUR_ADVANCE",
+                                "json" : {
+                                    "Params": {
+                                        "DETAILS": {
+                                            "DATA":$scope.advance_details,
+                                            "CCBS":$scope.CCBS
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        var eclaim_daily = eclaimService.ecalim_data(data);
+                            eclaim_daily.then(function(result) {
+                            $scope.set_msg = result.data.MESSAGE
+                            if($scope.set_msg == 'SUCCESS' ){
+                                success_toast();
+                                $window.location.href = "eClaim/eclaim_advance_request";
+                            }
+                            else{
+                                alert($scope.set_msg);
+                            }
+                        }).finally($scope.endloading);
+                     }
+                     else{
+                        alert("CCBS Amount not matched");
+                     }
+                }
+                else{
+                    alert("Not Make Advance")
+                }
+            }
+            else{
+                alert("CCBS Missing")
+            }
+        }
+    }
+    $scope.tour_service = function(data){
+        var eclaim_daily = eclaimService.ecalim_data(data);
+        eclaim_daily.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                if($scope.tourtype == 'CANCEL'){
+                    $window.location.href = "eClaim/eclaim_cancel_approval";
+                }
+                else{
+                    $window.location.href = "eClaim/eclaim_advance_approval";
+                }
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.reject = function() {
+         $scope.reject_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+    };
+    $scope.approve = function() {
+         $scope.approve_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+    };
+
+    $scope.return = function() {
+         $scope.return_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+    };
+
+
+    $scope.close_reject = function(){
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.forward_reason = false;
+        $scope.return_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_forward = false;
+		$scope.enable_return = false;
+		$scope.comments = "";
+    }
+
+    $scope.update_amt = false;
+    $scope.approve_amt = 0;
+    $scope.app_amtchange = function(e) {
+        var temp = e.advanceamount;
+        if(e.status == '0'){
+            if(parseFloat(e.appamount) <= parseFloat(e.advanceamount)){
+                $scope.update_amt = true;
+            }
+            else{
+                e.appamount = temp;
+                alert("Cann't change more than Advance Amount")
+            }
+        }
+    };
+    $scope.itnary_amount =0;
+    $scope.adv_amtchange = function(e) {
+        $scope.itnary_amount = e.advanceamount
+        $scope.totaladvance = 0;
+        angular.forEach($scope.advance_details, function(t) {
+               $scope.totaladvance = parseInt($scope.totaladvance) + parseInt(t.advanceamount);
+        });
+        if (e.advanceamount ==0){
+            e.advanceamount ='';
+        }
+    };
+
+    $scope.data_push = function(){
+        data = {
+            "gid":0,
+            "tourgid":$scope.tour_gid,
+            "reason":"",
+            "advanceamount":"",
+            "appamount":"",
+            "status" : "3",
+        }
+        $scope.advance_details.push(data);
+        $scope.data_len = $scope.advance_details.length;
+        $scope.enable_submit = false;
+    }
+
+    $scope.advance_details = [];
+    $scope.add_taveltype = function(e) {
+    if($scope.advance_details.length !=0){
+        angular.forEach($scope.advance_details, function(item1) {
+            $scope.keepGoing = true;
+            if(item1.gid == 0){
+                $scope.keepGoing = false;
+            }
+        });
+         if($scope.keepGoing){
+            $scope.data_push();
+            $scope.keepGoing = true;
+         }
+        }
+        else {
+            $scope.data_push();
+        }
+    };
+
+    $scope.remove_travel = function(e) {
+        $scope.advance_details.pop(e);
+        $scope.enable_submit = true;
+    }
+
+        $scope.direct_return = function(){
+        $scope.loading();
+        if($scope.tourtype == 'CANCEL'){
+            var data = {
+                params: {
+                    "Type": "ECLAIM_RETURN",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "gid":$scope.approvalgid,
+                              "tourgid":$scope.tour_gid,
+                              "appcomment":$scope.comments,
+                              "apptype":"ADVANCECANCEL"
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            var data = {
+                params: {
+                    "Type": "ECLAIM_RETURN",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "gid":$scope.approvalgid,
+                              "tourgid":$scope.tour_gid,
+                              "appcomment":$scope.comments,
+                              "apptype":"TOURADV"
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+     }
+
+    $scope.direct_approve = function() {
+        if ($scope.adv_type =="CANCEL"){
+            var data = {
+                  "gid":$scope.approvalgid,
+                  "tourgid":$scope.tour_gid,
+                  "approvedby":0,
+                  "appcomment":$scope.comments,
+                  "applevel":1,
+                  "apptype":"ADVANCECANCEL",
+                  "type":"CANCEL"
+            }
+            approve_data(data)
+            $scope.approver = true;
+            $scope.reject_reason = false;
+            $scope.approve_reason = false;
+            $scope.forward_reason = false;
+            $scope.enable_update = false;
+            $scope.enable_reject = false;
+            $scope.enable_forward = false;
+        }
+        else{
+            if($scope.CCBS.length !=0){
+                $scope.validation = "True";
+                var len = $scope.advance_details.length -1;
+                $scope.advance_detailsamt = $scope.advance_details[len].appamount;
+                $scope.advance_detailsgid = $scope.advance_details[len].gid;
+                var sum = 0;
+                angular.forEach($scope.CCBS, function(item2) {
+                    if (item2.claimreqgid == $scope.advance_detailsgid){
+                        sum = sum + item2.amount;
+                    }
+                });
+                if (sum != parseInt($scope.advance_detailsamt)){
+                    $scope.validation = "False";
+                }
+                 if($scope.validation == "True" ){
+                    $scope.loading();
+                     var data = {
+                      "gid":$scope.approvalgid,
+                      "tourgid":$scope.tour_gid,
+                      "approvedby":0,
+                      "appcomment":$scope.comments,
+                      "applevel":1,
+                      "apptype":"TOURADV"
+                    }
+                    approve_data(data)
+                    $scope.approver = true;
+                    $scope.reject_reason = false;
+                    $scope.approve_reason = false;
+                    $scope.forward_reason = false;
+                    $scope.enable_update = false;
+                    $scope.enable_reject = false;
+                    $scope.enable_forward = false;
+                 }
+                 else{
+                    alert("CCBS Amount not matched");
+                 }
+            }
+            else{
+                alert("CCBS Missing")
+            }
+        }
+    }
+
+    function approve_data(datas){
+        var data = {
+            params: {
+                "Type": "MOVE_APPROVE_II",
+                "json" : {
+                    "Params": {
+                        "DETAILS": datas
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+    }
+    $scope.reject_tour = function(){
+        $scope.loading();
+        if ($scope.adv_type =="CANCEL"){
+            var data = {
+                params: {
+                    "Type": "MOVE_REJECT",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "gid":$scope.approvalgid,
+                              "tourgid":$scope.tour_gid,
+                              "appcomment":$scope.comments,
+                              "apptype":"ADVANCECANCEL"
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            var data = {
+                params: {
+                    "Type": "MOVE_REJECT",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "gid":$scope.approvalgid,
+                              "tourgid":$scope.tour_gid,
+                              "appcomment":$scope.comments,
+                              "apptype":"TOURADV"
+                            },
+                        }
+                    }
+                }
+            }
+        }
+
+        $scope.tour_service(data);
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_forward = false;
+     }
+
+    $scope.get_approval_data = [];
+    loadapprovalflow();
+    function loadapprovalflow(){
+        if($scope.tourtype == "CANCEL"){
+            $scope.appr_flow = "ADVANCECANCEL";
+        }
+        else{
+            $scope.appr_flow = "TOURADV";
+        }
+        var data = {
+            params: {
+                "Type": "APPROVAL_FLOW",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "TourGid":$scope.tour_gid,
+                            "AppType":$scope.appr_flow
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE != "NOT_FOUND" ){
+                $scope.get_approval_data = $scope.main;
+                $scope.approvaldata = true;
+            }
+            else {
+                $scope.approvaldata = false;
+            }
+        });
+    }
+    $scope.get_pdf = function(e){
+     $scope.loading();
+        var datas={"params":{
+                        "filter":{
+                            "action":"GET",
+                            "type":"BARCODE_GENERATION",
+                            "InvoiceHeader_Gid": e
+                        }
+                    }
+                };
+        var summary = eclaimService.get_ecf_data(datas);
+        summary.then(function(result) {
+            var data = result.data;
+            var file = new Blob([data], { type: 'application/pdf' });
+            saveAs(file, 'Claims.pdf');
+        }).finally($scope.endloading);
+     }
+
+     var a = ['','ONE ','TWO ','THREE ','FOUR ', 'FIVE ','SIX ','SEVEN ','EIGHT ','NINE ','TEN ','ELEVEN ','TWELVE','THIRTEEN','FOURTEEN ','FIFTEEN','SIXTEEN','SEVENTEEN ','EIGHTTEEN','NINETEEN '];
+        var b = ['', '', 'TWENTY',' THIRTY','FOURTY','FIFTY', 'SIXTY','SEVENTY','EIGHTY','NINETY'];
+            function inWords (num) {
+            if ((num = num.toString()).length > 9) return 'overflow';
+            n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+            if (!n) return; var str = '';
+            str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'CRORE' : '';
+            str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'LAKH ' : '';
+            str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'THOUSAND ' : '';
+            str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'HUNDRED' : '';
+            str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + 'only ' : '';
+            return str;
+        }
+    $scope.pdf_download = function(){
+         var multibutton = document.getElementsByClassName("x");
+         var data = {
+            params: {
+                "html": multibutton[0].outerHTML,
+            }
+         };
+         var get_hsn = eclaimService.html_gen(data)
+         get_hsn.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                var move = "/download_pdf"
+                window.open(move,"_blank");
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.CCBS = [];
+    ccbs_data();
+    function ccbs_data(){
+        var data = {
+            params: {
+                "Type": "CCBS_GET",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Tour_Gid":$scope.tour_gid,
+                            "CCBS_Type":"1"
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.CCBS = [];
+            }
+            else{
+                $scope.CCBS = $scope.main;
+                angular.forEach($scope.advance_details, function(item1) {
+                    angular.forEach($scope.CCBS, function(item2) {
+                        if (item1.gid == item2.claimreqgid){
+                            item2.status = item1.status
+                        }
+                    });
+                });
+            }
+        });
+    }
+
+    $scope.arr_index = '';
+    $scope.add_asset = false;
+    $scope.add_ccbs = function(){
+        $scope.choices_ccbs = [];
+        if($scope.itnary_amount != 0){
+            if ($scope.applevel == 0){
+                $scope.claimamount = $scope.itnary_amount;
+            }
+            else{
+                $scope.claimamount = $scope.app_amount;
+            }
+
+                if($scope.CCBS.length == 0){
+                    $scope.choices_ccbs = [{
+                    gid:0,
+                    claimreqgid:0,
+                    amount:"",
+                    percentage:""}];
+                    modalshow('viewmodals');
+                }
+                else{
+                    angular.forEach($scope.CCBS, function(item2) {
+                        $scope.choices_ccbs.push(item2);
+                    });
+                    modalshow('viewmodals');
+                }
+            }
+    }
+
+    bsdata();
+    function bsdata(){
+        var data = {
+            params: {
+                "Type": "BS",
+                "json" : {
+
+                    }
+                }
+            }
+        var get_bs_data = eclaimService.ecalim_drop_get(data)
+            get_bs_data.then(function(result) {
+                $scope.main = result.data.DATA;
+                $scope.get_bs = $scope.main;
+            })
+    }
+    $scope.querySearchcc = gotocc;
+    function gotocc(query) {
+        var result = $filter('filter')($scope.get_cc, {
+            'cc_name': query
+        });
+        return result;
+    }
+
+    $scope.ccchange = function(cc,choice){
+        choice.ccgid = cc.cc_gid;
+    }
+    $scope.bschange = function(bs,choice){
+        var data = {
+            params: {
+                "Type": "CC",
+                "json" : {
+                    "Bs_gid": bs.bs_gid
+                    }
+                }
+            }
+        var get_cc_data = eclaimService.ecalim_drop_get(data)
+        get_cc_data.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_cc = $scope.main;
+            choice.bsgid = bs.bs_gid;
+        })
+        return $scope.get_cc;
+    }
+
+    $scope.querySearchbs = gotobs;
+    function gotobs(query) {
+        var result = $filter('filter')($scope.get_bs, {
+            'bs_name': query
+        });
+        return result;
+    }
+
+    $scope.percen_calc = function(i,v){
+        var value = (v / $scope.claimamount)*100;
+        $scope.choices_ccbs[i].percentage = value;
+    }
+
+    $scope.amount_calc = function(i,v){
+        var value = (v /100)* $scope.claimamount;
+        $scope.choices_ccbs[i].amount = value;
+    }
+    $scope.removeChoice = function() {
+        var lastItem = $scope.choices.length-1;
+        $scope.choices_ccbs.splice(lastItem);
+        $scope.add_asset = false;
+    };
+    $scope.addNewChoice = function() {
+        var sum = 0;
+<!--        for (i = 0; i < $scope.choices_ccbs.length; i++) {-->
+<!--            sum = parseFloat(sum) + parseFloat($scope.choices_ccbs[i].amount);-->
+<!--        }-->
+        angular.forEach($scope.choices_ccbs, function(item) {
+            if(item.status !=2 && item.status !=1){
+                sum = parseFloat(sum) + parseFloat(item.amount);
+            }
+        });
+            if( sum ==0 ){
+                var len = $scope.advance_details.length -1
+                if($scope.advance_details[len].gid =="0"){
+                    var newItemNo = $scope.choices_ccbs.length+1;
+                    $scope.len_asset = $scope.len_asset + 1;
+                    $scope.choices_ccbs.push({
+                    gid:0,
+                    claimreqgid:0,
+                    amount:"",
+                    percentage:""});
+                }
+                else{
+                    $scope.choices_ccbs.push({
+                    gid:0,
+                    claimreqgid:0,
+                    amount:"",
+                    percentage:""
+                    });
+                }
+            }
+            else if (sum > $scope.claimamount){
+                $scope.add_asset = true;
+                var len = $scope.choices_ccbs.length - 1;
+                $scope.choices_ccbs[len].amount ="";
+                $scope.choices_ccbs[len].percentage ="";
+                warning_toast(not_matched,time_toast);
+            }
+            else if(sum < $scope.claimamount){
+                var newItemNo = $scope.choices_ccbs.length+1;
+                $scope.len_asset = $scope.len_asset + 1;
+                $scope.choices_ccbs.push({
+                gid:0,
+                claimreqgid:0,
+                amount:"",
+                percentage:""});
+            }
+            else if(sum == $scope.claimamount){
+                $scope.enable_update = false;
+                $scope.reason = true;
+            }
+            else {
+               error_toast(no_data,time_toast);
+            }
+    };
+
+    $scope.ccbs_save = function(){
+        var sum = 0;
+        angular.forEach($scope.choices_ccbs, function(item) {
+            if(item.status !=2 && item.status !=1){
+                sum = parseFloat(sum) + parseFloat(item.amount);
+            }
+        });
+            if (sum == $scope.claimamount){
+                $scope.CCBS = [];
+                angular.forEach($scope.choices_ccbs, function(item1) {
+                    if (item1.status !=2 || item1.status !=1 ){
+                        var data = {
+                            "gid":item1.gid,
+                            "type":"1",
+                            "ccgid":item1.ccgid,
+                            "bsgid":item1.bsgid,
+                            "percentage":item1.percentage,
+                            "claimreqgid":item1.claimreqgid,
+                            "amount":item1.amount
+                        }
+                    }
+
+                     $scope.CCBS.push(data);
+                });
+                success_toast();
+                modalhide('viewmodals');
+            }
+            else{
+                error_toast(no_data,time_toast);
+            }
+    }
+    $scope.ccbs_update = function(){
+        var sum = 0;
+        angular.forEach($scope.choices_ccbs, function(item) {
+            if(item.status !=2 && item.status !=1){
+                sum = parseFloat(sum) + parseFloat(item.amount);
+            }
+        });
+            if (sum == $scope.claimamount){
+                $scope.CCBS = [];
+                angular.forEach($scope.choices_ccbs, function(item1) {
+                    if (item1.status !=2 || item1.status !=1 ){
+                        var data = {
+                            "ccbsgid":item1.gid,
+                            "tour_gid":$scope.tour_gid,
+                            "ccbs_type":"1",
+                            "ccgid":item1.ccgid,
+                            "bsgid":item1.bsgid,
+                            "percentage":item1.percentage,
+                            "claimreqgid":item1.claimreqgid,
+                            "amount":item1.amount
+                        }
+                    }
+                     $scope.CCBS.push(data);
+                });
+                var data = {
+                    params: {
+                        "Type": "CCBS_SET",
+                        "json" : {
+                            "Params": {
+                                "CCBS": $scope.CCBS
+                            }
+                        }
+                    }
+                }
+                $scope.loading_popup();
+                var eclaim_daily = eclaimService.ecalim_data(data);
+                eclaim_daily.then(function(result) {
+                    $scope.set_msg = result.data.MESSAGE
+                    if($scope.set_msg == 'SUCCESS' ){
+                        success_toast();
+                        modalhide('viewmodals');
+                        $window.location.reload();
+                    }
+                    else{
+                        alert($scope.set_msg);
+                    }
+                }).finally($scope.endloading);
+            }
+            else{
+                error_toast(no_data,time_toast);
+            }
+    }
+
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalim_data = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+    this.get_ecf_data = function(data) {
+        var response = $http.post(Appname + "/ecf_data_get/",data);
+        return response;
+    }
+    this.html_gen = function(data) {
+        var response = $http.post(Appname + "/tcf_to_pdf/",data);
+        return response;
+    }
+    this.ecalim_expense_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_summary/",data);
+        return response;
+    }
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    }
+    this.ecalim_session_get = function(data) {
+        var response = $http.post(Appname + "/session_get_expnese/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+{% endblock %}

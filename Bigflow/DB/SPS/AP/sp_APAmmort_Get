@@ -1,0 +1,254 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APAmmort_Get`(IN ls_action varchar(64),IN ls_type varchar(64),
+IN lj_Filters json,IN lj_Classification json, OUT Message varchar(1024))
+BEGIN
+##TAMIL OLI
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(6144);
+declare ls_count int;
+SET SESSION group_concat_max_len=4294967295;
+
+	if ls_action='GET' and ls_type='AMMORT_HEADER_DETAIL' then
+    
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Gid'))) into @Ammort_Gid;
+		     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+             
+             
+             
+             set Query_Select='';
+             set Query_Select=concat('select a.ammort_gid,a.ammort_invoiceheadergid,a.ammort_code,a.ammort_amount,
+										a.ammort_status,date_format(a.ammort_fromdate,''%Y-%m-%d'') as ammort_fromdate,
+                                        date_format(a.ammort_todate,''%Y-%m-%d'') as ammort_todate,
+                                        a.ammort_cycle,b.ammortdetails_ecfheadergid,
+										concat(''['' ,group_concat( JSON_OBJECT(''ammortdetail_gid'',ammortdetail_gid,
+																	''ammortdetails_invoiceno'',ammortdetails_invoiceno,
+																	''ammortdetails_suppliergid'',ammortdetails_suppliergid,
+																	 ''ammortdetails_ecfamount'',ammortdetails_ecfamount,
+                                                                     ''ammortdetail_fromdate'',ammortdetail_fromdate,
+                                                                     ''ammortdetail_todate'',ammortdetail_todate,
+                                                                     ''ammortdetails_hold'',ammortdetails_hold)),'']'') as ammort_detail
+										from ap_trn_tammort a 
+										inner join ap_trn_tammortdetails b on a.ammort_gid= b.ammortdetail_amortheadergid and
+                                        a.ammort_isactive=''Y'' and a.ammort_isremoved=''N'' and 
+                                        b.ammortdetail_isactive=''Y'' and b.ammortdetail_isremoved=''N''
+										where a.ammort_gid in (', @Ammort_Gid,') and a.entity_gid in (',@Entity_Gid,')
+                                        group by a.ammort_gid');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get.';
+				   end if;
+    
+    elseif ls_action='GET' and ls_type='AMMORT_SUMMARY' then
+   
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Status'))) into @Ammort_Status;
+            #SELECT @Ammort_Status,@Entity_Gid;
+            
+           set Query_Search ='';
+           if @Ammort_Status <> '' then
+				set Query_Search = concat(Query_Search,' and  ammort_status = ''',@Ammort_Status,''' ');
+			End if;
+
+			set Query_Select='';
+            set Query_Select=concat('select a.ammort_gid,a.ammort_invoiceheadergid,a.ammort_code,a.ammort_amount,
+										a.ammort_status,a.ammort_cycle,b.ammortdetails_ecfheadergid,
+                                        date_format(b.ammortdetail_fromdate,''%Y-%m-%d'') as ammortdetail_fromdate,
+                                        date_format(b.ammortdetail_todate,''%Y-%m-%d'') as ammortdetail_todate,b.ammortdetails_invoiceno,
+										b.ammortdetails_suppliergid,b.ammortdetails_ecfamount,
+                                        concat(''['' ,group_concat( JSON_OBJECT(''ammortdetail_gid'',ammortdetail_gid,
+																			''ammortdetail_status'',ammortdetail_status,
+																		''ammortdetails_invoiceno'',ammortdetails_invoiceno,
+																	''ammortdetails_suppliergid'',ammortdetails_suppliergid,
+																	 ''ammortdetails_ecfamount'',ammortdetails_ecfamount,
+                                                                     ''ammortdetail_fromdate'',ammortdetail_fromdate,
+                                                                     ''ammortdetail_todate'',ammortdetail_todate)),'']'') as ammort_detail
+										from ap_trn_tammort a 
+										inner join ap_trn_tammortdetails b on a.ammort_gid= b.ammortdetail_amortheadergid and 
+                                        a.ammort_isactive=''Y'' and a.ammort_isremoved=''N'' and 
+                                        b.ammortdetail_isactive=''Y'' and b.ammortdetail_isremoved=''N''
+										where  a.entity_gid in (',@Entity_Gid,') ',Query_Search,'
+                                        group by ammortdetail_amortheadergid');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get.';
+				   end if;
+   
+   
+elseif ls_action='GET' and ls_type='AMOMRT_GID' then
+   
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Status'))) into @Ammort_Status;
+            #SELECT @Ammort_Status,@Entity_Gid;
+            
+          
+
+			set Query_Select='';
+            set Query_Select=concat('select ammortdetail_gid from ap_trn_tammortdetails as a 
+									 inner join ap_trn_tammort as b on a.ammortdetail_amortheadergid = b.ammort_gid
+                                     where month(ammortdetail_fromdate) =month(CURDATE()) and 
+										   ammortdetail_status = ''Pending'' and 
+										   ammort_status = ''APPROVED'' and 
+                                           b.ammort_isactive=''Y'' and b.ammort_isremoved=''N'' and
+                                           a.ammortdetail_isactive=''Y'' and a.ammortdetail_isremoved=''N''and
+										   a.entity_gid in (',@Entity_Gid,') 
+                                     group by ammortdetail_gid');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get';
+				   end if;  
+   
+elseif ls_action='GET' and ls_type='AMMORT_CCBS_DETAIL' then
+
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Gid'))) into @Ammort_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+	  
+			set Query_Select='';
+            set Query_Select=concat(' 
+									select  ammortccbs_categorygid,ammortccbs_subcategorygid,ammortccbs_bsgid,ammortccbs_ccgid,
+											a.ammortccbs_percent,ammortccbs_remarks,category_code,category_no,category_name,
+											subcategory_code,subcategory_no,subcategory_name,tbs_name,tbs_description,
+											tcc_name,tcc_description
+									from ap_trn_tammort a1
+									inner join ap_trn_tammortccbs a on a1.ammort_gid=a.ammortccbs_ammortgid and 
+											a1.ammort_isactive=''Y'' and a1.ammort_isremoved=''N'' and 
+                                            a.ammortccbs_isactive=''Y'' and a.ammortccbs_isremoved=''N'' 
+									inner join ap_mst_tcategory b on a.ammortccbs_categorygid=b.category_gid and 
+											 b.category_isactive=''Y'' and b.category_isremoved=''N''
+									inner join ap_mst_tsubcategory c on a.ammortccbs_subcategorygid=c.subcategory_gid and
+											c.subcategory_isactive=''Y'' and c.subcategory_isremoved=''N'' 
+									inner join ap_mst_tbs d on a.ammortccbs_bsgid=d.tbs_gid and 
+											d.tbs_isactive=''Y'' and d.tbs_isremoved=''N''
+									inner join ap_mst_tcc e on a.ammortccbs_ccgid=e.tcc_gid and 
+											e.tcc_isactive=''Y'' and e.tcc_isremoved=''N'' 
+									where  a.entity_gid in (',@Entity_Gid,') and a1.ammort_gid in(',@Ammort_Gid,')');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get';
+				   end if;
+                   
+   elseif ls_action='GET' and ls_type='AMMORT_DATE' then
+   
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Month'))) into @Month;
+            #SELECT @Ammort_Status,@Entity_Gid;
+            
+          
+
+			set Query_Select='';
+            set Query_Select=concat('select ammortdetail_gid from ap_trn_tammortdetails as a
+									 inner join ap_trn_tammort as b on a.ammortdetail_amortheadergid = b.ammort_gid
+                                     where month(ammortdetail_fromdate) =''',@Month,''' and 
+										   ammortdetail_status = ''Pending'' and 
+										   ammort_status = ''APPROVED'' and
+                                           b.ammort_isactive=''Y'' and b.ammort_isremoved=''N'' and
+                                           a.ammortdetail_isactive=''Y'' and a.ammortdetail_isremoved=''N''and
+										   a.entity_gid in (',@Entity_Gid,') 
+                                     group by ammortdetail_gid');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get';
+				   end if;  
+   
+    elseif ls_action='GET' and ls_type='AMMORT_DETAIL' then
+   
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Gid'))) into @Ammort_Gid;
+            #SELECT @Ammort_Status,@Entity_Gid;
+            
+
+			set Query_Select='';
+            set Query_Select=concat('
+										select a.ammort_amount,a.ammort_balance,a.ammort_cycle, concat(''['' ,group_concat( JSON_OBJECT(''ammort_invoiceheadergid'',ammort_invoiceheadergid,
+											''ammortdetails_ecfheadergid'',ammortdetails_ecfheadergid,
+                                            ''ammortdetails_invoiceno'',ammortdetails_invoiceno,
+                                            ''ammortdetails_suppliergid'',ammortdetails_suppliergid,
+                                            ''ammortdetail_status'',ammortdetail_status)),'']'')as ammort_detail 
+                                            from ap_trn_tammort a
+											inner join ap_trn_tammortdetails b on a.ammort_gid=b.ammortdetail_amortheadergid AND
+														a.ammort_isactive=''Y'' and a.ammort_isremoved=''N'' and 
+                                                        b.ammortdetail_isactive=''Y'' and b.ammortdetail_isremoved=''N''
+											where a.ammort_gid=(',@Ammort_Gid,') and a.entity_gid in (',@Entity_Gid,') ');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get';
+				   end if;  
+   
+   elseif ls_action='GET' and ls_type='CCBS_DETAIL' then
+   
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Ammort_Gid'))) into @Ammort_Gid;
+            #SELECT @Ammort_Status,@Entity_Gid;
+            
+
+			set Query_Select='';
+            set Query_Select=concat('
+										select a.ammort_amount,a.ammort_balance,a.ammort_cycle, concat(''['' ,group_concat( JSON_OBJECT(''ammort_invoiceheadergid'',ammort_invoiceheadergid,
+											''ammortccbs_categorygid'',ammortccbs_categorygid,
+                                            ''ammortccbs_subcategorygid'',ammortccbs_subcategorygid,
+                                            ''ammortccbs_percent'',ammortccbs_percent)),'']'')as ammort_detail 
+                                            from ap_trn_tammort a
+											inner join ap_trn_tammortccbs b on a.ammort_gid=b.ammortccbs_ammortgid AND
+														a.ammort_isactive=''Y'' and a.ammort_isremoved=''N'' and 
+                                                        b.ammortccbs_isactive=''Y'' and b.ammortccbs_isremoved=''N''
+											where a.ammort_gid=(',@Ammort_Gid,') and a.entity_gid in (',@Entity_Gid,') ');
+			#select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into ls_count;
+					# select ls_count;
+				   if ls_count >0 then
+						 set message='FOUND';
+					else
+						set message='NOT FOUND-sp_APAmmort_Get';
+				   end if;  
+   
+   
+   
+   
+   
+   end if;
+   
+END

@@ -1,0 +1,398 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Physical Verification {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Physical Verification Maker Summary. </h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Id</label>
+                            <input maxlength="3" ng-model="asset_id" ng-change="myfun()" numbers-only
+                                   placeholder="Asset id"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Value</label>
+                            <input ng-model="asset_value" ng-change="myfun()" placeholder="Asset Value"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Cap Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" ng-change="myfun()"
+                                           md-open-on-focus
+                                           ng-model="cap_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset code</label>
+                            <input maxlength="3" ng-model="asset_code" ng-change="myfun()" numbers-only
+                                   placeholder="Asset code"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Branch</label>
+                            <input ng-model="asset_branch" ng-change="myfun()" placeholder="Branch"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-5">
+
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-href="fa_physic_verify_plus">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Create Physical Verification</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th scope="col" class="text-center"><a
+                            ng-click="orderByField='asset_id'; reverseSort = !reverseSort"
+                            style="color:white">Asset Id
+                        <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                    </a></th>
+                    <th scope="col" class="text-center">Product Name</th>
+                    <th scope="col" class="text-center">Category</th>
+                    <th scope="col" class="text-center">Capitalization Date</th>
+                    <th scope="col" class="text-center">Asset Value</th>
+                    <th scope="col" class="text-center">Branch</th>
+                    <th scope="col" class="text-center">Location</th>
+                    <th scope="col" class="text-center">Reason</th>
+                    <th scope="col" class="text-center">Status</th>
+                    <th scope="col" class="text-center">Action</th>
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="ast in asset.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{ast.assetdetails_id}}</td>
+                         <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.product_name}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.asset_cat_name}}</td>
+                        <td class="text-center">{{ast.impairasset_date}}</td>
+                        <td class="text-center">{{ast.impairasset_value | number :
+                            fractionSize}}
+                        </td>
+                        <td class="text-center">{{ast.branch_name}}</td>
+                        <td class="text-left" ng-repeat ="view in ast.lj_default_details">{{view.location_name}}</td>
+                        <td class="text-center">{{ast.assetdetails_requeststatus}}</td>
+                        <td class="text-center">{{ast.impairasset_reason}}</td>
+                        <td class="text-center"><span class="editlink" ng-click="viewdet(ast)">View</span></td>
+                    </tr>
+                   <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{asset.length}}</b></span>
+                        </td>
+                    </tfoot>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--popup page start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Asset Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row" ng-repeat="view in asset_data">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                            <thead class="header">
+                                            <th scope="col" class="text-center">Asset Write off Maker Details</th>
+                                            </thead>
+
+                                            <tbody ng-repeat="view in asset">
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset ID</label></td>
+                                                <td class="text-center" style="width:100px">{{view.asset_id}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Branch</label></td>
+                                                <td class="text-center" style="width:100px">{{view.branch}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset Value</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.asset_value}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset Cost</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.asset_code}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset Cap
+                                                    Date</label></td>
+                                                <td class="text-center" style="width:100px">{{view.cap_date}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset Date</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.status}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset
+                                                    Catagory</label></td>
+                                                <td class="text-center" style="width:100px"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="btn btn-info custbutton" ng-click="Save(emp)"
+                                       ng-disabled="enable_update">Submit
+                                <md-tooltip>Submit</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--popup page End-->
+
+
+</div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.data_len = 0;
+    $scope.cap_date = convertdate(td);
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    loaddata();
+    function loaddata() {
+        var data = {
+        "Params": {
+                "FILTER": {
+                        "Asset_Id": "",
+                        "Asset_Value": "",
+                        "Cap_Date": "",
+                        "Asset_Code": "",
+                        "Branch": "XXX",
+                        "Asset_Group":"N"
+
+                },
+
+                "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid,
+                }
+            }
+        };
+
+        var get_asset = newservice.asset_detail(data)
+        get_asset.then(function(result) {
+            $scope.loading();
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.asset = $scope.main;
+            $scope.data_len = $scope.asset.length;
+            $scope.pageLength = $scope.asset.length;
+            $scope.Totalpages = Math.ceil($scope.asset.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.asset.length;
+
+        }).finally($scope.endloading);
+
+    }
+
+    $scope.viewdet = function(e) {
+
+        $scope.assetdetails_id = e.assetdetails_id;
+        $scope.assetdetails_value = e.assetdetails_value;
+        $scope.assetdetails_capdate = e.assetdetails_capdate;
+        $scope.assetdetails_gid = e.assetdetails_gid;
+        $scope.assetdetails_branchgid = e.assetdetails_branchgid;
+        $scope.assetdetails_status = e.assetdetails_status;
+        modalshow('viewmodal');
+        $scope.asset_data = [{
+            "asset_id": $scope.assetdetails_id,
+            "asset_value": $scope.assetdetails_value,
+            "cap_date": $scope.assetdetails_capdate,
+            "asset_code": $scope.assetdetails_gid,
+            "branch": $scope.assetdetails_branchgid,
+            "status": $scope.assetdetails_status,
+        }];
+    }
+
+    $scope.myfun = function() {
+        $scope.asset = $filter('filter')($scope.main, {
+            "assetdetails_id": $scope.asset_id,
+            "assetdetails_value": $scope.asset_value,
+            "assetdetails_capdate": $scope.cap_date,
+            "assetdetails_gid": $scope.asset_code,
+            "assetdetails_branchgid": $scope.asset_branch,
+        });
+
+    };
+
+    $scope.search = function() {
+        var d = new Date($scope.cap_date);
+        var capdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+
+        var filter = {
+            "asset_id": $scope.asset_id,
+            "asset_value": $scope.asset_value,
+            "asset_capdate": capdate,
+            "asset_code": $scope.asset_code,
+            "asset_branch": $scope.asset_branch,
+
+        };
+
+        var save_deptdetail = newservice.asset_filter(filter);
+        save_deptdetail.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.asset_data = $scope.main;
+            $scope.pageLength = $scope.asset_data.length;
+            $scope.Totalpages = Math.ceil($scope.asset_data.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.asset_data.length;
+        });
+
+    }
+
+
+
+
+});
+
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+        var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                "Sub_Type": "SUMMARY",
+                "Type": "IMPAIRMENT_DETAILS",
+                "Group": "FA_ASSET_TRAN_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+
+    this.asset_filter = function(filter) {
+        var response = $http.post("", {
+            params: {
+
+                "json": filter,
+
+            }
+        });
+
+        return response;
+    }
+});
+
+
+
+
+</script>
+{% endblock %}

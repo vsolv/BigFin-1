@@ -1,0 +1,348 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Stock Screen{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appsales" ng-controller="Ctlsales as ctrl" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12 col-xs-12">
+                <h4><strong> Stock Taken for {{customer_name}} </strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class=" col-lg-12 col-sm-12 col-xs-12">
+                </br>
+
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-8 col-xs-9">
+                            <md-autocomplete
+                                    md-no-cache="true"
+                                    md-selected-item="selectedItem"
+                                    md-search-text="searchText"
+                                    md-selected-item-change="ACselectchange(item)"
+                                    md-items="item in querySearch(searchText)"
+                                    md-item-text="item.product_displayname"
+                                    md-min-length=0
+                                    placeholder="Product">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText"> {{item.product_displayname}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No product matching "{{searchText}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+
+                        <div class="col-md-4 col-xs-3 text-center">
+                            <md-button class="md-fab md-mini md-primary custbutton" ng-click="add()">
+                                <md-icon>add</md-icon>
+                                <md-tooltip>Create New</md-tooltip>
+                            </md-button>
+                        </div>
+                             <!--<marquee direction = "up">18 Degree Celsius</marquee>-->
+                    </div>
+                    <div class="col-lg-12 col-sm-12 table-responsive">
+                        <form name="demoForm">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                <thead class="header">
+                                <th>S.No</th>
+                                <th>Product Name</th>
+                                <th>Last Date</th>
+                                <th>Pre-Stock Qty</th>
+                                <th>Quantity</th>
+                                <th>Remarks</th>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="m in product.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))"
+                                    ng-class="m.sodetails_gid ?'success':''">
+                                    <td class="text-right">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                                    <td class="text-right">{{m.product_name}}</td>
+                                    <td class="align_center">{{m.stock_date| date : "dd-MMM-y"}}</td>
+                                    <td class="text-right">{{m.stock_qty=='0'?'':m.stock_qty}}</td>
+                                    <td ng-hide="true">{{m.product_gid}}</td>
+                                    <td ng-hide="true">{{m.stock_gid}}</td>
+                                    <td ng-hide="true">{{m.location_gid}}</td>
+                                    <td class="text-center">
+
+                                        <input name="amount{{$index}}" type="number" maxlength="3"
+                                               ng-model="m.quantity"
+                                               min="1" max="500"
+                                               class="form-control">
+                                        <div ng-messages="demoForm['amount'+$index].$error">
+                                            <div ng-message="number">Should be a number</div>
+                                            <div ng-message="max">your quantity order exceeds 500</div>
+                                            <div ng-message="min">your quantity should be greater thn zero</div>
+                                        </div>
+
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="text" ng-model="m.remarks" maxlength="128" class="form-control">
+                                    </td>
+                                </tr>
+                                </tbody>
+                                <tfoot>
+                                <tr>
+                                    <td colspan="6">
+                                        <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                            max-size="maxSize"
+                                            class="pagination-sm" boundary-links="true"
+                                            items-per-page="itemsPerPage"></ul>
+                                    </td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </form>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+        <div class="row">
+            <div ng-show="show_submit" class="col-md-12 text-right">
+                <md-button ng-click="Save(product)" class="btn btn-info custbutton">Submit
+                    <md-tooltip>Save</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row">
+            <div ng-show="show_update" class="col-md-12 text-right">
+                <md-button ng-click="Update(product)" class="btn btn-info custbutton">Update
+                    <md-tooltip>Update</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+  var app = angular.module('Appsales', ['ngMaterial', 'ngMessages', 'ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+  });
+  app.controller('Ctlsales', function($scope, $http, stockService, $mdDateLocale, $timeout, $filter, $window, $mdDialog) {
+    var customer_detail = JSON.parse(sessionStorage.getItem('cus_details'));
+    var custid = customer_detail.cus_gid;
+    var customer_name = customer_detail.cus_name
+    $scope.customer_name = customer_name
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.date = new Date()
+    $scope.product = [];
+    $scope.loading = function() {
+      $mdDialog.show({
+        templateUrl: '=loaderSpinner',
+        parent: angular.element(document.body),
+        clickOutsideToClose: false
+      });
+    };
+    $scope.endloading = function() {
+      $mdDialog.hide();
+    };
+    $scope.querySearch = function(query) {
+      var result = $http.get(Appname + "/Productjson/").then(function(response) {
+        te = $filter('filter')(JSON.parse(response.data), {
+          'product_displayname': query
+        });
+        var res = te.filter(function(obj) {
+          var data_prod = $filter('filter')($scope.product, {
+            product_gid: obj.product_gid
+          }, true)[0];
+          if (data_prod != undefined) {
+            return obj.name.toLowerCase().indexOf(query) != -1;
+          }
+        });
+        return res;
+      });
+      return result;
+    }
+    $scope.ACselectchange = function(query) {
+      $scope.productdetail = [];
+      $scope.productdetail = query;
+    }
+    $scope.add = function() {
+      if ($scope.productdetail != undefined) {
+        $scope.show_servicelist = true;
+        var c = $scope.product.length + 1;
+
+        var product_name = {
+          "product_name": $scope.productdetail.product_name,
+          "product_gid": $scope.productdetail.product_gid,
+          "sodetails_gid": $scope.productdetail.sodetails_gid,
+          "soheader_gid": $scope.productdetail.soheader_gid
+        };
+        $scope.product.splice(0, 0, product_name);
+        $scope.searchText = '';
+      }
+    }
+    var stck = stockService.getstck('SALESTOCK', "", custid, "")
+    stck.then(function(result) {
+      $scope.product = result.data;
+      $scope.pageLength = $scope.product.length;
+      edit_details();
+    }, function() {
+      alert('No data!.');
+    }).finally($scope.endloading);
+
+    function edit_details() {
+      var editordr = stockService.getedit('SALESTOCK', "EDIT", custid, formatDate($scope.date))
+      editordr.then(function(result, index) {
+        $scope.produc = result.data;
+        if ($scope.produc.length > 0) {
+          for (var i = 0; i < $scope.produc.length; i++) {
+            var product_gid = $scope.produc[i].product_gid;
+            var data_product = $filter('filter')($scope.product, {
+              product_gid: product_gid
+            }, true)[0];
+            if (data_product != null) {
+              if (data_product.product_gid != null) {
+                var index = $scope.product.indexOf(data_product);
+                $scope.product[index]["product_gid"] = $scope.produc[i].product_gid;
+                $scope.product[index]["quantity"] = $scope.produc[i].stock_qty;
+                $scope.product[index]["remarks"] = $scope.produc[i].stock_remarks;
+                $scope.product[index]["gid"] = $scope.produc[i].stock_gid;
+                if (data_product.quantity == 0 && data_product.remarks == 0) {
+                  $scope.product[index]["quantity"] = '';
+                  $scope.product[index]["remarks"] = '';
+                }
+              }
+            }
+            else {
+              $scope.product.push($scope.produc[i]);
+            };
+          }
+           for (var i = 0; i < $scope.produc.length; i++) {
+            var product_gid = $scope.produc[i].product_gid;
+            var data_product = $filter('filter')($scope.product, {
+              product_gid: product_gid
+            }, true)[0];
+
+           if(data_product.quantity > 0){
+                  $scope.show_update = true;
+                  $scope.show_submit = false;
+                  return 0;
+                 }
+                 else{
+                 $scope.show_update = false;
+                 $scope.show_submit = true;
+                 return 0;
+                 }
+                 }
+        }
+      }, function(err) {
+        alert('No data');
+      }).finally();
+    }
+
+    var m = [];
+    var details = [];
+    $scope.Save = function(m) {
+
+
+      for (var i = 0; i < m.length; i++) {
+        details.push({
+          "product_gid": m[i].product_gid,
+          "stock_qty": m[i].quantity,
+          "remark": m[i].remarks
+        })
+        }
+
+        var stckdet = {
+          FET_STOCK: details,
+          "Schedule_Affect":"YES"
+        };
+
+      var stock_save = stockService.setStock('Insert', custid, formatDate($scope.date), stckdet);
+      stock_save.then(function(result) {
+        if (result.data != '') {
+
+          alert("Inserted Succesfully!.");
+          $window.location.href = "pschedule";
+        }
+        else {
+          alert("Data Not Inserted!.");
+        }
+      }, function(err) {
+        alert('Data Not Inserted!.');
+      });
+    }
+    $scope.Update = function(m) {
+      for (var i = 0; i < m.length; i++) {
+        details.push({
+          "product_gid": m[i].product_gid,
+          "stock_qty": m[i].quantity,
+          "remark": m[i].remarks,
+          "stock_gid": m[i].stock_gid
+        })
+        var stckdet = {
+          FET_STOCK: details,
+             "Schedule_Affect":"YES"
+        };
+      }
+      var stock_update = stockService.updateStock('Update', custid, formatDate($scope.date), stckdet);
+      stock_update.then(function(result) {
+        if (result.data == 'SUCCESS') {
+          alert(result.data);
+          alert("Updated Succesfully!.");
+          $window.location.href = "pschedule";
+        }
+        else {
+          alert("Data Not Inserted!.");
+        }
+      }, function(err) {
+        alert('Data Not Inserted!.');
+      });
+    }
+  });
+  app.service("stockService", function($http, $filter) {
+    this.getstck = function(action, type, custid, todaydate) {
+      var response = $http.post(Appname + "/stockget/", {
+        parms: {
+          "action": action,
+          "type": type,
+          "custid": custid,
+          "todaydate": todaydate
+        }
+      });
+      return response;
+    }
+    this.getedit = function(action, type, custid, todaydate) {
+      var response = $http.post(Appname + "/stockeditget/", {
+        parms: {
+          "action": action,
+          "type": type,
+          "custid": custid,
+          "todaydate": todaydate
+        }
+      });
+      return response;
+    }
+    this.setStock = function(action, custid, todaydate, stckdet) {
+      var response = $http.post(Appname + "/stockset/", {
+        parms: {
+          "action": action,
+          "custid": custid,
+          "todaydate": todaydate,
+          "stckdet": stckdet
+        }
+      });
+      return response;
+    }
+    this.updateStock = function(action, custid, todaydate, stckdet) {
+      var response = $http.post(Appname + "/stockset/", {
+        parms: {
+          "action": action,
+          "custid": custid,
+          "todaydate": todaydate,
+          "stckdet": stckdet
+        }
+      });
+      return response;
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} File Upload Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appintegrity" ng-controller="Ctrlintegrity" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>File Upload Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Entry Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-open-on-focus
+                                       ng-model="entrydate"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Template Name"
+                            md-input-maxlength=126
+                            md-item-text="item.templateheader_name"
+                            md-items="item in gettemplate(searchTex)"
+                            md-min-length=0
+                            md-search-text="searchTex"
+                            md-selected-item="selectedItem"
+                            md-selected-item-change="customergrpChange(item)"
+                            placeholder="Customer Group Name">
+                        <md-item-template>
+                            <span md-highlight-text="searchTex"> {{item.templateheader_name}}</span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Customer Name matching "{{searchTex}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-2">
+                    <div class="col-md-2" class="newcontainer1" style="margin-top:30px;">
+                        <input file-model="files" fileinput="file" id="file" multiple
+                               type="file"/>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <md-button style="margin-top:14px;" class="md-fab md-mini md-primary custbutton"
+                               ng-click="uploadFile()">
+                        <md-icon>cloud_upload</md-icon>
+                        <md-tooltip>Upload</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                           md-progress="deferred">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Entry Date</th>
+                            <th>Template Name</th>
+                            <th>View</th>
+                            <th>Delete</th>
+                            <th>Select</th>
+                        </tr>
+                        </thead>
+                        <tbody ng-init="totall = 0">
+                        <tr ng-style="{color: obj.colors}" ng-class="{selected: obj.isChecked}"
+                            ng-repeat="obj in hosmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{obj.entry_gl}}</td>
+                            <td>{{obj.file_path}}</td>
+                            <td ng-click="clkname(obj)">{{obj.file_name}}</td>
+                            <td>{{obj.entry_amt}}</td>
+                            <td class="text-center"><input ng-change="filtersearch(obj)"
+                                                           ng-click="selectEntity(obj)"
+                                                           ng-model="obj.isChecked"
+                                                           type="checkbox"
+                            ></td>
+                        </tr>
+                        <tr ng-show="hosmry.length == undefined || 0">
+                            <td class="warning" colspan="11">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage" max-size="maxSize"
+                                    ng-model="currentPage" total-items="hosmry.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <td colspan="4">
+                                Total Count:{{hosmry.length}}<br>
+                                Total Sum:<span>{{sum}}</span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appintegrity', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+myApp.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+myApp.directive("fileinput", [function() {
+    return {
+        scope: {
+            fileinput: "=",
+            filepreview: "="
+        },
+        link: function(scope, element, attributes) {
+            element.bind("change", function(changeEvent) {
+                scope.fileinput = changeEvent.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    scope.$apply(function() {
+                        scope.filepreview = loadEvent.target.result;
+                    });
+                }
+                reader.readAsDataURL(scope.fileinput);
+            });
+        }
+    }
+}]);
+    myApp.controller('Ctrlintegrity', ['$scope', 'testService', '$mdDialog', '$window', '$filter', '$element',function($scope, testService, $mdDialog, $window, $filter,$element) {
+          $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.currentPag = 1;
+        $scope.maxSiz = 3;
+        $scope.itemsPerPag = 10;
+        $scope.entrydate = new Date();
+
+
+           var data = {
+           "params":{
+           "Classification":{
+                    "Entity_Gid": [1]},
+                    "Filter":'{}'
+                    }}
+         var data_int = {
+            Group : 'INTEGRITY_SUMMARY',
+            Type: 'TEMPLATE_GET',
+            Sub_Type:'',
+            data : data
+        };
+        loadtemplatedetail(data_int);
+
+    function loadtemplatedetail(data_int) {
+        var overalldtl = testService.gethosmry(data_int);
+        overalldtl.then(function(res) {
+        debugger;
+                $scope.templatedetail = res.data;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+$scope.gettemplate = gototemplateget;
+    function gototemplateget(query) {
+        var result = $filter('filter')($scope.templatedetail, {
+            'templateheader_name': query
+        });
+        return result;
+    }
+
+        $scope.uploadFile = function() {
+        debugger;
+        $scope.name = $scope.files[0].name;
+        if ($scope.files !== undefined) {
+            var excl = new FormData();
+            angular.forEach($scope.files, function(file) {
+                excl.append('file', file);
+                excl.append('Type', 'Integrity_Upload');
+                excl.append('Group', 'INTEGRITY_UPLOAD');
+                excl.append('Action', 'Insert');
+                excl.append('Employee_Gid', $scope.emp_gid);
+                excl.append('name', $scope.name);
+                excl.append('templ',$scope.selectedItem.templateheader_gid);
+                loadexcl(excl);
+            });
+        }
+    }
+        function loadexcl(excl) {
+    debugger;
+        var overalldtl = testService.excelgen(excl);
+        overalldtl.then(function(res) {
+        debugger;
+            var hosmr = [];
+            $scope.hosmr = res.data.MESSAGE;
+            if ($scope.hosmr == "SUCCESS") {
+                alert("File Saved Successfully!.")
+                $scope.sltdgrp = "";
+            } else {
+                alert($scope.hosmr);
+                $scope.sltdgrp = "";
+            }
+        }).finally($scope.endloading);
+    }
+
+         var data = {
+           "params":{
+           "Classification":{
+                    "Entity_Gid": [1]},
+                    "Filter":'{}'
+                    }}
+         var data_int = {
+            Type: 'FILE_GET',
+            Group:'INTEGRITY_SUMMARY',
+            Sub_Type:'',
+            data : data
+        };
+        loadhodetail(data_int);
+            function loadhodetail(data_int) {
+        var overalldtl = testService.gethosmry(data_int);
+        overalldtl.then(function(res) {
+        debugger;
+                $scope.maintable = res.data;
+                $scope.hosmry = $scope.maintable;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+    }]);
+    myApp.service("testService", function($http) {
+    this.gethosmry = function(custid) {
+        var respons = $http.post(Appname + "/mainentryget/",
+            custid
+        );
+        return respons;
+    }
+        this.excelgen = function(custid) {
+        var respons = $http.post(Appname + "/excelgen1/",
+            custid, {
+                transformRequest: angular.identity,
+                headers: {
+                    'Content-Type': undefined
+                }
+            }
+        );
+        return respons;
+    }
+    });
+
+
+</script>
+{% endblock %}

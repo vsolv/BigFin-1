@@ -1,0 +1,598 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Service POD {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appschedule" ng-controller="Ctrlschedulereport" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Service POD</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-11">
+                <div class="col-lg-5 col-sm-3 col-md-3">
+                    <label>Customer Name</label>
+                    <md-autocomplete
+                            ng-disabled="Customer_disable"
+                            md-no-cache="true"
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="ACselectchange(item,awbno,courier,search_emp)"
+                            md-items="item in querySearch(searchText)"
+                            md-item-text="item.display_name"
+                            md-min-length=0
+                    >
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.display_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <!--<div class="col-lg-3 col-sm-3">-->
+                <!--<md-input-container class="md-block inputcontainer">-->
+                <!--<label>SR status</label>-->
+                <!--<input type="text" ng-model="status" maxlength="16"-->
+                <!--ng-change="ACselectchange(item,status,sino,search_emp)"/>-->
+                <!--</md-input-container>-->
+                <!--</div>-->
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>AWB No</label>
+                        <input type="text"
+                               ng-model="awbno" maxlength="16"
+                               ng-change="ACselectchange(item,awbno,courier,search_emp)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Courier Name</label>
+                        <md-select ng-model="courier" ng-disabled="service_disable"
+                                   ng-change="ACselectchange(item,awbno,courier,search_emp)">
+                            <md-optgroup label="Client Name">
+                                <md-option ng-repeat="c in courier_dtl" ng-value="c.courier_name"> {{c.courier_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="col-lg-11">
+            </div>
+            <div class="col-lg-12">
+                <div class="pull-right">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>AWB NO</th>
+                        <th>Courier Name</th>
+                        <th>Dispatched Date</th>
+                        <th>Dispatched To</th>
+                        <th>POD Date</th>
+                        <!--<th>Product Type</th>-->
+                        <th>Weight</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="m in DispatchDetails.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{m.dispatch_awbno}}</td>
+                        <td>{{m.courier_name}}</td>
+                        <td>{{m.dispatch_date | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{m.customer_name}}</td>
+                        <td>{{m.dispatch_pod | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{m.dispatch_totweight}}</td>
+                        <td align="center"><a href="" ng-click="Update_pod(m)" ng-show="!m.dispatch_pod"> UPDATE
+                            POD </a>
+                            <a href="" ng-click="View_pod(m)" ng-show="m.dispatch_podimage"> VIEW </a>
+                            <label ng-show="!m.dispatch_podimage && m.dispatch_pod"> NO IMAGE </label>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="13">
+                            <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="mdl_present" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true" enctype="multipart/form-data">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            Courier Details
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!--Leave details-->
+                            <div class="col-xs-12">
+                                <!--<div class="col-lg-6 col-sm-6 col-md-6">-->
+                                <!--<md-input-container class="md-block inputcontainer">-->
+                                <!--<label>Courier Name</label>-->
+                                <!--<md-select ng-model="courier" required>-->
+                                <!--<md-option><em>&#45;&#45;Select&#45;&#45;</em></md-option>-->
+                                <!--<md-option ng-repeat="cou in courier_dtl"-->
+                                <!--ng-click="producttype_click(pro.producttype_gid)" ng-value="cou"-->
+                                <!--&gt;-->
+                                <!--{{ cou.courier_name }}-->
+                                <!--</md-option>-->
+                                <!--</md-select>-->
+                                <!--</md-input-container>-->
+                                <!--</div>-->
+                                <div class="col-lg-6 col-sm-4 col-md-4">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>POD Date</label>
+                                        <md-datepicker ng-disabled="service_disable" md-hide-icons="calendar"
+                                                       ng-model="to_date" md-min-date="maxDate" md-max-date="minDate"
+                                                       md-hide-icons="calendar" ng-click="date" formatDate
+                                                       required></md-datepicker>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Dispatched To</label>
+                                        <input type="text" ng-model="Dispatched_to" ng-disabled="true" required/>
+                                    </md-input-container>
+
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Courier Name</label>
+                                        <input type="text" ng-model="Courier_name" ng-disabled="true" required/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>AWB No</label>
+                                        <input type="text" ng-model="dispatch_awbno" ng-disabled="true" required/>
+                                    </md-input-container>
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Status</label>
+                                        <input type="text" ng-model="status_closed" ng-disabled="true" required/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <label>POD Image</label>
+                                    <input type="file" fileinput="file" filepreview="filepreview" file-model="files"
+                                           multiple/>
+                                    <!--<div ng-init="myVar = 'media/docs/m/franklindroosevelt1.jpg'">-->
+                                    <!--<h1>Angular</h1>-->
+                                    <!--<img ng-src="{{myVar}}">-->
+                                    <!--</div>-->
+
+                                    <!--<button ng-click = "uploadFile()">upload me</button>-->
+                                    <!--<li ng-repeat="file in files">{{file.name}}</li>-->
+                                </div>
+                                <div class="col-xs-12">
+                                    <img ng-src="{{filepreview}}" class="img-responsive" ng-show="filepreview"/></div>
+                                <!--Present details-->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-info custbutton" ng-click="staus_update()">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="image_present" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true" enctype="multipart/form-data">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title">
+                            POD Image
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <!--<img ng-src="{{imagelocation}}">-->
+                    <embed ng-src="{{imagelocation}}" width="900px" height="900px"/>
+                    <div class="modal-footer"><a href="{{imagelocation}}" download>
+                        <button type="button" class="btn btn-info custbutton">
+                            Download
+                        </button>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+    .md-autocomplete-suggestions-container{
+   z-index:100000 !important;
+  }
+    .md-dialog-container{
+    z-index:100000 !important;
+    }
+    .thumb{
+    width:100px;
+    margin:5px;
+    float:left;
+}
+
+
+
+
+</style>
+<script>
+var app=angular.module('Appschedule',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+app.directive('fileModel', ['$parse', function ($parse) {
+        return {
+           restrict: 'A',
+           link: function(scope, element, attrs) {
+              element.bind('change', function(){
+              $parse(attrs.fileModel).assign(scope,element[0].files)
+                 scope.$apply();
+              });
+           }
+        };
+     }])
+
+ app.directive("fileinput", [function() {
+    return {
+      scope: {
+        fileinput: "=",
+        filepreview: "="
+      },
+      link: function(scope, element, attributes) {
+        element.bind("change", function(changeEvent) {
+          scope.fileinput = changeEvent.target.files[0];
+          var reader = new FileReader();
+          reader.onload = function(loadEvent) {
+            scope.$apply(function() {
+              scope.filepreview = loadEvent.target.result;
+            });
+          }
+          reader.readAsDataURL(scope.fileinput);
+        });
+      }
+    }
+  }]);
+
+app.controller('Ctrlschedulereport', ['$scope', '$http', 'requestservice', '$filter', '$window', '$mdDialog', '$mdDateLocale', function($scope, $http, requestservice, $filter, $window, $mdDialog, $mdDateLocale) {
+
+   $scope.currentPage = 1;
+   $scope.maxSize = 3;
+   $scope.itemsPerPage = 10;
+   $scope.maintable = [];
+   $scope.status_closed = 'SERVICE CLOSED';
+   $scope.ls_followup_date = new Date();
+
+   $scope.minDate = new Date(
+      $scope.ls_followup_date.getFullYear(),
+      $scope.ls_followup_date.getMonth(),
+      $scope.ls_followup_date.getDate()
+   );
+
+   $scope.maxDate = new Date(
+      $scope.ls_followup_date.getFullYear(),
+      $scope.ls_followup_date.getMonth() - 3,
+      $scope.ls_followup_date.getDate() - 1
+   );
+
+   $scope.loading = function() {
+      $mdDialog.show({
+         templateUrl: 'loaderSpinner',
+         parent: angular.element(document.body),
+         clickOutsideToClose: false
+      });
+   };
+
+   $scope.to_date = new Date();
+
+   $mdDateLocale.formatDate = function(date) {
+      return $filter('date')($scope.to_date, "dd-MMM-yyyy");
+   };
+
+   function load() {
+      var dispatch_dtl = requestservice.getdispatch_dtl()
+      dispatch_dtl.then(function(result) {
+         console.log(result.data)
+         $scope.maintable = result.data;
+
+         $scope.DispatchDetails = $scope.maintable;
+
+         $scope.pageLength = $scope.maintable.length;
+
+      });
+
+
+   }
+
+   load();
+
+   var cust = requestservice.getCustomername()
+   cust.then(function(result) {
+         $scope.Customer = result.data;
+         //alert(JSON.stringify(result.data))
+      },
+      function() {
+         alert('no data');
+      });
+
+   $scope.querySearch = function(query) {
+      te = $filter('filter')($scope.Customer, {
+         'display_name': query
+      });
+
+      return te;
+   }
+
+   $scope.cussearch = function(query) {
+      te = $filter('filter')($scope.Customer, {
+         'display_name': query
+      });
+
+      return te;
+   }
+
+   $scope.ACselectchange = function(query, awbno, courier, emp) {
+
+      if (query !== undefined) {
+         $scope.cust_name = query.display_name;
+      } else if ($scope.selectedItem !== null) {
+         $scope.cust_name = $scope.selectedItem.display_name;
+      } else {
+         $scope.cust_name = "";
+      }
+
+
+      $scope.DispatchDetails = $filter('filter')($scope.maintable, {
+         "customer_name": $scope.cust_name,
+         "dispatch_awbno": awbno,
+         "courier_name": courier,
+
+      }, );
+      $scope.pageLength = $scope.DispatchDetails.length;
+      $scope.search_flag = 1;
+
+   }
+
+
+   var courier = requestservice.getcourier_dtl()
+   courier.then(function(result) {
+         $scope.courier_dtl = result.data
+      }),
+      function() {
+         alert('no data');
+      };
+
+   function selecteddate(date) {
+
+      //  var d = $scope.to_date;
+      var d = date;
+      var curr_date = ('0' + d.getDate()).slice(-2);
+      var curr_month = ('0' + (d.getMonth() + 1)).slice(-2);
+
+      var curr_year = d.getFullYear();
+      newdate = curr_year + "-" + curr_month + "-" + curr_date;
+      return newdate
+   }
+
+   function podname(item) {
+      var fileExtension = '.' + item.name.split('.').pop();
+      // $scope.pod_name = Math.random().toString(36).substring(7) + new Date().getTime() + fileExtension;
+      $scope.pod_name = "POD" + new Date().getTime() + fileExtension;
+
+   };
+
+   $scope.staus_update = function() {
+
+      $scope.loading();
+      var pod_imagename = "";
+
+      if ($scope.files !== undefined) {
+         var fd = new FormData();
+
+         angular.forEach($scope.files, function(file) {
+            podname(file);
+            pod_imagename = "/" + $scope.pod_name;
+
+            fd.append('file', file);
+            fd.append("filename", $scope.pod_name)
+
+         });
+
+         var pod_save= requestservice.POD_image_upload(fd);
+            pod_save.then(function(result) {
+
+                if(result.data == "saved"){
+                    var saved_flag = 1;
+                }else{
+                    alert("Image Not Saved")
+                }
+            });
+
+
+      } else {
+
+      }
+
+
+      var pod_date = selecteddate($scope.to_date);
+      var pod_imgdate = pod_date.replace(/-/g, "/");
+      if ($scope.files !== undefined) {
+         var pod_imagename = "media/pod/" + pod_imgdate + pod_imagename;
+      } else {
+         var pod_imagename = ""
+      }
+
+      var data_int = [{
+         action: "Update",
+         type: "SERVICE",
+         courier_gid: 0,
+         Dispatch_date: "",
+         send_by: 0,
+         awbno: "",
+         dispatch_mode: "",
+         dispatch_type: "",
+         packets: 0,
+         weight: 0,
+         dispatch_to: "",
+         address: "",
+         city: "",
+         state: "",
+         pincode: "",
+         remark: "",
+         returned: "",
+         returned_on: "",
+         returned_remark: "",
+         pod: pod_date,
+         pod_image: pod_imagename,
+         isactive: "",
+         isremoved: "",
+         dispatch_gid: $scope.dispatch_gid,
+          "Schedule_Affect":"YES"
+      }];
+
+
+
+      var save_dispatch = requestservice.setdispatch_dtl(data_int);
+      save_dispatch.then(function(result) {
+         if (result.data == "SUCCESS") {
+            var save_Status = requestservice.setdisservice_status($scope.dispatch_gid);
+            save_Status.then(function(result) {
+
+               alert("Inserted Successfully!.");
+               load();
+               modalhide('mdl_present');
+            });
+         } else {
+            alert("Data Not Inserted!.")
+         }
+      }, function(err) {
+         alert("Data Not Inserted!.")
+      }).finally($scope.endloading);
+
+   }
+
+   $scope.Update_pod = function(detail) {
+
+      $scope.Dispatched_to = detail.customer_name;
+      $scope.Courier_name = detail.courier_name;
+      $scope.dispatch_awbno = detail.dispatch_awbno;
+      $scope.dispatch_gid = detail.dispatch_gid;
+
+      modalshow('mdl_present');
+   }
+
+   $scope.View_pod = function(details) {
+
+      $scope.imagelocation = details.dispatch_podimage;
+      modalshow('image_present');
+
+   }
+
+   $scope.endloading = function() {
+      $mdDialog.hide();
+   };
+
+}]);
+
+app.service("requestservice", function ($http) {
+
+    this.getCustomername = function(){
+        var response = $http.post(Appname+"/customer_service/",{params:{'customer_gid':0,'customer_code':'','customer_name':''}});
+        return response;
+        }
+
+    this.getservicedtl = function(){
+        var response = $http.post(Appname+"/ServiceDtl_get/",{params:{'from_date':'','to_date':'','customer_gid':0,'product_gid':0,'service_gid':0}});
+        return response;
+        }
+
+    this.setdispatch_dtl = function(data){
+        var response = $http.post(Appname+"/PodDispatch_Set/",{'dispatch_data':data});
+        return response;
+        }
+
+   this.getcourier_dtl = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params: { "courier_gid": 0, "courier_name":''} });
+        return response;
+    }
+
+
+
+   this.setservice_dtl = function(action,cust_gid,service,date,emplgid,sts){
+        var response = $http.post(Appname+"/Service_set/",{params:{'action':action,'date':date,'customer_gid':cust_gid,'status':sts,'SERVICE_JSON':service,'entity_gid':1,'employee_gid':emplgid}});
+        return response;
+        }
+
+   this.POD_image_upload = function(image){
+        var response = $http.post(Appname+"/upload_image/",image,{
+               transformRequest: angular.identity,
+               headers: {'Content-Type': undefined}
+            });
+        return response;
+        }
+
+
+   this.getdispatch_dtl = function(){
+        var response = $http.post(Appname+"/Get_Dispatch/",{params:{'action':''}});
+        return response;
+        }
+
+
+    this.setdisservice_status = function(gid){
+        var response = $http.post(Appname+"/DispatchPOD_set/",{'dispatch_gid':gid});
+        return response;
+        }
+});
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,556 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} MAIL Summary{% endblock %}
+{% block content %}
+
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="Appprosummary" ng-controller="ctlprosummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>MAIL Summary</h4>
+            </div>
+            <md-button class="md-raised" data-dismiss="modal" ng-click="clk_mail()">MAIL CHECK
+                                <md-tooltip>MAIL</md-tooltip>
+                            </md-button>
+        </div>
+</div>
+{% endverbatim %}
+
+<script>
+    var app = angular.module('Appprosummary', ['ngMaterial']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    app.directive('letterOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z./'-: ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+    app.controller("ctlprosummary", ['$scope', '$window', '$mdDialog', '$filter', '$http', 'productService','$sce' ,function (
+        $scope,
+        $window, $mdDialog,
+        $filter, $http, productService,$sce) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+        $scope.maxSize = 3;
+        $scope.currentPage = 1;
+        $scope.currentPge = 1;
+        $scope.currentPge1 = 1;
+        $scope.viewby = 10;
+        $scope.maintable = [];
+        $scope.itemsPerPage = 10;
+        $scope.itemsPerPge = 10;
+        $scope.itemsPerPge1 = 10;
+        $scope.loading = function () {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function () {
+            $mdDialog.hide();
+        };
+
+
+                  $scope.tran_history = function(e){
+        $scope.Number = e.poheader_no;
+        var data= {"DETAIL":{
+        "Poheader_Gid":e.poheader_gid
+        }
+        ,
+          "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+        }
+        var data = {
+                    "Group":"PO_HISTORY",
+                    "Type": "GET",
+                    "SubType": "PO_HISTORY",
+                    "DETAIL": data
+                }
+            var get_purchase = productService.getviewtran(data)
+                get_purchase.then(function (result) {
+                if(result.data.MESSAGE == "FOUND"){
+                debugger;
+                    $scope.viewtran = result.data.DATA;
+                    }
+                    modalshow('viewtranhistory');
+                }).finally($scope.endloading);
+        }
+
+
+
+        //--------------------
+        $scope.Assetid = function (d) {
+
+            $scope.loading();
+            var data = {
+                "Params": {
+                    "filter": {
+                        "assetid_pogid": d.poheader_gid,
+                        "Page_Index": 0,
+                            "Page_Size":60,
+
+                    },
+                    "type": "ASSET_HEADER",
+                    "Action": "Get"
+                },
+            }
+
+            // window.location.href = "generate_asst"
+            return $http.post(Appname + "/Pr_approvalget/", data)
+                .then(function (data) {
+
+                    $scope.assetid = data.data;
+                    if($scope.assetid.MESSAGE!="NOT_FOUND"){
+                    $scope.assetid = $scope.assetid[0].imagepath;
+                    modalshow('mep_details_pr');
+
+    // Here I encode my AWS S3 url
+    complete_url ='http://docs.google.com/gview?url=' + encodeURIComponent($scope.assetid) + '&embedded=true';
+    $scope.assetid1 = $sce.trustAsResourceUrl(complete_url);
+
+                    return $scope.assetid1;
+                    }
+                    else{
+alert('No Asset')
+}
+
+                }).finally($scope.endloading);
+}
+
+
+        $scope.Assetiddet = function (d) {
+
+            $scope.loading();
+            var data = {
+                "Params": {
+                    "filter": {
+                        "assetid_pogid": d.poheader_gid,
+                         "assetid_podetailsgid": d.podetails_gid,
+                        "Page_Index": 0,
+                            "Page_Size":60,
+
+                    },
+                    "type": "ASSET_DETAILS",
+                    "Action": "Get"
+                },
+            }
+
+            // window.location.href = "generate_asst"
+            return $http.post(Appname + "/Pr_approvalget/", data)
+                .then(function (data) {
+
+                    $scope.assetid = data.data;
+                    if($scope.assetid.MESSAGE!="NOT_FOUND"){
+                    $scope.assetid = $scope.assetid[0].imagepath;
+                    modalshow('mep_details_pr');
+
+    // Here I encode my AWS S3 url
+    complete_url ='http://docs.google.com/gview?url=' + encodeURIComponent($scope.assetid) + '&embedded=true';
+    $scope.assetid1 = $sce.trustAsResourceUrl(complete_url);
+                    return $scope.assetid1;
+
+                    }
+                    else{
+                    alert("No Asset")
+                    }
+                }).finally($scope.endloading);
+
+        }
+
+        $scope.trustAsHtml = function(html) {
+        return $sce.trustAsHtml(html);
+     }
+
+
+        $scope.create = function () {
+
+            sessionStorage.setItem('poheader_gid', '');
+            sessionStorage.setItem('PO_Creation', '');
+            $window.location.href = "prfinalapproval";
+
+        };
+
+
+
+        $scope.viewpoheaders = function (e) {
+            $scope.poheadernum = e.poheader_no;
+            $scope.posummary = JSON.parse(e.file_path);
+            if ($scope.posummary.length > 0) {
+                if ($scope.posummary[0].file_path != null) {
+                    modalshow('viewpoheader');
+                } else {
+                    alert("No File for against " + e.poheader_no);
+                }
+            }
+        }
+
+
+
+
+$scope.generatePDF = function () {
+
+            $scope.loading();
+            data = {
+                "poheader_gid": $scope.pogid
+            }
+            var getpostatus = productService.generateddl_download(data);
+            getpostatus.then(function (getpostatus) {
+            debugger;
+             var data = getpostatus.data;
+             var file = new Blob([data], { type: 'application/pdf' });
+             saveAs(file, $scope.ponum+'.pdf');
+
+            }, function () {
+                alert('Records not found');
+            }).
+            finally($scope.endloading);
+        }
+
+
+
+
+
+
+
+
+
+
+        $scope.generate = function (user) {
+        $scope.ponum = user.poheader_no;
+        $scope.pogid =  user.poheader_gid;
+            if (user.poheader_status == "Approved" || user.poheader_status == "REOPENED") {
+                $scope.based_on_status = false;
+
+            } else {
+                $scope.based_on_status = true;
+                return false;
+            }
+
+            $scope.loading();
+
+            data = {
+                "poheader_gid": user.poheader_gid
+            }
+            var getpostatus = productService.generatepoddl(data);
+            getpostatus.then(function (getpostatus) {
+            debugger;
+                $scope.headerddl = getpostatus.data;
+                $scope.supplier_namedd = $scope.headerddl[0].supplier_name;
+                $scope.poheader_no = $scope.headerddl[0].poheader_no;
+                $scope.poheader_date = $scope.headerddl[0].poheader_date;
+                $scope.pogeerate_no_ = $scope.headerddl[0].poheader_no;
+                $scope.pogeerate_date_ = $scope.headerddl[0].poheader_validfrom;
+                $scope.ipforimg = $scope.headerddl[0].ip;
+                $scope.address_1 = $scope.headerddl[0].address_1;
+                $scope.address_2 = $scope.headerddl[0].address_2;
+                $scope.address_3 = $scope.headerddl[0].address_3;
+                $scope.address_pincode = $scope.headerddl[0].address_pincode;
+                $scope.Contact_email = $scope.headerddl[0].Contact_email;
+                $scope.mob = $scope.headerddl[0].Contact_mobileno;
+                $scope.generateamt = $scope.headerddl[0].poheader_amount;
+                $scope.potermstemplate_desc = JSON.parse($scope.headerddl[0]
+                .potermstemplatedes);
+                debugger;
+                $scope.productddl = JSON.parse($scope.headerddl[0].product_detail);
+                $scope.productdetails = JSON.parse($scope.headerddl[0].productdetails);
+                $scope.PO_ADI = $scope.headerddl[0].PO_ADI;
+
+$scope.product_specdetails = [];
+for(i=0;i<$scope.productdetails.length;i++){
+$scope.productdetail = $scope.productdetails[i];
+angular.forEach($scope.productdetail, function(value, key) {
+  var data ={keydata:key,valuedata:value}
+  $scope.product_specdetails.push(data)
+});
+}
+
+
+            $scope.productddldelivery = [];
+                for(i=0;i<$scope.productddl.length;i++){
+                if($scope.productddl[i].podetails_qty > 0){
+                var data={
+                "address_1":$scope.productddl[i].address_1,
+                "address_2":$scope.productddl[i].address_2,
+                "address_3":$scope.productddl[i].address_3,
+                "address_pincode":$scope.productddl[i].address_pincode,
+                "branch_metadatavalue":$scope.productddl[i].branch_metadatavalue
+                }
+                }
+                $scope.productddldelivery.push(data);
+                }
+
+                for(i=0;i<$scope.productddl.length;i++){
+                for(j=0;j<$scope.productddldelivery.length;j++){
+                $scope.productddl[j].address = [$scope.productddldelivery[j]];
+                }
+                }
+
+                modalshow('mdl1_present');
+            }, function () {
+                alert('Records not found');
+            }).
+            finally($scope.endloading);
+
+
+
+        }
+        $scope.poheader = [];
+        $scope.getpoheader = function (a) {
+            if(a=='search'){
+                $scope.currentPage=1;
+            }
+            $scope.loading();
+
+
+            var datas = {
+                "Filter": {
+                    "poheader_no": $scope.po_no_po,
+                    "supplier_name": $scope.poheader_suppliername_po,
+                    "poheader_amount": $scope.po_amount_po,
+                    "poheader_status": "",
+                    "Page_Index": $scope.currentPage - 1,
+                    "Page_Size": $scope.itemsPerPage,
+                }
+            }
+            var po_valus = {
+                "Type": "GET",
+                "params": datas
+            }
+            var getpoheader = productService.getprodsearch(po_valus);
+            getpoheader.then(function (getpoheader) {
+                var data = JSON.parse(getpoheader.data)
+                $scope.maintable = $filter('orderBy')(data, '-poheader_gid');
+                $scope.poheader = $scope.maintable;
+                $scope.poheader_length = $scope.poheader[0].Total_Row;
+            }).finally($scope.endloading);
+        }
+
+
+        $scope.getpoheader();
+        $scope.view = function (poheader_gid) {
+
+            sessionStorage.setItem('poheader_gid', poheader_gid);
+            $window.location.href = "createpoindex";
+        };
+
+        /* $scope.pdf=function(po_gid){
+           $window.location.href = "http://174.138.120.196:8089/pentaho/content/reporting/execute/steel-wheels/dashboards/newpages.pdf?solution=steel-wheels&path=/dashboards&name=pogenerate.prpt&userid=joe&password=password&po_gid="+po_gid;
+        } */
+
+
+        var getpostatus = productService.getpostatus();
+        getpostatus.then(function (getpostatus) {
+            $scope.lststaus = getpostatus.data;
+        }, function () {
+            alert('Records not found');
+        });
+
+
+         $scope.notepad = function(){
+         if($scope.file_path_notepad == ' '){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad == undefined){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad){
+                      var data = {
+                        "Filename": $scope.file_path_notepad
+                    }
+                    var getdept_name = productService.get_file_read(data)
+                    getdept_name.then(function(result) {
+                    $scope.htmlcontent = result.data.file_path
+                     modalshow('viewnotepad');
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally();
+                }
+
+                else{
+                 modalshow('viewnotepad');
+                }
+        }
+
+
+        $scope.clkview = function (e) {
+            $scope.filename = e;
+            var data = {
+                "Filename": e
+            }
+            var get_purchase = productService.getviewfile(data)
+            get_purchase.then(function (result) {
+                $scope.viewfilepath = result.data;
+                if ($scope.viewfilepath != '') {
+                    modalshow('viewprfile');
+                }
+            }).finally($scope.endloading);
+        }
+
+
+        $scope.clk_mail = function () {
+debugger;
+            var get_purchase = productService.get_mail_data()
+            get_purchase.then(function (result) {
+            debugger;
+                $scope.mailchkk = result.data.MESSAGE;
+                alert($scope.mailchkk);
+            }).finally($scope.endloading);
+        }
+
+
+        $scope.clkdownload = function(e){
+        if(e!=""){
+        $window.location.href = "/common_downloadfile/?filename="+e;
+        }
+        else{
+        return false;
+        }
+        }
+
+
+        $scope.viewpo = function (e) {
+
+            var po_gid = e.poheader_gid;
+            var productname = productService.getpodetails(po_gid);
+            productname.then(function (productname) {
+
+                $scope.details = JSON.parse(productname.data);
+                $scope.dropdown1 = ($scope.details[0].poheader_gid);
+                $scope.comm = ($scope.details[0].commodity_name);
+                //loaddata11();
+                //alert(JSON.stringify($scope.dropdown));
+                if ($scope.details.length > 0) {
+                    $scope.poapproval = $scope.details;
+                    var prodname = $scope.poapproval;
+                    if (prodname.length > 0) {
+                        $scope.poheader_gid = prodname[0].poheader_gid;
+                        $scope.supplier_name = prodname[0].supplier_name;
+                        $scope.supplier_gid = prodname[0].supplier_gid;
+                        $scope.poheader_sno = prodname[0].poheader_no;
+                        $scope.teamandcond_gid = prodname[0].teamandcond_gid;
+                        $scope.teamandcond_name = prodname[0].poterms_name;
+                        $scope.branch_name1 = prodname[0].branch_name;
+                        $scope.poheader_status = prodname[0].poheader_status;
+                        $scope.poheader_remarks = prodname[0].poheader_remarks;
+                        $scope.file_path_notepad = prodname[0].poheader_notepad;
+                        modalshow('viewdetailspo');
+
+                    }
+                    $scope.calculatePay = calucatesum();
+                }
+
+            }, function () {
+                alert('Records not found');
+            });
+
+        }
+
+        function calucatesum() {
+            var sum = 0;
+            var podetails = $scope.poapproval;
+            for (var i = 0; i < podetails.length; i++) {
+                if (podetails[i].podetails_totalamount !== undefined && podetails[i]
+                    .podetails_totalamount !== "") {
+                    sum += parseFloat(podetails[i].podetails_totalamount);
+                }
+            }
+            return sum;
+        };
+
+
+        //Pagination
+        $scope.file_view = function (path) {
+            $scope.prheader_imagepath = path.poheader_imagepath;
+
+            if ($scope.prheader_imagepath != null) {
+                modalshow('viewpdfpopup')
+            }
+        }
+        $scope.file_ddview = function (path) {
+            $scope.prheader_imagepath = path.podetails_imagepath;
+
+            if ($scope.prheader_imagepath != null) {
+                modalshow('viewpdfpopup')
+            }
+        }
+
+
+
+    }]);
+    app.service("productService", function ($http) {
+        this.getprodsearch = function (ev) {
+            var response = $http.post(Appname + "/Poheader_detail/", ev)
+            return response;
+        }
+        this.getpodetails = function (po_gid) {
+            var response = $http.post(Appname + "/Approval_PODetail/", {
+                params: {
+                    'podetails_gid': po_gid,
+                    'product_name': ''
+                }
+            })
+            return response;
+        }
+
+        this.getpostatus = function () {
+            var response = $http.get(Appname + "/Getpostatus/");
+            return response;
+        }
+
+        this.generatepoddl = function (data) {
+            var response = $http.post(Appname + "/generateddl/", data);
+            return response;
+        }
+        this.generateddl_download = function (data) {
+            var response = $http.post(Appname + "/generateddl_download/", data);
+            return response;
+        }
+        this.getviewfile = function (data) {
+            var response = $http.post(Appname + "/common_viewfile/", data);
+            return response;
+        }
+   this.getviewtran = function (data) {
+            var response = $http.post(Appname + "/Get_Tran_History/", data);
+            return response;
+        }
+        this.getviewfile = function (data) {
+            var response = $http.post(Appname + "/common_viewfile/", data);
+            return response;
+        }
+        this.get_mail_data = function (data) {
+            var response = $http.get(Appname + "/mail_check/", data);
+            return response;
+        }
+             this.get_file_read = function (data) {
+            var response = $http.post(Appname + "/common_read_file/", data);
+            return response;
+        }
+    });
+
+</script>
+{% endblock %}

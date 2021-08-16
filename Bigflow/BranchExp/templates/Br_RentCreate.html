@@ -1,0 +1,347 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Branch Maker Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Expense Create</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <md-input-container class="md-block inputcontainer">
+                <label>Type</label>
+                <md-select ng-model="EXPENSETYPE">
+                    <md-option ng-repeat="x in expense_type"
+                               ng-click="inputtype_click(x.type)"
+                               ng-value="x.type">{{
+                        x.type }}
+                    </md-option>
+                </md-select>
+            </md-input-container>
+        </div>
+        <!--<div class="col-md-3">-->
+        <!---->
+        <!--</div>-->
+        <form role="form" name="Expense_valid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-repeat-start="param in parameters">
+                        <div class="col-md-3" ng-show="param.inputtype == 'Textbox'"
+                             ng-repeat="para in param.columnsdata">
+                            <md-input-container ng-disabled="" class="md-block inputcontainer" ng-show="param.expensecolumn_type == EXPENSETYPE"
+                            >
+                                <label>{{para.ColumnName}}</label>
+                                <input ng-model="models[para.ColumnName]" maxlength="16"/>
+                            </md-input-container>
+                        </div>
+                    </div>
+                    <div ng-repeat-end></div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-repeat-start="param in parameters">
+                        <div class="col-md-3" ng-show="param.inputtype == 'Date'"
+                             ng-repeat="para in param.columnsdata">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>{{para.ColumnName}}</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="models[para.ColumnName]"
+                                               md-hide-icons="calendar" ng-click="date" md-min-date="maxDate"
+                                               md-max-date="minDate" formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    </div>
+                    <div ng-repeat-end></div>
+
+                </div>
+            </div>
+        </form>
+
+
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <!--<tr>-->
+            <!--<td>-->
+            <!--<select ng-model="selectedQuery"-->
+            <!--ng-options="q.name for q in queryList" >-->
+            <!--<option title="-&#45;&#45;Select Query-&#45;&#45;" value="">-&#45;&#45;Select Query-&#45;&#45;</option>-->
+            <!--</select>-->
+            <!--</td>-->
+            <!--</tr>-->
+            <!--<tr ng-if="0" ng-repeat-start="dtll in invoicedetails">-->
+
+            <!--<tr ng-repeat="dtl in dtll.DEBIT_DETAILS">-->
+
+
+            <!--<tr ng-if="0" ng-repeat-start="param in parameters">-->
+            <!--<td>{{param}}:</td>-->
+            <!--<tr ng-show="param.inputtype == 'Textbox'" ng-repeat="para in param.columnsdata">-->
+            <!--<td>{{para}}</td>-->
+            <!--<td><input type="text" ng-model="models[para.ColumnName] "/>-->
+            <!--</td>-->
+            <!--</tr>-->
+            <!--<tr ng-show="param.inputtype == 'Dropdown'" ng-repeat="para in param.columnsdata">-->
+            <!--<td>-->
+
+            <!--<select ng-model="models[para.inputtype] " ng-options="x for x in para.dropdown_data"></select>-->
+            <!--</td>-->
+            <!--</tr>-->
+            <!--</tr>-->
+            <!--<tr ng-repeat-end>I also get repeated</tr>-->
+        </table>
+        <pre>{{models | json}}</pre>
+        <div class="col-lg-12">
+
+            <div class="pull-right">
+
+                <md-button type="submit" class="md-raised md-primary" id="btn_create"
+
+                           ng-click="add_continue()">
+                    Submit
+                </md-button>
+                <md-button type="submit" class="md-raised " id="btn_create"
+                           ng-click="close_click()" href="">
+                    Close
+                </md-button>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+<style>
+
+.btn-default.btn-on.active{background-color: #5BB75B;color: white;}
+.btn-default.btn-off.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-1.active{background-color: #006FFC;color: white;}
+.btn-default.btn-off-1.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-2.active{background-color: #00D590;color: white;}
+.btn-default.btn-off-2.active{background-color: #A7A7A7;color: white;}
+
+.btn-default.btn-on-3.active{color: #5BB75B;font-weight:bolder;}
+.btn-default.btn-off-3.active{color: #DA4F49;font-weight:bolder;}
+
+.btn-default.btn-on-4.active{background-color: #006FFC;color: #5BB75B;}
+.btn-default.btn-off-4.active{background-color: #DA4F49;color: #DA4F49;}
+
+
+
+
+</style>
+
+
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap','AppCommon','rzTable']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_makersummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter, $mdDateLocale, br_makersummary, $window, $mdDialog, $element) {
+ <!--$scope.parameters = [-->
+        <!--{ name: 'Textbox', fields: [ "Name", "Id"] },-->
+        <!--{ name: 'Dropdown', fields: [] },-->
+        <!--{ name: 'Bounce Back Report', fields: [ "Date"] }-->
+      <!--];-->
+$scope.models = {};
+
+
+
+
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')($scope.models.rent_percentage, "dd-MMM-yyyy");
+        };
+
+        function selecteddate() {
+            var d = $scope.models.rent_percentage;
+            var curr_date = d.getDate();
+            var curr_month = d.getMonth();
+            curr_month++;
+            var curr_year = d.getFullYear();
+            $scope.Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+        }
+
+        $scope.expense_type = [{
+            type: "RENT",
+            value: "E",
+        }, {
+            type: "HOUSEHOLD",
+            value: "S",
+        }, {
+            type: "CLEAN",
+            value: "S",
+        }]
+
+       <!--$scope.parameters = [-->
+        <!--{ name: 'Textbox', fields: [{ "Name":"rent_amt", "Id":"1"},{ "Name":"rent_period", "Id":"2"} ] },-->
+        <!--{ name: 'Dropdown', fields: [{ "Name":"field3", "dropdown_data":["houseclean", "sa", "sdas"]}] },-->
+        <!--{ name: 'Date', fields: [ "Date"] }-->
+      <!--];-->
+
+        var datas = {
+            "Params": {
+                "FILTER": {
+                    "ExpenseType":"HOUSEHOLD"
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": [1]
+                }
+
+            },
+             "Group": "EXPENSE_DATA",
+                "Type": "EXPENSE",
+                "Sub_Type": "COLUMN"
+        }
+
+
+      var columndata = br_makersummary.getcolumndata(datas);
+      columndata.then(function(result){
+            console.log(result.data)
+           $scope.parameters_ = result.data.DATA;
+           angular.forEach($scope.parameters_, function(values, keys) {
+                     var columndata = JSON.parse(values.columnsdata);
+                     values.columnsdata = columndata
+                      });
+           console.log($scope.parameters_)
+       });
+
+
+        $scope.add_continue = function() {
+             $scope.data_toexpense = []
+             for (o in $scope.models) {
+
+                    if( o.indexOf('date') >= 0){
+                        var d = $scope.models[o];
+                        var curr_date = d.getDate();
+                        var curr_month = d.getMonth();
+                        curr_month++;
+                        var curr_year = d.getFullYear();
+                        $scope.models[o] = curr_year + "-" + curr_month + "-" + curr_date;
+
+                    }
+
+                     $scope.data_toexpense.push({
+                         "columnname":o,
+                         "columnvalue":$scope.models[o],
+                     });
+             }
+
+
+
+            var datas = {
+                "Params": {
+                    "FILTER": {
+                        "Expensetype":$scope.EXPENSETYPE,
+                        "Property_id":1,
+                        "Expensedata":$scope.data_toexpense
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [1]
+                    }
+
+                },
+                 "Group": "EXPENSE_DATA",
+                "Type": "EXPENSE_TYPE",
+                "Action": "COLUMN"
+            }
+
+            var setcolumndata = br_makersummary.setcolumndata(datas);
+            columndata.then(function(result){
+               console.log(result)
+            });
+
+
+        }
+
+        $scope.inputtype_click = function(type){
+            $scope.models = {};
+
+
+            $scope.parameters =  $filter('filter')($scope.parameters_, {
+                                expensecolumn_type: type
+                            });
+
+            angular.forEach($scope.parameters, function(values, keys) {
+                if(values.inputtype == "Date"){
+                   var dates = $scope.models[values.columnsdata[0].ColumnName]
+                     $mdDateLocale.formatDate = function(dates) {
+                        return $filter('date')(dates, "dd-MMM-yyyy");
+                   };
+                  }
+
+            })
+
+
+        }
+
+<!--var summary = servicesummary.getmakerservice();-->
+        <!--summary.then(function(result) {-->
+
+
+       <!--$scope.names = ["Emil", "Tobias", "Linus"];-->
+    <!--$scope.models = {};-->
+    <!--$scope.$watch('selectedQuery', function (newVal, oldVal) {-->
+
+        <!--if ($scope.selectedQuery) {-->
+            <!--$scope.parameters = $scope.selectedQuery.fields;-->
+        <!--}-->
+    <!--});-->
+    }
+]);
+
+app.service("br_makersummary", function ($http) {
+    this.getmakerservice = function () {
+        var response=$http.post(Appname+"/test/");
+        return response;
+    }
+    this.getcolumndata = function (data) {
+        var response=$http.post(Appname+"Get_expense/",data);
+        return response;
+    }
+
+    this.setcolumndata = function (data) {
+        var response=$http.post(Appname+"Set_expense/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+{% endblock %}

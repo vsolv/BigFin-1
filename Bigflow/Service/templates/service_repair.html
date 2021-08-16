@@ -1,0 +1,638 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Service Repair {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appschedule" ng-controller="Ctrlschedulereport" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Service Repair</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-11">
+                <div class="col-lg-5 col-sm-3 col-md-3">
+                    <label>Customer Name</label>
+                    <md-autocomplete
+                            ng-disabled="Customer_disable"
+                            md-no-cache="true"
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="ACselectchange(item,status,sino,search_emp)"
+                            md-items="item in querySearch(searchText)"
+                            md-item-text="item.display_name"
+                            md-min-length=0
+                    >
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.display_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No product matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>SR Status</label>
+                        <md-select ng-model="status" ng-change="ACselectchange(item,status,sino,search_emp)">
+                            <md-optgroup label="SR Status">
+                                <md-option ng-repeat="status in SR_status"
+                                           ng-value="status.status"
+                                           ng-selected="status.status == clickstatus ">
+                                    {{ status.status }}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>SI No</label>
+                        <input type="text"
+                               ng-model="sino" maxlength="16" ng-change="ACselectchange(item,status,sino,search_emp)"/>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="col-lg-11">
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Raised By</label>
+                        <md-select ng-model="search_emp" ng-disabled="service_disable"
+                                   ng-change="ACselectchange(item,status,sino,search_emp)"
+                                   md-on-close="clearSearchTerm()"
+                                   data-md-container-class="selectdemoSelectHeader">
+                            <md-select-header class="demo-select-header">
+                                <input ng-model="searchTerm" type="search" placeholder="Search for a Raised By.."
+                                       class="demo-header-searchbox md-text">
+                            </md-select-header>
+                            <md-optgroup label="Raised By">
+                                <md-option ng-value="c.employee_name" ng-repeat="c in employe |
+              filter:searchTerm">{{c.employee_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="col-lg-12">
+                <div class="">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>SR No</th>
+                        <th>SR Date</th>
+                        <th>SR Raised By</th>
+                        <th>Customer Name</th>
+                        <!--<th>Product Type</th>-->
+                        <th>Product Name</th>
+                        <th>SR Type</th>
+                        <th>SR Status</th>
+                        <th>Action</th>
+                        <th>Product SI NO</th>
+                        <!--<th>Select</th>-->
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="m in ServiceDetails.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{m.service_code}}</td>
+                        <td>{{m.service_date | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{m.employee_name}}</td>
+                        <!--<td>{{m.producttype_name}}</td>-->
+                        <td>{{m.customer_name}}</td>
+                        <td>{{m.product_name}}</td>
+                        <td>{{m.service_dispatchmode}}</td>
+                        <td>{{m.service_status}}</td>
+                        <td><a href="" ng-click="Update_repair(m)">UPDATE</a></td>
+                        <td>{{m.service_productslno}}</td>
+                        <!--<td align="center"><label><input type="checkbox" ng-model="m.d"-->
+                        <!--value="" ng-change="selectAll(m)"-->
+                        <!--ng-hide="m.service_status == 'DISPATCHED' || m.service_status ==  'CENTRAL OFFICE' "></label>-->
+                        <!--</td>-->
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="12">
+                            <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="mdl_present" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            ADD Components
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-xs-12">
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>SI No</label>
+                                        <input type="text" maxlength="16" ng-disabled="true" ng-model="SI_no" required/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Product Name</label>
+                                        <input type="text" maxlength="16" ng-disabled="true" ng-model="Product_name"
+                                               required/>
+                                    </md-input-container>
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Product Type</label>
+                                        <md-select ng-model="product_type" required ng-disabled="true">
+
+                                            <md-option ng-repeat="pro in Producttype"
+                                                       ng-click="producttype_click(pro.producttype_gid)"
+                                                       ng-value="pro" ng-selected="protypegid==pro.producttype_gid">
+                                                {{ pro.producttype_name }}
+                                            </md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-lg-6 col-sm-6 col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Component Name</label>
+                                        <md-select ng-model="component_name" required>
+
+                                            <md-option ng-repeat="name in Productname" ng-value="name"
+                                                       ng-selected="pronamegid==name.product_gid">
+                                                {{ name.product_name }}
+                                            </md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                </div>
+                                <div class="pull-right">
+                                    <md-button class="md-fab md-mini md-primary custbutton" type="submit"
+                                               ng-click="Add_components()">
+                                        <md-icon>add</md-icon>
+                                        <md-tooltip>Add</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 col-lg-12 col-sm-12 table-responsive">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                           md-progress="deferred">
+                                        <thead class="header">
+                                        <tr style="text-align:center">
+                                            <th>S.No</th>
+                                            <th>Component</th>
+                                            <th>QTY</th>
+                                            <!--<th>Action</th>-->
+
+                                            <!--<th>Select</th>-->
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="m in RepairDetail">
+                                            <td>
+                                                <center>{{$index + 1}}</center>
+                                            </td>
+                                            <td>{{m.product_name}}</td>
+                                            <td>1</td>
+                                            <!--<td ><md-button><i class="material-icons">edit</i></md-button>-->
+                                            <!--<md-button><i class="material-icons">delete</i></md-button></td>-->
+                                        </tr>
+                                        </tbody>
+
+                                    </table>
+                                </div>
+                            </div>
+                            <!--Present details-->
+                            <div class="col-lg-6 col-sm-6">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>Status</label>
+                                    <md-select ng-model="Repaired_name" required>
+
+                                        <md-option ng-repeat="name in repair_Status" ng-value="name"
+                                                   ng-selected="'REPAIR IN PROCESS'==name.Status">
+                                            {{ name.Status }}
+                                        </md-option>
+                                    </md-select>
+                                </md-input-container>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-info custbutton" ng-click="submitrepair()">
+                            Submit
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+    .md-select-menu-container.md-active {
+        z-index: 1060;
+    }
+    .md-autocomplete-suggestions-container{
+        z-index:100000 !important;
+    }
+    .md-dialog-container{
+        z-index:100000 !important;
+    }
+
+
+
+</style>
+<script>
+var app=angular.module('Appschedule',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+app.controller('Ctrlschedulereport', ['$scope', '$http', 'requestservice', '$filter', '$window', '$mdDialog', '$mdDateLocale','$element',
+ function($scope, $http, requestservice, $filter, $window, $mdDialog, $mdDateLocale,$element) {
+      $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+   $scope.currentPage = 1;
+   $scope.maxSize = 3;
+   $scope.itemsPerPage = 10;
+   $scope.maintable = [];
+   $scope.loading = function() {
+      $mdDialog.show({
+         templateUrl: 'loaderSpinner',
+         parent: angular.element(document.body),
+         clickOutsideToClose: false
+      });
+   };
+
+   $scope.to_date = new Date();
+
+
+   $mdDateLocale.formatDate = function(date) {
+      return $filter('date')($scope.to_date, "dd-MMM-yyyy");
+   };
+
+   function load() {
+
+      var servicedtl = requestservice.getservicedtl()
+      servicedtl.then(function(result) {
+         $scope.maintable = result.data;
+       
+         $scope.ServiceDetails = [];
+
+         angular.forEach($scope.maintable, function(value, key) {
+
+            if (value.service_status == "REPAIR" || value.service_status == "REPAIR IN PROCESS") {
+                 if(value.service_status == "REPAIR"){
+                   value.service_status = " REPAIR"
+                 }
+
+               $scope.ServiceDetails.push(value);
+
+            }
+         });
+       
+         $scope.ServiceDtl = $scope.ServiceDetails;
+
+         $scope.pageLength = $scope.ServiceDetails.length;
+         $scope.Totalpages = Math.ceil($scope.ServiceDetails.length / $scope.itemsPerPage);
+         angular.forEach($scope.ServiceDetails, function(value, key) {
+            $scope.ServiceDetails[key].checked = false;
+
+         });
+         console.log($scope.ServiceDetails)
+      });
+   }
+
+   load();
+
+   $scope.SR_status = [{
+      status: "REPAIR IN PROCESS"
+   }, {
+      status: " REPAIR"
+   }]
+
+
+   var cust = requestservice.getCustomername()
+   cust.then(function(result) {
+         $scope.Customer = result.data;
+         //alert(JSON.stringify(result.data))
+      },
+      function() {
+         alert('no data');
+      });
+
+   $scope.querySearch = function(query) {
+      te = $filter('filter')($scope.Customer, {
+         'display_name': query
+      });
+
+      return te;
+   }
+
+   $scope.cussearch = function(query) {
+      te = $filter('filter')($scope.Customer, {
+         'display_name': query
+      });
+
+      return te;
+   }
+
+   $scope.cust_name = "";
+
+   $scope.ACselectchange = function(query, status, sino, empl) {
+
+      if (query !== undefined) {
+         $scope.cust_name = query.customer_name;
+      } else if ($scope.selectedItem !== null) {
+         $scope.cust_name = $scope.selectedItem.customer_name;
+      } else {
+         $scope.cust_name = "";
+      }
+
+
+      $scope.ServiceDetails = $filter('filter')($scope.ServiceDtl, {
+         "customer_name": $scope.cust_name,
+         "service_status": status,
+         "service_productslno": sino,
+         "employee_name": empl
+      },);
+      $scope.pageLength = $scope.ServiceDetails.length;
+      $scope.search_flag = 1;
+
+   }
+
+
+   var producttype = requestservice.getproducttype()
+   producttype.then(function(result) {
+         var result1 = JSON.parse(result.data);
+         $scope.Producttype = result1;
+
+      }),
+      function() {
+         alert('no data');
+      };
+
+   $scope.producttype_click = function(gid) {
+      var productname = requestservice.getproductname(gid)
+      productname.then(function(result) {
+            var result = JSON.parse(result.data);
+
+            $scope.Productname = result;
+         }),
+         function() {
+            alert('no data');
+         };
+   }
+
+
+   $scope.employe = [];
+   var employee = requestservice.getemployee()
+   employee.then(function(result) {
+         $scope.employe = JSON.parse(result.data);
+
+      }),
+      function() {
+         alert('no data');
+      };
+
+
+   function selecteddate() {
+
+      var d = $scope.to_date;
+      var curr_date = d.getDate();
+      var curr_month = d.getMonth();
+      curr_month++;
+      var curr_year = d.getFullYear();
+      Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+   }
+
+
+   $scope.repair_Status = [{
+      Status: "REPAIR IN PROCESS"
+   }, {
+      Status: "REPAIRED"
+   }]
+
+   $scope.RepairDetail = [];
+
+   $scope.Update_repair = function(detail) {
+      $scope.SERVICE = [];
+
+      var component_data = requestservice.getcomponent(detail.service_gid);
+      component_data.then(function(result) {
+         $scope.RepairDetail = result.data;
+      })
+      $scope.protypegid = 9;
+      $scope.producttype_click(9);
+
+      $scope.SI_no = detail.service_productslno;
+      $scope.Product_name = detail.product_name;
+      $scope.service_gid = detail.service_gid;
+
+      $scope.cust_gid = detail.service_customer_gid;
+      $scope.empl_gid = detail.employee_gid
+      var d = new Date(detail.service_date);
+      var curr_date = d.getDate();
+      var curr_month = d.getMonth();
+      curr_month++;
+      var curr_year = d.getFullYear();
+      $scope.Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+      var service_json = {}
+      $scope.service_json = {
+         SERVICE: [{
+            product_gid: detail.service_product_gid,
+            product_slno: detail.service_productslno,
+            invoice_no: '',
+            remark: detail.service_remarks,
+            service_gid: detail.service_gid,
+            dispatch_mode: detail.service_dispatchmode,
+            pay_by: detail.service_courierexp,
+         }],"Schedule_Affect":"YES"
+      }
+
+      modalshow('mdl_present');
+   }
+
+   $scope.SERVICE = [];
+
+   function servicejson_set() {
+
+      $scope.SERVICE.push({
+         product_gid: $scope.component_name.product_gid,
+         remarks: ''
+
+
+      })
+   }
+
+
+   $scope.Add_components = function() {
+
+      if($scope.component_name !== "" && $scope.component_name !== undefined){
+      $scope.RepairDetail.push({
+
+         product_name: $scope.component_name.product_name,
+         product_gid: $scope.component_name.product_gid
+
+      })
+      servicejson_set();
+      $scope.component_name = "";
+      }else{
+        false;
+        alert("Select Any One Component")
+      }
+
+
+   }
+
+
+   $scope.submitrepair = function() {
+
+    if($scope.SERVICE.length > 0 || $scope.Repaired_name.Status == "REPAIRED"){
+      var service_json = {
+         service_gid: $scope.service_gid,
+         SERVICE: $scope.SERVICE,
+         "Schedule_Affect":"YES"
+      }
+
+      var save_repair = requestservice.setRepair(service_json);
+
+      save_repair.then(function(result) {
+
+         // alert(JSON.stringify(result.data))
+      })
+
+
+      var save_service = requestservice.setservice_dtl('update', $scope.cust_gid, $scope.service_json, $scope.Service_date, $scope.empl_gid, $scope.Repaired_name.Status);
+      save_service.then(function(result) {
+         if (result.data == "SUCCESS") {
+            alert("Inserted successfully!.");
+            $scope.SERVICE = [];
+
+            load();
+
+            modalhide('mdl_present');
+         } else {
+            alert("Data not inserted")
+         }
+      })
+
+    }else{
+      alert("Select Any One Component")
+    }
+
+   }
+
+   $scope.endloading = function() {
+      $mdDialog.hide();
+   };
+
+}]);
+app.service("requestservice", function ($http) {
+
+    this.getCustomername = function(){
+        var response = $http.post(Appname+"/customer_service/",{params:{'customer_gid':0,'customer_code':'','customer_name':''}});
+        return response;
+        }
+
+    this.getservicedtl = function(){
+        var response = $http.post(Appname+"/ServiceDtl_get/",{params:{'from_date':'','to_date':'','customer_gid':0,'product_gid':0,'service_gid':0}});
+        return response;
+        }
+
+    this.setdispatch_dtl = function(data,service_json){
+        var response = $http.post(Appname+"/Dispatch_Set/",{'dispatch_data':data,'service_dtl':service_json});
+        return response;
+        }
+
+    this.getstateddl = function (d) {
+        var response = $http.get(Appname+"/stateddl/");
+        return response;
+
+    }
+
+        this.getdistddl = function (state_gid) {
+        var response = $http.get(Appname+"/districtddl/", { params: { "state_gid": state_gid} });
+        return response;
+
+    }
+
+        this.getcityddl = function (district_gid) {
+        var response = $http.get(Appname+"/cityddl/", { params: { "district_gid": district_gid} });
+        return response;
+    }
+
+        this.getpincode = function (city_gid) {
+        var response = $http.get(Appname+"/pincode/", { params: { "city_gid": city_gid} });
+        return response;
+    }
+
+   this.getcourier_dtl = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params: { "courier_gid": 0, "courier_name":''} });
+        return response;
+    }
+
+    this.getemployee = function (d) {
+        var response = $http.get(Appname+"/employe_get/");
+        return response;
+    }
+
+        this.getproducttype = function (details) {
+
+        var response = $http.post(Appname+"/Producttype_service/", { params:{'producttype_gid': 0} });
+        return response;
+    }
+
+   this.getproductname = function(gid){
+        var response = $http.post(Appname+"/Productname_service/",{params:{'producttype_gid':gid,'supplier_gid':0}});
+        return response;
+        }
+
+
+    this.setRepair = function(service){
+        var response = $http.post(Appname+"/Repair_set/",{params:{'action':'Insert','service_dtl':service}});
+        return response;
+        }
+
+        this.getcomponent = function(service_gid){
+        var response = $http.post(Appname+"/Component_get/",{params:{'component_gid':0,'service_gid':service_gid}});
+        return response;
+        }
+
+         this.setservice_dtl = function(action,cust_gid,service,date,emplgid,sts){
+        var response = $http.post(Appname+"/Service_set/",{params:{'action':action,'date':date,'customer_gid':cust_gid,'status':sts,'SERVICE_JSON':service,'entity_gid':1,'employee_gid':emplgid}});
+        return response;
+        }
+
+});
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,262 @@
+
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Control Sheet Summary{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<script src="//mozilla.github.io/pdf.js/build/pdf.js"></script>
+<style>
+#mydiv {
+  position: absolute;
+  z-index: 9;
+
+  text-align: center;
+  border: 1px solid #d3d3d3;
+}
+
+#mydivheader {
+  padding: 10px;
+  cursor: move;
+  z-index: 10;
+  background-color: #2196F3;
+  color: #fff;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+}
+</style>
+<div class="maincontent">
+  <div class="container container1" ng-app="Control_sheet" ng-controller="Control_sheet_cl">
+    <h1>PDF.js Previous/Next example</h1>
+    <div>
+      <button id="prev">Previous</button>
+      <button id="next">Next</button>
+      &nbsp; &nbsp;
+      <span>Page: <span id="page_num"></span> / <span id="page_count"></span></span>
+    </div>
+    <canvas id="the-canvas"></canvas>
+    <div id="mydiv">
+      <div id="mydivheader">Click here to move</div>
+      <div class="col-md-4">
+        <md-input-container class="md-block inputcontainer">
+
+          <input type="text" ng-model="ponumber">
+
+        </md-input-container>
+        <div class="col-lg-12 col-sm-12 text-right">
+          <md-button class="md-raised" ng-click="product(ponumber)">
+            ExportData
+          </md-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endverbatim %}
+<script>
+
+// If absolute URL from the remote server is provided, configure the CORS
+// header on that server.
+var url = '../../media/destination4.pdf';
+
+// Loaded via <script> tag, create shortcut to access PDF.js exports.
+var pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+// The workerSrc property shall be specified.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+
+var pdfDoc = null,
+    pageNum = 1,
+    pageRendering = false,
+    pageNumPending = null,
+    scale = 0.8,
+    canvas = document.getElementById('the-canvas'),
+    ctx = canvas.getContext('2d');
+
+/**
+ * Get page info from document, resize canvas accordingly, and render page.
+ * @param num Page number.
+ */
+function renderPage(num) {
+  pageRendering = true;
+  // Using promise to fetch the page
+  pdfDoc.getPage(num).then(function(page) {
+    var viewport = page.getViewport({scale: scale});
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    // Render PDF page into canvas context
+    var renderContext = {
+      canvasContext: ctx,
+      viewport: viewport
+    };
+    var renderTask = page.render(renderContext);
+
+    // Wait for rendering to finish
+    renderTask.promise.then(function() {
+      pageRendering = false;
+      if (pageNumPending !== null) {
+        // New page rendering is pending
+        renderPage(pageNumPending);
+        pageNumPending = null;
+      }
+    });
+  });
+
+  // Update page counters
+  document.getElementById('page_num').textContent = num;
+}
+
+/**
+ * If another page rendering in progress, waits until the rendering is
+ * finised. Otherwise, executes rendering immediately.
+ */
+function queueRenderPage(num) {
+  if (pageRendering) {
+    pageNumPending = num;
+  } else {
+    renderPage(num);
+  }
+}
+
+/**
+ * Displays previous page.
+ */
+function onPrevPage() {
+  if (pageNum <= 1) {
+    return;
+  }
+  pageNum--;
+  queueRenderPage(pageNum);
+}
+document.getElementById('prev').addEventListener('click', onPrevPage);
+
+/**
+ * Displays next page.
+ */
+function onNextPage() {
+  if (pageNum >= pdfDoc.numPages) {
+    return;
+  }
+  pageNum++;
+  queueRenderPage(pageNum);
+}
+document.getElementById('next').addEventListener('click', onNextPage);
+
+/**
+ * Asynchronously downloads PDF.
+ */
+pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+  pdfDoc = pdfDoc_;
+  document.getElementById('page_count').textContent = pdfDoc.numPages;
+
+  // Initial/first page rendering
+  renderPage(pageNum);
+});
+
+var app = angular.module('Control_sheet', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function(
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('Control_sheet_cl', ['$scope', '$filter', 'sales_outstanding_summary', '$mdDialog', '$window', function($scope,
+    $filter, sales_outstanding_summary, $mdDialog, $window) {
+
+
+//Make the DIV element draggagle:
+dragElement(document.getElementById("mydiv"));
+
+function dragElement(elmnt) {
+  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  if (document.getElementById(elmnt.id + "header")) {
+    /* if present, the header is where you move the DIV from:*/
+    document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+  } else {
+    /* otherwise, move the DIV from anywhere inside the DIV:*/
+    elmnt.onmousedown = dragMouseDown;
+  }
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // get the mouse cursor position at startup:
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // calculate the new cursor position:
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    // set the element's new position:
+
+    elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+    elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    $scope.top=elmnt.offsetTop - pos2;
+    $scope.left=elmnt.offsetLeft - pos1;
+  }
+
+  function closeDragElement() {
+    /* stop moving when mouse button is released:*/
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+}
+
+$scope.product = function(e) {
+   $scope.top
+    $scope.left
+    data={
+      'top':$scope.top,
+      'left': $scope.left,
+      'value':e
+
+    }
+ debugger;
+ alert(JSON.stringify(e))
+ //const element = document.querySelector('#mydiv')
+//const stye = getComputedStyle(element.top)
+//console.log(style.content)
+<!-- var url="pdfedit?Main="+JSON.stringify(data);-->
+<!-- -->
+<!-- window.open(url,"_blank");-->
+
+<!--  var data_int=$scope.ponumber;-->
+   var Openpo = sales_outstanding_summary.get_pendingdata(data);
+    Openpo.then(function(result) {
+
+            $scope.Openpo_data = JSON.parse(result.data)
+
+
+        },
+        function(err) {
+            alert('No data!.');
+       }).finally();
+
+}
+    }]);
+//SERVICE PART
+app.service("sales_outstanding_summary", function($http) {
+    //geting the Excel
+
+    this.get_pendingdata = function(data) {
+        var respons = $http.post(Appname + "/pdfedit/", data
+
+        );
+        return respons;
+    }
+});
+
+</script>
+
+
+{% endblock %}

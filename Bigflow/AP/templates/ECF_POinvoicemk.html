@@ -1,0 +1,614 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} POInvoice Maker {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appsmry" ng-controller="Ctrlsmry" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>POInvoice Maker</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+
+                <div class="col-md-3" ng-show="!pohide">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PO Number</label>
+                        <input ng-model="POno" maxlength="16" required/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-1">
+                    <a href="" ng-click="poentry(POno)"><i class="material-icons"
+                                                           style="material-icons.line-height:3px;line-height: 3;">send</i></a>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Supplier Name</label>
+                        <md-select ng-model="supplier_gid" ng-disabled="true" required>
+                            <md-option><em>None</em></md-option>
+                            <md-option ng-repeat="posupplier in invoicesupplier_list"
+                                       ng-click="supplier_click(posupplier.supplier_gid)"
+                                       ng-selected="supplier_gid == posupplier.supplier_gid"
+                                       ng-value="posupplier.supplier_gid">
+                                {{posupplier.supplier_name}}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Date</label>
+                        <md-datepicker ng-disabled="true" md-hide-icons="calendar"
+                                       ng-model="invdate"
+                                       md-hide-icons="calendar" ng-click="date" md-min-date="maxDate"
+                                       md-max-date="minDate" formatDate required></md-datepicker>
+                    </md-input-container>
+                </div>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>State</label>
+                        <md-select ng-model="selectedstate" ng-disabled="true" required>
+                            <md-option ng-repeat="x in stateddl" ng-value="x.state_name"
+                                       ng-selected="state_gid == x.state_gid"
+                            >{{ x.state_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Invoice Number</label>
+                        <input ng-model="invoicenum" ng-disabled="true" numbers-only maxlength="10" required/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Invoice Amount</label>
+                        <input ng-model="invoiceamount" ng-disabled="true" numbers-only maxlength="10" required/>
+                    </md-input-container>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Product Category</th>
+                        <th>Product Name</th>
+                        <th>Product Type</th>
+                        <th>UOM</th>
+                        <th>Unit Price</th>
+                        <th>Qty Ordered</th>
+                        <th>ECF Process</th>
+                        <th>Qty Read & Paid</th>
+                        <th>Balance Qty</th>
+                        <th>Select</th>
+                        <th>Current Invoice qty Read</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="dtl in GRNdetail.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:searchquery ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{dtl.productcategory_name}}
+                        </td>
+                        <td>{{dtl.product_name}}</td>
+                        <td>{{dtl.producttype_name}}</td>
+                        <td>{{dtl.uom_name}}</td>
+                        <td>{{dtl.podetails_unitprice}}</td>
+                        <td>{{dtl.podetails_qty}}</td>
+                        <td>{{dtl.ECF_quantity}}</td>
+                        <td>{{dtl.paid_quantity}}
+                        </td>
+                        <td>{{dtl.balance_quantity}}</td>
+                        <td align="center">
+
+                            <!--                            <label><input type="checkbox" ng-model="d" ng-value="m.product_name"-->
+                            <!--                                                         class="checkAll" ng-change="select_po(dtl)"-->
+                            <!--                        ></label>-->
+
+
+                            <a href="" ng-click="Add_po(dtl,$index)">
+                                <i class="material-icons">
+                                    add
+                                </i></a>
+
+                        </td>
+
+                        <td><input type="text" class="textboxgeneral" maxlength="5"
+                                   ng-change="qtyvalid(dtl)" ng-model="dtl.all_qty" only-numbers/></td>
+                        <td>{{dtl.Amount}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="11" align="center">
+                            <ul uib-pagination total-items="GRNdetail.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{GRNdetail.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+
+                </table>
+
+                <div class="row ">
+
+                </div>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>POInvoice Creation</h4>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Product Name</th>
+                        <th>PO NO</th>
+                        <th>Unit Price</th>
+                        <th>Qty Ordered</th>
+
+
+                        <th>Amount</th>
+                        <th>Delete</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="dtl in PO_detail.slice(((po_currentPage-1)*po_itemsPerPage), ((po_currentPage)*po_itemsPerPage))  | filter:searchquery ">
+                        <td>
+                            <center>{{((po_currentPage-1)*po_itemsPerPage)+$index+1}}</center>
+                        </td>
+
+                        <td>{{dtl.item}}</td>
+                        <td>{{dtl.pono}}</td>
+                        <td>{{dtl.Unit_price}}</td>
+                        <td>{{dtl.qty}}</td>
+
+
+                        <td>{{dtl.Amount}}</td>
+                        <td><i class="material-icons removelink" title="Remove"
+                               ng-click="delete_invoice($index)">delete</i></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td>
+                            Total
+                        </td>
+                        <span style="display: none;">Total: {{ getTotal() }}</span>
+
+
+                        <td></td>
+                        <td></td>
+                        <td ng-hide="hide_show"></td>
+                        <td></td>
+
+                        <td></td>
+                        <td>{{calculatePay | number:2}}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" align="center">
+                            <ul uib-pagination total-items="PO_detail.length" ng-model="po_currentPage"
+                                max-size="po_maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="po_itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{PO_detail.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+
+                </table>
+
+                <div class="row ">
+                    <div class="col-lg-12 col-sm-12 text-right">
+                        <md-button ng-click="Close()" href="makersummary" class="md-raised">Close
+                            <md-tooltip>Close</md-tooltip>
+                        </md-button>
+
+
+                        <md-button ng-click="save_podetails()" ng-hide=""
+                                   class="md-raised md-warn">Submit
+                            <md-tooltip>Submit</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+
+<script>(function (global) {
+
+    if(typeof (global) === "undefined") {
+        throw new Error("window is undefined");
+    }
+
+    var _hash = "!";
+    var noBackPlease = function () {
+        global.location.href += "#";
+
+        // making sure we have the fruit available for juice (^__^)
+        global.setTimeout(function () {
+            global.location.href += "!";
+        }, 50);
+    };
+
+    global.onhashchange = function () {
+        if (global.location.hash !== _hash) {
+            global.location.hash = _hash;
+        }
+    };
+
+    global.onload = function () {
+        noBackPlease();
+
+        // disables backspace on page except on input fields and textarea..
+        document.body.onkeydown = function (e) {
+            var elm = e.target.nodeName.toLowerCase();
+            if (e.which === 8 && (elm !== 'input' && elm  !== 'textarea')) {
+                e.preventDefault();
+            }
+            // stopping event bubbling up the DOM tree..
+            e.stopPropagation();
+        };
+    }
+
+})(window);
+
+
+
+
+</script>
+<script>
+var myApp = angular.module('Appsmry', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+myApp.controller('Ctrlsmry', ['$scope', 'poinvoiceService', '$window', '$mdDialog','$filter','$mdDateLocale',
+   function($scope, poinvoiceService, $window, $mdDialog,$filter,$mdDateLocale) {
+      $scope.currentPage = 1;
+      $scope.maxSize = 3;
+      $scope.itemsPerPage = 10;
+
+      $scope.po_currentPage = 1;
+      $scope.po_maxSize = 3;
+      $scope.po_itemsPerPage = 10;
+
+   $mdDateLocale.formatDate = function(date) {
+      return $filter('date')($scope.invdate, "dd-MMM-yyyy");
+   };
+
+      $scope.ls_followup_date = new Date();
+
+      $scope.minDate = new Date(
+         $scope.ls_followup_date.getFullYear(),
+         $scope.ls_followup_date.getMonth(),
+         $scope.ls_followup_date.getDate()
+      );
+
+      $scope.maxDate = new Date(
+         $scope.ls_followup_date.getFullYear(),
+         $scope.ls_followup_date.getMonth() - 12,
+         $scope.ls_followup_date.getDate() - 1
+      );
+
+            var sttddl = poinvoiceService.getstateddl()
+      sttddl.then(function(result) {
+            $scope.stateddl = [];
+            $scope.stateddl = JSON.parse(result.data);
+            // alert(JSON.stringify($scope.stateddl) )
+         },
+         function() {
+            alert('no data');
+         });
+
+      $scope.loading = function() {
+         $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+         });
+      };
+
+
+
+      $scope.endloading = function() {
+         $mdDialog.hide();
+      };
+
+  $scope.delete_invoice = function(index) {
+        $scope.PO_detail.splice(index, 1);
+        count-- ;
+    }
+      var supplier = poinvoiceService.getdropdown("supplier");
+      supplier.then(function(supplier) {
+         var supplier = JSON.parse(supplier.data);
+
+         $scope.invoicesupplier_list = supplier;
+
+      }, function() {
+         alert("Record Not Found")
+      });
+    var status = '';
+    var PO_toinvoice = '';
+      var POdtl = JSON.parse(sessionStorage.getItem('POdtl'));
+      var POdtledit =  JSON.parse(sessionStorage.getItem('POdtledit'));
+    //  var CHECKLIST = POdtl.CHECKLIST
+          // alert(JSON.stringify(POdtl.CHECKLIST))
+      if (POdtl !== null) {
+          status = "NEW";
+        PO_toinvoice = POdtl;
+      }else{
+           status = "REPROCESS";
+           PO_toinvoice =  POdtledit
+      }
+        $scope.invoiceheader_gid = PO_toinvoice.invoiceheader_gid;
+        $scope.suppl_gid = PO_toinvoice.supplier_gid;
+        $scope.POno = PO_toinvoice.pono;
+      var summary = poinvoiceService.getmakerservice($scope.invoiceheader_gid,status);
+      summary.then(function(result) {
+
+            $scope.invoicenum = result.data[0].invoiceheader_invoiceno;
+            $scope.invoiceamount = result.data[0].invoiceheader_amount;
+            $scope.supplier_gid = result.data[0].supplier_gid;
+            $scope.state_gid = result.data[0].address_state_gid;
+            $scope.podate = result.data[0].invoiceheader_invoicedate;
+            $scope.invdate =  new Date(result.data[0].invoiceheader_invoicedate_full)
+
+         },
+         function(err) {
+            alert('No data!.');
+         }).finally($scope.endloading);
+
+
+       $scope.getTotal = function(){
+        var sum = 0;
+
+        var PO_detail = $scope.PO_detail;
+        for (var i = 0; i < PO_detail.length; i++) {
+          sum += parseFloat( PO_detail[i].Amount)
+
+        }
+
+      $scope.calculatePay = sum;
+
+        return sum;
+      }
+
+
+      $scope.qtyvalid = function(valid_dtl) {
+
+         if ((valid_dtl.balance_quantity - (valid_dtl.paid_quantity + (valid_dtl.ECF_quantity = valid_dtl.ECF_quantity || 0 ) ))  < valid_dtl.all_qty) {
+            alert("Given Quantity Is Greater Than Balance Quantity");
+            valid_dtl.all_qty = 0;
+            valid_dtl.Amount = parseFloat(valid_dtl.podetails_unitprice) * parseInt(valid_dtl.all_qty);
+
+
+         } else {
+            valid_dtl.Amount = parseFloat(valid_dtl.podetails_unitprice) * parseInt(valid_dtl.all_qty);
+
+
+         }
+
+      }
+
+  function javascript_abort() {
+        throw new Error('This is not an error. This is just to abort javascript');
+    }
+      $scope.PO_detail = []
+         var count = 1;
+
+      $scope.Add_po = function(value,inndex) {
+
+         if(value.all_qty > 0){
+            angular.forEach($scope.PO_detail, function(povalue, key) {
+                          if(povalue.PO_Detail_Gid == value.podetails_gid && povalue.GRN_Detail_Gid == value.grninwarddetails_gid ){
+
+                            if ((value.balance_quantity - (parseInt(povalue.qty) +(value.paid_quantity =value.paid_quantity || 0 ) + (value.ECF_quantity = value.ECF_quantity || 0 ) ))  >= parseInt( value.all_qty)) {
+                                var sumdata = 0;
+                                sumdata = parseInt(povalue.qty) +  parseInt( value.all_qty);
+                                povalue.qty = sumdata;
+                                povalue.Amount = parseFloat(value.podetails_unitprice) * sumdata;
+                                javascript_abort();
+                            }else{
+                             alert("Given Quantity Is Greater Than Balance Quantity");
+
+                            javascript_abort();
+                            }
+                          }
+            })
+
+
+
+                      $scope.PO_detail.push({
+                        "item": value.product_name,
+                        "description": value.description,
+                        "HSN_Code": value.hsn_code,
+                        "Unit_price": value.podetails_unitprice,
+                        "qty": value.all_qty,
+                        "Amount": value.Amount,
+                        "Amount_todb": value.Amount,
+                        "Discount": 0,
+                        "IGST": value.IGST,
+                        "CGST": value.CGST,
+                        "SGST": value.SGST,
+                        "Total_amount": value.Amount,
+                        "checked" : true,
+                        "Debit_checked" : true,
+                        "DEBIT_DETAILS":[],
+                        "PO_Header_Gid": value.poheader_gid,
+                        "PO_Detail_Gid": value.podetails_gid,
+                        "GRN_Header_Gid": value.grninwardheader_gid,
+                        "GRN_Detail_Gid": value.grninwarddetails_gid,
+                        "Invoice_Header_gid": $scope.invoiceheader_gid,
+                        "supplier_gid": $scope.suppl_gid,
+                        "pono":$scope.POno,
+                        "state": $scope.state_gid,
+                        "Invoice_Sno":count,
+                        "TYPE" : 'PO',
+                        "status": status,
+                        "bscc":value.bscc,
+                        "prod_catsub":value.prod_catsub,
+
+                     })
+
+                   count++;
+          }else{
+
+            alert("Given Quantity Should Be Greater Than Zero")
+          }
+
+
+      }
+
+      $scope.poentry = function(pono) {
+
+          var GRNdetail = poinvoiceService.getgrn(pono, PO_toinvoice.supplier_gid);
+          GRNdetail.then(function(GRNdetail) {
+             $scope.GRNdetail = GRNdetail.data;
+
+
+             angular.forEach($scope.GRNdetail, function(value, key) {
+                $scope.GRNdetail[key].checked = false;
+                $scope.GRNdetail[key].Amount = 0;
+
+             });
+            // alert(JSON.stringify($scope.GRNdetail));
+          }, function() {
+             alert("Record Not Found")
+          });
+
+      }
+
+
+
+
+      $scope.PO_detail = []
+         var count = 1;
+      function POjson_set(value) {
+
+             $scope.PO_detail.push({
+                        "item": value.product_name,
+                        "description": value.description,
+                        "HSN_Code": value.hsn_code,
+                        "Unit_price": value.podetails_unitprice,
+                        "qty": value.all_qty,
+                        "Amount": value.Amount,
+                        "IGST": value.IGST,
+                        "CGST": value.CGST,
+                        "SGST": value.SGST,
+                        "Total_amount": value.Amount,
+                        "Amount_todb": value.Amount,
+                        "Discount": 0,
+                        "checked" : true,
+                        "DEBIT_DETAILS":[],
+                        "PO_Header_Gid": value.poheader_gid,
+                        "PO_Detail_Gid": value.podetails_gid,
+                        "GRN_Header_Gid": value.grninwardheader_gid,
+                        "GRN_Detail_Gid": value.grninwarddetails_gid,
+                        "Invoice_Header_gid": $scope.invoiceheader_gid,
+                        "supplier_gid": $scope.suppl_gid,
+                        "pono":$scope.POno,
+                        "state": $scope.state_gid,
+                        "Invoice_Sno":count,
+                        "TYPE" : 'PO',
+                        "status": status,
+
+                        })
+
+         count++;
+      }
+
+      $scope.save_podetails = function() {
+
+         angular.forEach($scope.GRNdetail, function(value, key) {
+ // alert(JSON.stringify($scope.GRNdetail));
+            if (value.checked == true && value.all_qty > 0) {
+               POjson_set(value);
+
+            }
+
+         });
+         if ($scope.PO_detail.length > 0) {
+           var aray = ["rejecthead", "Viewap_dtl","rejecthead", "Approvdtl","checkerdtl", "POjson","CHECKLIST", "makerdtl","makerdtl_ecf", "POdtl","POdtledit","POjson"];
+aray.forEach(function(key) { sessionStorage.removeItem(key) });
+           sessionStorage.setItem('POjson', JSON.stringify($scope.PO_detail));
+          // sessionStorage.setItem('CHECKLIST',JSON.stringify( CHECKLIST));
+           if(status == 'NEW'){
+                 $window.location.href = "Ecf_billentry";
+             }else{
+                // $window.location.href = "billentryedit";
+             }
+         } else {
+            alert("Enter Atleast One Qty")
+         }
+
+      }
+
+
+   }
+]);
+
+myApp.service("poinvoiceService", function ($http,$filter) {
+    this.getdropdown = function (tablename) {
+        var responsee = $http.post(Appname+"/Dropdown_details/",{params:{"tablename":tablename,"gid":0,"name":''}});
+        return responsee;
+    }
+
+    this.getgrn = function (pono,supplier_gid) {
+
+        var responsee = $http.post(Appname+"/getgrndetail/",{params:{"action":'GRN',"POnumber":pono,"supplier_gid":supplier_gid}});
+        return responsee;
+    }
+
+    this.getstateddl = function (d) {
+        var response = $http.get(Appname+"/stateddl/");
+        return response;
+
+    }
+
+     this.getmakerservice = function (header_gid,status) {
+       //  alert(header_gid)
+        var response=$http.post(Appname+"/ECFInvoice_get/",{params:{"action":"INVOICE_MAKER_SUMMARY","ponumber":"","supplier_gid":0,"inwarddetail_gid":0,"inwardheader_gid":header_gid,"status":status}});
+        return response;
+    }
+
+    });
+
+
+
+
+
+
+</script>
+{% endblock %}

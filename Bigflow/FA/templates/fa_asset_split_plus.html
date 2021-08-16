@@ -1,0 +1,672 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Split {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-md-3">
+                    <h4>Asset Split Maker </h4>
+                </div>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Id</label>
+                            <input maxlength="30" ng-change="" ng-model="assetdetails_id" numbers-only
+                                   placeholder="Asset id"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Value</label>
+                            <input ng-change="" ng-model="assetdetails_value" placeholder="Asset Value"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Cap Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                           ng-change="selectdate()"
+                                           ng-model="assetdetails_cpdate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Category</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedcat"
+                                md-search-text="searchcat"
+                                md-selected-item-change="selectchange(item)"
+                                md-items="item in catsearch(searchcat)"
+                                md-item-text="item.assetcat_subcatname"
+                                md-min-length=0
+                                placeholder="Category">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Category matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Branch</label>
+                            <input ng-change="" ng-model="assetdetails_branch" placeholder="Branch"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       id="tb_emp">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th class="text-center" scope="col">Asset Transaction Id
+                        <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                    <th scope="col" class="text-center">Product Name</th>
+                    <th scope="col" class="text-center">Category</th>
+                    <th scope="col" class="text-center">Capitalization Date</th>
+                    <th scope="col" class="text-center">Asset Value</th>
+                    <th scope="col" class="text-center">Branch</th>
+                    <th scope="col" class="text-center">Location</th>
+                    <th scope="col" class="text-center">Status</th>
+                    <th scope="col" class="text-center">Action</th>
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="ast in asset | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{ast.index}}</center>
+                        </td>
+                        <td class="text-center" ng-click="imgshow($index)">{{ast.assetdetails_id}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.product_name}}</td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.asset_cat_name}}
+                        </td>
+                        <td class="text-center">{{ast.assetdetails_capdate}}</td>
+                        <td class="text-right">{{ast.assetdetails_value | number :
+                            fractionSize}}
+                        </td>
+                        <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.branch_name}} -
+                            {{view.branch_code}}
+                        </td>
+                        <td class="text-left" ng-repeat="view in ast.lj_default_details">{{view.location_name}}</td>
+                        <td class="text-left">{{ast.assetdetails_requeststatus}}</td>
+                        <td class="text-center"><span class="editlink" ng-click="viewdet(ast)">
+                            <md-icon>call_split</md-icon>
+                        </span></td>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-change="search()"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="1">
+                            <label>Page Count:</label>
+                            <select type="text" style="width:100px;"
+                                    class="form-control" placeholder="count"
+                                    ng-model="itemsPerPage">
+                                <option ng-value="10">10</option>
+                                <option ng-value="20">20</option>
+                                <option ng-value="50">50</option>
+                                <option ng-value="100">100</option>
+                                <option ng-value="150">150</option>
+                                <option ng-value="200">200</option>
+                            </select>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{pageLength}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--popup page start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Asset Split Form {{ assetdetails_id }}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="row">
+
+                    </div>
+                    <br/>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <b>Asset Value : &#8377; {{assetdetails_value }}</b>
+                            </div>
+                            <div class="col-md-3">
+                                <b>Asset ID : {{assetdetails_id}}</b>
+                            </div>
+                            <div class="col-md-3">
+                                <b>Asset Branch : <span> {{ branch_name }} </span></b>
+                                <!--                                              {{ invoice_totalamt | number : fractionSize}}-->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <div class="row table-responsive">
+                                        <div class="col-md-12 col-lg-12 col-sm-12">
+                                            <fieldset data-ng-repeat="choice in choices">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <md-input-container class="md-block inputcontainer">
+                                                            <label>Asset Id</label>
+                                                            <input type="text" ng-model="choice.Asset_New_Id" name=""
+                                                                   placeholder="Enter Asset ID">
+                                                        </md-input-container>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <md-input-container class="md-block inputcontainer">
+                                                            <label>Asset value</label>
+                                                            <input type="number"
+                                                                   ng-model="choice.Asset_Value"
+                                                                   ng-change="value_check()"
+                                                                   placeholder="Enter Asset Value">
+                                                        </md-input-container>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <md-button class="md-fab md-mini md-primary custbutton"
+                                                                   ng-show="$last"
+                                                                   ng-click="removeChoice()">
+                                                            <md-icon>close</md-icon>
+                                                            <md-tooltip>Remove</md-tooltip>
+                                                        </md-button>
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </div>
+                                    </div>
+                                    <md-button class="md-fab md-mini md-primary custbutton" ng-disabled="add_asset"
+                                               ng-click="addNewChoice()">
+                                        <md-icon>add</md-icon>
+                                        <md-tooltip>Create Asset</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div ng-show="reason">
+                            <div class="col-md-3">
+                            </div>
+                            <div class="col-md-9">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Split Reason</label>
+                                            <input class="textboxline" maxlength="60"
+                                                   placeholder="Comments for Split"
+                                                   ng-change="Check(comments)"
+                                                   ng-model="comments" required/>
+                                                   <p ng-show="test">The Special Characters except 'Comma', 'Fullstop' and 'Exclamation Mark'
+                                not accepted.</p>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label>Asset Split Date</label>
+                                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                       md-min-date="minDate"
+                                                       ng-change="date_check()"
+                                                       md-open-on-focus placeholder="Enter the date"
+                                                       ng-model="split_date" formatDate></md-datepicker>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <md-button class="btn btn-info custbutton" ng-click="Save()"
+                                           ng-disabled="enable_update">Submit
+                                    <md-tooltip>Submit</md-tooltip>
+                                </md-button>
+                                <md-button class="md-raised" data-dismiss="modal" ng-href="fa_asset_split_plus">Back
+                                    <md-tooltip>close</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--popup page End-->
+        </div>
+        <!--Image start-->
+            <div ng-include="'fa_image_popup'"></div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+fieldset{
+    background: #FCFCFC;
+    padding: 16px;
+    border: 1px solid #D5D5D5;
+}
+.addfields{
+    margin: 10px 0;
+}
+.remove{
+    background: #C76868;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 24px;
+    border: 0;
+    cursor: pointer;
+    display: inline-block;
+    padding: 4px 9px;
+    vertical-align: top;
+    line-height: 100%;
+}
+input[type="text"],
+select{
+    padding:5px;
+}
+
+
+</style>
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $element, $http,$mdDateLocale, $mdDialog, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.split_date = convertdate(td);
+    $scope.dbdate = convertdate(td);
+    $scope.orderByField = '';
+    $scope.itemsPerPage = 10;
+    $scope.maxSize  = 3;
+    $scope.currentPage = 1;
+    $scope.asset_id ='';
+    $scope.asset_value ='';
+    $scope.enable_update = true;
+    $scope.add_asset = false;
+    $scope.Assetcrntpge = 1;
+    $scope.AssetmaxSize = 1;
+    $scope.Assetitmpge = 1;
+    $scope.len_asset = '';
+    $scope.data_len = 0;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+      $scope.Check= function(x) {
+        var reg = /^[^`~@#$%\^&*()_+={}|[\]\\:';"<>?/]*$/;
+
+              if (!x.match(reg)) {
+              $scope.comments = x.substring(0, x.length-1);
+              $scope.test=true;
+
+              }
+              else
+              {
+               $scope.test=false;
+              }
+      };
+
+    $scope.loading_popup = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('viewmodal')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.maxDate = new Date($scope.split_date.getFullYear(), $scope.split_date.getMonth(), $scope.split_date.getDate() + 7);
+    $scope.minDate = new Date($scope.split_date.getFullYear(), $scope.split_date.getMonth() - 1, $scope.split_date.getDate());
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.viewdet = function(e) {
+
+        $scope.assetdetails_id = e.assetdetails_id;
+        $scope.assetdetails_value = e.assetdetails_value;
+        $scope.assetdetails_capdate = e.assetdetails_capdate;
+        $scope.assetdetails_gid = e.assetdetails_gid;
+        $scope.branch_name = e.branch_name;
+        $scope.assetdetails_status = e.assetdetails_requeststatus;
+        modalshow('viewmodal');
+        $scope.asset_data = [{
+            "asset_id": $scope.assetdetails_id,
+            "asset_value": $scope.assetdetails_value,
+            "cap_date": $scope.assetdetails_capdate,
+            "asset_code": $scope.assetdetails_gid,
+            "branch": $scope.assetdetails_branchgid,
+            "status": $scope.assetdetails_status,
+        }];
+        $scope.len_asset = parseInt($scope.asset.length) * 100;
+
+    }
+    $scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+            }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+            }
+    }
+    $scope.selectdate = function() {
+        $scope.assetdetails_capdate = $filter('date')(new Date($scope.assetdetails_cpdate),'yyyy-MM-dd');
+    }
+
+$scope.search = function() {
+        $scope.loading();
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Asset_Id": $scope.assetdetails_id,
+                    "Asset_Value": $scope.assetdetails_value,
+                    "Cap_Date": $scope.assetdetails_capdate,
+                    "Asset_Code": $scope.catagry,
+                    "Branch": $scope.assetdetails_branch,
+                    "Asset_Group":"N",
+                    "Page_Index":$scope.currentPage -1,
+                    "Page_Size":$scope.itemsPerPage,
+                },
+            }
+        };
+        var get_asset = newservice.asset_detail(data)
+        get_asset.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.asset = $scope.main;
+            if($scope.currentPage != 0){
+                var count = $scope.currentPage - 1;
+                count = count * $scope.itemsPerPage;
+            }
+            else{
+                count = 0;
+            }
+            for (i = 0; i < $scope.asset.length; i++) {
+                var t = i+1;
+                $scope.asset[i].index = count + t ;
+            };
+            $scope.pageLength = $scope.asset[0].Total_Row;
+            $scope.data_len = $scope.pageLength;
+            $scope.Totalpages = Math.ceil($scope.pageLength / $scope.itemsPerPage);
+            $scope.len_asset = parseInt($scope.pageLength) * 100;
+            $scope.choices = [{Asset_New_Id:$scope.len_asset,Asset_Value: ''}];
+        }).finally($scope.endloading);
+    }
+
+    loadcat();
+    function loadcat(){
+        var get_drop = newservice.drop_data()
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_drop_data = $scope.main;
+
+        });
+    }
+    $scope.catsearch = gotocat;
+        function gotocat(query) {
+            var result = $filter('filter')($scope.get_drop_data, {
+                'assetcat_subcatname': query
+            });
+            return result;
+        }
+
+
+    $scope.imgshow = function(id){
+    if($scope.asset[id].assetdetails_imagepath != null){
+         modalshow('viewmodals');
+         $scope.asset_img =$scope.asset[id].assetdetails_imagepath;
+     }
+    }
+
+    $scope.asset_id ='';
+    $scope.asset_value ='';
+
+    $scope.addNewChoice = function() {
+        var sum = 0;
+        for (i = 0; i < $scope.choices.length; i++) {
+            sum = parseFloat(sum) + parseFloat($scope.choices[i].Asset_Value);
+        }
+            if (sum > $scope.assetdetails_value){
+                $scope.add_asset = true;
+                var len = $scope.choices.length - 1;
+                $scope.choices[len].Asset_Value ="";
+                warning_toast(not_matched,time_toast);
+            }
+            else if(sum < $scope.assetdetails_value){
+                var newItemNo = $scope.choices.length+1;
+                $scope.len_asset = $scope.len_asset + 1;
+                $scope.choices.push({'Asset_New_Id':$scope.len_asset,'Asset_Value':''});
+            }
+            else if(sum == $scope.assetdetails_value){
+                $scope.enable_update = false;
+                $scope.reason = true;
+            }
+            else {
+               error_toast(no_data,time_toast);
+            }
+    };
+
+    $scope.removeChoice = function() {
+        var lastItem = $scope.choices.length-1;
+        $scope.choices.splice(lastItem);
+        $scope.add_asset = false;
+    };
+
+    $scope.value_check = function() {
+        var sum = 0;
+        for (i = 0; i < $scope.choices.length; i++) {
+            sum = parseFloat(sum) + parseFloat($scope.choices[i].Asset_Value);
+        }
+        if(sum == $scope.assetdetails_value){
+                $scope.add_asset = true;
+                $scope.reason = true;
+            if($scope.split_date != undefined){
+               $scope.enable_update = false;
+            }
+            }
+        else if(sum > $scope.assetdetails_value){
+                $scope.add_asset = true;
+                $scope.enable_update = true;
+                warning_toast(not_matched,time_toast);
+                var len = $scope.choices.length - 1;
+                $scope.choices[len].Asset_Value ="";
+            }
+        else {
+              $scope.add_asset = false;
+            }
+    };
+
+    $scope.date_check = function() {
+        if($scope.split_date != undefined){
+                $scope.value_check();
+            }
+        else{
+                $scope.enable_update = true;
+            }
+    };
+
+
+    $scope.Save = function() {
+            if($scope.comments == undefined){
+                error_toast(not_enter_reason,time_toast);
+            }
+        else{
+            var sum =parseInt(0);
+            for (i = 0; i < $scope.choices.length; i++) {
+                sum = parseFloat(sum) + parseFloat($scope.choices[i].Asset_Value);
+            }
+            if(sum == $scope.assetdetails_value && $scope.split_date != undefined ){
+
+                 var d = new Date($scope.split_date);
+                  var splitdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+                var Asset ={
+                    "Asset_Id"  : ($scope.assetdetails_id).toString(),
+                    "Asset_Gid" : ($scope.assetdetails_gid).toString(),
+                    "AssetSplit_Date":(splitdate).toString(),
+                    "All_Value": ($scope.assetdetails_value).toString(),
+                };
+
+               angular.forEach($scope.choices, function(item1) {
+                    item1.Asset_New_Id = (item1.Asset_New_Id).toString();
+                    item1.Asset_Value = (item1.Asset_Value).toString();
+               });
+
+                var save_data = {
+                    "Params": {
+                        "DETAILS": {
+                             "ASSET": Asset,
+                             "SPLIT": $scope.choices,
+                        },
+                        "CHANGE": {},
+                        "STATUS": {
+                            "Status":"SPLIT",
+                            "Remark":($scope.comments).toString(),
+                        },
+                    }
+                };
+                save_file(save_data);
+            }
+            else if(sum != $scope.assetdetails_value){
+                        $scope.enable_update = true;
+                }
+            else if($scope.split_date == undefined ){
+                        $scope.enable_update = true;
+                        error_toast(not_enter_date,time_toast);
+                }
+        }
+    }
+    function save_file(save_data){
+    var asset_save = newservice.assets_save(save_data,employgid);
+    $scope.loading_popup();
+    asset_save.then(function(res) {
+        $scope.set_msg = res.data.MESSAGE
+        if($scope.set_msg == 'SUCCESS' ){
+            success_toast();
+        }
+        else{
+            alert($scope.set_msg);
+        }
+        $window.location.href = "fa_asset_split_plus";
+    }).finally($scope.endloading);
+}
+});
+
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+       var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                "Sub_Type": "SEARCH",
+                "Type": "ASSET_DETAILS",
+                "Group": "FA_ASSET_TRAN_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+    this.assets_save = function(save_data,employgid) {
+        var respons = $http.post(Appname + "/writeoff_summary/", {
+            params: {
+                "Sub_Type": "MAKER",
+                "Action": "UPDATE",
+                "Type": "ASSET_SPLIT",
+                "Group": "FA_ASSET_TRAN",
+                "Employee_Gid": employgid,
+                "json": save_data,
+            }
+        });
+        return respons;
+    }
+     this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+     }
+});
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

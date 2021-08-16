@@ -1,0 +1,254 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} FET Report{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="Appreport" ng-controller="Ctrlreview">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>FET Report</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Employee</label>
+                    <md-select ng-model="ddlemp_gid">
+                        <md-option ng-value="0"><em>--Select--</em></md-option>
+                        <md-option ng-repeat="emp in followups" ng-value="emp">
+                            {{ emp.employee_name }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-open-on-focus md-max-date="maxDate"
+                                   ng-model="from_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>To Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-open-on-focus md-min-date="from_date"
+                                   md-max-date="maxDate" ng-model="to_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Type</label>
+                    <md-select ng-model="ddltype" md-container-class="popup_select">
+                        <md-optgroup label="Type">
+                            <md-option ng-repeat="type in types" ng-value="type">{{
+                                type.scheduletype_name }}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>State</label>
+                    <md-select ng-model="ddlstate" md-container-class="popup_select">
+                        <md-optgroup label="State">
+                            <md-option ng-repeat="s in state" ng-value="state">{{
+                                s.name }}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-button class="md-raised custbutton" ng-click="Excelexport()">
+                    Report
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script type="text/javascript">
+    var app_report = angular.module('Appreport', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+app_report.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+app_report.controller('Ctrlreview', function($scope, $rootScope, $filter, $mdDialog, Serreport, SerCommon) {
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.salesSchedule = [];
+    $scope.custgrp = [];
+    $scope.from_date = '';
+    $scope.to_date = '';
+    $scope.followups =[];
+    $scope.showat = function(refno) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.login_emp_gid = detail.employee_gid;
+    }
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.testt = function(ev) {
+        ev.stopPropagation();
+    }
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    function loadMain(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid,Cname) {
+        $scope.loading()
+        var overalldtl = Serreport.getschedulelist(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid,Cname);
+        overalldtl.then(function(res) {
+            overallSchedule = res.data;
+            $scope.salesSchedule = overallSchedule;
+            $scope.salesSchedule = $filter('filter')(overallSchedule, {
+                'schedulereview_reviewstatus': $scope.ddlstatus
+            });
+            if ($scope.salesSchedule[0].admin == 'Y') {
+                var get_employ = SerCommon.getemployee(0, '', 0, 'ALL')
+                get_employ.then(function(result) {
+
+                    $scope.empsmry = result.data;
+                $scope.followups = $filter('filter')($scope.empsmry, function(item) {
+                     return (item.employee_dept_gid == '2' || item.employee_dept_gid == '7')
+                })
+                }, function(err) {
+                    alert('No data!.');
+                })
+
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.followups, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+
+            } else {
+                login_emp_gid = $scope.salesSchedule[0].login_gid
+                var get_employ = SerCommon.getemployee(login_emp_gid, '', 0, 'HIERARCHY')
+                get_employ.then(function(result) {
+
+                    $scope.followups = result.data;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.followups, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+            }
+        }, function(err) {
+            <!--alert(err);-->
+        }).finally($scope.endloading);
+    }
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    loadMain(detail.employee_gid, '', '', '', '', '', '', 0, 0, 0, 0, detail.employee_gid,'');
+    var get_types = Serreport.getScheduleType()
+    get_types.then(function(result) {
+
+        $scope.types = result.data;
+    }, function(err) {
+        alert('No data!.');
+    })
+    $scope.state = [{name:'TAMIL NADU'},{name:'KERELA'}]
+    $scope.maxDate = new Date();
+    var login_emp_gid = 0;
+
+    $scope.Excelexport = function(){
+        var data = [];
+        var emp_gid = 0;
+        var f_date = '';
+        var t_date = '';
+        var cus_gid = 0;
+        var type_gid = '';
+        var custgrp = 0;
+        var loc = '';
+
+        if ($scope.ddlemp_gid) {
+            emp_gid = $scope.ddlemp_gid.employee_gid
+        };
+        if ($scope.ddlcus_gid) {
+            cus_gid = $scope.ddlcus_gid.customer_gid
+        };
+        if ($scope.ddlcusgrp_gid) {
+            custgrp = $scope.ddlcusgrp_gid.customergroup_gid
+        };
+        if ($scope.ddlstate) {
+
+            loc = $scope.ddlstate.name
+        };
+        if ($scope.from_date) {
+            f_date = formatDate($scope.from_date)
+        };
+        if ($scope.to_date) {
+            t_date = formatDate($scope.to_date)
+        };
+        if ($scope.ddltype) {
+            type_gid = $scope.ddltype.scheduletype_name
+        };
+        a = "fetreview_getexcel/?action=excelreport&cus_gid="+cus_gid+"&custgrp_gid="+custgrp+"&emp_gid="+emp_gid+"&f_date="+f_date+"&loc_name="+loc+"&t_date="+t_date+"&type_gid="+type_gid;
+        window.location.href=a;
+
+    }
+});
+
+app_report.service("Serreport", function($http) {
+    this.getschedulelist = function(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp, loc_gid, login_emp_gid,Cname) {
+        var response = $http.get(Appname + "/emp_schedule_get", {
+            params: {
+                "action": "SCHEDULE_SUMMARY",
+                "f_date": f_date,
+                "t_date": t_date,
+                "fu_f_date": fu_f_date,
+                "fu_t_date": fu_t_date,
+                "rs_f_date": rs_f_date,
+                "rs_t_date": rs_t_date,
+                "emp_gid": emp_gid,
+                "cus_gid": cus_gid,
+                "scheduletype_gid": type_gid,
+                "custgrp": custgrp,
+                "loc_gid": loc_gid,
+                "login_emp_gid": login_emp_gid,
+                "Cname":Cname
+            }
+        });
+        return response;
+    };
+    this.getScheduleType = function() {
+        var response = $http.get(Appname + "/schedule_type");
+        return response;
+    };
+    this.getexcel = function(action, emp_gid, f_date, t_date, cus_gid, type_gid, custgrp_gid, loc_name) {
+        var response = $http.get(Appname + "/fetreview_getexcel/", {
+            params: {
+                "action": action,
+                "emp_gid":emp_gid,
+                "f_date":f_date,
+                "t_date":t_date,
+                "cus_gid":cus_gid,
+                "type_gid":type_gid,
+                "custgrp_gid":custgrp_gid,
+                "loc_name":loc_name,
+            }
+        });
+        return response;
+    };
+});
+
+
+</script>
+{% endblock %}

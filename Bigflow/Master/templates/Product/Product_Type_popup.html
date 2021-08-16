@@ -1,0 +1,126 @@
+{% verbatim %}
+<div aria-hidden="True" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+     data-keyboard="false"
+     id="md_present"
+     role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header popup-header" style="z-index: 99000 !important">
+                <h5 class="modal-title" id="exampleModalLabel">
+                    Product Sub Category Details
+                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </h5>
+            </div>
+            <div class="modal-body popup-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Product Category</label>
+                            <md-select ng-model="add.selectedcat1" md-container-class="popup_select"
+                                       ng-change="prodcat_change(selectedcat)">
+                                <md-option ng-repeat="x in prodcatgory" ng-value="x.productcategory_gid">{{
+                                    x.productcategory_name }}
+                                </md-option>
+                                
+                            </md-select>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-5">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Product Type Name</label>
+                            <input type="text" ng-model="add.product_typename">
+                        </md-input-container>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 col-md-offset-4">
+                            <md-button class="md-raised custbutton" value="Close" class="btn btn-secondary"
+                                       ng-hide="!update"
+                                       ng-click="save2(add);">Submit
+                            </md-button>
+                            <md-button class="md-raised custbutton" value="Close" class="btn btn-secondary"
+                                       ng-hide="update"
+                                       ng-click="editdetails3(add);">update
+                            </md-button>
+                            <md-button class="md-raised" value="close" ng-href="productadd">Cancel</md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appproduct', ['ngMaterial', 'ui.bootstrap']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+myApp.controller('Ctrlproduct', ['$scope', 'testService', '$mdDialog', '$rootScope', '$window',
+    function($scope, testService, $mdDialog, $rootScope, $window) {
+        $scope.list_trading_item = [{
+            id: 'Y',
+            data: 'YES'
+        }, {
+            id: 'N',
+            data: 'NO'
+        }];
+        $scope.setproduct1 = [];
+        $scope.getproduct1 = [];
+        $scope.setproduct = [];
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.create_by = detail.employee_gid;
+
+        $scope.entity_gid = detail.entity_gid;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $rootScope.prodcat_change = function(selectedcat) {
+            if (selectedcat == 0) {
+                $scope.loading();
+                $mdDialog.show({
+                    controller: 'DialogController',
+                    templateUrl: 'prodcatgry',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: true,
+                }).finally($scope.endloading);
+                $scope.showedit = false;
+            } else {
+                var prodcat_gid = selectedcat;
+                var get_type = testService.gettype(prodcat_gid)
+                get_type.then(function(result) {
+                    $scope.prodtypes = JSON.parse(result.data);
+                }, function(err) {
+                    alert('No data!.');
+                }).finally();
+                $scope.showedit = true;
+            }
+        };
+        var get_category = testService.getcategory()
+        get_category.then(function(result) {
+            $scope.prodcatgory = JSON.parse(result.data);
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+]);
+myApp.service("testService", function($http) {
+    this.getcategory = function() {
+        var response = $http.get("/categoryget/");
+        return response;
+    }
+});
+</script>

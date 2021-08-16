@@ -1,0 +1,381 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PO Close Create {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Apppoclosecreate" ng-controller="Ctrlpoclosecreate" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PO Close Create</h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PO No</label>
+                        <input id="ponum" maxlength="256" ng-disabled="true" ng-model="poheader_no"/>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Supplier Name</label>
+                        <input id="supplr" maxlength="256" ng-disabled="true" ng-model="supplier_name"/>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Product Category</th>
+                        <th>Product type</th>
+                        <th>Product Name</th>
+                        <th>UOM</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Amount</th>
+                        <th>Total Amount</th>
+                        <th>Delivery</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="podet in close_podetails" align="right">
+                        <td >
+                            {{$index+1}}
+                        </td>
+                        <td>
+                            <span>{{podet.productcategory_name}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.producttype_name}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.product_name}}</span>
+                        </td>
+                       
+                        <td>
+                            <span>{{podet.podetails_uom}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.podetails_qty}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.podetails_unitprice| number:2}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.podetails_amount| number:2}}</span>
+                        </td>
+                        <td>
+                            <span>{{podet.podetails_totalamount| number:2 }}</span>
+                        </td>
+                        <td align="center">
+                            <a align="center" data-target="#godown_view"
+                               data-toggle="modal" ng-click="godowndetails(podet.podetails_gid,podet.product_name,podet.podetails_qty)"
+                               style='cursor: pointer; text-decoration:none;'>
+                                <i class="material-icons">send</i>
+                                <md-tooltip>Delivery Details</md-tooltip>
+                            </a>
+                        </td>
+                    </tr>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr align="right">
+                        <td colspan="8">
+                            Total
+                        </td>
+                      
+                        <td>{{calculatePay | number:2}}</td>
+                        <td ng-hide="hide_show"></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row  text-left">
+            <form name="poapprovel" role="form">
+                <div class="col-lg-3 col-sm-3 ">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Close Remarks</label>
+                        <input id="btn_search_inline"   letter-Num name="Create" ng-disabled="created"
+                         ng-maxlength="256" ng-model="ls_Remarks"
+                         autocomplete="off"
+                               required type="text"/>
+                    </md-input-container>
+                </div>
+            </form>
+        </div>
+        <div class="row ">
+            <div class="col-lg-12 col-sm-12 text-right">
+                <button  type="button" class="btn btn-default"
+                          style="margin:5px;"
+                 ng-click="close()"  value="Close">Close</button>
+                <button  type="button" class="btn btn-success" 
+                          style="margin:5px;"
+                ng-click="poclose_submit()"
+                 ng-disabled="poapprovel.$invalid" ng-hide="disabled"
+                           type="button" value="submit">PO Close
+                </button>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static" data-keyboard="false"
+             id="godown_view"
+             role="dialog" tabindex="-1">
+            <form name="Delivery" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                Delivery Details
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                        <div>
+                            {{erroemessagedelivery}}
+                        </div>
+                        <div class="modal-body">
+                            Product Name : {{product_name}} Product Qty:{{product_qty}}
+                            <table class="table  table-striped table-bordered table-condensed table-hover">
+                                <thead class="header">
+                                <tr>
+                                    <td style="width:10px;">
+                                        Sno
+                                    </td>
+                                    <td rowspan="2" style="width:10px;">
+                                        Godown Name
+                                    </td>
+                                    <td rowspan="2" style="width: 100px;">
+                                        Incharge Name
+                                    </td>
+                                    <td rowspan="2" style="width: 200px;">
+                                        Address
+                                    </td>
+                                    <td rowspan="2" style="width: 30px;">
+                                        UOM
+                                    </td>
+                                    <td rowspan="2" style="width: 30px;">
+                                        Quantity
+                                    </td>
+
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="des in godown_detail">
+                                    <td>
+                                        {{$index+1}}
+                                    </td>
+                                    <td>
+                                        <span>{{des.common_name}} </span>
+                                    </td>
+                                    <td>
+                                        <span>{{des.employee_name}}</span>
+                                    </td>
+                                    <td>
+                                        <span>{{des.address_1}}</span>
+                                    </td>
+                                    <td>
+                                        <span>{{des.uom_name}}</span>
+                                    </td>
+                                    <td width="55px;">
+                                        <span>{{des.podelivery_qty}}</span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                             <div class="row">
+                                <div class="col-md-12 text-center">
+                                    <md-button class="md-raised" data-dismiss="modal">Close
+                                        <md-tooltip>close</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+</div>
+
+
+{% endverbatim %}
+<script>
+var myApp = angular.module('Apppoclosecreate', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+  myApp.directive('letterNum', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z./' ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+myApp.controller('Ctrlpoclosecreate', ['$scope','Servicepoclosecreate','$mdDialog','$window', function($scope,Servicepoclosecreate,$mdDialog,$window) {
+
+    
+
+        $scope.loading = function () {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function () {
+            $mdDialog.hide();
+        };
+
+        var po_gid = JSON.parse(sessionStorage.getItem('poclosepoheader'));
+
+            if (po_gid.poclose_status != null ) {
+                  $scope.created = true;
+            }
+
+        var get_podetails = Servicepoclosecreate.getpodetails(po_gid.poheader_gid);
+        get_podetails.then(function(result) {
+                var details = JSON.parse(result.data)
+                $scope.close_podetails = details;
+                if (details.length > 0) {
+                        var prodname = $scope.close_podetails;
+                        if (prodname.length > 0) {
+                                $scope.poheader_gid = prodname[0].poheader_gid;
+                                $scope.supplier_name = prodname[0].supplier_name;
+                                $scope.supplier_gid = prodname[0].supplier_gid;
+                                $scope.poheader_no = prodname[0].poheader_no;
+                                $scope.teamandcond_gid = prodname[0].teamandcond_gid;
+                                $scope.teamandcond_name = prodname[0].poterms_name;
+                        }
+                        $scope.calculatePay = calucatesum();
+
+                if(po_gid.postatus=="REOPENED" && po_gid.poclose_status=="Approved"){
+                      $scope.disabled=false;
+                      $scope.created=false;
+                     
+                }
+                else{
+                if(po_gid.poclose_status=="Approved" || po_gid.poclose_status=="Pending for Approval"){
+                     
+                    $scope.disabled=true;
+                      $scope.created=true;
+                      $scope.ls_Remarks= $scope.close_podetails[0].poheader_closeremarks;
+                     
+                }
+                else{
+
+                    $scope.disabled=false;
+                      $scope.created=false;
+                      
+                }
+                }
+             }
+
+        }, function() {
+                alert('Records not found');
+        });
+
+        function calucatesum() {
+                var sum = 0;
+                var podetails = $scope.close_podetails;
+                for (var i = 0; i < podetails.length; i++) {
+                        if (podetails[i].podetails_totalamount !== undefined && podetails[i].podetails_totalamount !== "") {
+                                sum += parseFloat(podetails[i].podetails_totalamount);
+                        }
+                }
+                return sum;
+        };
+
+         $scope.godowndetails = function(gid, product_name, qty) {
+             $scope.loading();
+                $scope.product_qty = qty;
+                $scope.product_name = product_name;
+                var getgodown = Servicepoclosecreate.getgodown(gid);
+                getgodown.then(function(getgodown) {
+                        var delivery_detail = JSON.parse(getgodown.data)
+                        $scope.godown_detail = delivery_detail;
+                }, function() {
+                        alert('Records not found');
+                }).finally($scope.endloading);
+        }
+
+        $scope.poclose_submit=function(){
+            $scope.loading();
+            $scope.poapprovel.$invalid=true;
+            var savepoclosedetails=Servicepoclosecreate.savedetails('close',po_gid.poheader_gid,$scope.ls_Remarks);
+                savepoclosedetails.then(function(result){
+                    var status = JSON.parse(result.data)
+                    if(status=="SUCCESS"){
+                     alert("Move to Approval Level");
+                      sessionStorage.removeItem('poclosepoheader');
+                      $window.location.href="PO_Close_Maker"}
+                      else{
+                          alert(" Not Able Move the PO For Approval")
+                      }
+            }, function() {
+                      alert('Records not found');
+                      $scope.poapprovel.$invalid=false;
+            }).finally($scope.endloading);
+        }
+
+        $scope.close=function(){
+            sessionStorage.removeItem('poclosepoheader');
+            $window.location.href="PO_Close_Maker"
+
+        }
+
+     }]);
+
+ myApp.service("Servicepoclosecreate", function ($http) {
+     this.getpodetails = function (po_gid) {
+        var response = $http.post(Appname + "/Approval_PODetail/", { params:{'podetails_gid': po_gid ,'product_name': ''}});
+        return response;
+    }
+
+    this.getgodown = function(detail_gid){
+      var response = $http.post(Appname+"/PODelivery_detail/", { params:{'podetails_gid': detail_gid }})
+        return response;
+    }
+
+    this.savedetails=function(action,poheader_gid,remarks){
+        var response=$http.post(Appname+"/Approval_Update/", { params:{'action': action,'poheader_gid':poheader_gid,'remark':remarks }})
+         return response;
+    }
+
+  });
+
+
+
+
+
+
+</script>
+{% endblock %}

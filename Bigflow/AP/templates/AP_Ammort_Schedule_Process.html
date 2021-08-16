@@ -1,0 +1,234 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Ammort Schedule Process {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <form name="invoice_form" novalidate>
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>Ammort Schedule Process</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-autocomplete
+                                md-clear-button="true"
+                                md-floating-label="Choose Month"
+                                md-input-maxlength=126
+                                md-item-text="month.month_name"
+                                md-items="month in getMonthName(searchMonthName)"
+                                md-selected-item-change="MonthChanged(month.month_value)"
+                                md-min-length=0
+                                md-search-text="searchMonthName"
+                                ng-model="month"
+                                md-no-cache="true"
+                                size="5"
+                                ng-disabled="true"
+                                ng-required="true"
+                                md-selected-item="selected_month_item">
+                            <md-item-template>
+                                <span md-highlight-text="searchMonthName"> {{month.month_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Property Name matching "{{searchMonthName}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                        <md-autocomplete
+                                md-clear-button="true"
+                                md-floating-label="Choose Year"
+                                md-input-maxlength=126
+                                md-item-text="year.year_name"
+                                md-items="year in getyear(searchyear)"
+                                md-selected-item-change="year_change(year.year_value)"
+                                md-min-length=0
+                                md-search-text="searchyear"
+                                ng-model="year"
+                                md-no-cache="true"
+                                size="5"
+                                ng-disabled="true"
+                                ng-required="true"
+                                md-selected-item="selected_year">
+                            <md-item-template>
+                                <span md-highlight-text="searchyear"> {{year.year_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Year matching "{{searchyear}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-5"></div>
+                    <div class="col-md-2">
+                        <md-button class="btn btn-info custbutton"
+                                   value="submit"
+                                   ng-click="save_schedule_process()"
+                                   ng-disabled="!selected_month_item || !selected_year">
+                            SUBMIT
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endverbatim %}
+
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+   });
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog, $element) {
+
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.minDate=new Date();
+    $scope.all_date=[];
+    $scope.total_amount=0;
+    $scope.selected_month=0;
+
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date;
+    var employgid = detail.employee_gid;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.month_all=[
+        {"month_name":"January","month_value":1},{"month_name":"February","month_value":2},
+        {"month_name":"March","month_value":3},{"month_name":"April","month_value":4},
+        {"month_name":"May","month_value":5},{"month_name":"June","month_value":6},
+        {"month_name":"July","month_value":7},{"month_name":"August","month_value":8},
+        {"month_name":"September","month_value":9},{"month_name":"October","month_value":10},
+        {"month_name":"November","month_value":11},{"month_name":"December","month_value":12}
+    ];
+
+    $scope.getMonthName = Change_Month_Name;
+        function Change_Month_Name(query) {
+           var result = $filter('filter')($scope.month_all, {
+           'month_name': query
+             });
+           return result;
+    }
+
+    $scope.MonthChanged=function(month_value){
+       $scope.selected_month=month_value;
+    }
+
+    $scope.years=[];
+    $scope.start_year = 1900;
+    $scope.curent_year= new Date();
+    $scope.only_curent_year=$filter('date')($scope.curent_year, "yyyy");
+    $scope.selected_month=$filter('date')($scope.curent_year, "MM");
+    $scope.selected_month_item=$filter('date')($scope.curent_year, "MMMM");
+    $scope.selected_year=$scope.only_curent_year;
+
+    for(var i=$scope.only_curent_year;i>=$scope.start_year;i--){
+        $scope.years.push({"year_name":i,"year_value":i});
+    }
+
+    $scope.getyear = change_year;
+        function change_year(query) {
+           var result = $filter('filter')($scope.years, {
+           'year_name': query
+             });
+           return result;
+    }
+
+    $scope.year_change=function(year){
+        if(year!=undefined){
+            $scope.selected_year=year;
+            console.log(year);
+        }
+
+    }
+
+
+    $scope.save_schedule_process=function(){
+    debugger;
+        $scope.to_date=$filter('date')($scope.to_date, "yyyy-MM-dd");
+    
+        var datas={params:{"action":"GET","type":"AMORT_GID",
+        "filter":{"Month":parseInt($scope.selected_month),"Year":parseInt($scope.selected_year)}}};
+        console.log($scope.selected_month);
+
+        $scope.loading();
+        var ammort = servicesummary.get_ammort_schedule_process(datas);
+        ammort.then(function(result) {
+            var res = result.data;
+            debugger;
+            if(res=="SUCCESS"){
+               alert("Succesfully Amort Schedule Process Created...");
+            }
+            else if(res=="ammortdetail_amortheadergid"){
+                alert("No Records, So Amort Schedule Process Not Run");
+            }
+            else{
+                alert(JSON.stringify(res));
+            }
+        }, function(err) {
+           alert("Date Not Inserted!");
+        }).finally($scope.endloading);
+    }
+
+
+
+}]);
+app.service("servicesummary", function ($http) {
+
+    this.get_ammort_schedule_process=function(data){
+        var response=$http.post(Appname+"/run_ammort/",data);
+        return response;
+    }
+
+    this.set_schedule_ammort=function(datas){
+        var response=$http.post(Appname+"/set_ammort/",datas);
+        return response;
+    }
+
+
+});
+
+
+
+
+
+
+
+</script>
+{% endblock %}

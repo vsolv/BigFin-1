@@ -1,0 +1,366 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Stale Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Stale Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <form role="form" name="inwardsummary_valid">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Type</label>
+                                <md-select ng-model="selectedtype"
+                                           ng-change="ACselectchange(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate)">
+                                    <md-optgroup label="Invoice Type">
+                                        <md-option ng-repeat="c in channelddl" ng-click="typeclick(c.metadata_value)"
+                                                   ng-value="c.metadata_value"> {{c.metadata_value}}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="invdate"
+                                               md-hide-icons="calendar"
+                                               ng-change="ACselectchange(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate)"
+                                               md-min-date="maxDate"
+                                               md-max-date="minDate" formatDate required></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Supplier Name</label>
+                                <md-select ng-model="supplier_gid"
+                                           ng-change="ACselectchange(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate)"
+                                           ng-disabled="disable" md-on-close="clearSearchTerm()"
+                                           data-md-container-class="selectdemoSelectHeader">
+                                    <md-select-header class="demo-select-header">
+                                        <input ng-model="searchTerm" type="search"
+                                               placeholder="Search for a Supplier Name.."
+                                               class="demo-header-searchbox md-text">
+                                    </md-select-header>
+                                    <md-optgroup label="Supplier Name">
+                                        <md-option ng-value="posupplier.supplier_gid"
+                                                   ng-click="supplier_click(posupplier.supplier_gid)"
+                                                   ng-selected="supplier_gid == posupplier.supplier_gid" ng-repeat="posupplier in invoicesupplier_list |
+              filter:searchTerm">{{posupplier.supplier_name}}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Number</label>
+                                <input ng-model="invoicenum"
+                                       ng-change="ACselectchange(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate)"
+                                       numbers-only maxlength="10"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Amount</label>
+                                <input ng-model="invoiceamt"
+                                       ng-change="ACselectchange(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate)"
+                                       numbers-only maxlength="10"/>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <div class="pull-right">
+
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>CR No</th>
+                        <!--<th>Invoice Type</th>-->
+                        <!--<th>Supplier Name</th>-->
+                        <!--<th>Employee Name</th>-->
+                        <th>Stale Release</th>
+                        <th>Chq Date</th>
+                        <th>Invoice Amount</th>
+                        <th>Payment Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sum in stale_summary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | filter :name">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <td ng-click="invoicehistory(sum)"><a href="">
+                            {{sum.stalechq_pvno}}</a>
+                        </td>
+                        <!--<td>-->
+                            <!--{{sum.invoiceheader_invoicetype}}-->
+                        <!--</td>-->
+                        <!--<td>-->
+                            <!--{{sum.supplier_name}}-->
+                        <!--</td> <td>-->
+                            <!--{{sum.employee_name}}-->
+                        <!--</td>-->
+                        <td>{{sum.stalechq_release}}</td>
+                        <td>{{sum.stalechq_date }}</td>
+                        <td align="right">{{sum.invoiceheader_amount}}</td>
+                        <td align="right">{{sum.paymentheader_amount}}</td>
+                        <td>{{sum.stalechq_status}}</td>
+                        <td class="text-center" ng-click="Add_AP(sum)">
+                            <a href=""><i class="material-icons"
+                                          style="material-icons.line-height:3px">send</i></a>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul uib-pagination total-items="stale_summary.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2" style="padding: 34px">
+                            <strong>Total Count:{{stale_summary.length}}</strong>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog,$element) {
+
+ $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+
+   $scope.currentPage = 1;
+   $scope.maxSize = 3;
+   $scope.itemsPerPage = 10;
+   $scope.airwayno = '';
+   $scope.courier = '';
+   $scope.Summarydate = '';
+   $scope.status = '';
+   $scope.invdate =  "";
+   $scope.ls_followup_date = new Date();
+
+      $scope.minDate = new Date(
+      $scope.ls_followup_date.getFullYear(),
+      $scope.ls_followup_date.getMonth(),
+      $scope.ls_followup_date.getDate()
+   );
+
+
+   $mdDateLocale.formatDate = function(date) {
+      return $filter('date')($scope.invdate, "dd-MMM-yyyy");
+   };
+
+   $scope.loading = function() {
+      $mdDialog.show({
+         templateUrl: 'loaderSpinner',
+         parent: angular.element(document.body),
+         clickOutsideToClose: false
+      });
+   };
+
+   $scope.endloading = function() {
+      $mdDialog.hide();
+   };
+
+   $scope.channelddl =[{
+   metadata_value:"PO ",
+   },{metadata_value:"Non PO"
+   }]
+
+   var channel = servicesummary.ddl('invoiceheader', 'invoicetype');
+   channel.then(function(result) {
+         var channel_data = JSON.parse(result.data)
+       //  $scope.channelddl = channel_data;
+      },
+      function(err) {
+         alert('No data!.');
+      }).finally();
+
+   var supplier = servicesummary.getdropdown("supplier");
+   supplier.then(function(supplier) {
+      var supplier = JSON.parse(supplier.data);
+      $scope.invoicesupplier_list = supplier;
+
+   }, function() {
+      alert("Record Not Found");
+
+   });
+
+    function amount_toinr(amount){
+            var x=amount;
+        x=x.toString();
+        var afterPoint = '';
+        if(x.indexOf('.') > 0)
+           afterPoint = x.substring(x.indexOf('.'),x.length);
+        x = Math.floor(x);
+        x=x.toString();
+        var lastThree = x.substring(x.length-3);
+        var otherNumbers = x.substring(0,x.length-3);
+        if(otherNumbers != '')
+            lastThree = ',' + lastThree;
+        var res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + afterPoint;
+       return res;
+
+    }
+
+   summary();
+
+   function summary() {
+      var summary = servicesummary.getmakerservice();
+      summary.then(function(result) {
+
+            $scope.stale_summary = JSON.parse(result.data);
+              $scope.maintable = JSON.parse(result.data);
+       angular.forEach($scope.stale_summary, function(value, key) {
+         var inramount = amount_toinr($scope.stale_summary[key].invoiceheader_amount)
+         $scope.stale_summary[key].invoiceheader_amount =inramount
+      if(value.invoiceheader_invoicetype ==  "PO"){
+         $scope.stale_summary[key].invoiceheader_invoicetype = "PO "
+      }
+            })
+         },
+         function(err) {
+            alert('No data!.');
+         }).finally($scope.endloading);
+
+   }
+
+   $scope.ACselectchange = function(selectedtype,supplier_gid,invoicenum,invoiceamt,invdate) {
+
+     $scope.ddMMyyyy = $filter('date')(invdate, 'dd-MM-yyyy');
+
+      $scope.stale_summary = $filter('filter')($scope.maintable, {
+         "invoiceheader_invoicetype": selectedtype,
+         "supplier_gid": supplier_gid,
+         "invoiceheader_invoiceno":invoicenum,
+         "invoiceheader_amount":invoiceamt,
+         "invoiceheader_invoicedate":$scope.ddMMyyyy
+      }, );
+
+   }
+ $scope.invoicehistory = function(detail){
+  var aray = ["rejecthead", "Viewap_dtl","rejecthead", "Approvdtl","checkerdtl", "POjson","CHECKLIST", "makerdtl","makerdtl_ecf", "POdtl","POdtledit","POjson"];
+aray.forEach(function(key) { sessionStorage.removeItem(key) });
+        var history = {
+              invoiceheader_gid:detail.invoiceheader_gid,
+            };
+sessionStorage.setItem('history', JSON.stringify(history));
+  $window.location.href =    "AP_History ";
+  }
+
+ $scope.Add_AP = function (detail){
+//  alert(JSON.stringify(detail))
+   var aray = ["rejecthead", "Viewap_dtl","rejecthead", "Approvdtl","checkerdtl", "POjson","CHECKLIST", "makerdtl","makerdtl_ecf", "POdtl","POdtledit","POjson"];
+aray.forEach(function(key) { sessionStorage.removeItem(key) });
+        if( detail.invoiceheader_invoicetype == "PO "){
+     detail.invoiceheader_invoicetype = "PO"
+    }
+
+    var checkerdtl = {
+                type: detail.invoiceheader_invoicetype,
+              invoiceheader_gid:detail.invoiceheader_gid,
+              supplier_gid: detail.supplier_gid,
+            };
+            sessionStorage.setItem('checkerdtl', JSON.stringify(checkerdtl));
+     $window.location.href =    "billentry";
+
+    }
+
+   $scope.Add_Sr = function(detail) {
+      //alert(JSON.stringify(detail))
+      var aray = ["rejecthead", "Viewap_dtl","rejecthead", "Approvdtl","checkerdtl", "POjson","CHECKLIST", "makerdtl","makerdtl_ecf", "POdtl","POdtledit","POjson"];
+aray.forEach(function(key) { sessionStorage.removeItem(key) });
+      var inwarddtl = {
+         noofpockets: detail.inwardheader_noofpockets,
+         inwarddetails_gid: detail.inwarddetails_gid
+      };
+      sessionStorage.setItem('inwarddtl', JSON.stringify(inwarddtl));
+      $window.location.href = "Inward_entry";
+   }
+
+   $scope.Search_click = function() {
+
+      alert($scope.Summarydate);
+      if ($scope.Summarydate != '') {
+         var d = $scope.Summarydate;
+         var curr_date = d.getDate();
+         var curr_month = d.getMonth();
+         curr_month++;
+         var curr_year = d.getFullYear();
+         Service_date = curr_year + "-" + curr_month + "-" + curr_date;
+         alert(Service_date)
+      }
+
+      summary();
+   }
+
+}]);
+app.service("servicesummary", function ($http) {
+
+   this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+    }
+
+   this.getdropdown = function (tablename) {
+        var responsee = $http.post(Appname+"/Dropdown_detail_ap/",{params:{"tablename":tablename,"gid":0,"name":''}});
+        return responsee;
+    }
+
+     this.getemployee=function(){
+        var response=$http.get(Appname+"/empddl/");
+        return response;
+     }
+
+      this.setinwardservice = function (action,type,header,details) {
+        var responsee = $http.post(Appname+"/setinwardentry/",{params:{"Action":action,"Type":type,"lj_header":header,"lj_details":details}});
+        return responsee;
+    }
+
+    this.getmakerservice = function () {
+        var response=$http.post(Appname+"/stalesummary_get/",{params:{"type":"SUMMARY","sub_type":""}});
+        return response;
+    }
+});
+
+
+
+</script>
+{% endblock %}

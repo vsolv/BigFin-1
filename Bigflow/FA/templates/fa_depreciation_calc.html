@@ -1,0 +1,921 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Depreciation {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-cloak ng-controller="datectrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Depreciation Calculation </h4>
+            </div>
+        </div>
+        <div>
+            <md-card style="background-color:#8dbed6;">
+                <md-card-content>
+                    <div class="row">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>From Date</label>
+                                        <md-datepicker formatDate md-hide-icons="calendar" md-max-date="maxDate"
+                                                       md-open-on-focus ng-change=""
+                                                       ng-disabled="disable_dates" ng-model="from_date"></md-datepicker>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>To Date</label>
+                                        <md-datepicker formatDate md-hide-icons="calendar" md-max-date="maxDate"
+                                                       md-open-on-focus ng-change=""
+                                                       ng-disabled="disable_dates" ng-model="to_date"></md-datepicker>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <md-radio-group layout="row" ng-change="dr_radio_change(option_radio)"
+                                                        ng-init="option_radio = 'FORECASTING'"
+                                                        ng-model="option_radio">
+                                            <md-radio-button value="FORECASTING">Forecasting</md-radio-button>
+                                            <md-radio-button checked ng-selected="true" value="REGULAR">Regular
+                                            </md-radio-button>
+                                        </md-radio-group>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Depreciation Type</label>
+                                        <input disabled ng-change="" ng-model="get_dep_data[0].depsettings_deptype"
+                                               placeholder="Asset Value"
+                                               type="text"
+                                        />
+                                    </md-input-container>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>GL No</label>
+                                        <input disabled ng-change="" ng-model="get_dep_data[0].depsettings_depgl"
+                                               placeholder="Asset Value"
+                                               type="text"
+                                        />
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>GL Ref No</label>
+                                        <input disabled ng-change="" ng-model="get_dep_data[0].depsettings_depreservegl"
+                                               placeholder="Asset Value"
+                                               type="text"
+                                        />
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-button class="btn btn-info custbutton" ng-click="dep_calc()"
+                                               ng-disabled="calc_btn_disabled">
+                                        Calculation
+                                        <md-tooltip>Depreciation Calculation</md-tooltip>
+                                    </md-button>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-button class="btn btn-info custbutton" ng-click="forcast_show()" ng-show="hide">
+                                        Forecast
+                                        <md-tooltip>Forecast Calculation</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </md-card-content>
+            </md-card>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Select Month</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-mode="month"
+                                           md-open-on-focus="true" ng-change="reg_date_change()"
+                                           ng-model="regular_dep_month"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="btn btn-info custbutton" ng-click="dep_calc_test(regular_dep_month_modifi)">
+                            Prepare Regular Excel
+                            <md-tooltip>Prepare Regular Excel</md-tooltip>
+                        </md-button>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-raised" href="dpregular_getexcel?Dep_Month={{regular_dep_month_modifi}}"
+                                   ng-disabled="reg_excel_btn_disabled">
+                            Regular excel
+                            <md-tooltip>Regular Data Download</md-tooltip>
+                        </md-button>
+                    </div>
+                     <div class="col-md-3">
+                        <md-button class="btn btn-info custbutton" ng-click="dep_calc_forecast('')">
+                            Prepare Forecast Excel
+                            <md-tooltip>Prepare Forecast Excel</md-tooltip>
+                        </md-button>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-raised" href="dpforecast_getexcel" ng-disabled="forecast_excel_btn_disabled">
+                            Forecast excel
+                            <md-tooltip>Forecast Excel Download</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="row-header col-lg-12 col-sm-12" ng-show="show_depre">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col">Asset ID</th>
+                        <th class="text-center" scope="col">Asset Tran ID</th>
+                        <th class="text-center" scope="col">Asset Category</th>
+                        <th class="text-center" scope="col">Depreciation Fromdate</th>
+                        <th class="text-center" scope="col">Depreciation Todate</th>
+                        <th class="text-center" scope="col">CP Date</th>
+                        <th class="text-center" scope="col">Asset Cost</th>
+                        <th class="text-center" scope="col">Branch Name</th>
+                        <th class="text-center" scope="col">Depreciation Method</th>
+                        <th class="text-center" scope="col">Depreciation ITC</th>
+                        <th class="text-center" scope="col">Depreciation CA</th>
+                        <th class="text-center" scope="col">Depreciation MGMT</th>
+                        <th class="text-center" scope="col">Depreciation GL</th>
+                        <th class="text-center" scope="col">Depreciation Res GL</th>
+                        <th class="text-center" scope="col">Depreciation Value</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="ast in dep_data_get">
+                            <td class="text-center">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <!--                        <td class="text-center">{{ast.assetdetails_id}}</td>-->
+                            <td class="text-right"><span class="editlink"
+                                                         ng-click="loading_popup(ast.assetdetails_gid)">{{ast.asst_id}}</span>
+                            </td>
+                            <td class="text-center">{{ast.assetdetails_id}}</td>
+                            <td class="text-center">{{ast.assetcat_subcatname}}</td>
+                            <td class="text-left">{{ast.depreciation_fromdate}}</td>
+                            <td class="text-left">{{ast.depreciation_todate}}</td>
+                            <td class="text-left">{{ast.asset_cap_date}}</td>
+                            <td class="text-right">{{ast.assetdetails_cost}}</td>
+                            <td class="text-left">{{ast.asset_branch_name}}</td>
+                            <td class="text-left">{{ast.assetcat_deptype}}</td>
+                            <td class="text-right">{{ast.depreciation_itcvalue | number : fractionSize}}</td>
+                            <td class="text-right">{{ast.depreciation_cavalue | number : fractionSize}}</td>
+                            <td class="text-right">{{ast.depreciation_mgmtvalue | number : fractionSize}}</td>
+                            <td class="text-right">{{ast.depreciation_gl}}</td>
+                            <td class="text-right">{{ast.depreciation_resgl}}</td>
+                            <td class="text-right">{{ast.depreciation_value}}</td>
+                        </tr>
+                        <tr ng-show="data_len ==  0">
+                            <td class="warning" colspan="13">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="12">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-change="fn_pagination()"
+                                    ng-model="currentPage" total-items="pageLength"
+                                    uib-pagination></ul>
+                            </td>
+                            <td class="text-left" colspan="2">
+                                <label>Page Count:</label>
+                                <select class="form-control" ng-model="itemsPerPage"
+                                        placeholder="count"
+                                        style="width:100px;"
+                                        type="text">
+                                    <option ng-value="10">10</option>
+                                    <option ng-value="20">20</option>
+                                    <option ng-value="40">40</option>
+                                    <option ng-value="60">60</option>
+                                    <option ng-value="80">80</option>
+                                    <option ng-value="100">100</option>
+                                </select>
+                            </td>
+                            <td class="text-left" colspan="2">
+                                <span>Total Count:<br/> <b class="text-centre"> {{dep_data_get.length}}</b></span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!--popup page start-->
+        <div aria-hidden="" aria-labelledby="exampleModalLabel"
+             class="modal fade"
+             data-backdrop="" data-keyboard="false"
+             id="Modal_asset_ae">
+            <div class="modal-dialog modal-md modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabels">
+                                <strong>Accounting Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                        <thead class="header">
+                                        <th class="text-center" scope="col">S.No</th>
+                                        <th class="text-center">Entry Financial Year</th>
+                                        <th class="text-center">Entry Screen</th>
+                                        <th class="text-center">WiseFin GL</th>
+                                        <th class="text-center">Entry GL</th>
+                                        <th class="text-center">C/D</th>
+                                        <th class="text-right">Amount</th>
+                                        <th class="text-right">Status</th>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat=" ae in assetae ">
+                                            <td class="text-center">
+                                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                            </td>
+                                            <td class="text-center">{{ae.bigfentry_fiscalyear}}</td>
+                                            <td class="text-left">{{ae.bigfentry_screen}}</td>
+                                            <td class="text-right">{{ae.wisefingl}}</td>
+                                            <td class="text-right">{{ae.bigfentry_gl}}</td>
+                                            <td class="text-center">{{ae.bigfentry_type}}</td>
+                                            <td class="text-right">{{ae.bigfentry_amt}}</td>
+                                            <td class="text-left">{{ae.entry_status}}</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-6"></div>
+                                    <div class="col-md-6">
+                                        <h4>Sum Of Debits:{{db_tot}}</h4>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-6"></div>
+                                    <div class="col-md-6">
+                                        <h4>Sum of Credits:{{db_tot}}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-lg-10 col-sm-10">
+                                    <div class="col-md-5">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <md-button class="md-raised" data-dismiss="modal">Close
+                                            <md-tooltip>close</md-tooltip>
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--popup page End-->
+
+        <div ng-show="show_forcast">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>From Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-open-on-focus
+                                           ng-change="" ng-model="forcast_frdate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>To Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-open-on-focus
+                                           ng-change="" ng-model="forcast_todate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="forcast_data()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col">Title</th>
+                        <th class="text-center" scope="col">Time Difference (Method)</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="ast in forcast.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center" style="width:60px">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-left" style="width:150px"> {{ ast.title}}</td>
+                            <td></td>
+                        </tr>
+                        <tr ng-show="forcast.length ==  0">
+                            <td class="warning" colspan="10">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col">Title</th>
+                        <th class="text-center" scope="col">Time Difference (Method)</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="ast in forcast1.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center" style="width:60px">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-left" style="width:150px"> {{ ast.title}}</td>
+                            <td></td>
+                        </tr>
+                        <tr ng-show="forcast.length ==  0">
+                            <td class="warning" colspan="10">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl',['$scope', 'newservice', '$window', '$mdDialog','$mdDateLocale', '$rootScope', '$filter','$q',
+ function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter,$q) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.enable_update = true;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.dep_data_get = [];
+    $scope.show_forcast = false;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.cap_date = convertdate(td);
+    $scope.writeoff_date = convertdate(td);
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.reg_excel_btn_disabled = true;
+    $scope.forecast_excel_btn_disabled = true;
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+get_depreciation_details();
+<!--called before - need to remove-->
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    var radio_option = '';
+
+    $scope.fn_pagination = function(){
+        depriciation_data();
+    }
+
+    depriciation_data();
+    function depriciation_data(radio_option){
+        $scope.loading();
+        var data = {
+            "Params": {
+                "FILTER": {
+                "Depreciation_Type":radio_option,
+                "Page_Index":$scope.currentPage - 1,
+                "Page_Size":$scope.itemsPerPage,
+                },
+            }
+
+        };
+        var dep_data_get = newservice.depre_data(data)
+        dep_data_get.then(function(result) {
+        $scope.dep_data_get = [];
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.dep_data_get = $scope.main;
+            $scope.data_len = $scope.dep_data_get.length;
+            $scope.pageLength = $scope.dep_data_get[0].Total_Row;
+            $scope.Totalpages = Math.ceil($scope.pageLength / $scope.itemsPerPage);
+        }).finally($scope.endloading);
+        $scope.show_depre =true;
+    }
+    loaddata();
+    function loaddata(){
+
+     var get_dep_data = newservice.dep_data($scope.entity_gid)
+        get_dep_data.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.get_dep_data = $scope.main;
+        });
+     }
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.forcast_show =function(){
+    if($scope.show_forcast != true){
+        $scope.show_forcast = true;
+        $scope.show_depre =false;
+    }
+    else{
+        $scope.show_forcast = false;
+        $scope.show_depre =true;
+    }
+    }
+
+    $scope.imgshow = function(id){
+     modalshow('viewmodal');
+     $scope.asset_img =$scope.asset[id].assetdetails_imagepath;
+    }
+
+    $scope.forcasting_status = [
+         {
+            id: 'FORECASTING',
+            data: 'Forecasting'
+        },
+        {
+            id: 'REGULAR',
+            data: 'Regular'
+    }];
+
+ $scope.forcast=[{'title':"Financial Year"},{'title':"Financial Year End Date"},{'title':"Initial Balance"},{'title':"Depreciation"},{'title':"Final Balance"}];
+ $scope.forcast1=[{'title':"Impaired Asset"},{'title':"Writeoff Asset"},{'title':"Depreciation closed Asset"},{'title':"Sale Asset"}];
+    $scope.selectall = function () {
+        if($scope.checkall == true){
+            for (var i = 0; i < $scope.asset.length; i++) {
+			    $scope.asset[i].isChecked = true;
+			    $scope.enable_update = false;
+			     $scope.reason = true;
+		}
+		}
+		else if ($scope.checkall == false){
+            for (var i = 0; i < $scope.asset.length; i++) {
+			    $scope.asset[i].isChecked = false;
+		}
+		     $scope.enable_update = true;
+		     $scope.reason = false;
+        }
+	};
+
+    $scope.selectEntity = function() {
+                for (var i = 0; i < $scope.asset.length; i++) {
+                   if ($scope.asset[i].isChecked == true) {
+                        $scope.enable_update = false;
+                        $scope.enable_reject = false;
+                        $scope.reason = true;
+                        return
+                    }
+                    else if ($scope.asset[i].isChecked == false){
+                        $scope.reason = false;
+                        $scope.enable_update = true;
+                        $scope.enable_reject = true;
+
+                    }
+                }
+            };
+    $scope.dep_calc = function() {
+        if($scope.from_date != undefined){
+            var d = new Date($scope.from_date);
+            $scope.fromdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+            if($scope.to_date != undefined){
+                var d = new Date($scope.to_date);
+                $scope.todate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+                start_calc();
+            }
+            else{
+                warning_toast(not_enter_date,time_toast);
+                return false;
+            }
+        }
+        else{
+            warning_toast(not_enter_date,time_toast);
+            return false;
+        }
+    }
+ function start_calc() {
+
+        var dep_data = {
+            "Params": {
+             "DEPRECIATION": {
+                    "From_Date":$scope.fromdate,
+                    "To_Date":$scope.todate,
+                    "Calculate_For":"ALL",
+                    "DepType":$scope.option_radio,
+                    "Is_Commit" : "Y",
+                },
+                "CHANGE": {},
+            }
+        };
+        depcalc(dep_data);
+    }
+    function depcalc(dep_data) {
+       var DepType = $scope.option_radio;
+        var asset_dep = newservice.calculation(dep_data,employgid,DepType);
+        $scope.loading();
+
+        var millisecondsToWait = 300000;
+        setTimeout(function() {
+
+        asset_dep.then(function(res) {
+           $scope.set_msg = res.data.MESSAGE;
+           if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+            $scope.pagemove = "Y";
+        if($scope.pagemove == "N")
+        {
+            $window.location.href = "fa_depreciation_calc";
+        }
+        else{
+            $window.location.href = "fa_depreciation_calc";
+            $scope.search();
+        }
+        }).finally($scope.endloading);
+
+        }, millisecondsToWait);
+
+
+   }
+
+
+   $scope.dep_calc_test = function(date_reg){
+
+    $scope.loading();
+    var asset_dep = newservice.calculation_test(date_reg);
+      var millisecondsToWait = 420000;
+        setTimeout(function() {
+
+        var file_exists = newservice.check_file_exists(date_reg);
+                file_exists.then(function(res) {
+              alert(res.data.DATA);
+              if (res.data.DATA == 'SUCCESS'){
+                  $scope.reg_excel_btn_disabled = false;
+              }
+           });
+
+        $scope.endloading();
+        // Whatever you want to do after the wait
+    }, millisecondsToWait);
+}
+
+<!--Below to Prepare Forecast Excel-->
+
+$scope.dep_calc_forecast = function(){
+
+    $scope.loading();
+    var asset_dep = newservice.calculation_test_forecast();
+      var millisecondsToWait = 420000;
+        setTimeout(function() {
+        var file_exists = newservice.check_file_exists_forecast();
+                file_exists.then(function(res) {
+              alert(res.data.DATA);
+              if (res.data.DATA == 'SUCCESS'){
+                  $scope.forecast_excel_btn_disabled = false;
+              }
+           });
+
+        $scope.endloading();
+        // Whatever you want to do after the wait
+    }, millisecondsToWait);
+
+
+
+<!--    var asset_dep = newservice.calculation_test(date_reg);-->
+<!--      asset_dep.then(function(res) {-->
+<!--              alert(res.data.DATA);-->
+<!--              if (res.data.DATA == 'SUCCESS'){-->
+<!--                  $scope.reg_excel_btn_disabled = false;-->
+<!--              }-->
+<!--           });-->
+
+   }
+
+
+
+   $scope.regular_excel = function() {
+      var reg_excel = newservice.reg_excel('2020-09-09');
+       reg_excel.then(function(res) {
+       });
+   }
+
+   $scope.reg_date_change = function() {
+     var d = new Date($scope.regular_dep_month);
+      $scope.regular_dep_month_modifi = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+      $scope.regular_dep_month_modifi = ($scope.regular_dep_month_modifi).toString()
+
+   }
+
+ $scope.dr_radio_change = function(callback) {
+<!--    $scope.loading();-->
+   $scope.calc_btn_disabled = false;
+   if ($scope.option_radio == 'REGULAR'){
+
+       var dep_date_reg = new Date();
+       dep_date_reg = new Date(dep_date_reg.getFullYear(), dep_date_reg.getMonth(), dep_date_reg.getDate());
+
+       $scope.disable_dates = true;
+      var deferred = $q.defer();
+       var promise = deferred.promise;
+      promise.then(function() {
+       get_depreciation_details();
+       callback();
+      }).then(function(){});
+     deferred.resolve();
+
+      var d = new Date($scope.max_dep_date);
+      m = d.getMonth(); //current month
+      y = d.getFullYear(); //current year
+
+     $scope.from_date = new Date(y,m,1);
+      $scope.to_date = new Date(y,m+1,0);
+
+      if ($scope.from_date > dep_date_reg ){
+            alert('Future Month Regular Depreciation Not Allowed.');
+            $scope.calc_btn_disabled = true;
+      }
+      else {
+        $scope.calc_btn_disabled = false;
+      }
+
+   }
+   else {
+    $scope.disable_dates = false;
+    $scope.from_date = '';
+    $scope.to_date = '';
+   }
+<!--   $scope.endloading();-->
+ }
+
+
+   function get_depreciation_details() {
+
+     var data = {
+            "Params": {
+                "FILTER": {
+                },
+            }
+
+        };
+     var get_depreciation_details = newservice.sr_get_depreciation_details(data);
+      get_depreciation_details.then(function(result)
+      {
+       $scope.data = result.data.DATA;
+<!--       alert(JSON.stringify($scope.data[0].mdd));-->
+       $scope.max_dep_date = $scope.data[0].mdd;
+
+      }
+      );
+
+  }
+
+   $scope.option_radio_change = function () {
+       if ($scope.option_radio_summary == "REGULAR"){
+          depriciation_data("REGULAR");
+          alert('Regu');
+          return false;
+       } else if ($scope.option_radio_summary == "FORECASTING") {
+         alert('Fore');
+          depriciation_data("FORECASTING");
+          return false;
+       }
+   }
+
+   $scope.loading_popup = function(ast_gidx) {
+      load_ae_data(ast_gidx);
+       modalshow('Modal_asset_ae');
+
+    };
+
+    <!--    for AE-->
+function load_ae_data(asset_gidx) {
+    var data = {
+            "Params": {
+              "FILTER": {
+                 "Asset_Gid":asset_gidx
+                },
+            }
+        };
+
+    var get_asset = newservice.asset_ae(data)
+
+        get_asset.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.assetae = $scope.main;
+
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                modalhide('Modal_asset_ae');
+                alert('No Records Found');
+                $scope.warning = true;
+            }
+
+             var cr_tot = 0;
+             var db_tot = 0;
+
+            for (i=0;i < $scope.assetae.length;i++){
+               if ($scope.assetae[i].bigfentry_type == 'C') {
+                    cr_tot += $scope.assetae[i].bigfentry_amt;
+                }
+               else if ($scope.assetae[i].bigfentry_type == 'D') {
+                   db_tot += $scope.assetae[i].bigfentry_amt;
+               }
+
+            }
+
+            $scope.cr_tot = cr_tot;
+            $scope.db_tot = db_tot;
+
+            for (i=0;i < $scope.assetae.length;i++){
+                var t = i+1;
+                $scope.assetae[i].index = count + t;
+            };
+
+        }).finally($scope.endloading);
+    }
+
+
+}]);
+
+app.service('newservice', function($http) {
+    this.calculation = function(dep_data,employgid,DepType) {
+        var response = $http.post(Appname + "/dep_calculation/", {
+            params: {
+                "Sub_Type": DepType,
+                "Type": "DEPRECATION",
+                "Group": "FA_ASSET_DEPRECIATION",
+                "Action": "INSERT",
+                "Employee_Gid": employgid,
+                "json": dep_data,
+            }
+        });
+        return response;
+    }
+
+    this.calculation_test = function(dep_data) {
+        var response = $http.get(Appname + "/dpregular_getexcel_test/", {
+            params: {
+                "Dep_Month": dep_data,
+            }
+        });
+        return response;
+    }
+
+<!--    this.check_file_exists = function(dep_data) {-->
+<!--        var response = $http.get(Appname + "/check_file_exists/", {-->
+<!--            params: {-->
+<!--                "Dep_Month": dep_data,-->
+<!--            }-->
+<!--        });-->
+<!--        return response;-->
+<!--    }-->
+
+<!--    Below two is used for forecast-->
+    this.calculation_test_forecast = function(dep_data) {
+        var response = $http.get(Appname + "/dpforecast_getexcel_test/", {
+            params: {
+                "Dep_Month": dep_data,
+            }
+        });
+        return response;
+    }
+
+    this.check_file_exists_forecast = function() {
+        var response = $http.get(Appname + "/check_file_exists_forecast/", {
+            params: {
+                "Dep_Month": '',
+            }
+        });
+        return response;
+    }
+
+    this.dep_data = function(entity) {
+        var response = $http.post(Appname + "/dep_data_get/", {
+         params: {
+               "Entity_Gid": entity,
+            }
+        });
+        return response;
+     }
+    this.depre_data = function(dep_get) {
+        var response = $http.post(Appname + "/dep_calculation/", {
+            params: {
+                "Sub_Type": "SUMMARY",
+                "Type": "DEPRECIATION",
+                "Group": "FA_ASSET_DEPRECIATION_GET",
+                "json": dep_get,
+            }
+        });
+        return response;
+    }
+
+    this.sr_get_depreciation_details = function(sr_params) {
+      var response = $http.post(Appname + "/dep_calculation/", {
+            params: {
+                "Sub_Type": "LAST_DEP_ON",
+                "Type": "DEPRECIATION",
+                "Group": "FA_ASSET_DEPRECIATION_GET",
+                "json": sr_params,
+            }
+        });
+
+        return response;
+    }
+
+<!--   Below two not going to use-->
+    this.getexcel = function() {
+            var response = $http.get(Appname + "/dpforecast_getexcel/", {
+                params: {
+                }
+            });
+
+            return response;
+        }
+
+
+        this.reg_excel = function() {
+            var response = $http.get(Appname + "/dpregular_getexcel/", {
+                params: {
+                "Dep_Month":'2020-09-09'
+                }
+            });
+
+            return response;
+        }
+
+        this.asset_ae = function(data) {
+      var response = $http.post(Appname + "/asset_details/",{
+         params: {
+            "Group":"FA_QUERY_SUMMARY",
+            "Type":"FA_QUERY",
+            "Sub_Type":"AE_DEPRECIATION",
+            "json":data,
+         }
+      }
+      );
+      return response;
+    }
+
+});
+
+
+
+</script>
+
+{% endblock %}

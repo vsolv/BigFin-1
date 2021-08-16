@@ -1,0 +1,431 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Invoice Print Summary  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appemployee" ng-cloak ng-controller="Ctrlemployee">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Invoice Print Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Invoice No</label>
+                    <input maxlength="11" ng-model="invoiceno">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="Customer Name"
+                        md-input-maxlength=126
+                        md-item-text="item.display_name"
+                        md-items="item in getcustmer(searchTex)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchTex"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.display_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No customer matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="searchquery_StartDate"
+                    ></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Amount</label>
+                    <input maxlength="16" ng-model="searchquery_Amount"
+                           ng-pattern="/^[123456789][.0-9]{0,10}$/" type="number">
+                </md-input-container>
+            </div>
+            <div class="col-md-2" style="margin-top:15px">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="salesAPI()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Invoice Number</th>
+                        <th>Customer Name</th>
+                        <th>Executive Name</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in empsmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.invoiceheader_no}}</td>
+                        <td class="text-center">{{emp.display_name}}</td>
+                        <td class="text-center">{{emp.employee_name}}</td>
+                        <td class="text-right">{{emp.invoiceheader_total}}</td>
+                        <!--<td class="text-center"><a href ng-click="cancelAPI(emp.invoiceheader_gid)">print</a></td>-->
+                        <td class="text-center"><input ng-click="selectEntity(emp)"
+                                                       ng-model="emp.selectd"
+                                                       type="checkbox"
+                        ></td>
+                    </tr>
+                    </tbody>
+                    <tfoot class="row" colspan="12">
+                    <tr>
+                        <td colspan="17">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-4"></div>
+                <div class="col-md-2 align-right">
+                    <md-button class="btn btn-info custbutton" ng-click="generate()" ng-disabled="shwgenrtinv"
+                    >
+                        Generate PDF
+                    </md-button>
+                </div>
+                <div class="col-md-3 align-left">
+                    <md-button class="btn btn-info custbutton" ng-click="buksubmit()" ng-disabled="bulksbmtshw">
+                        PRINT INVOICE
+                    </md-button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+myApp.controller('Ctrlemployee', ['$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter', '$element',
+    function($scope, testService, $mdDialog, $rootScope, $window, $filter, $element) {
+        $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+        $scope.currentPage = 1;
+        $scope.bulksbmtshw = true;
+        $scope.shwgenrtinv = true;
+        $scope.maxSize = 3;
+        $scope.empsmry = [];
+        $scope.set1 = [];
+        $scope.itemsPerPage = 10;
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.getcustmer = gotocust;
+        function gotocust(query) {
+            var result = $filter('filter')($scope.customers, {
+                'display_name': query
+            });
+            return result;
+        }
+        var dta = {
+            "params": {
+                "FILTER": {}
+            }
+        }
+        var custdata = {
+            "Entity_Gid": $scope.entity_gid,
+            "Group": 'CUST_GET',
+            "data": dta
+        }
+
+        var get_cust = testService.getcust(custdata)
+        get_cust.then(function(result) {
+            $scope.customers = result.data.DATA
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+
+        $scope.buksubmit = function() {
+            var data = [];
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].selectd) {
+                    loadprintflag(2)
+                    gid = $scope.empsmry[i].invoiceheader_gid
+                    $window.open("http://174.138.120.196:8089/pentaho/content/reporting/execute/steel-wheels/dashboards/newpages.pdf?solution=steel-wheels&path=/dashboards&name=MultiInvc.prpt&userid=joe&password=password&po_gid=" + gid)
+                }
+            }
+        }
+
+            $scope.selectEntity = function(emp) {
+                var dd = emp.selectd;
+                var flag = emp.Is_Print;
+            for (i = 0; i < $scope.empsmry.length; i++) {
+                if ((i != emp.num)&&(flag == 1)) {
+                    $scope.empsmry[i].selectd = false;
+                    $scope.bulksbmtshw = false;
+                    $scope.shwgenrtinv= true;
+                }
+                if ((i == emp.num)&&(flag == 0)) {
+                    $scope.empsmry[i].selectd = true;
+                    $scope.bulksbmtshw = true;
+                     $scope.shwgenrtinv= false;
+                }
+                if ((i == emp.num)&&((flag == 1)||(flag == 2))) {
+                    $scope.empsmry[i].selectd = true;
+                    $scope.bulksbmtshw = false;
+                     $scope.shwgenrtinv= true;
+                }
+                if (dd == false) {
+                    $scope.bulksbmtshw = true;
+                     $scope.shwgenrtinv= true;
+                     $scope.empsmry[i].selectd = false;
+                }
+            }
+        }
+
+        $scope.generate = function() {
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].selectd) {
+                    $scope.invcno = $scope.empsmry[i].invoiceheader_no;
+                    $scope.gid = $scope.empsmry[i].invoiceheader_gid;
+                } else {
+                    $scope.bulksbmtshw = true;
+                }
+            }
+
+            var datas = {
+                "filename": $scope.invcno,
+                "gid": $scope.gid
+            }
+
+            var get_employ = testService.setpdf(datas)
+            get_employ.then(function(result) {
+                    $scope.maintable = result.data.MESSAGE;
+                    alert($scope.maintable);
+                    loadprintflag(1);
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally();
+        }
+
+        function loadprintflag(x) {
+            $scope.chqscn = [];
+            var chqs = 0;
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].selectd) {
+                    chqs = $scope.empsmry[i].invoiceheader_gid
+                    $scope.chqscn.push(chqs);
+                } else {
+                    $scope.bulksbmtshw = true;
+                }
+            }
+
+            var data = {
+                "Params": {
+                    "HEADER": {
+                        "INV_Header_Gid": $scope.chqscn,
+                        "Is_Print": x
+                    },
+                    "DETAILS": {},
+                    "RATE": {},
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid],
+                        "Entity_Details_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+            var datam = {
+                "Group": "UPDATE_STATUS",
+                "Action": "Update",
+                "Type": "INVOICE_PRINT_FLAG",
+                "Is_Commit": "Y",
+                "Create_by": $scope.employgid,
+                "data": data
+            }
+
+            var print = testService.setprint(datam)
+            print.then(function(result) {
+
+                $scope.printdata = [];
+                $scope.printdata = result.data.MESSAGE;
+                if ($scope.printdata == 'SUCCESS') {
+                alert($scope.printdata);
+                $window.location.href = "printsummary";
+                }
+            })
+        }
+
+        $scope.salesAPI = function() {
+            if ($scope.invoiceno == undefined) {
+                $scope.invoiceno = "";
+            }
+            if ($scope.selectedItem !== null) {
+                $scope.cus = $scope.selectedItem.customer_gid;
+            } else {
+                $scope.cus = '';
+            }
+            if ($scope.searchquery_StartDate == undefined) {
+                $scope.searchquery_StartDate = "";
+            } else {
+                $scope.searchquery_StartDate = $filter('date')($scope.searchquery_StartDate, "yyyy-MM-dd")
+            }
+            if ($scope.searchquery_Amount == undefined) {
+                $scope.searchquery_Amount = "";
+            }
+            var dati = {
+                "Params": {
+                    "FILTER": {
+                        "InvoiceHeader_No": $scope.invoiceno,
+                        "Customer_Gid": $scope.cus,
+                        "InvoiceHeader_Date": $scope.searchquery_StartDate,
+                        "Amount": $scope.searchquery_Amount,
+                        "Status": "PENDING_PRINT"
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var datas = {
+                "Group": "INV_DISPATCH_PROCESS",
+                "Type": "SUMMARY_PRINT",
+                "Sub_Type": "INVOICE_PRINT",
+                "Employee_Gid": $scope.employgid,
+                "data": dati
+            }
+
+            var get_employ = testService.getprcesmry(datas)
+            get_employ.then(function(result) {
+                    $scope.maintable = result.data.DATA;
+                    $scope.empsmry = $scope.maintable;
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.empsmry.length;
+                    for (i = 0; i < $scope.empsmry.length; i++) {
+                        if ($scope.empsmry[i].invoiceheader_gid > 0) {
+                            $scope.sltd = false;
+                            $scope.empsmry[i].num = i + 0;
+                            $scope.empsmry[i].selectd = $scope.sltd;
+                        }
+                    }
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally();
+        }
+
+        var dati = {
+            "Params": {
+                "FILTER": {
+                    "InvoiceHeader_No": "",
+                    "Customer_Name": "",
+                    "InvoiceHeader_Date": "",
+                    "Amount": "",
+                    "Status": "PENDING_PRINT"
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": [$scope.entity_gid]
+                }
+            }
+        }
+
+        var datas = {
+            "Group": "INV_DISPATCH_PROCESS",
+            "Type": "SUMMARY_PRINT",
+            "Sub_Type": "INVOICE_PRINT",
+            "Employee_Gid": $scope.employgid,
+            "data": dati
+        }
+
+        var get_employ = testService.getprcesmry(datas)
+        get_employ.then(function(result) {
+                $scope.maintable = result.data.DATA;
+                $scope.empsmry = $scope.maintable;
+                $scope.pageLength = $scope.empsmry.length;
+                $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                $scope.pageLength = $scope.empsmry.length;
+
+                for (i = 0; i < $scope.empsmry.length; i++) {
+                        if ($scope.empsmry[i].invoiceheader_gid > 0) {
+                            $scope.sltd = false;
+                            $scope.empsmry[i].num = i + 0;
+                            $scope.empsmry[i].selectd = $scope.sltd;
+                        }
+                    }
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally();
+    }
+]);
+
+myApp.service("testService", function($http) {
+    this.getprcesmry = function(custid) {
+        var response = $http.post(Appname + "/getinv/", custid);
+        return response;
+    }
+    this.setpdf = function(custid) {
+        var response = $http.post(Appname + "/pdfupload/", custid);
+        return response;
+    }
+    this.getcust = function(custid) {
+        var respons = $http.post(Appname + "/custgroup/",
+            custid
+        );
+        return respons;
+    }
+    this.getcusomter = function(datam) {
+        var response = $http.post(Appname + "/getlablprod/", datam);
+        return response;
+
+    }
+    this.setprint = function(custid) {
+        var respons = $http.post(Appname + "/setinvc/", custid);
+        return respons;
+    }
+});
+</script>
+{% endblock %}

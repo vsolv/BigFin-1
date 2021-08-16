@@ -1,0 +1,431 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}AP Report{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>AP Report</h4>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Transaction Type</label>
+                        <md-select ng-model="selected_transaction_type">
+                            <md-option ng-repeat="x in transaction_type"
+                                       ng-value="x.metadata_value">{{ x.metadata_value }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Supplier Name"
+                            md-input-maxlength=126
+                            md-input-id="Supplier_Names"
+                            ng-modle="suppliers"
+                            md-item-text="itempn.supplier_branchname"
+                            md-items="itempn in getSupplierName(searchSuplierName)"
+                            md-selected-item-change="download_supplierNameChanged(itempn)"
+                            md-min-length=0 md-search-text="searchSuplierName"
+                            ng-model="itempn" md-no-cache="true" size="5"
+                            md-selected-item="selected_supplier">
+                        <md-item-template>
+                            <span md-highlight-text="searchSuplierName"> {{itempn.supplier_branchname}}</span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Supplier Name matching were {{searchSuplierName}}found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete md-clear-button="true"
+                                     md-floating-label="Branch"
+                                     md-item-text="item.branch_detail"
+                                     md-items="item in getBranch(search_branch)"
+                                     md-menu-class="md-virtual-repeat-container"
+                                     md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="search_branch"
+                                     md-selected-item="selected_branch"
+                                     md-selected-item-change="download_Branch_Change(item)">
+                        <md-item-template>
+                            <span md-highlight-text="search_branch"> {{item.branch_detail}}</span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Branch matching "{{search_branch}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Transaction Status</label>
+                        <md-select ng-model="selected_transaction_status">
+                            <md-option ng-repeat="x in transaction_status"
+                                       ng-value="x.status_name">{{ x.status_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-autocomplete md-clear-button="true"
+                                     md-floating-label="Employee"
+                                     md-item-text="item.employee_name"
+                                     md-items="item in getemployee_srch(search_employee)"
+                                     md-menu-class="md-virtual-repeat-container"
+                                     md-min-length=0
+                                     md-no-cache="true"
+                                     md-search-text="search_employee"
+                                     md-selected-item="selected_employee"
+                                     md-selected-item-change="emp_changed(item)">
+                        <md-item-template>
+                            <span md-highlight-text="search_alter_incharge"> {{item.employee_name}} - {{item.employee_code}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Employee matching "{{search_alter_incharge}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Transaction From Date</label>
+                        <md-datepicker md-hide-icons="calendar"
+                                       ng-model="from_date"
+                                       md-hide-icons="calendar" ng-click="date"
+                                       ng-change="change_download_from_date(from_date)"
+                                       formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Transaction To Date</label>
+                        <md-datepicker md-hide-icons="calendar"
+                                       ng-model="to_date"
+                                       md-hide-icons="calendar" ng-click="date"
+                                       md-min-date="maxDates"
+                                       md-max-date="minDates"
+                                       ng-change="change_download_to_date(to_date)"
+                                       formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-4"></div>
+                <div class="col-md-6">
+                    <md-button class="md-fab md-mini md-info custbutton"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_REPORT&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>GST Report</md-tooltip>
+                    </md-button>
+
+                     <md-button class="md-fab md-mini md-primary"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_NONGST&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>NonGST Report</md-tooltip>
+                    </md-button>
+                    
+                    <md-button class="md-fab md-mini md-raised"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_IMPREST&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>PETTYCASH Report</md-tooltip>
+                    </md-button>
+
+
+                    <md-button class="md-fab md-mini md-success"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_CREDITREPORT&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Credit XL</md-tooltip>
+                    </md-button>
+
+                    <md-button class="md-fab md-mini md-primary"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_TDS&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>TDS Report</md-tooltip>
+                    </md-button>
+
+                    <md-button class="md-fab md-mini custbutton"
+                               href="get_Accounting_Entry_Data?action=GET&type=AP_RCM&download_from_date={{download_from_date}}&download_to_date={{download_to_date}}&download_supplier_gid={{download_supplier_gid}}&download_branch_gid={{download_branch_gid}}&download_txn_status={{selected_transaction_status}}&download_txn_type={{selected_transaction_type}}&download_employee_gid={{download_employee_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>RCM Report</md-tooltip>
+                    </md-button>
+
+
+                    <md-button class="md-fab md-mini md-warn "
+                               ng-click="clear_seach()">
+                        <md-icon>search_off</md-icon>
+                        <md-tooltip>Clear Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+<style>
+
+.btn-default.btn-on.active{background-color: #5BB75B;color: white;}
+.btn-default.btn-off.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-1.active{background-color: #006FFC;color: white;}
+.btn-default.btn-off-1.active{background-color: #DA4F49;color: white;}
+
+.btn-default.btn-on-2.active{background-color: #00D590;color: white;}
+.btn-default.btn-off-2.active{background-color: #A7A7A7;color: white;}
+
+.btn-default.btn-on-3.active{color: #5BB75B;font-weight:bolder;}
+.btn-default.btn-off-3.active{color: #DA4F49;font-weight:bolder;}
+
+.btn-default.btn-on-4.active{background-color: #006FFC;color: #5BB75B;}
+.btn-default.btn-off-4.active{background-color: #DA4F49;color: #DA4F49;}
+
+
+
+
+
+
+
+</style>
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap','AppCommon','rzTable']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+   });
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'ap_report', '$window', '$mdDialog', '$element','$http',
+    function($scope, $filter, $mdDateLocale, ap_report, $window, $mdDialog, $element,$http) {
+
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.airwayno = '';
+        $scope.courier = '';
+        $scope.Summarydate = '';
+        $scope.status = '';
+        $scope.invdate = "";
+        $scope.download_data=[];
+        $scope.download_from_date="";
+        $scope.download_to_date="";
+        $scope.download_cr_number="";
+        $scope.download_supplier_gid="";
+        $scope.download_branch_gid="";
+        $scope.download_status="";
+        $scope.selected_transaction_status="";
+        $scope.selected_transaction_type="";
+        $scope.download_employee_gid="";
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.loading_popup = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_pop_up')),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.transaction_status=[{"status_name":"NEW"},{"status_name":"MAKER"},{"status_name":"Checker"},
+                                    {"status_name":"APPROVED"},{"status_name":"BOUNCE"},
+                                    {"status_name":"REPROCESS"},{"status_name":"REAUDIT"},
+                                    {"status_name":"REJECTED"},{"status_name":"PAID"}];
+
+        $scope.change_download_from_date=function(from_date){
+            var dt = new Date(from_date);
+            dt.setMonth( dt.getMonth() +1);
+            $scope.maxDate=from_date;
+            $scope.minDate=dt;
+            $scope.download_from_date=$filter('date')(from_date,"yyyy-MM-dd");
+        }
+
+        $scope.change_download_to_date=function(to_date){
+        debugger;
+            if($scope.from_date==undefined){
+                alert("Give From Date");
+                $scope.to_date="";
+            }
+             else{
+                $scope.download_to_date=$filter('date')(to_date,"yyyy-MM-dd");
+
+            }
+        }
+
+        var transaction_type_data = ap_report.ddl('invoiceheader', 'invoicetype');
+            transaction_type_data.then(function(result) {
+                    var transaaction_types = JSON.parse(result.data)
+                    $scope.transaction_type =transaaction_types;
+                    console.log($scope.transaction_data);
+            },
+        function(err) {
+            alert('No data!.');
+        }).finally();
+
+        $scope.getSupplierName = function(query) {
+            if(query==undefined){
+                $scope.clear_old_supplier_values();
+            }
+            var datas={"Params":{"Group":"GET_EMP_DATA","Type":"SUPPLIER","Sub_Type":"SUPPLIER_ALL",
+                 "FILTER":{"supplier_branchname" :$scope.searchSuplierName,
+                 "Supplier_code":$scope.search_supplier_code,
+                 "Supplier_gstno":$scope.search_supplier_gstno,"Pan_Number":$scope.pan_number},"Limit": 0 + "," + 30,}};
+
+                 return $http.post(Appname + '/Get_Supplier/' , datas).then(function(data) {
+
+                    var final_values=data.data.DATA;
+                    console.log(final_values);
+                    if(query==undefined){
+                        $scope.toggled();
+                    }
+                    if(data.data.MESSAGE=="NOT_FOUND"){
+                        final_values=[{"supplier_name":"NOT FOUND...","supplier_gid":0}];
+                    }
+                    return final_values;
+                  });
+        }
+        $scope.download_supplierNameChanged=function(supplier){
+            debugger;
+            $scope.download_supplier_gid=supplier.supplier_gid;
+        };
+
+
+        $scope.getBranch = function(query) {
+
+            var datas={params:{"type":"Mode","Sub_Type":"Summary_new",
+                               "FILTER":{"Limit_Start":0,"Limit_End":30,"branch_name":"","branch_detail":query,
+                                            "branch_code":""},"CLASSIFICATION":{"Entity_Gid":[0]}}};
+
+                         return $http.post(Appname + '/classificationdata_get/' , datas).then(function(data) {
+
+                            var final_values=data.data.DATA;
+                            console.log(final_values);
+                            return final_values;
+                          });
+        }
+
+        $scope.download_Branch_Change =function(branch){
+            if(branch!=undefined){
+                $scope.download_branch_gid=branch.branch_gid;
+            }
+        }
+
+        $scope.getemployee_srch= function(searchText) {
+
+            var datas = {
+                params: {
+                    "Group": "GET_EMP_DATA",
+                    "Limit" : 0 + "," + 30,
+                    "Type": "EMPLOYEE",
+                    "Sub_Type": "EMPLOYEE_ALL",
+                    "json" : {
+                        "Params": {
+                                "FILTER": {
+                                    "Employee_name":searchText,
+                                },
+                            }
+                        }
+                    }
+                }
+            return $http.post(Appname + '/employee_mst_data/' , datas).then(function(data) {
+                return data.data.DATA;
+              });
+        };
+
+        $scope.emp_changed =function(emp){
+            if(emp!=undefined){
+                $scope.download_employee_gid=emp.employee_gid;
+             }
+        }
+
+        $scope.clear_seach=function(){
+            $scope.selected_transaction_status="";
+            $scope.selected_branch="";
+            $scope.selected_transaction_type="";
+            $scope.selected_supplier="";
+            $scope.selected_employee="";
+            $scope.from_date="";
+            $scope.to_date="";
+
+        }
+
+
+
+
+
+
+}]);
+
+app.service("ap_report", function ($http) {
+
+    this.ddl=function(tablename,columnname){
+            var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+            return response;
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+.C{
+ background-color: #B3FFC1 !important;
+}
+
+.D{
+ background-color: #FFBDF3 !important;
+}
+
+
+
+
+</style>
+{% endblock %}

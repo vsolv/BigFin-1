@@ -1,0 +1,30 @@
+from django.urls import path
+from Bigflow.Service import views
+
+urlpatterns = [
+    path('Requestexe/' ,views.Requestexe, name='Requestexe'),
+    path('Producttype_service/' ,views.Producttype, name='Producttype'),
+    path('Productname_service/', views.Productname , name='productnmae'),
+    path('customer_service/', views.customer_detail , name='customer_detail'),
+    path('get_mappedcustomer/',views.get_mappedcustomer,name='get_mappedcustomer'),
+    path('Service_set/', views.Service_set ,  name='Service_set'),
+    path('servicesummary/' ,views.Service_summary, name='servicesummary'),
+    path('ServiceDtl_get/', views.ServiceDtl_get, name='ServiceDtl_get'),
+    path('Servicereceived/', views.ServiceReceived, name='servicereceived'),
+    path('ServiceDispatch/', views.ServiceDispatch, name='ServiceDispatch'),
+    path('Dispatch_Set/', views.Dispatch_Set, name = 'Dispatch_Set'),
+    path('Courier_dtl/',views.Courier_dtl, name= 'Courier_dtl'),
+    path('ServicePOD/',views.ServicePOD,name='ServicePOD'),
+    path('Servicedirect/' ,views.ServiceDirect, name = 'ServiceDirect'),
+    path('ServiceRepaired/' ,views.ServiceRepaired, name = 'ServiceRepaired'),
+    path('Repair_set/', views.Repair_set, name= 'Repair_set'),
+    path('Component_get/', views.Component_get, name= 'Component_get'),
+    path('PodDispatch_Set/',views.PODDispatch_Set, name='PODDispatch_Set'),
+    # path('uploaddata/',views.uploaddata, name='uploaddata'),
+    path('upload_image/',views.upload_image, name='upload_image'),
+    path('employe_get/', views.employee_get, name='employee_get'),
+    path('Address_get/', views.Get_address, name='Get_address'),
+    path('Get_Dispatch/', views.Get_Dispatch , name='Get_Dispatch'),
+    path('DispatchPOD_set/', views.DispatchPOD_set, name='DispatchPOD_set' ),
+    path('branchofficerec_index/',views.branchofficerec_index,name='branchofficerec_index'),
+]

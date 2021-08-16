@@ -1,0 +1,1966 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Erma_Process_Set`(IN `ls_Action` varchar(32),IN `ls_Type` varchar(32),
+IN `ls_Sub_Type` varchar(32),IN `lj_Details` json,IN `lj_Status` Json,IN `lj_Change` json,
+IN `lj_Classification` json,IN `ls_Createby` varchar(16),OUT `Message` varchar(1024))
+sp_Erma_Process_Set:BEGIN
+### Bala Feb 05 2020 - Created
+Declare errno int;
+Declare msg varchar(1000);
+Declare i int;
+Declare j int;
+Declare countRow int;
+Declare Query_Insert varchar(9000);
+Declare Query_Update varchar(9000);
+Declare Query_Column varchar(9000);
+Declare Query_Value varchar(9000);
+
+
+
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+
+     BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+     END;
+
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,'$.Entity_Gid[0]')) into @Entity_Gids;
+
+        if @Entity_Gids is  null or @Entity_Gids = '' then
+				set Message = 'Entity_Gid Is Not Given';
+                leave sp_Erma_Process_Set;
+        End if;
+
+start transaction;
+
+set autocommit=0;
+
+IF ls_Action = 'INSERT' and ls_Type = 'BARCODE' and  ls_Sub_Type = 'MAKER'  then
+
+						select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Business_Gid'))) into @BarCode_Business_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_DeptGid'))) into @BarCode_DeptGid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Count'))) into @BarCode_Count;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_RequestRemarks'))) into @BarCode_RequestRemarks;
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address1'))) into @Address1;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address2'))) into @Address2;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address3'))) into @Address3;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Ref_Code'))) into @Address_Ref_Code;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Pincode')))into @Address_Pincode;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_District_Gid')))into @Address_District_Gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_City_Gid')))into @Address_City_Gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_State_Gid')))into @Address_State_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.BarCode_Status'))) into @BarCode_Status;
+
+
+                            if @Barcode_Business_Gid is null or @Barcode_Business_Gid = '' then
+								set Message = 'Barcode Business Gid Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @BarCode_DeptGid is null or @BarCode_DeptGid = '' then
+								set Message = 'BarCode Department Gid Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @BarCode_Type is null or @BarCode_Type = '' then
+								set Message = 'BarCode Type Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @BarCode_Count is null or @BarCode_Count = '' then
+								set Message = 'BarCode Count Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @BarCode_RequestRemarks is null or @BarCode_RequestRemarks = '' then
+								set Message = 'BarCode Request Remarks Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @BarCode_Status is null or @BarCode_Status = '' then
+								set Message = 'BarCode Status Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if @Address_District_Gid is null or @Address_District_Gid = '' then
+								set Message = 'Address District Gid Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+                            if ls_Createby is null or ls_Createby = '' then
+								set Message = 'Createby Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+						set Query_Column = '';
+                        set Query_Value = '';
+
+                        if @Address1 is not null and @Address1 <> '' then
+							set Query_Column = concat(Query_Column,',address_1');
+							set Query_Value = concat(Query_Value,',','''',@Address1,'''');
+						End if;
+
+                        if @Address2 is not null and @Address2 = '' then
+							set Query_Column = concat(Query_Column,',address_2');
+							set Query_Value = concat(Query_Value,',','''',@Address2,'''');
+						End if;
+
+                        if @Address3 is not null and @Address3 = '' then
+							set Query_Column = concat(Query_Column,',address_3');
+							set Query_Value = concat(Query_Value,',','''',@Address3,'''');
+						End if;
+
+
+                        if @Address_Pincode is not null and @Address_Pincode = '' then
+							set Query_Column = concat(Query_Column,',address_pincode');
+							set Query_Value = concat(Query_Value,',',@Address_Pincode);
+						End if;
+
+                        if @Address_City_Gid is not null and @Address_City_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_city_gid');
+							set Query_Value = concat(Query_Value,',',@Address_City_Gid);
+						End if;
+
+                        if @Address_State_Gid is not null and @Address_State_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_state_gid');
+							set Query_Value = concat(Query_Value,',',@Address_State_Gid);
+						End if;
+
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO gal_mst_taddress
+											(address_ref_code,address_district_gid,
+                                            entity_gid,create_by ',Query_Column,' )
+									   VALUES(''',@Address_Ref_Code,''',',@Address_District_Gid,',
+                                              ',@Entity_Gids,',',ls_Createby,' ',Query_Value,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+                                set @BarCode_Delvry_Addr_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+            select max(substr(barcode_requestno,2)) from erma_trn_tbarcode  into @Request_No;
+
+            select  exists(select max(substr(barcode_requestno,2)) from erma_trn_tbarcode) into @Test;
+
+            if @Test=0 then
+				call sp_Generatecode_Get('WITHOUT_DATE', 'B', '000','000', @Message);
+				select @Message into @BarCode_RequestNo;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE', 'B', '000',@Request_No, @Message);
+				select @Message into @BarCode_RequestNo;
+			end if;
+
+
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO erma_trn_tbarcode
+											(barcode_requestno,barcode_businessgid,barcode_deptgid,
+                                             barcode_type,barcode_count,barcode_deliveryaddressgid,
+                                             barcode_requestremarks,barcode_status,
+                                             entity_gid,create_by)
+									   VALUES(''',@BarCode_RequestNo,''',',@Barcode_Business_Gid,',',@BarCode_DeptGid,',
+										      ''',@BarCode_Type,''',',@BarCode_Count,',',@BarCode_Delvry_Addr_Gid,',
+                                              ''',@BarCode_RequestRemarks,''',''',@BarCode_Status,''',
+                                              ''',@Entity_Gids,''',',ls_Createby,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'BARCODE' and  ls_Sub_Type = 'ASSIGN'  then
+
+				select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Series_Gid'))) into @BarCode_Series_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Gid'))) into @BarCode_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Storage_Vendor'))) into @Storage_Vendor;
+
+
+                            if ls_Createby is null or ls_Createby = '' then
+								set Message = 'Createby Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+
+
+				SELECT  barcodeseries_to-barcodeseries_from INTO @BarCode_From_To
+						FROM  erma_mst_tbarcodeseries
+							WHERE barcodeseries_gid =  @BarCode_Series_Gid  AND barcodeseries_isactive = 'Y'
+                            AND barcodeseries_isremoved = 'N' ;
+
+
+
+                SELECT barcode_count,barcode_type INTO @BarCode_Count,@BarCode_Type
+						FROM  erma_trn_tbarcode
+							WHERE barcode_gid=@BarCode_Gid AND
+								  barcode_isactive='Y' AND barcode_isremoved='N' ;
+
+
+
+                #select  @BarCode_From_To,@BarCode_Count ;
+               # IF @BarCode_From_To>@BarCode_Count THEN
+					#set Message = 'BarCode_To Is Too Large';
+					#leave sp_Erma_Process_Set;
+               # END IF;
+
+                	#select @BarCode_Gid,@BarCodedtl_BarCode,@Storage_Vendor,@BarCode_Type,
+                                             # @BarCodedtl_Status,@Entity_Gids,ls_Createby;
+
+            set @BarCodedtl_Status='ASSIGNED';
+
+            set i =0;
+
+			while i<@BarCode_Count do
+
+            #select Replace(@BarCode_From,REVERSE(CAST(CAST(REVERSE(@BarCode_From) as character) as unsigned)),'');
+            #select Replace(@BarCode_From,REVERSE(CAST(REVERSE(@BarCode_From) as character)+0),'')  into @Test1;
+            #select  substr(@BarCode_From,1,length(@BarCode_From)-1) into @Str_Format;
+			#set @BarCodedtl_BarCode =  concat(@Str_Format,@BarCode_From+j);
+
+            if i=0 then
+
+			SELECT  case when barcodeseries_from=1 then 0
+					else barcodeseries_from end as barcodeseries_from,
+					barcodeseries_startwith INTO @BarCode_From,@Startwith
+						FROM  erma_mst_tbarcodeseries
+							WHERE barcodeseries_gid =  @BarCode_Series_Gid
+                            AND barcodeseries_isactive = 'Y'
+                            AND barcodeseries_isremoved = 'N' ;
+            end if;
+
+                set @BarCode_From=CAST(concat('0000',@BarCode_From)as character);
+
+				call sp_Generatecode_Get('WITHOUT_DATE',@Startwith,'0000',@BarCode_From, @Message);
+				set @BarCodedtl_BarCode = @Message ;
+
+				set @BarCode_From=@BarCode_From+1;
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO erma_trn_tbarcodedtl
+											(barcodedtl_barcodegid, barcodedtl_barcode,
+											 barcodedtl_storagevendor, barcodedtl_barcodetype,
+											 barcodedtl_status,entity_gid,create_by)
+									   VALUES(',@BarCode_Gid,',''',@BarCodedtl_BarCode,''',
+										      ''',@Storage_Vendor,''',''',@BarCode_Type,''',
+                                              ''',@BarCodedtl_Status,''',',@Entity_Gids,',',ls_Createby,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+            set i=i+1;
+
+            end while;
+
+							set @BarCodedtl_BarCode=extractnumber(@BarCodedtl_BarCode);
+
+            set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_mst_tbarcodeseries
+											SET barcodeseries_from=''',@BarCodedtl_BarCode,''',
+                                                update_date=now(),
+                                                update_by=',ls_Createby,'
+                                        WHERE barcodeseries_gid=',@BarCode_Series_Gid,'  ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'BARCODE' and  ls_Sub_Type = 'DISPATCH'  then
+
+				select JSON_LENGTH(lj_Details,'$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Gid'))) into @BarCode_Gid;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Business_Gid'))) into @BarCode_Business_Gid;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Dept_Gid'))) into @BarCode_Dept_Gid;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Count'))) into @BarCode_Count;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Request_No'))) into @BarCode_Request_No;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Storage_Vendor'))) into @Storage_Vendor;
+              #  select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Assign_By'))) into @BarCode_Assign_By;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_from'))) into @BarCode_from;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_To'))) into @BarCode_To;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Delivery_Type'))) into @Delivery_Type;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Delivery_Sub_Type'))) into @Delivery_Sub_Type;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Request_Remarks'))) into @Request_Remarks;
+
+												/*barcode_businessgid=',@BarCode_Business_Gid,',
+                                                barcode_deptgid=',@BarCode_Dept_Gid,',
+                                                barcode_type=''',@BarCode_Type,''',
+												barcode_count=''',@BarCode_Count,''',
+                                                barcode_requestno=''',@BarCode_Request_No,''',*/
+
+
+                            if ls_Createby is null or ls_Createby = '' then
+								set Message = 'Createby Is Needed.';
+								leave sp_Erma_Process_Set;
+							End if;
+
+            set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tbarcode
+											SET barcode_storagevendor=''',@Storage_Vendor,''',
+												barcode_assignby=',@BarCode_Assign_By,',
+                                                barcode_from=''',@BarCode_from,''',
+                                                barcode_to=''',@BarCode_To,''',
+                                                barcode_deliverytype=''',@Delivery_Type,''',
+												barcode_deliverysubtype=''',@Delivery_Sub_Type,''',
+                                                barcode_requestremarks=''',@Request_Remarks,''',
+                                                update_date=now(),
+                                                update_by=',ls_Createby,'
+                                        WHERE barcode_gid=',@BarCode_Gid,'  ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+
+ELSEIF ls_Action = 'INSERT' and ls_Type = 'BARCODE' and  ls_Sub_Type = 'SERIES'  then
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Storage_Vendor'))) into @Storage_Vendor;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Series_Type'))) into @BarCode_Series_Type;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCodes_Series_From'))) into @BarCodes_Series_From;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCodes_Series_To'))) into @BarCodes_Series_To;
+
+
+						if @Storage_Vendor is null or @Storage_Vendor = '' then
+							set Message = 'Storage Vendor Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @BarCode_Series_Type is null or @BarCode_Series_Type = '' then
+							set Message = 'BarCode Series Type Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @BarCodes_Series_From is null or @BarCodes_Series_From = '' then
+							set Message = 'BarCodes Series From Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @BarCodes_Series_To is null or @BarCodes_Series_To = '' then
+							set Message = 'BarCodes Series To Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+						if ls_Createby is null or ls_Createby = '' then
+							set Message = 'Createby Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+
+            set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO erma_mst_tbarcodeseries
+											(barcodeseries_storagevendor,barcodeseries_type,
+                                             barcodeseries_from, barcodeseries_to,
+											 entity_gid, create_by)
+									   VALUES(''',@Storage_Vendor,''',''',@BarCode_Series_Type,''',
+										      ''',@BarCodes_Series_From,''',''',@BarCodes_Series_To,''',
+                                              ',@Entity_Gids,',',ls_Createby,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+ELSEIF ls_Action = 'INSERT' and ls_Type = 'ARCHIVAL' and  ls_Sub_Type = 'REQUEST'  then
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+					select JSON_LENGTH(lj_Change, '$') into @Change_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+                        if @Change_json_count is null or @Change_json_count = 0 then
+							set Message = 'No Data In Change Json .';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Business_Gid'))) into @Archival_Business_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Dept_Gid'))) into @Archival_Dept_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Product_Gid'))) into @Archival_Product_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Document_Count'))) into @Document_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Carton_Barcode_Count'))) into @Carton_Barcode_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.File_Barcode_Count'))) into @File_Barcode_Count;
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Remarks'))) into @Remarks;
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address1'))) into @Address1;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address2'))) into @Address2;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address3'))) into @Address3;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Ref_Code'))) into @Address_Ref_Code;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Pincode')))into @Address_Pincode;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_District_Gid')))into @Address_District_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_City_Gid')))into @Address_City_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_State_Gid')))into @Address_State_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Storage_Vendor')))into @Storage_Vendor;
+
+
+						if @Archival_Business_Gid is null or @Archival_Business_Gid = '' then
+							set Message = 'Archival Business Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Archival_Dept_Gid is null or @Archival_Dept_Gid = '' then
+							set Message = 'Archival Dept Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Archival_Product_Gid is null or @Archival_Product_Gid = '' then
+							set Message = 'Archival Product Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Document_Count is null or @Document_Count = '' then
+							set Message = 'Document Count Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Carton_Barcode_Count is null or @Carton_Barcode_Count = '' then
+							set Message = 'Carton Barcode Count Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+                        if @File_Barcode_Count is null or @File_Barcode_Count = '' then
+							set Message = 'File Barcode Count Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Address_District_Gid is null or @Address_District_Gid = '' then
+							set Message = 'Address District Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Storage_Vendor is null or @Storage_Vendor = '' then
+							set Message = 'Storage Vendor Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+						if ls_Createby is null or ls_Createby = '' then
+							set Message = 'Createby Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+
+                        set Query_Column = '';
+                        set Query_Value = '';
+
+                        if @Address1 is not null and @Address1 <> '' then
+							set Query_Column = concat(Query_Column,',address_1');
+							set Query_Value = concat(Query_Value,',','''',@Address1,'''');
+						End if;
+
+                        if @Address2 is not null and @Address2 = '' then
+							set Query_Column = concat(Query_Column,',address_2');
+							set Query_Value = concat(Query_Value,',','''',@Address2,'''');
+						End if;
+
+                        if @Address3 is not null and @Address3 = '' then
+							set Query_Column = concat(Query_Column,',address_3');
+							set Query_Value = concat(Query_Value,',','''',@Address3,'''');
+						End if;
+
+
+                        if @Address_Pincode is not null and @Address_Pincode = '' then
+							set Query_Column = concat(Query_Column,',address_pincode');
+							set Query_Value = concat(Query_Value,',',@Address_Pincode);
+						End if;
+
+                        if @Address_City_Gid is not null and @Address_City_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_city_gid');
+							set Query_Value = concat(Query_Value,',',@Address_City_Gid);
+						End if;
+
+                        if @Address_State_Gid is not null and @Address_State_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_state_gid');
+							set Query_Value = concat(Query_Value,',',@Address_State_Gid);
+						End if;
+
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO gal_mst_taddress
+											(address_ref_code,address_district_gid,
+                                            entity_gid,create_by ',Query_Column,' )
+									   VALUES(''',@Address_Ref_Code,''',',@Address_District_Gid,',
+                                              ',@Entity_Gids,',',ls_Createby,' ',Query_Value,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								#set Message = 'SUCCESS';
+                                set @Pickup_Address_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+
+
+            select exists(select max(archival_requestno) from erma_trn_tarchival) into @Test;
+            select max(substr(archival_requestno,2)) from erma_trn_tarchival into  @Archival_RequestNo ;
+
+             if @Test=0 then
+				call sp_Generatecode_Get('WITHOUT_DATE','RE', '00','00', @Message);
+				select @Message into @TicketHeader_Code;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE','RE', '00',@Archival_RequestNo, @Message);
+				select @Message into @Archival_RequestNo;
+			end if;
+
+
+
+            set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO erma_trn_tarchival
+											(archival_requestno, archival_businessgid,
+											 archival_deptgid, archival_productgid,
+											 archival_documentcount, archival_cartonbarcodecount,
+											 archival_filebarcodecount, archival_pickupaddressgid,
+											 entity_gid, create_by)
+									   VALUES(''',@Archival_RequestNo,''',',@Archival_Business_Gid,',
+										      ',@Archival_Dept_Gid,',',@Archival_Product_Gid,',
+                                              ',@Document_Count,',',@Carton_Barcode_Count,',
+                                             ',@File_Barcode_Count,' , ',@Pickup_Address_Gid,',
+                                              ',@Entity_Gids,',',ls_Createby,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								#set Message = 'SUCCESS';
+                                set @Archivaldtl1_Archival_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+	  select
+			case when product_arcrefno1 is null then ''
+                  else product_arcrefno1
+                  end as product_arcrefno1,
+			case when product_arcrefno2 is null then ''
+                  else product_arcrefno2
+                  end as product_arcrefno2,
+			case when product_arcrefno3 is null then ''
+                  else product_arcrefno3
+                  end as product_arcrefno3,
+			case when product_arcrefno4 is null then ''
+                  else product_arcrefno4
+                  end as product_arcrefno4,
+			case when product_arcrefno5 is null then ''
+                  else product_arcrefno5
+                  end as product_arcrefno5,
+			case when product_arcrefno6 is null then ''
+                  else product_arcrefno6
+                  end as product_arcrefno6,
+              case when product_refno1 is null then ''
+                  else product_refno1
+                  end as product_refno1,
+			 case when product_refno2 is null then ''
+                  else product_refno2
+                  end as product_refno2,
+			 case when product_refno3 is null then ''
+                  else product_refno3
+                  end as product_refno3,
+			 case when product_refno4 is null then ''
+                  else product_refno4
+                  end as product_refno4,
+			 case when product_refno5 is null then ''
+                  else product_refno5
+                  end as product_refno5,
+			 case when product_refno6 is null then ''
+                  else product_refno6
+                  end as product_refno6
+			into @Column1,@Column2,@Column3,@Column4,@Column5,@Column6,
+				 @Value1,@Value2,@Value3,@Value4,@Value5,@Value6
+			from erma_mst_tproduct where product_gid=@Archival_Product_Gid
+            and product_isactive='Y' and product_isremoved='N' ;
+
+         # select @Column1,@Column2,@Column3,@Column4,@Column5,@Column6,
+				 #@Value1,@Value2,@Value3,@Value4,@Value5,@Value6,@Archival_Product_Gid;
+
+
+
+             set @Change_json_count = JSON_LENGTH(lj_Change,'$.DATA') ;
+
+		set i = 0;
+		While i < @Change_json_count  do
+
+			set @Product_Ref_No1='',@Product_Ref_No2='',@Product_Ref_No3='',
+				@Product_Ref_No4='',@Product_Ref_No5='',@Product_Ref_No6='';
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].CartonBarcode'))) into @Carton_BarCode;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].FileBarcode'))) into @File_BarCode;
+
+            #select @Value1,@Value2,@Value3,@Value4,@Value5,@Value6;
+            set @Test_Values='';
+			if @Value1<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value1,' '))) into @Product_Ref_No1;
+				set @Test_Values= CONCAT(@Test_Values,@Value1);
+            end if;
+            if @Value2<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value2,' '))) into @Product_Ref_No2;
+                set @Test_Values= CONCAT(@Test_Values,',',@Value2);
+            end if;
+            if @Value3<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value3,' '))) into @Product_Ref_No3;
+                set @Test_Values= CONCAT(@Test_Values,',',@Value3);
+            end if;
+            if @Value4<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value4,' '))) into @Product_Ref_No4;
+                set @Test_Values= CONCAT(@Test_Values,',',@Value4);
+            end if;
+            if @Value5<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value5,' '))) into @Product_Ref_No5;
+                set @Test_Values= CONCAT(@Test_Values,',',@Value5);
+            end if;
+            if @Value6<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value6,' '))) into @Product_Ref_No6;
+                set @Test_Values= CONCAT(@Test_Values,',',@Value6);
+            end if;
+
+            #select JSON_UNQUOTE(JSON_KEYS(lj_Change,CONCAT('$.DATA[',i,'] '))) into @Product_Ref_No11;
+
+            set Query_Column='';
+
+            if @Column1<>'' AND @Product_Ref_No1<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column1);
+            end if;
+
+            if @Column2<>'' AND @Product_Ref_No2<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column2);
+            end if;
+
+            if @Column3<>'' AND @Product_Ref_No3<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column3);
+            end if;
+
+            if @Column4<>'' AND @Product_Ref_No4<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column4);
+            end if;
+
+            if @Column5<>'' AND @Product_Ref_No5<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column5);
+            end if;
+
+            if @Column6<>'' AND @Product_Ref_No6<>'' then
+				set Query_Column=concat(Query_Column,',','archivaldtl1_',@Column6);
+            end if;
+
+
+
+			set Query_Value='';
+
+            if @Product_Ref_No1<>'' AND @Product_Ref_No1 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No1,'''');
+            end if;
+
+            if @Product_Ref_No2<>'' AND @Product_Ref_No2 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No2,'''');
+            end if;
+
+            if @Product_Ref_No3<>'' AND @Product_Ref_No3 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No3,'''');
+            end if;
+
+            if @Product_Ref_No4<>'' AND @Product_Ref_No4 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No4,'''');
+            end if;
+
+            if @Product_Ref_No5<>'' AND @Product_Ref_No5 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No5,'''');
+            end if;
+
+            if @Product_Ref_No6<>'' AND @Product_Ref_No6 is not null then
+				set Query_Value=concat(Query_Value,',','''',@Product_Ref_No6,'''');
+            end if;
+
+              #select  Query_Column,Query_Value;
+              #select  @Archivaldtl1_Archival_Gid,@Archival_RequestNo,
+								        	  # @Archival_Product_Gid,@Carton_BarCode,
+											  # @File_BarCode,@Storage_Vendor,
+											  # @Archivaldtl_Status,@Entity_Gids,ls_Createby;
+
+
+
+            set  @Archivaldtl_Status='REQUESTED';
+
+			set Query_Insert = '';
+			set Query_Insert = concat('insert into erma_trn_tarchivaldtl1
+											(archivaldtl1_archivalgid, archivaldtl1_archivalrequestno,
+											 archivaldtl1_productgid, archivaldtl1_cartonbarcode,
+                                             archivaldtl1_filebarcode,archivaldtl1_storagevendor,
+                                             archivaldtl1_status,entity_gid,create_by ',Query_Column,')
+									  values(',@Archivaldtl1_Archival_Gid,',''',@Archival_RequestNo,''',
+											 ',@Archival_Product_Gid,',''',@Carton_BarCode,''',
+											 ''',@File_BarCode,''',''',@Storage_Vendor,''',
+											 ''',@Archivaldtl_Status,''',',@Entity_Gids,',',ls_Createby,'
+                                             ',Query_Value,'
+                                             )
+
+									 ');
+
+
+                            set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow =0;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+                            set Message = '';
+
+                            if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+			 set i=i+1;
+             end while ;
+
+
+							select  Message ;
+							if  Message = 'SUCCESS' then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'BARCODE' and  ls_Sub_Type = 'MAKER'  then
+						#Edit Page for BARCODE  MAKER
+
+						select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Barcode_Gid'))) into @Barcode_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Business_Gid'))) into @BarCode_Business_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_DeptGid'))) into @BarCode_DeptGid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Type'))) into @BarCode_Type;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_Count'))) into @BarCode_Count;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.BarCode_RequestRemarks'))) into @BarCode_RequestRemarks;
+
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Gid'))) into @Address_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address1'))) into @Address1;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address2'))) into @Address2;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address3'))) into @Address3;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Ref_Code'))) into @Address_Ref_Code;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Pincode')))into @Address_Pincode;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_District_Gid')))into @Address_District_Gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_City_Gid')))into @Address_City_Gid;
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_State_Gid')))into @Address_State_Gid;
+                select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.BarCode_Status'))) into @BarCode_Status;
+
+						if @Barcode_Gid is null or @Barcode_Gid = '' then
+							set Message = 'Barcode Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+                        if @Address_Gid is null or @Address_Gid = '' then
+							set Message = 'Address Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+					set Query_Column='';#Query_Column for BarCode Update
+
+						if @BarCode_Business_Gid is not null and @BarCode_Business_Gid <> '' then
+							set Query_Column = concat(Query_Column,',barcode_businessgid=',@BarCode_Business_Gid,' ');
+						End if;
+
+                        if @BarCode_DeptGid is not null and @BarCode_DeptGid <> '' then
+							set Query_Column = concat(Query_Column,',barcode_deptgid=',@BarCode_DeptGid,' ');
+						End if;
+
+                        if @BarCode_Type is not null and @BarCode_Type <> '' then
+							set Query_Column = concat(Query_Column,',barcode_type=',@BarCode_DeptGid,' ');
+						End if;
+
+                        if @BarCode_Count is not null and @BarCode_Count <> '' then
+							set Query_Column = concat(Query_Column,',barcode_count=',@BarCode_Count,' ');
+						End if;
+
+                        if @BarCode_RequestRemarks is not null and @BarCode_RequestRemarks <> '' then
+							set Query_Column = concat(Query_Column,',barcode_requestremarks=''',@BarCode_RequestRemarks,''' ');
+						End if;
+
+                        if @BarCode_Status is not null and @BarCode_Status <> '' then
+							set Query_Column = concat(Query_Column,',barcode_status=',@BarCode_Status,' ');
+						End if;
+
+            set sql_safe_updates=0;
+			set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tbarcode
+											SET update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+											WHERE barcode_gid=',@Barcode_Gid,' and
+												  barcode_isactive=''Y'' and
+												  barcode_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+
+
+					set Query_Column='';#Query_Column for Address Update
+
+						if @Address1 is not null and @Address1 <> '' then
+							set Query_Column = concat(Query_Column,',address_1=''',@Address1,''' ');
+						End if;
+
+                        if @Address2 is not null and @Address2 <> '' then
+							set Query_Column = concat(Query_Column,',address_2=''',@Address2,''' ');
+						End if;
+
+                        if @Address3 is not null and @Address3 <> '' then
+							set Query_Column = concat(Query_Column,',address_3=''',@Address1,''' ');
+						End if;
+
+                        if @Address_Pincode is not null and @Address_Pincode <> '' then
+							set Query_Column = concat(Query_Column,',address_pincode=',@Address_Pincode,' ');
+						End if;
+
+                        if @Address_District_Gid is not null and @Address_District_Gid <> '' then
+							set Query_Column = concat(Query_Column,',address_district_gid=',@Address_District_Gid,' ');
+						End if;
+
+                        if @Address_State_Gid is not null and @Address_State_Gid <> '' then
+							set Query_Column = concat(Query_Column,',address_state_gid=',@Address_State_Gid,' ');
+						End if;
+
+
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE gal_mst_taddress
+											SET update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+											WHERE address_gid=',@Address_Gid,'  ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'ARCHIVAL' and  ls_Sub_Type = 'SCHEDULE'  then
+
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Gid'))) into @Archival_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Schedule_Date'))) into @Schedule_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Vehicle_No'))) into @Archival_Vehicle_No;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.Archival_Status'))) into @Archival_Status;
+
+							set @Schedule_Date = date_format(@Schedule_Date,'%Y-%m-%d');
+
+
+
+						if @Archival_Gid is null or @Archival_Gid = '' then
+							set Message = 'Archival Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+            set sql_safe_updates=0;
+			set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tarchival
+											SET archival_status=''',@Archival_Status,''',
+												archival_scheduledate=''',@Schedule_Date,''',
+												archival_vehicleno=''',@Archival_Vehicle_No,''',
+												archival_scheduleby=',ls_Createby,',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+										  WHERE archival_gid=',@Archival_Gid,' and
+												archival_isactive=''Y'' and
+												archival_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+							End if;
+
+
+			set sql_safe_updates=0;
+			set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tarchivaldtl1
+											SET archivaldtl1_status=''',@Archival_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+										  WHERE archivaldtl1_archivalgid=',@Archival_Gid,' and
+												archivaldtl1_isactive=''Y'' and
+												archivaldtl1_isremoved=''N''
+										');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'ARCHIVAL' and  ls_Sub_Type = 'CONFORM'  then
+
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Archival_Gid'))) into @Archival_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Pickup_Date'))) into @Pickup_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.Archival_Status'))) into @Archival_Status;
+
+							set @Pickup_Date = date_format(@Pickup_Date,'%Y-%m-%d');
+
+						if @Archival_Gid is null or @Archival_Gid = '' then
+							set Message = 'Archival Gid Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+
+            set sql_safe_updates=0;
+			set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tarchival
+											SET archival_status=''',@Archival_Status,''',
+												archival_pickupdate=''',@Pickup_Date,''',
+												archival_pickupby=',ls_Createby,',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+										  WHERE archival_gid=',@Archival_Gid,' and
+												archival_isactive=''Y'' and
+												archival_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+                            set sql_safe_updates=0;
+			set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tarchivaldtl1
+											SET archivaldtl1_status=''',@Archival_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+										  WHERE archivaldtl1_archivalgid=',@Archival_Gid,' and
+												archivaldtl1_isactive=''Y'' and
+												archivaldtl1_isremoved=''N''
+										');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+			 select distinct archivaldtl1_gid,concat('[',group_concat(json_object('Barcode',archivaldtl1_filebarcode)),']')
+			        into @Archivaldtl_Gid,@BarCodedtl_BarCode
+					from erma_trn_tarchivaldtl1 where archivaldtl1_archivalgid=@Archival_Gid
+						and archivaldtl1_isactive='Y'
+						and archivaldtl1_isremoved='N' ;
+
+
+
+						set @BarCode_json = concat('{"Data":',@BarCodedtl_BarCode,'}');
+
+                  select JSON_LENGTH(@BarCode_json, CONCAT('$.Data')) into @BarCodedtl_BarCode_Count;
+
+
+					if @BarCodedtl_BarCode_Count is null or @BarCodedtl_BarCode_Count = 0 or @BarCodedtl_BarCode_Count = '' then
+							set Message = 'BarCodedtl BarCode Is Needed.';
+							leave sp_Erma_Process_Set;
+					End if;
+
+
+            set i=0;
+			while i < @BarCodedtl_BarCode_Count do
+
+              select JSON_UNQUOTE(JSON_EXTRACT(@BarCode_json, CONCAT('$.Data[',i,'].Barcode'))) into @BarCodedtl_BarCode;
+
+
+            set @BarCodedtl_Status='USED';
+            set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tbarcodedtl
+											SET barcodedtl_status=''',@BarCodedtl_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+										  WHERE barcodedtl_barcode=''',@BarCodedtl_BarCode,''' and
+												barcodedtl_isactive=''Y'' and
+												barcodedtl_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+                               commit;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+		   set i=i+1;
+           end while;
+
+
+ELSEIF ls_Action = 'INSERT' and ls_Type = 'SINGLE_AND_BULK' and  ls_Sub_Type = 'RETRIEVAL'  then
+
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Request_No'))) into @Retrieval_Request_No;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Business_Gid'))) into @Retrieval_Business_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Dept_Gid'))) into @Retrieval_Dept_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Product_Gid'))) into @Retrieval_Product_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Request_Date'))) into @Retrieval_Request_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_No_of_Req'))) into @Retrieval_No_of_Req;
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_svAcceptCount'))) into @Retrieval_svAcceptCount;
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_svBounceCount'))) into @Retrieval_svBounceCount;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Type'))) into @Retrieval_Type;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Storage_Vendor'))) into @Storage_Vendor;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.Retrieval_Status'))) into @Retrieval_Status;
+
+            set @Retrieval_Request_Date=date_format(@Retrieval_Request_Date,'%Y-%m-%d');
+
+            if @Retrieval_Type <> 'Scan_Copy'  then
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address1'))) into @Address1;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address2'))) into @Address2;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address3'))) into @Address3;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Ref_Code'))) into @Address_Ref_Code;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Pincode')))into @Address_Pincode;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_District_Gid')))into @Address_District_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_City_Gid')))into @Address_City_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_State_Gid')))into @Address_State_Gid;
+
+					set Query_Column = '';
+					set Query_Value = '';
+
+                        if @Address1 is not null and @Address1 <> '' then
+							set Query_Column = concat(Query_Column,',address_1');
+							set Query_Value = concat(Query_Value,',','''',@Address1,'''');
+						End if;
+
+                        if @Address2 is not null and @Address2 = '' then
+							set Query_Column = concat(Query_Column,',address_2');
+							set Query_Value = concat(Query_Value,',','''',@Address2,'''');
+						End if;
+
+                        if @Address3 is not null and @Address3 = '' then
+							set Query_Column = concat(Query_Column,',address_3');
+							set Query_Value = concat(Query_Value,',','''',@Address3,'''');
+						End if;
+
+                        if @Address_Pincode is not null and @Address_Pincode = '' then
+							set Query_Column = concat(Query_Column,',address_pincode');
+							set Query_Value = concat(Query_Value,',',@Address_Pincode);
+						End if;
+
+                        if @Address_City_Gid is not null and @Address_City_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_city_gid');
+							set Query_Value = concat(Query_Value,',',@Address_City_Gid);
+						End if;
+
+                        if @Address_State_Gid is not null and @Address_State_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_state_gid');
+							set Query_Value = concat(Query_Value,',',@Address_State_Gid);
+						End if;
+
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO gal_mst_taddress
+											(address_ref_code,address_district_gid,
+                                             entity_gid,create_by ',Query_Column,' )
+									   VALUES(''',@Address_Ref_Code,''',',@Address_District_Gid,',
+                                              ',@Entity_Gids,',',ls_Createby,' ',Query_Value,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+                                set @Delivery_Address_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+
+            end if;
+
+			set Query_Column = '';
+			set Query_Value = '';
+
+				if @Retrieval_Type = 'Scan_Copy'  then
+						set @Delivery_Address_Gid ='';
+				end if;
+
+				if @Delivery_Address_Gid is not null and @Delivery_Address_Gid <>'' then
+						set Query_Column =concat(',retrieval_deliveryaddressgid');
+						set Query_Value =concat(',',@Delivery_Address_Gid,'');
+				end if;
+
+
+
+            select max(substr(retrieval_requestno,2)) from erma_trn_tretrieval  into @Request_No;
+
+            select  exists(select max(substr(retrieval_requestno,2)) from erma_trn_tretrieval) into @Test;
+
+            if @Test=0 then
+				call sp_Generatecode_Get('WITHOUT_DATE', 'R', '000','000', @Message);
+				select @Message into @Retrieval_Request_No;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE', 'R', '000',@Request_No, @Message);
+				select @Message into @Retrieval_Request_No;
+			end if;
+
+
+
+            set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO erma_trn_tretrieval
+											 (retrieval_requestno, retrieval_business_gid,
+											  retrieval_department_gid, retrieval_product_gid,
+											  retrieval_requestdate, retrieval_requestby, retrieval_approvedby,
+											  retrieval_noofreq,  retrieval_status,
+                                              retrieval_svacceptcount,retrieval_svbouncecount,
+                                              retrieval_type, entity_gid,create_by ',Query_Column,' )
+									   VALUES(''',@Retrieval_Request_No,''',',@Retrieval_Business_Gid,',
+                                              ',@Retrieval_Dept_Gid,',',@Retrieval_Product_Gid,',
+                                              ''',@Retrieval_Request_Date,''',',ls_Createby,',',ls_Createby,' ,
+                                              ''',@Retrieval_No_of_Req,''',''',@Retrieval_Status,''',
+                                              ''',@Retrieval_svAcceptCount,''',''',@Retrieval_svBounceCount,''',
+											  ''',@Retrieval_Type,''',',@Entity_Gids,',',ls_Createby,'
+                                              ',Query_Value,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+                                set @Retrievaldtl_Retrieval_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+			select
+			case when product_retrefno1 is null then ''
+                  else product_retrefno1
+                  end as product_retrefno1,
+			case when product_retrefno2 is null then ''
+                  else product_retrefno2
+                  end as product_retrefno2,
+			case when product_retrefno3 is null then ''
+                  else product_retrefno3
+                  end as product_retrefno3,
+			case when product_retrefno4 is null then ''
+                  else product_retrefno4
+                  end as product_retrefno4,
+			case when product_retrefno5 is null then ''
+                  else product_retrefno5
+                  end as product_retrefno5,
+			case when product_retrefno6 is null then ''
+                  else product_retrefno6
+                  end as product_retrefno6
+			into  @Value1,@Value2,@Value3,@Value4,@Value5,@Value6
+			from  erma_mst_tproduct where product_gid=@Retrieval_Product_Gid
+				  and product_isactive='Y' and product_isremoved='N' ;
+
+
+
+
+ set @Change_json_count = JSON_LENGTH(lj_Change,'$.DATA') ;
+
+		set i = 0;
+		While i < @Change_json_count  do
+
+			set @Product_Ref_No1='',@Product_Ref_No2='',@Product_Ref_No3='',
+				@Product_Ref_No4='',@Product_Ref_No5='',@Product_Ref_No6='';
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].CartonBarcode'))) into @Carton_BarCode;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].FileBarcode'))) into @File_BarCode;
+
+          #select @Value1,@Value2,@Value3,@Value4,@Value5,@Value6;
+
+			if @Value1<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value1,' '))) into @Retrievaldtl_Ref_No1;
+            end if;
+            if @Value2<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value2,' '))) into @Retrievaldtl_Ref_No2;
+            end if;
+            if @Value3<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value3,' '))) into @Retrievaldtl_Ref_No3;
+            end if;
+            if @Value4<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value4,' '))) into @Retrievaldtl_Ref_No4;
+            end if;
+            if @Value5<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value5,' '))) into @Retrievaldtl_Ref_No5;
+            end if;
+            if @Value6<>'' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_Change,CONCAT('$.DATA[',i,'].',@Value6,' '))) into @Retrievaldtl_Ref_No6;
+            end if;
+
+
+
+            set Query_Column='';
+            set Query_Value='';
+
+            if  @Retrievaldtl_Ref_No1<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno1');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No1,'''');
+            end if;
+
+            if  @Retrievaldtl_Ref_No2<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno2');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No2,'''');
+            end if;
+
+            if  @Retrievaldtl_Ref_No3<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno3');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No3,'''');
+            end if;
+
+            if  @Retrievaldtl_Ref_No4<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno4');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No4,'''');
+            end if;
+
+            if  @Product_Ref_No5<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno5');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No5,'''');
+            end if;
+
+            if  @Product_Ref_No<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_refno6');
+                set Query_Value=concat(Query_Value,',','''',@Retrievaldtl_Ref_No6,'''');
+            end if;
+
+
+            set  @Retrievaldtl_Status='REQUESTED';
+
+			set Query_Insert = '';
+		    set Query_Insert = concat('insert into erma_trn_tretrievaldtl
+											(retrievaldtl_retrieval_gid, retrievaldtl_cartonbarcode,
+											 retrievaldtl_filebarcode, retrievaldtl_type, retrievaldtl_status,
+											 retrievaldtl_storagevendor, entity_gid, create_by
+                                             ',Query_Column,')
+									  values(',@Retrievaldtl_Retrieval_Gid,',''',@Carton_BarCode,''',
+											 ''',@File_BarCode,''',''',@Retrieval_Type,''',''',@Retrievaldtl_Status,''',
+											 ''',@Storage_Vendor,''',',@Entity_Gids,',',ls_Createby,'
+                                             ',Query_Value,'
+                                             )
+
+									 ');
+
+
+                            set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow =0;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+                            if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+			 set i=i+1;
+             end while ;
+
+
+							if  Message = 'SUCCESS' then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'RETRIEVAL' and  ls_Sub_Type = 'VERIFICATION'  then
+
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrievaldtl_VerifiedBy'))) into @Retrievaldtl_VerifiedBy;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Gid'))) into @Retrieval_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrievaldtl_VerifiedDate'))) into @Retrievaldtl_VerifiedDate;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Accept_Count'))) into @Retrieval_Accept_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Bounce_Count'))) into @Retrieval_Bounce_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrievaldtl_Bounce_Reason'))) into @Retrievaldtl_Bounce_Reason;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.Retrieval_Status'))) into @Retrieval_Status;
+
+            set @Retrievaldtl_VerifiedDate=date_format(@Retrievaldtl_VerifiedDate,'%Y-%m-%d');
+
+            set Query_Column='';
+
+            if  @Retrieval_Accept_Count<>'' then
+				set Query_Column=concat(Query_Column,',','retrieval_acceptcount=',@Retrieval_Accept_Count,' ');
+            end if;
+
+            if  @Retrieval_Bounce_Count<>'' then
+				set Query_Column=concat(Query_Column,',','retrieval_bouncecount=',@Retrieval_Bounce_Count,' ');
+            end if;
+
+
+            set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tretrieval
+											SET retrieval_status=''',@Retrieval_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+										  WHERE retrieval_gid=''',@Retrieval_Gid,''' and
+												retrieval_isactive=''Y'' and
+												retrieval_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+		set Query_Column='';
+
+			if  @Retrievaldtl_VerifiedBy<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_verifiedby=',ls_Createby,' ');
+            end if;
+
+            if  @Retrievaldtl_VerifiedDate<>'' then
+				set Query_Column=concat(Query_Column,',','retrievaldtl_verifieddate=''',@Retrievaldtl_VerifiedDate,''' ');
+            end if;
+
+			set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tretrievaldtl
+											SET retrievaldtl_status=''',@Retrieval_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+										  WHERE retrievaldtl_retrieval_gid=''',@Retrieval_Gid,''' and
+												retrievaldtl_isactive=''Y'' and
+												retrievaldtl_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+                                commit;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+ELSEIF ls_Action = 'UPDATE' and ls_Type = 'RETRIEVAL' and  ls_Sub_Type = 'CONFIRM'  then
+
+
+					select JSON_LENGTH(lj_Details, '$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Gid'))) into @Retrieval_Gid;
+            #select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrievaldtl_VerifiedBy'))) into @Retrievaldtl_VerifiedBy;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Confirmed_Date'))) into @Confirmed_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Accept_Count'))) into @Accept_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Bounce_Count'))) into @Bounce_Count;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Bounce_Reason'))) into @Bounce_Reason;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Status,CONCAT('$.Retrieval_Status'))) into @Retrieval_Status;
+
+            set @Retrievaldtl_VerifiedDate=date_format(@Retrievaldtl_VerifiedDate,'%Y-%m-%d');
+
+            set Query_Column='';
+
+            if  @Retrieval_Accept_Count<>'' then
+				set Query_Column=concat(Query_Column,',','retrieval_svacceptcount=',@Accept_Count,'  ');
+            end if;
+
+            if  @Retrieval_Bounce_Count<>'' then
+				set Query_Column=concat(Query_Column,',','retrieval_svbouncecount=',@Bounce_Count,' ');
+            end if;
+
+
+            set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tretrieval
+											SET retrieval_status=''',@Retrieval_Status,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+										  WHERE retrieval_gid=''',@Retrieval_Gid,''' and
+												retrieval_isactive=''Y'' and
+												retrieval_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+			set sql_safe_updates=0;
+            set Query_Update = '';
+			set Query_Update = concat('UPDATE erma_trn_tretrievaldtl
+											SET retrievaldtl_status=''',@Retrieval_Status,''',
+												retrievaldtl_svconfirmedby=',ls_Createby,',
+                                                retrievaldtl_svconfirmeddate=''',@Confirmed_Date,''',
+												update_date=now(),
+                                                update_by=',ls_Createby,'
+                                                ',Query_Column,'
+										  WHERE retrievaldtl_retrieval_gid=''',@Retrieval_Gid,''' and
+												retrievaldtl_isactive=''Y'' and
+												retrievaldtl_isremoved=''N'' ');
+
+							set @Query_Update = Query_Update;
+							#SELECT @Query_Update;
+							PREPARE stmt FROM @Query_Update;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+                                commit;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+ELSEIF ls_Action = 'INSERT' and ls_Type = 'SCAN_IMAGE' and  ls_Sub_Type = 'DISPATCH'  then
+
+				select JSON_LENGTH(lj_Details,'$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Scan_Retrieval_Gid'))) into @Scan_Retrieval_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Scan_Image_Name'))) into @Scan_Image_Name;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Scan_Image_Date'))) into @Scan_Image_Date;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Scan_StorageVendor'))) into @Scan_StorageVendor;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Scan_Image_Size'))) into @Scan_Image_Size;
+
+
+
+						if @Scan_Retrieval_Gid is null or @Scan_Retrieval_Gid = '' then
+							set Message = 'Scan Retrieval Gid Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Scan_Image_Name is null or @Scan_Image_Name = '' then
+							set Message = 'Scan Image Name Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Scan_Image_Date is null or @Scan_Image_Date = '' then
+							set Message = 'Scan Image Date Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Scan_StorageVendor is null or @Scan_StorageVendor = '' then
+							set Message = 'Scan StorageVendor Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Scan_Image_Size is null or @Scan_Image_Size = '' then
+							set Message = 'Scan Image Size Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+            set @Scan_Image_Date=date_format(@Scan_Image_Date,'%Y-%m-%d');
+			set Query_Insert = '';
+		    set Query_Insert = concat('insert into erma_trn_tscanimage
+											 (scan_retrieval_gid,scan_imagename,
+                                              scan_imagedate,scan_storagevendor,
+                                              scan_imagesize,entity_gid,create_by)
+									   values(',@Scan_Retrieval_Gid,',''',@Scan_Image_Name,''',
+											  ''',@Scan_Image_Date,''',''',@Scan_StorageVendor,''',
+                                              ''',@Scan_Image_Size,''',',@Entity_Gids,',',ls_Createby,')
+									');
+
+
+                            set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow =0;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+                            if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+ELSEIF ls_Action = 'INSERT' and ls_Type = 'DOCUMENT' and  ls_Sub_Type = 'DISPATCH'  then
+set autocommit=off;
+set autocommit=0;
+
+				select JSON_LENGTH(lj_Details,'$') into @li_json_count;
+
+						if @li_json_count is null or @li_json_count = 0 then
+							set Message = 'No Data In Json.';
+							leave sp_Erma_Process_Set;
+						end if;
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Despatch_Date'))) into @Despatch_Date;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Retrieval_Gid'))) into @Retrieval_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Despatch_awbNo'))) into @Despatch_awbNo;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Delivery_Type'))) into @Delivery_Type;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Delivery_SubType'))) into @Delivery_SubType;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Despatch_Remarks'))) into @Despatch_Remarks;
+
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address1'))) into @Address1;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address2'))) into @Address2;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address3'))) into @Address3;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Ref_Code'))) into @Address_Ref_Code;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_Pincode')))into @Address_Pincode;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_District_Gid')))into @Address_District_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_City_Gid')))into @Address_City_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Address_State_Gid')))into @Address_State_Gid;
+
+
+						if @Despatch_Date is null or @Despatch_Date = '' then
+							set Message = 'Despatch Date Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Retrieval_Gid is null or @Retrieval_Gid = '' then
+							set Message = 'Despatch Retrieval Gid Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Despatch_awbNo is null or @Despatch_awbNo = '' then
+							set Message = 'Despatch awbno Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Delivery_Type is null or @Delivery_Type = '' then
+							set Message = 'Despatch Delivery Type Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Delivery_SubType is null or @Delivery_SubType = '' then
+							set Message = 'Delivery SubType Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+						if @Despatch_Remarks is null or @Despatch_Remarks = '' then
+							set Message = 'Despatch Remarks Is Not Given';
+							leave sp_Erma_Process_Set;
+						end if;
+
+
+						if ls_Createby is null or ls_Createby = '' then
+							set Message = 'Createby Is Needed.';
+							leave sp_Erma_Process_Set;
+						End if;
+
+						set Query_Column = '';
+                        set Query_Value = '';
+
+                        if @Address1 is not null and @Address1 <> '' then
+							set Query_Column = concat(Query_Column,',address_1');
+							set Query_Value = concat(Query_Value,',','''',@Address1,'''');
+						End if;
+
+                        if @Address2 is not null and @Address2 = '' then
+							set Query_Column = concat(Query_Column,',address_2');
+							set Query_Value = concat(Query_Value,',','''',@Address2,'''');
+						End if;
+
+                        if @Address3 is not null and @Address3 = '' then
+							set Query_Column = concat(Query_Column,',address_3');
+							set Query_Value = concat(Query_Value,',','''',@Address3,'''');
+						End if;
+
+
+                        if @Address_Pincode is not null and @Address_Pincode = '' then
+							set Query_Column = concat(Query_Column,',address_pincode');
+							set Query_Value = concat(Query_Value,',',@Address_Pincode);
+						End if;
+
+                        if @Address_City_Gid is not null and @Address_City_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_city_gid');
+							set Query_Value = concat(Query_Value,',',@Address_City_Gid);
+						End if;
+
+                        if @Address_State_Gid is not null and @Address_State_Gid = '' then
+							set Query_Column = concat(Query_Column,',address_state_gid');
+							set Query_Value = concat(Query_Value,',',@Address_State_Gid);
+						End if;
+
+
+			set Query_Insert = '';
+			set Query_Insert = concat('INSERT INTO gal_mst_taddress
+											(address_ref_code,address_district_gid,
+                                            entity_gid,create_by ',Query_Column,' )
+									   VALUES(''',@Address_Ref_Code,''',',@Address_District_Gid,',
+                                              ',@Entity_Gids,',',ls_Createby,' ',Query_Value,')
+									   ');
+
+							set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+
+							if  countRow>0 then
+								set Message = 'SUCCESS';
+                                set @Delivery_Address_Gid= last_insert_id();
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+
+			#set @Delivery_Address_Gid=877;
+
+            set @Despatch_Date=date_format(@Despatch_Date,'%Y-%m-%d');
+			set Query_Insert = '';
+		    set Query_Insert = concat('insert into erma_trn_tretrievaldespatch
+											 (retdespatch_despatchdate,retdespatch_despatchby,
+                                              retdespatch_retrieval_gid,retdespatch_awbno,
+                                              retdespatch_deliverytype,retdespatch_deliverysubtype,
+											  retdespatch_deliveryaddressgid,retdespatch_remarks,
+                                              entity_gid, create_by)
+									   values(''',@Despatch_Date,''',',ls_Createby,',
+											  ',@Retrieval_Gid,',''',@Despatch_awbNo,''',
+                                              ''',@Delivery_Type,''',''',@Delivery_SubType,''',
+                                              ',@Delivery_Address_Gid,',''',@Despatch_Remarks,''',
+                                              ',@Entity_Gids,',',ls_Createby,')
+									');
+
+
+                            set @Insert_query = Query_Insert;
+							#SELECT @Insert_query;
+							PREPARE stmt FROM @Insert_query;
+							EXECUTE stmt;
+							set countRow =0;
+							set countRow = ROW_COUNT();
+							DEALLOCATE PREPARE stmt;
+
+                            if  countRow>0 then
+								COMMIT;
+								set Message = 'SUCCESS';
+							else
+								rollback;
+								set Message = 'FAIL';
+                                leave sp_Erma_Process_Set;
+							End if;
+
+
+
+END IF;
+
+END

@@ -1,0 +1,352 @@
+{% verbatim %}
+
+<div class="row">
+    <div class="row-header col-lg-12 col-sm-12">
+        <div class="col-lg-10 col-sm-10">
+            <h4><strong>Supplier Tax Details</strong><label ng-show="pacode">({{Partner.partnercode}}-{{Partner.partnername}})</label><label ng-model="tax_partnername" ></label>{{$scope.partner_gid}}</h4>
+        </div>
+    </div>
+</div>
+
+<!--<div ng-show= "shwpdfs" class="row">-->
+<!--<iframe src="{{pdfurls}}" frameborder="0" height="250px" width="50%"></iframe>-->
+<!--</div>-->
+<div class="row">
+    <div class="col-md-12">
+        <div class="col-md-3">
+            <md-autocomplete
+                md-clear-button="true"
+                md-floating-label="Tax Type"
+                md-input-maxlength=126
+                md-item-text="item.tax_type"
+                md-items="item in gottaxdetails(searchTexttax1tax1)"
+                md-min-length=0
+                md-no-cache="true"
+                md-search-text="searchTexttax1tax1"
+                md-selected-item="add_tax.ngsstaxtype"
+                md-selected-item-change="change_tax(add_tax)">
+                <md-item-template>
+                    <span md-highlight-text="searchTexttax1tax1"> {{item.tax_type}} </span>
+                </md-item-template>
+                <md-not-found>
+                    No matching "{{searchTexttax1tax1}}" were found.
+                </md-not-found>
+            </md-autocomplete>
+        </div>
+        <div class="col-md-3">
+            <md-input-container class="md-block inputcontainer">
+                <label>Tax No</label>
+                <input type="text" ng-model="add_tax.ngmptaxno" maxlength="64>=1" ng-change="change_tax(add_tax)">
+            </md-input-container>
+        </div>
+
+        <div class="col-md-1" ng-show="createpartner">
+            </br>
+            <md-button class="md-fab md-mini md-primary custbutton" type="submit"
+                       ng-click="addtaxpagepopup()">
+                <md-icon>add</md-icon>
+                <md-tooltip>Add Tax</md-tooltip>
+            </md-button>
+        </div>
+    </div>
+</div>
+<div class="row table-responsive">
+    <div class="col-md-12 col-lg-12 col-sm-12">
+        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+            <thead class="header">
+                <tr>
+                    <th>S.No</th>
+                    <th>Branch Name</th>
+                    <th>MSME</th>
+                    <th>Tax Type</th>
+                    <th>Tax No</th>
+                    <th>Tax Rate</th>
+                    <th>Is Exempted</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+        <tr ng-repeat="emp in get_tax_details.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                <td>
+                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                </td>
+                <td>{{emp.partnerbranch_name}}</td>
+                <td>{{emp.taxdetails_ismsme}}</td>
+                <td>{{emp.tax_type}}</td>
+                <td>{{emp.taxdetails_taxno}}</td>
+                <td>{{emp.taxsubdetails_taxrate}}</td>
+                <td>{{emp.taxsubdetails_isexcempted}}</td>
+                <td align="center">
+                    <a title="View" ng-click="show_taxdetails(emp)" align="center" class="editlink">
+                        <i class="material-icons">visibility</i>
+                    </a>
+                    <span title="Edit" ng-click="edit_taxdata(emp)" align="center" class="editlink" ng-show="createpartner">
+                        <i class="material-icons">edit</i>
+                    </span>
+                    <span title="View Pdf" ng-click="show_tax_pdfview(emp)" ng-show="emp.taxsubdetails_isexcempted == 'YES'"
+                       class="editlink" >
+                     <a class="material-icons" href="/Memo_downloadfile/?filename={{emp.file_name}}" target="_blank">picture_as_pdf</a>
+                </span>
+                </td>
+            </tr>
+            <tr ng-show="get_tax_details.length == undefined">
+                            <td class="warning" colspan="8">
+                                No Records Found.
+                            </td>
+            </tbody>
+            <tfoot>
+            <tr>
+                <td colspan="6">
+                    <ul uib-pagination total-items="get_tax_details.length" ng-model="currentPage" max-size="maxSize"
+                        class="pagination-sm cust_pagination" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                </td>
+                <td colspan="3">
+                    Total Count:{{get_tax_details.length}}
+                </td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="taxdetailsmodal" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header popup-header">
+                <h5 class="modal-title" id="exampleModalLabel">
+                    Supplier Tax Add Page
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="true"
+                                            md-clear-button="button_clr"
+                                             md-floating-label="Supplier Branch"
+                                             md-input-maxlength=126
+                                             md-item-text="item_tax.partnerbranch_name"
+                                             md-items="item_tax in tax_partnerbranchdetails(searchBranch)"
+                                             md-min-length=0
+                                             md-no-cache="true"
+                                             md-search-text="searchBranch"
+                                             md-selected-item="add_tax.branch"
+                                             ng-disabled="tax_true"
+                                            md-selected-item-change="view_pan(item_tax)"
+                                             required
+                                             >
+                                <md-item-template>
+                                    <span md-highlight-text="searchBranch" >{{item_tax.partnerbranch_name}} - {{item_tax.partnerbranch_code}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Branch matching "{{searchBranch}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3">
+                           <md-autocomplete
+                                md-clear-button="true"
+                                md-floating-label="Supplier Classified under MSME"
+                                md-input-maxlength=126
+                                md-item-text="item.metadata_value"
+                                md-items="item in gottaxmsmedetails(searchTextta)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-search-text="searchTextta"
+                                md-selected-item="add_tax.ngpsMSME"
+                                md-selected-item-change="ngcMSME(item)">
+                                <md-item-template>
+                                    <span md-highlight-text="searchTextta"> {{item.metadata_value}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No matching "{{searchTextta}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3" >
+                            <md-autocomplete
+                                    md-clear-button="true"
+                                    md-floating-label="Tax Type"
+                                    md-input-maxlength=126
+                                    md-item-text="item.tax_type"
+                                    md-items="item in gottaxdetails(searchText1)"
+                                    md-min-length=0
+                                    md-no-cache="true"
+                                    md-search-text="searchText1"
+                                    md-selected-item="add_tax.ngstaxtype"
+                                    md-selected-item-change="ngctaxtype(item)"
+                            required>
+                                <md-item-template>
+                                    <span md-highlight-text="searchText1"> {{item.tax_type}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                No matching "{{searchText1}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                            <label>Pan No</label>
+                            <input type="text" ng-model="add_tax.ngmtaxno" maxlength="16" readonly>
+                            </md-input-container>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3" ng-show="tax_show_data">
+                            <md-autocomplete
+                                md-clear-button="true"
+                                md-floating-label="Tax Rate"
+                                md-input-maxlength=126
+                                md-item-text="item.taxrate_rate"
+                                md-search-text="add_tax.ngistaxrate"
+                                md-items="item in gottaxrate(searchText1tax1s)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-selected-item-change="ngcngtaxrate(item)"
+                            required>
+                                <md-item-template>
+                                    <span md-highlight-text="searchText1tax1s"> {{item.taxrate_rate}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No matching "{{searchText1tax1s}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3" ng-show="tax_show_data">
+                            <md-autocomplete
+                                md-clear-button="true"
+                                md-floating-label="Exempted is"
+                                md-input-maxlength=126
+                                md-item-text="item.metadata_value"
+                                md-items="item in gotisexcempted(searchText1tax1as)"
+                                md-min-length=0
+                                md-no-cache="true"
+                                md-search-text="searchText1tax1as"
+                                md-selected-item="add_tax.ngisexcem"
+                                md-selected-item-change="ngcngtaxExempted(item)">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText1tax1as"> {{item.metadata_value}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No matching "{{searchText1tax1as}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3" ng-show="showform">
+                              <md-input-container class="md-block inputcontainer">
+                                  <label>Valid From Date</label>
+                                  <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                    md-open-on-focus ng-model="add_tax.fdate"></md-datepicker>
+                              </md-input-container>
+                        </div>
+                        <div class="col-md-3" ng-show="showform">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Valid To Date</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                md-open-on-focus ng-model="add_tax.tdate"></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-show="showform">
+                    <div class="col-md-12">
+                        <div class="col-md-3" ng-show="showform">
+                            <md-input-container class="md-block inputcontainer">
+                            <label>Exempted Rate</label>
+                            <input type="text" ng-model="add_tax.ngmtaxExempted" maxlength="64>=1" required valid-number>
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                            <label>Excemthrosold</label>
+                            <input type="text" ng-model="add_tax.ngthrosold" maxlength="64>=1" required valid-number>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3" ng-show="showform">
+                            <md-input-container class="md-block inputcontainer">
+                            <label>File Name</label>
+                                <title>{{add_tax.tax_filename}}</title>
+                            <input type="text" ng-model="add_tax.tax_filename" ng-click="edit_tax_file()" readonly>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3" style="" ng-show="showforms">
+                        </br>
+                            <input type="file" file-model="files" fileinput="add_tax.file" id="taxfile" multiple/>
+                        </div>
+                    </div>
+                </div>
+                  <md-input-container class="md-block inputcontainer">
+                            <md-checkbox ng-model="add_tax.tds" aria-label="Checkbox 1" ng-click="tdsflad(add_tax.tds)" ng-hide="hidetds">
+                                TDS FOR BRANCH
+                            </md-checkbox>
+                        </md-input-container>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="modal-footer text-right">
+                            <md-button class="md-raised" value="Close" ng-click="close_fun('tax')">Close</md-button>
+                            <md-button class="md-raised custbutton" ng-click="addtaxdetailsmode(add_tax)" value="Submit" ng-show="addtax"
+                             ng-disabled="tax_disabled" >Submit</md-button>
+                            <md-button class="md-raised custbutton" ng-click="updatetaxdetailsmode(add_tax)" value="Submit" ng-show="taxupdate">Update</md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="modal fade" id="tax_viewpdfpopup" tabindex="-1" role="dialog" data-backdrop="static" style="margin-width:300px;"
+             data-keyboard="false" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:640px;">
+                <div class="">
+                    <div  class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabesl">
+                           {{pdf_filenames}}
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="" ng-form="createrole">
+                        <div class="row" style="margin-left:00px;">
+
+                               <iframe src="{{pdfurls}}" frameborder="0" height="600px" width="97%"></iframe>
+
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class=" text-right">
+                                    <md-button class="md-raised" value="Close"
+                                               ng-click="close_fun('pdf_tax_popup')" >Close
+                                    </md-button>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+{% endverbatim %}
+<style>
+.md-select-menu-container.md-active {
+   z-index: 1060;
+   }
+   .md-autocomplete-suggestions-container{
+  z-index:100000 !important;<body>
+ }
+   .md-dialog-container{
+   z-index:100000 !important;
+   }
+
+</style>

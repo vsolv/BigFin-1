@@ -1,0 +1,1012 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Dispatch POD Updation{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appemployee" ng-controller="Ctrlemployee" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Dispatch POD Updation</h4>
+            </div>
+        </div>
+        <div class="row" class="col-lg-12" >
+            <div class="col-md-3" style="margin-top:-17px;">
+                <br>
+                <md-autocomplete
+                        md-item-text="item.display_name"
+                        md-items="item in getcustmer(searchTex)"
+                        md-min-length = 0
+                        md-input-maxlength = 126
+                        md-no-cache="true"
+                        md-clear-button="true"
+                        md-floating-label="Customer Name"
+                        md-search-text="searchTex"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.display_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No customer matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label> Date</label>
+                    <md-datepicker md-hide-icons="calendar" ng-model="searchquery_StartDate"
+                    >
+
+                    </md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Dispatch Mode</label>
+                    <md-select name="cname"  ng-model="dispatchname">
+                        <md-option><em>--Select--</em></md-option>
+                        <md-option ng-click="clckdispatch(cou)" ng-repeat="cou in Dispatch"
+                                   ng-value="cou.metadata_value">
+                            {{ cou.metadata_value }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Courier Name</label>
+                    <md-select name="cname" ng-model="courier">
+                        <md-option><em>--Select--</em></md-option>
+                        <md-option ng-repeat="cou in Transport" ng-value="cou.courier_name">
+                            {{ cou.courier_name }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-1" style="margin-top:12px">
+                <md-button ng-click="Search_Pod();" class="md-fab md-mini md-primary custbutton">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row" class="col-lg-12">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Choose excel format</label>
+                    <md-select ng-model="excel_click" ng-change="excel1()">
+                        <md-optgroup label="options">
+                            <md-option ng-repeat="st in review_status" ng-value="st.value" >
+                                {{st.status}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-3" style="margin-top:30px" ng-hide="filebutton">
+                <input type="file" file-model="files" fileinput="file" id="file" multiple />
+            </div>
+            <div class="col-md-3" style="margin-left:-50px;margin-top:10px" ng-hide="dailybutton">
+                <md-button class="md-fab md-mini md-primary custbutton "
+                               ng-click="uploadFile()">
+                        <md-icon>cloud_upload</md-icon>
+                        <md-tooltip>daily</md-tooltip>
+                    </md-button>
+            </div>
+            <div class="col-md-3" style="margin-left:-50px;margin-top:10px" ng-hide="monthlybutton">
+                <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-click="uploadFilemothly()">
+                        <md-icon>cloud_upload</md-icon>
+                        <md-tooltip>monthly</md-tooltip>
+                    </md-button>
+            </div>
+            <div class="col-md-3" style="margin-top:10px">
+                <md-button class="btn btn-info custbutton" ng-click="Excepted_courier1()">
+                    Expected Courier Bill
+                </md-button>
+            </div>
+            <div class="col-md-3" style="margin-top:10px">
+                <md-button class="btn btn-info custbutton" ng-click="courier_explorer()">
+                    Courier Exposure
+                </md-button>
+            </div>
+
+        </div>
+        <br>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>AWB No</th>
+                        <th>Customer Name</th>
+                        <th>Executive Name</th>
+                        <th>Date</th>
+                        <th>Dispatch Mode</th>
+                        <th>Courier Name</th>
+                        <th>Status</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in empsmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{emp.dispatch_awbno }}</td>
+                        <td class="text-center">{{emp.customer_display_name}}</td>
+                        <td class="text-center">{{emp.employee_name}}</td>
+                        <td class="text-center">{{emp.dispatch_date}}</td>
+                        <td class="text-center">{{emp.dispatch_mode}}</td>
+                        <td class="text-center">{{emp.courier_name}}</td>
+                        <td align="center"><a align="center" href ng-click="showpop1(emp)">{{emp.dispatch_status}}</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+                            <td colspan="14">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="pageLength"
+                                    uib-pagination></ul>
+                            </td>
+                        </div>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'dispatchpopup'"></div>
+            <div ng-include="'Excepted_Courier'"></div>
+            <div ng-include="'courierexplorer'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+   var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+     myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+
+    myApp.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+
+
+    myApp.directive("fileinput", [function() {
+        return {
+            scope: {
+                fileinput: "=",
+                filepreview: "="
+            },
+            link: function(scope, element, attributes) {
+                element.bind("change", function(changeEvent) {
+                    scope.fileinput = changeEvent.target.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function(loadEvent) {
+                        scope.$apply(function() {
+                            scope.filepreview = loadEvent.target.result;
+                        });
+                    }
+                    reader.readAsDataURL(scope.fileinput);
+                });
+            }
+        }
+    }]);
+
+myApp.controller('Ctrlemployee', ['$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter','$element',
+    function($scope, testService, $mdDialog, $rootScope, $window, $filter,$element) {
+    $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+     var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+        $scope.empsmry = [];
+        $scope.dispatch_date = new Date();
+        $scope.set = [];
+        $scope.updatePOD=[];
+        $scope.fulldat=[];
+        $scope.maintable=[];
+        $scope.showfr = false;
+        $scope.awb = false;
+        $scope.delivery = false;
+        $scope.status = true;
+        $scope.truck = true;
+        $scope.showfr1 = true;
+        var fileExtension='';
+        $scope.reject = true;
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.dailybutton=true;
+        $scope.monthlybutton=true;
+        $scope.courier_exp=[];
+        $scope.filebutton=true;
+        $scope.Excepted_courier=[];
+        $scope.add=[];
+        $scope.form={};
+        $scope.add1=[];
+        $scope.serchclck=function(add1)
+        {
+
+
+            if(add1.airwayno == null || add1.airwayno == undefined || add1.airwayno == "" )
+            {
+            $scope.add1.airwayno='';
+            }
+                else
+                {
+                $scope.add1.airwayno=add1.airwayno;
+                }
+            if(add1.courier == null ||add1.courier == undefined || add1.courier == "")
+            {
+            $scope.add1.courier='';
+            }
+                else
+                {
+                $scope.add1.courier=add1.courier.courier_gid;
+                }
+            if(add1.dispatch == null ||add1.dispatch == undefined || add1.dispatch == "")
+            {
+            $scope.add1.dispatch='';
+            }
+                else
+                {
+                $scope.add1.dispatch=add1.dispatch.metadata_value;
+                }
+            if(add1.selectitem == null || add1.selectitem == undefined || add1.selectitem =="")
+            {
+            $scope.add1.selectitem='';
+            }
+                else
+                {
+                $scope.add1.selectitem=add1.selectitem.customer_gid;
+                }
+            if(add1.fromDate == null || add1.fromDate == undefined || add1.fromDate == "")
+            {
+            $scope.add1.fromDate='';
+            }
+                else
+                {
+                $scope.add1.fromDate=formatStringDate(add1.fromDate,'yyyy-mm-dd');
+                }
+            if(add1.toDate == null || add1.toDate == undefined || add1.toDate == "")
+            {
+            $scope.add1.toDate='';
+            }
+                else
+                {
+                $scope.add1.toDate=formatStringDate(add1.toDate,'yyyy-mm-dd');
+                }
+
+
+         var data = {
+                "Params": {
+                    "FILTER": {
+                    "airwayno":$scope.add1.airwayno,
+                    "courier_gid":$scope.add1.courier,
+                    "customer_gid":$scope.add1.selectitem,
+                    "metadata_value":$scope.add1.dispatch,
+                    "fromDate":$scope.add1.fromDate,
+                    "toDate":$scope.add1.toDate
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+
+            }
+             var datam={
+                            "Type":"EXCEPTED",
+                            "Sub_Type":"EXCEPTED_COURIER_BILL",
+                            "Group":"DISPATCH_POD_SUMMARY",
+                            "data":data
+                }
+
+            var excepted_courier=testService.getexceptedCourier(datam)
+                excepted_courier.then(function(result)
+                {
+
+                $scope.Excepted_courier=result.data.DATA;
+                if(result.data.MESSAGE == 'NOT_FOUND')
+                {
+                $scope.pageLength1=0;
+                $scope.Totalpages=1;
+                return false;
+                }
+                $scope.pageLength1=$scope.Excepted_courier.length;
+                $scope.Totalpages = Math.ceil($scope.Excepted_courier.length / $scope.itemsPerPage);
+                },function(err)
+                {
+                alert(err);
+                });
+
+
+        }
+
+        $scope.clearbutton=function()
+        {
+        $scope.add.toDate='';
+        $scope.add.fromDate='';
+        $scope.add.dispatch='';
+        $scope.add.courier='';
+        $scope.add.selectitem='';
+        $scope.add.airwayno='';
+        $scope.form.validate.$setPristine();
+        $scope.form.validate.$setUntouched();
+        }
+
+        $scope.serchclck1=function(add)
+        {
+        if(add.courier != null)
+        {
+        var response=$filter('filter')($scope.maintable,{
+        "courier_gid":add.courier.courier_gid
+        });
+        $scope.courier_exp=response;
+        }
+        else
+        {
+        loadcourier_data();
+        }
+
+        }
+
+        $scope.close=function()
+        {
+        $scope.add.toDate='';
+        $scope.add.fromDate='';
+        $scope.add.dispatch='';
+        $scope.add.courier='';
+        $scope.add.selectitem='';
+        $scope.add.airwayno='';
+        $scope.form.validate.$setPristine();
+        $scope.form.validate.$setUntouched();
+        LoadExceptedCourierBill();
+        }
+
+          $scope.getdispatch=function(query)
+           {
+                var result=$filter('filter')($scope.Dispatch,{
+                'metadata_value':query
+                });
+                return result;
+           }
+
+          $scope.getcourier=function(query)
+               {
+                        var result=$filter('filter')($scope.Transport,
+                        {
+                        'courier_name':query
+                        });
+                        return result;
+               }
+
+
+         $scope.getMinDate = function() {
+            return new Date(
+                $scope.dispatch_date.getFullYear(),
+                $scope.dispatch_date.getMonth() - 2,
+                $scope.dispatch_date.getDate());
+        }
+        $scope.getMaxDate = function() {
+            return new Date(
+                $scope.dispatch_date.getFullYear(),
+                $scope.dispatch_date.getMonth(),
+                $scope.dispatch_date.getDate());
+        }
+        $scope.minDate = $scope.getMinDate();
+        $scope.maxDate = $scope.getMaxDate();
+         LoadExceptedCourierBill();
+         function LoadExceptedCourierBill()
+            {
+                var data={
+                            "Params":{
+                                      "FILTER":{},
+                                      "CLASSIFICATION":{"Entity_Gid":[$scope.entity_gid]}
+                                     }
+                         }
+
+                var datam={
+                            "Type":"EXCEPTED",
+                            "Sub_Type":"EXCEPTED_COURIER_BILL",
+                            "Group":"DISPATCH_POD_SUMMARY",
+                            "data":data
+                }
+
+                var excepted_courier=testService.getexceptedCourier(datam)
+                excepted_courier.then(function(result)
+                {
+
+                $scope.Excepted_courier=result.data.DATA;
+                //$scope.total
+                $scope.pageLength1=$scope.Excepted_courier.length;
+                $scope.Totalpages = Math.ceil($scope.Excepted_courier.length / $scope.itemsPerPage);
+                },function(err)
+                {
+                alert(err);
+                });
+            }
+
+
+        $scope.Excepted_courier1=function()
+        {
+        modalshow('Excepted_courier_bill')
+        }
+
+         $scope.courier_explorer=function()
+        {
+
+        modalshow('courier_explorer')
+        loadcourier_data();
+        }
+
+        function loadcourier_data()
+        {
+
+
+          var datan = {
+            "Params": {
+                    "FILTER": {
+                    "Dispatch_Date":"",
+                              },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+        }
+
+        var trans = {
+            Group:"Courier_Explorer",
+            Type:"COURIER",
+            Sub_Type:"COURIER_EXPLORER",
+            Entity_Gid: $scope.entity_gid,
+            data: datan
+        }
+
+        var explorer=testService.expdata(trans)
+        explorer.then(function(result)
+        {
+
+        if(result.data.MESSAGE == 'FOUND')
+        {
+         $scope.maintable = result.data.DATA;
+         $scope.courier_exp = $scope.maintable;
+         $scope.pageLength2 = $scope.courier_exp.length;
+         $scope.Totalpages = Math.ceil($scope.courier_exp.length / $scope.itemsPerPage);
+         $scope.pageLength2 = $scope.courier_exp.length;
+         //$scope.endloading();
+        }
+        else
+        {
+        alert(JSON.stringify(result.data.MESSAGE));
+        }
+        })
+        }
+
+
+        $scope.review_status = [];
+          $scope.review_status = [{
+            status: "Daily",
+            value: "dailybutton"
+        }, {
+            status: "Monthly",
+            value: "monthlybutton"
+        }]
+
+
+        $scope.clear=function(dispatch_POD)
+        {
+        $scope.dispatch_POD.status='';
+        $scope.dispatch_POD.myDate='';
+        }
+
+        function reconname(item)
+        {
+        //alert(JSON.stringify(item));
+        fileExtension=item.name.split('.').pop();
+        $scope.recon="RECON"+new Date().getTime()+fileExtension;
+        //alert($scope.recon);
+        }
+
+        $scope.uploadFilemothly=function()
+        {
+
+            if($scope.files==undefined)
+                {
+                alert("please choose the file");
+                return false;
+                }
+            //alert($scope.files[0].name);
+            $scope.name=$scope.files[0].name.split('.');;
+            //$scope.file_name=$scope.name[0];
+            //$scope.file_extension=$scope.name[1];
+            if($scope.files!=undefined || $scope.files.length>0)
+                {
+                    var excell=new FormData();
+                    angular.forEach($scope.files,function(file)
+                    {
+                        excell.append('file',file);
+                        excell.append('Group','COURIER_PROCESS');
+                        excell.append('Action','UPDATE');
+                        excell.append('Type','POD_AMOUNT');
+                        excell.append('Sub_Type','SALES');
+                        excell.append('Create_by',$scope.employgid);
+                        excell.append('name',  $scope.name[0]);
+                        excell.append('file_extension',$scope.name[1]);
+                        loadexcell(excell);
+                    })
+                }
+        }
+
+        function loadexcell(excell)
+        {
+         var loadexe=testService.excelmon(excell)
+            loadexe.then(
+            function(result)
+            {
+                $scope.monthly=result.data.MESSAGE;
+                //alert(JSON.stringify(result));
+                if($scope.monthly=='File Updated' || $scope.monthly == 'Partially Updated' || $scope.monthly == 'None Record is Updated' )
+                    {
+                    alert($scope.monthly);
+                    $window.location.href='dispatchPOD';
+                    }
+                else
+                    {
+                     alert("check your file error is "+JSON.stringify(result.data));
+                    }
+
+            },
+            function(err)
+            {
+            //$scope.group=;
+            alert("Your file is missing column name were "+err);
+            });
+        }
+
+
+        $scope.uploadFile=function()
+        {
+
+            if($scope.files==undefined)
+            {
+            alert("please choose the file to upload");
+            return false;
+            }
+            $scope.file_name=[];
+            $scope.name=$scope.files[0].name;
+            $scope.file_name=$scope.name.split('.');
+            $scope.file_name_extension=$scope.file_name[0];
+            $scope.file_extension=$scope.file_name[1];
+            //alert(JSON.stringify($scope.name));
+            if($scope.files!== undefined)
+            {
+                var excl=new FormData();
+                angular.forEach($scope.files,function(file)
+                {
+                reconname(file)
+                excl.append('file',file);
+                excl.append('Group','COURIER_PROCESS');
+                excl.append('Action','UPDATE');
+                excl.append('Type','POD');
+                excl.append('Sub_Type','SALES');
+                excl.append('Create_by',$scope.employgid);
+                excl.append('name',  $scope.file_name_extension);
+                excl.append('file_extension',$scope.file_extension);
+                loadexcl(excl);
+                });
+            }
+        }
+        function loadexcl(excl)
+        {
+
+            var overalldtl = testService.excelgen(excl);
+            overalldtl.then(function(res)
+            {
+                $scope.exsmry=[];
+                $scope.exsmry=res.data.MESSAGE;
+                if($scope.exsmry=='File Updated' || $scope.exsmry == 'Partially Updated' || $scope.exsmry == 'None Record is Updated' )
+                {
+                alert($scope.exsmry);
+                $scope.excel_click='';
+                $scope.files='';
+                $window.location.href='dispatchPOD';
+                }
+                else
+                {
+                alert("check your file error is "+JSON.stringify(res.data));
+                }
+
+            }).finally();
+        }
+
+
+        $scope.excel1=function()
+        {
+            if($scope.excel_click == "dailybutton")
+            {
+            $scope.dailybutton=false;
+            $scope.monthlybutton=true;
+            $scope.filebutton=false;
+            }
+            else if($scope.excel_click =='monthlybutton')
+            {
+            $scope.monthlybutton=false;
+            $scope.dailybutton=true;
+            $scope.filebutton=false;
+            }
+        }
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+    $scope.getcustmer = gotocust;
+
+    function gotocust(query) {
+            var result = $filter('filter')($scope.customers, {
+                'display_name': query
+            });
+            return result;
+        }
+
+        $scope.Status = [];
+        var datan = {
+            "Table_name": "gal_mst_tmetadata",
+            "Column_1": "metadata_value",
+            "Column_2": "",
+            "Where_Common": "metadata",
+            "Where_Primary": "columnname",
+            "Primary_Value": "dispatch_status",
+            "Order_by": "value"
+        }
+
+        var trans = {
+            Action: "COURIER",
+            Entity_Gid: $scope.entity_gid,
+            data: datan
+        }
+
+        var gettransport = testService.gettransportdata(trans)
+        gettransport.then(function(result) {
+            $scope.Status = result.data.DATA;
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+
+
+
+        $scope.updateDISPATCH_POD=function(dispatch_POD)
+        {
+
+$scope.bulkdata  = [];
+         var data = {
+                "action": "UPDATE",
+                "type": "DISPATCH_POD_UPDATE",
+                "courier_gid": "",
+                "Dispatch_date": "",
+                "send_by": "",
+                "dispatch_mode":"",
+                "dispatch_type": "",
+                "packets": "",
+                "weight": "",
+                "dispatch_to": "",
+                "address": "",
+                "city": "",
+                "state": "",
+                "pincode": "",
+                "remark": "",
+                "returned": "",
+                "returned_on": "",
+                "returned_remark": "",
+                "pod": formatStringDate(dispatch_POD.myDate, 'yyyy-mm-dd'),
+                "pod_image": "",
+                "isactive": "",
+                "isremoved": "",
+                "dispatch_gid":$scope.dispatch_POD.dispatch_gid,
+                "status":dispatch_POD.status,
+                "entity_gid": $scope.entity_gid
+            }
+$scope.bulkdata.push(data);
+
+            var datam = {
+                "dispatch_data": $scope.bulkdata
+            }
+
+            var datan = {
+                "Employee_Gid":$scope.employgid,
+                "data": datam
+            }
+            var setdispatchvalue = testService.setdispatchdata(datan)
+            setdispatchvalue.then(function(result) {
+                    $scope.set = result.data.MESSAGE;
+                    if ($scope.set == "SUCCESS") {
+                        alert($scope.set);
+                        $window.location.href= "dispatchPOD";
+                    } else {
+                        alert($scope.set);
+                    }
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally();
+        }
+
+
+        $scope.dispatch_POD=[];
+        $rootScope.showpop1 = function(data) {
+        $scope.dispatch_POD = data;
+            modalshow('dispatchpopup_present',data);
+        }
+
+        loaddispatch();
+        function loaddispatch(){
+             var data = {
+            "Table_name": "gal_mst_tmetadata",
+            "Column_1": "metadata_value",
+            "Column_2": "",
+            "Where_Common": "metadata",
+            "Where_Primary": "columnname",
+            "Primary_Value": "dispatch_mode",
+            "Order_by": "columnname"
+        }
+
+        var patch = {
+            Action: "",
+            Entity_Gid: $scope.entity_gid,
+            data: data
+        }
+
+        var getdispatch = testService.getdispatchdata(patch)
+        getdispatch.then(function(result) {
+            $scope.Dispatch = result.data.DATA;
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+        }
+        $scope.loading();
+        loaddata();
+        function loaddata() {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                    Customer_Gid:"",
+                    Dispatch_Date:"",
+                    Dispatch_Mode:"",
+                    Courier_Name:""},
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+
+            }
+            var datam = {
+                "Type": "SUMMARY",
+                "Sub_Type": "DISPATCH_DETAILS_ALL",
+                "Group": "DISPATCH_POD_SUMMARY",
+                "data": data
+            }
+
+            var get_employ = testService.getcusomter(datam)
+            get_employ.then(function(result) {
+
+                    $scope.maintable = result.data.DATA;
+                    $scope.empsmry = $scope.maintable;
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.endloading();
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally($scope.endloading());
+        };
+
+$scope.Search_Pod = function(){
+ if ($scope.selectedItem !== null) {
+                $scope.cus = $scope.selectedItem.customer_gid;
+            } else {
+                $scope.cus = '';
+            }
+if($scope.searchquery_StartDate == undefined){
+$scope.searchquery_StartDate = '';
+}
+else{
+$scope.searchquery_StartDate = $filter('date')($scope.searchquery_StartDate, "yyyy-MM-dd")
+}
+if($scope.dispatchname == undefined){
+$scope.dispatchname = '';
+}
+if($scope.courier == undefined){
+$scope.courier = '';
+}
+    var data = {
+                "Params": {
+                    "FILTER": {
+                    Customer_Gid:$scope.cus,
+                    Dispatch_Date:$scope.searchquery_StartDate,
+                    Dispatch_Mode:$scope.dispatchname,
+                    Courier_Name:$scope.courier
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+
+            }
+            var datam = {
+                "Type": "SUMMARY",
+                "Sub_Type": "DISPATCH_DETAILS_ALL",
+                "Group": "DISPATCH_POD_SUMMARY",
+                "data": data
+
+            }
+
+            var get_employ = testService.getcusomter(datam)
+            get_employ.then(function(result) {
+                    $scope.maintable = result.data.DATA;
+                    $scope.empsmry = $scope.maintable;
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.empsmry.length;
+
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+
+}
+
+
+
+
+            var datan = {
+                "Table_name": "dis_mst_tcourier",
+                "Column_1": "courier_gid,courier_name",
+                "Column_2": "",
+                "Where_Common": "courier",
+                "Where_Primary": "type",
+                "Primary_Value": "courier",
+                "Order_by": "name"
+            }
+
+            var trans = {
+                Action: "COURIER",
+                Entity_Gid: $scope.entity_gid,
+                data: datan
+            }
+
+            var gettransport = testService.gettransportdata(trans)
+            gettransport.then(function(result) {
+                $scope.Transport = result.data.DATA;
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+
+ $scope.customers = [];
+        var dta= {"params":{"FILTER":{}}}
+        var custdata = {
+            "Entity_Gid": $scope.entity_gid,
+            "Group": 'CUST_GET',
+            "data":dta
+        }
+
+        var get_cust = testService.getcust(custdata)
+        get_cust.then(function(result) {
+            $scope.customers = result.data.DATA
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+
+
+
+
+]);
+
+myApp.service("testService", function($http) {
+    this.getcusomter = function(datam) {
+        var response = $http.post(Appname + "/getlablprod/", datam);
+        return response;
+
+    }
+      this.getdispatchdata = function(patch) {
+        var respons = $http.post(Appname + "/prodget/", patch);
+        return respons;
+    }
+
+    this.setdispatchdata = function(datan) {
+        var response = $http.post(Appname + "/setdispatch/", datan);
+        return response;
+    }
+
+    this.gettransportdata = function(trans) {
+        var respons = $http.post(Appname + "/prodget/", trans);
+        return respons;
+    }
+
+    this.getexceptedCourier=function(datam)
+    {
+    var response=$http.post(Appname+"/getlablprod/",datam);
+    return response;
+    }
+
+     this.expdata=function(trans)
+    {
+    var response=$http.post(Appname+"/getlablprod/",trans);
+    return response;
+    }
+
+     this.getcust = function(custid) {
+        var respons = $http.post(Appname + "/custgroup/",
+            custid
+        );
+        return respons;
+    }
+    this.excelgen=function(excl)
+    {
+        var response=$http.post(Appname + "/excel1/",excl,
+        {
+        transformRequest:angular.identity,
+        headers:
+            {
+            'Content-Type':undefined
+            }
+        }
+        );
+
+        return response;
+    }
+
+    this.excelmon=function(excell)
+    {
+        var response=$http.post(Appname+"/monthlyexcel/",excell,
+            {
+            transformRequest:angular.identity,
+            headers:
+                {
+                'Content-Type':undefined
+                }
+            }
+        );
+        return response;
+    }
+
+});
+</script>
+{% endblock %}
+

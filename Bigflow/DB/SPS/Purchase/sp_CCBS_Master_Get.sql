@@ -1,0 +1,172 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_CCBS_Master_Get`(IN `Type` varchar(64),
+IN `Sub_type` varchar(64),
+IN `lj_filters` JSON,
+IN `lj_classification` JSON,
+ OUT `Message` varchar(5000))
+sp_Ccbs_Master_Get:BEGIN
+
+#Akshay 27-july-2019
+declare Stock_srch text;
+declare Query_srch text;
+declare ls_error varchar(100);
+declare li_count int;
+declare cust  text;
+declare i int;
+
+			select JSON_LENGTH(lj_filters,'$') into @li_json_count;
+			select JSON_LENGTH(lj_classification,'$') into @li_json_count1;
+
+
+		   if  @li_json_count <=0  then
+				set Message = 'No Data in Json Object';
+				leave sp_Ccbs_Master_Get;
+		  end if;
+
+			if  @li_json_count1 <=0  then
+				set Message = 'No classification in Json Object';
+				leave sp_Ccbs_Master_Get;
+			end if;
+
+if Type = 'ccbs_category'  and Sub_type='get'  then
+
+     select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid;
+     select JSON_LENGTH(lj_filters,'$.category_gid') into @li_json;
+
+     set cust='';
+	 set i=0;
+
+     #if @li_json<=0 then
+     #set Message='No list of category_gid is present';
+     #leave sp_Ccbs_Master_Get;
+    # end if;
+
+     if @li_json is not null or @li_json <> '' then
+			while i<@li_json do
+				select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.category_gid[',i,']'))) into @category_gid;
+                if i=0 then
+					set cust=concat(@category_gid);
+			    else
+					set cust=concat(cust,',',@category_gid);
+                end if;
+					set i=i+1;
+			end while;
+        end if;
+     #select cust;
+
+
+		if @category_gid <> 0 then
+		set Query_srch = concat(' where  a.category_gid in (' ,cust,')');
+		else
+		set Query_srch='';
+		end if;
+		#select Query_srch;
+
+    set Stock_srch = concat('select category_gid,subcategory_gid,
+													category_name,
+													category_code,
+                                                    category_no,
+													subcategory_name,
+													subcategory_code,
+                                                    subcategory_no,
+                                                    subcategory_glno,
+													category_isactive,
+													subcategory_isactive
+													from ap_mst_tcategory as a
+													inner join  ap_mst_tsubcategory as b on b.subcategory_categorygid=a.category_gid
+													and a.category_isactive=''Y''
+                                                    and a.category_isremoved=''N''
+                                                    and  a.entity_gid=',@Entity_Gid,'
+													and b.subcategory_isactive=''Y''
+                                                    and b.subcategory_isremoved=''N''
+                                                    and b.entity_gid=',@Entity_Gid,' ',Query_srch,' ');
+
+					set @p = Stock_srch;
+					#select @p;
+					PREPARE stmt FROM @p;
+					EXECUTE stmt;
+					DEALLOCATE PREPARE stmt;
+					select found_rows() into li_count;
+					if li_count>0 then
+							set Message='FOUND';
+					 else
+							set Message='NOT FOUND';
+					 end if;
+
+
+  elseif  Type = 'ccbs_category'  and Sub_type='summary'  then
+
+     select  JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.status'))) into @ccbs_status;
+     select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+
+	if @ccbs_status is not null then
+	set Query_srch = concat('and  ccbs_status=''',@ccbs_status,''' ');
+	else
+	set Query_srch='';
+	end if;
+
+	set Stock_srch = concat('select
+										ccbs_gid,
+										ccbs_name,
+										ccbs_cc,
+                                        ccbs_bs,
+										ccbs_code,
+										ccbs_glno,
+										ccbs_isactive,
+										ccbs_status
+										from ap_mst_tccbs
+										where entity_gid=',@Entity_Gid,'  ',Query_srch,' order by  ccbs_gid desc
+');
+
+									set @p = Stock_srch;
+									#select @p;
+									PREPARE stmt FROM @p;
+									EXECUTE stmt;
+									DEALLOCATE PREPARE stmt;
+									select found_rows() into li_count;
+									if li_count>0 then
+										set Message='FOUND';
+									 else
+										set Message='NOT FOUND';
+									 end if;
+
+
+ elseif  Type = 'ccbs_category'  and Sub_type='get_bs'  then
+
+     select  JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.tcc_bsgid'))) into @tcc_bsgid;
+     select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+
+     if @Entity_Gid = 0 or @Entity_Gid = '' or @Entity_Gid is null  then
+           set Message = 'Entity Gid Is Not Given';
+        leave sp_CCBS_Master_Get;
+    end if;
+
+    if @tcc_bsgid = '' or @tcc_bsgid is null  then
+           set Message = 'Bs gid Number Is Not Given';
+        leave sp_CCBS_Master_Get;
+    end if;
+
+
+
+
+	set Stock_srch = concat('select * from ap_mst_tcc where tcc_bsgid=',@tcc_bsgid, ' and tcc_isactive=''Y'' and tcc_isremoved=''N'' Order by tcc_bsgid asc');
+
+									set @p = Stock_srch;
+									#select @p;
+									PREPARE stmt FROM @p;
+									EXECUTE stmt;
+									DEALLOCATE PREPARE stmt;
+									select found_rows() into li_count;
+									if li_count>0 then
+										set Message='FOUND';
+									 else
+										set Message='NOT FOUND';
+									 end if;
+
+
+end if;
+
+
+
+
+END

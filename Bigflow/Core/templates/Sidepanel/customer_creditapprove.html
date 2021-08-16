@@ -1,0 +1,158 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Cue Card{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" id="maincontent">
+    <div ng-app="Appcredit" ng-controller="Ctrlcuecard" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Credit Approve</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <br>
+                <div class="col-md-10 col-lg-10">
+                    <md-autocomplete
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="customerChange(item)"
+                            md-items="item in getcustomer(searchText)"
+                            md-item-text="item.customer_name"
+                            md-min-length=0
+                            placeholder="Customer Name">
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.customer_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Customer Name matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'cus_creditapprvview'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    (function(angular, undefined) {
+        'use strict';
+
+        var myapp = angular
+            .module('Appcredit', ['ngMaterial', 'ui.bootstrap'])
+            .config(configAddschedule)
+            .controller('Ctrlcuecard', Ctrlcuecard)
+            .service('Sercuecard', Sercuecard);
+
+        function configAddschedule($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        }
+
+        Ctrlcuecard.$inject = ['$scope', '$mdDialog', 'Sercuecard', '$filter'];
+
+        function Ctrlcuecard($scope, $mdDialog, Sercuecard, $filter) {
+            $scope.customer = [];
+            $scope.getcustomer = gotoGetCustomer;
+            $scope.customerChange = gotoCustomerChange;
+
+            var get_cust = Sercuecard.getdropdown('customer', 0, '')
+            get_cust.then(function(result) {
+                $scope.customer = JSON.parse(result.data);
+            }, function(err) {
+                alert('No data!.');
+            });
+
+            function gotoGetCustomer(query) {
+                var result = $filter('filter')($scope.customer, {
+                    'customer_name': query
+                });
+                return result;
+            }
+
+            function gotoCustomerChange(item) {
+                getentityoutcome(item.customer_gid);
+            }
+
+            function getentityoutcome(cust_gid) {
+                var get_cust = Sercuecard.getentity('', '', cust_gid)
+                get_cust.then(function(result) {
+                    $scope.salesdetails = JSON.parse(result.data);
+                }, function(err) {
+                    alert('No data!.');
+                });
+
+                proposedbilling(cust_gid);
+            }
+
+            function proposedbilling(cust_gid) {
+                var get_cust = Sercuecard.getproposed('', '', cust_gid)
+                get_cust.then(function(result) {
+                    $scope.proposedbills = JSON.parse(result.data);
+                }, function(err) {
+                    alert('No data!.');
+                });
+                pdc(cust_gid)
+            }
+
+            function pdc(cust_gid) {
+                var get_cust = Sercuecard.getpdc('', '', cust_gid)
+                get_cust.then(function(result) {
+                    $scope.pdcdetails = JSON.parse(result.data);
+                }, function(err) {
+                    alert('No data!.');
+                });
+            }
+        }
+
+        function Sercuecard($http) {
+            this.getdropdown = function(tableName, searchGid, searchName) {
+                var response = $http.get(Appname + "/dropdowndata/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "search_name": searchName
+                    }
+                });
+                return response;
+            };
+            this.getentity = function(tableName, searchGid, cust_gid) {
+                var response = $http.get(Appname + "/credit_approve/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "cust_gid": cust_gid,
+                    }
+                });
+                return response;
+            };
+            this.getproposed = function(tableName, searchGid, cust_gid) {
+                var response = $http.get(Appname + "/credit_proposed/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "cust_gid": cust_gid,
+                    }
+                });
+                return response;
+            };
+            this.getpdc = function(tableName, searchGid, cust_gid) {
+                var response = $http.get(Appname + "/credit_pdc/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "cust_gid": cust_gid,
+                    }
+                });
+                return response;
+            };
+        }
+
+    })(angular);
+
+</script>
+{% endblock %}

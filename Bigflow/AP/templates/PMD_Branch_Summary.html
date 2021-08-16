@@ -1,0 +1,260 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PMD Branch Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PMD Branch Summary </h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="branch_name"
+                               ng-change="filtersearch()" placeholder="Branch Name">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="branch_code"
+                               ng-change="filtersearch()" placeholder="Branch Code">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="location"
+                               ng-change="filtersearch()" placeholder="Location">
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+<!--                    <md-button class="md-fab md-mini md-primary custbutton"-->
+<!--                               ng-click="find_maker_summary()">-->
+<!--                        <md-icon>search</md-icon>-->
+<!--                        <md-tooltip>Search</md-tooltip>-->
+<!--                    </md-button>-->
+
+<!--                    <md-button class="md-fab md-mini md-primary custbutton"-->
+<!--                               ng-click="clear_seach()">-->
+<!--                        <md-icon>search_off</md-icon>-->
+<!--                        <md-tooltip>Clear Search</md-tooltip>-->
+<!--                    </md-button>-->
+
+                    <a href="pmd_create/">
+                        <md-button class="md-fab md-mini md-primary custbutton">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>PMD Creation</md-tooltip>
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>Branch Name</th>
+                        <th>Branch Code</th>
+                        <th>Location</th>
+                        <th>GST NO</th>
+<!--                        <th>IGST Account Number</th>-->
+<!--                        <th>SGST Account Number</th>-->
+<!--                        <th>CGST Account Number</th>-->
+                        <th>Is Active</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="pmd in pmd_summary_data.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage))"
+                        align="center">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{pmd.branch_name}}</td>
+                        <td>{{pmd.branch_code}}</td>
+                        <td>{{pmd.pmdbranch_location}}</td>
+                        <td>{{pmd.pmdbranch_gstno}}</td>
+<!--                        <td>{{pmd.pmdbranch_igst_accountno}}</td>-->
+<!--                        <td>{{pmd.pmdbranch_sgst_accountno}}</td>-->
+<!--                        <td>{{pmd.pmdbranch_cgst_accountno}}</td>-->
+                        <td>{{pmd.pmdbranch_isactive}}</td>
+                        <td class="text-center">
+                            <a href=""
+                               title="Edit" ng-click="edit_data(pmd)"
+                               align="center">
+                                <i class="material-icons">edit</i>
+                            </a>
+                        </td>
+
+                    </tr>
+                    <tr ng-show="pmd_summary_data.length ==  0">
+                        <td class="warning" colspan="5">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr align="center">
+                        <td colspan="5">
+                            <ul uib-pagination total-items="pmd_summary_data.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm"
+                                boundary-links="true"
+                                ng-change=""
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{pmd_summary_data.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','pmd_service','$mdDialog','$window','$filter', function($scope,pmd_service,$mdDialog,$window,$filter) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    sessionStorage.removeItem('pmd');
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+
+
+    $scope.pageChanged = function(){
+        debugger;
+        if($scope.pmd_summary_data.length==0){
+            $scope.currentPage=1;
+        }
+        $scope.summary();
+    }
+
+    $scope.summary=function(){
+        debugger;
+        if($scope.txn_date!=undefined){
+            $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+        }
+        var datas={"action":'GET',"type":"PMD_SUMMARY","filter":{}};
+            $scope.loading();
+            var pmd_summary = pmd_service.pmd_get(datas);
+             pmd_summary.then(function(result) {
+            debugger;
+                    $scope.pmd_summary_data =result.data;
+                    $scope.pmd_summary_data_filter =result.data;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data));
+                    }
+
+                    console.log($scope.pmd_summary_data);
+                },
+                function(err) {
+                    alert("No Data");
+        }).finally($scope.endloading);
+    }
+    $scope.summary();
+
+     $scope.find_maker_summary=function(){
+                $scope.currentPage=1;
+                $scope.Total_Row=0;
+                $scope.summary();
+    }
+
+
+
+    $scope.filtersearch = function(selected_type) {
+        $scope.pmd_summary_data= $filter('filter')($scope.pmd_summary_data_filter, {
+            "branch_name": $scope.branch_name,
+            "branch_code": $scope.branch_code,
+            "pmdbranch_location": $scope.location,
+        });
+    }
+
+    $scope.clear_seach=function(){
+        $scope.status="";
+
+    }
+    $scope.edit_data=function(pmd){
+        var pmd_data = {"pmd": pmd,view:"edit"};
+         sessionStorage.setItem('pmd', JSON.stringify(pmd_data));
+         $window.location.href = "pmd_create/";
+    }
+
+
+
+
+   }]);
+
+ myApp.service("pmd_service", function ($http) {
+
+
+    this.pmd_get=function(data){
+        var response=$http.post(Appname+"/get_pmd_data/",data);
+        return response;
+    }
+
+
+ });
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

@@ -1,0 +1,545 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Tracking{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="Appemptrackrep" ng-controller="Ctrlemptrackrep" ng-cloak>
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Employee Tracking Report</h4>
+            </div>
+        </div>
+        <div ng-show="!showdetails">
+            <div class="row">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Employee</label>
+                        <md-select ng-model="ddlemp_gid" md-container-class="selectSelectHeader">
+                            <md-select-header class="select-header">
+                                <input type="text" id="testt" autocomplete="off" ng-model="sInput"
+                                       ng-keydown="mdselectInput($event)"
+                                       class="header-searchbox" value="" placeholder="search..">
+                            </md-select-header>
+                            <md-option ng-repeat="emp in empsmry  | filter:{employee_name:sInput}" ng-value="emp">{{
+                                emp.employee_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Schedule From Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="sdate" md-open-on-focus md-max-date="maxDate"
+                                       autocomplete="off"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Schedule To Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-min-date="sdate" ng-model="todate"
+                                       md-max-date="maxDate" md-open-on-focus
+                                       autocomplete="off"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-icon-button md-primary" aria-label="Search"
+                               ng-click="search(ddlemp_gid.employee_gid);report()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-raised custbutton" ng-click="Excelexport()">
+                        TRACKING REPORT
+                        <md-tooltip>Tracking Report</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Executive Name</th>
+                            <th>Date</th>
+                            <th>Location St.point</th>
+                            <th>Location Ed.point</th>
+                            <th>View LoginDetails</th>
+                            <th>View Route</th>
+                            <th>View</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="emp in tracking.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))|filter:{date: '!null'}">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{emp.employee_name }}</td>
+                            <td>{{emp.date}}</td>
+                            <td>{{emp.startlocation}}</td>
+                            <td>{{emp.endlocation}}</td>
+                            <td align="center"><a title="Login Details" ng-click="showlogindetails(emp)" align="center"
+                                                  class="editlink">
+                                <i class="material-icons">format_list_bulleted</i>
+                            </a></td>
+                            <td align="center"><a title="Location Details" ng-click="showview(emp)" align="center"
+                                                  class="editlink">
+                                <i class="material-icons">visibility</i>
+                            </a></td>
+                            <td align="center">
+                            <span title="Map View" ng-click="loadmap(emp.employee_gid)" align="center"
+                                  class="editlink">
+                                    <i class="material-icons">map</i>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr ng-show="tracking.length == 0">
+                            <td class="warning" colspan="10">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="5">
+                                <ul uib-pagination total-items="pageLength" ng-model="currentPage"
+                                    max-size="maxSize"
+                                    class="pagination-sm cust_pagination" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="3">
+                                Total :{{pageLength}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div ng-show="showdetails">
+            <div class="row">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Employee</label>
+                        <md-select ng-model="ddlemp_gid" md-container-class="selectSelectHeader">
+                            <md-select-header class="select-header">
+                                <input type="text" id="test1" autocomplete="off" ng-model="sInput"
+                                       ng-keydown="mdselectInput($event)"
+                                       class="header-searchbox" value="" placeholder="search..">
+                            </md-select-header>
+                            <md-option ng-repeat="emp in empsmry  | filter:{employee_name:sInput}"
+                                       ng-value="emp.employee_gid">{{
+                                emp.employee_name }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Schedule Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="sdate" md-open-on-focus
+                                       autocomplete="off"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-icon-button md-primary" aria-label="Search" ng-click="loadmap(ddlemp_gid)">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-icon-button md-primary" aria-label="close" ng-click="showdetails=!showdetails">
+                        <md-icon>close</md-icon>
+                        <md-tooltip>Close</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12 col-sm-12">
+                    <div ng-show="Markers.length>0" id="dvMap"
+                         style="width: 100%; height: 400px;    border: 1px solid transparent;border-radius: 12px;    box-shadow: 1px 1px 5px 0px #6b63639e;">
+                    </div>
+                    <div ng-if="Markers.length==0" class="alert alert-danger">
+                        <strong>No record to display!.</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app_trackingrep = angular.module('Appemptrackrep', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+    app_trackingrep.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+app_trackingrep.controller('Ctrlemptrackrep', ['$scope', '$mdDialog', 'trackingser', 'SerCommon', '$filter', '$element', function($scope, $mdDialog, trackingser, SerCommon, $filter, $element) {
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+    $scope.Markers = [];
+    $scope.totalempsmry = [];
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.showdetails = false;
+    $scope.maintain = [];
+    $scope.maintain1 = [];
+    $scope.exefinal = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.dategoogl
+    $scope.dbdate = convertdate(td);
+    $scope.maxDate =new Date();
+    $scope.sdate = convertdate(td);
+    $scope.todate = convertdate(td);
+
+    var value_location;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    function loaddata() {
+      $scope.loading();
+        var get_employ = SerCommon.getemployee(0, '', 0, 'ALL')
+        get_employ.then(function(result) {
+                $scope.totalempsmry = result.data;
+                $scope.empsmry = result.data;
+            }, function(err) {
+                alert('No data!.');
+            })
+            .finally();
+    }
+
+    loaddata();
+    loaddetails(0);
+    var routedetails = "";
+
+    $scope.loadmap = loaddet;
+
+    function loaddet(emp_gid) {
+        $scope.showdetails = true;
+        $scope.ddlemp_gid = emp_gid
+        var data = trackingser.getlaglong('FET_EMPLOYEE', emp_gid, formatStringDate($scope.sdate, 'yyyy-mm-dd'), '');
+        data.then(function(res) {
+
+            $scope.Markers = res.data.DATA;
+            if ($scope.Markers.length > 0) {
+                loadmap();
+            }
+        }, function(err) {
+            alert(err);
+        })
+    }
+
+    $scope.search = function(emp_gid) {
+        $scope.loading();
+        loaddetails(emp_gid);
+
+    };
+    $scope.exefinal = [];
+
+    function loaddetails(emp_gid) {
+        if (emp_gid == undefined) {
+            emp_gid = 0;
+        }
+
+        $scope.getroutedetails;
+        $scope.dattracking = [];
+
+        var data = trackingser.getlaglong('FET_REPORT', emp_gid, formatStringDate($scope.sdate, 'yyyy-mm-dd'), formatDate($scope.todate));
+        data.then(function(res) {
+            $scope.maintain = res.data.DATA;
+            $scope.tracking = $filter('filter')($scope.maintain, function(item) {
+                return (item.date != '')
+            });
+
+            angular.forEach($scope.tracking, function(user, key) {
+                var emp_gid = user.employee_gid
+                var data = trackingser.getlaglong('FET_EMPLOYEE_INTERVAL_MIS', emp_gid, formatStringDate($scope.sdate, 'yyyy-mm-dd'), formatDate($scope.todate));
+                data.then(function(res) {
+                    $scope.getroutedetails = res.data.DATA;
+                    angular.forEach($scope.getroutedetails, function(user, key) {
+
+                        $scope.exefinal.push({
+                            "employee_gid": user.employee_gid,
+                            "latlong_date": user.latlong_date.split('-')[2] + "-" + user.latlong_date.split('-')[1] + "-" + user.latlong_date.split('-')[0],
+                            "enter_time": user.latlong_date.split('-')[2] + "-" + user.latlong_date.split('-')[1] + "-" + user.latlong_date.split('-')[0] + ' ' + user.actual_time + ':00',
+                            "emp_location": user.latlong_name
+                        });
+                    });
+                }).then(function() {
+                    insertdayvisit();
+                });
+                $scope.endloading();
+            });
+            $scope.pageLength = $scope.tracking.length;
+            angular.forEach($scope.tracking, function(user, key) {
+                displayLocation(key, 'start', user.startlag, user.startlog);
+                displayLocation(key, 'end', user.endlag, user.endlog);
+            });
+                $scope.endloading();
+        }, function(err) {
+            alert(err);
+        })
+    }
+
+    function insertdayvisit() {
+        var details_final = {
+            daydetails: $scope.exefinal
+        };
+
+        var setdata = trackingser.setday('INSERT', details_final);
+        setdata.then(function(res) {}, function(err) {
+            //alert("Not inserted");
+        });
+    }
+
+    function ldload() {
+        var data = trackingser.getlaglong('FET_EMP_ALL', 0, formatDate($scope.sdate), formatDate($scope.todate));
+        data.then(function(res) {
+            var emp_gid = 0;
+            var time = "";
+            var details = res.data;
+            angular.forEach(details, function(user, key) {
+                if (emp_gid == user.employee_gid) {
+                    var difftm = diff_minutes(user.date, time);
+                } else {
+                    emp_gid = user.employee_gid;
+                    time = user.date;
+                    user.hour = 1;
+                }
+            });
+        }, function(err) {
+            alert(err);
+        });
+    };
+
+    $scope.Excelexport = function() {
+        var data = [];
+        var emp_gid = 0;
+        a = "fetemployee_getexcel/?action=FET_DAY_ROUTE_ALL&emp_gid=" + emp_gid + "&date=" + formatDate($scope.sdate) + "&todate=" + formatDate($scope.todate);
+        window.location.href = a;
+    }
+
+    $scope.showview = function(ev) {
+        $scope.loading();
+        var dialogData = {
+            action: 'FET_REPORT',
+            emp_gid: ev.employee_gid,
+            date: formatStringDate($scope.sdate, 'yyyy-mm-dd'),
+            todate: formatStringDate($scope.todate, 'yyyy-mm-dd'),
+        }
+        $mdDialog.show({
+                controller: 'DialogController',
+                templateUrl: 'trackingview',
+                parent: angular.element(document.body),
+                targetEvent: ev,
+                locals: {
+                    dialogData: dialogData
+                },
+                clickOutsideToClose: true,
+                fullscreen: false
+            })
+            .then(function(res) {}, function(err) {})
+            .finally($scope.endloading);
+    };
+
+    $scope.showlogindetails = function(ev) {
+        var dt = formatDate($scope.convertToDate(ev.date));
+        $scope.loading();
+        $scope.employee_name_login = ev.employee_name
+        var json = {
+            "Employee_gid": ev.employee_gid,
+            "From_Date": dt.split('/')[2] + "-" + dt.split('/')[1] + "-" + dt.split('/')[0],
+            "To_Date": dt.split('/')[2] + "-" + dt.split('/')[1] + "-" + dt.split('/')[0]
+        };
+
+        var dialogData = {
+            action: 'FET_LOGIN',
+            type: '',
+            json: json,
+        }
+
+        $mdDialog.show({
+                controller: 'DialogController',
+                templateUrl: 'fetemplogin',
+                parent: angular.element(document.body),
+                targetEvent: ev,
+                locals: {
+                    dialogData: dialogData
+                },
+                clickOutsideToClose: true,
+                fulcustomFullscreenlscreen: false
+            })
+            .then(function(answer) {}, function() {});
+    };
+
+
+
+    $scope.convertToDate = function(stringDate) {
+        var dateOut = new Date(stringDate);
+        dateOut.setDate(dateOut.getDate());
+        return dateOut;
+    };
+
+    $scope.logindetemp = [];
+
+    function displayLocation(user, type, latitude, longitude) {
+        var request = new XMLHttpRequest();
+        var location = '';
+        var method = 'GET';
+        var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' +
+            latitude + ',' + longitude + '&key=AIzaSyDNAhWk5hntX2obVvFsO6lUIms_hY3BzIs';
+        var async = true;
+
+        request.open(method, url, async);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4 && request.status == 200) {
+                var data = JSON.parse(request.responseText);
+                var address = data.results[0];
+                var value = address.formatted_address.split(",");
+
+                count = value.length;
+                country = value[count - 1];
+                state = value[count - 2];
+                city = value[count - 3];
+                location = value[count - 4];
+                $scope.value_deta = location;
+                if (type == 'start') {
+                    $scope.tracking[user].startlocation = location;
+                } else if (type == 'end') {
+                    $scope.tracking[user].endlocation = location;
+                }
+            }
+        };
+        request.send();
+    };
+
+
+    var successCallback = function(position) {
+        var x = position.coords.latitude;
+        var y = position.coords.longitude;
+        displayLocation(x, y);
+    };
+
+    var errorCallback = function(error) {};
+
+    var options = {
+        enableHighAccuracy: true,
+        timeout: 1000,
+        maximumAge: 0
+    };
+
+
+    navigator.geolocation.getCurrentPosition(successCallback, errorCallback,
+        options);
+
+
+    function loadmap() {
+        var latlong = [];
+        //Setting the Map options.
+        $scope.MapOptions = {
+            center: new google.maps.LatLng($scope.Markers[0].latlong_latitude, $scope.Markers[0].latlong_longitude),
+            zoom: 8,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+
+        //Initializing the InfoWindow, Map and LatLngBounds objects.
+        $scope.InfoWindow = new google.maps.InfoWindow();
+        $scope.Latlngbounds = new google.maps.LatLngBounds();
+        $scope.Map = new google.maps.Map(document.getElementById("dvMap"), $scope.MapOptions);
+
+        //Looping through the Array and adding Markers.
+        for (var i = 0; i < $scope.Markers.length; i++) {
+            var data = $scope.Markers[i];
+            var myLatlng = new google.maps.LatLng(data.latlong_latitude, data.latlong_longitude);
+            latlong.push(myLatlng);
+            //Initializing the Marker object.
+            var marker = new google.maps.Marker({
+                position: myLatlng,
+                animation: google.maps.Animation.DROP,
+                map: $scope.Map,
+                label: {
+                    text: (i + 1).toString(),
+                    color: "#EBFEFF"
+                },
+                title: data.actual_time
+            });
+
+            //Adding InfoWindow to the Marker.
+            (function(marker, data) {
+                google.maps.event.addListener(marker, "click", function(e) {
+                    if (typeof $scope.InfoWindow != 'undefined') $scope.InfoWindow.close();
+                    $scope.InfoWindow.setContent("<div ><p>Date:" + data.latlong_date + "</p></br><p>Time:" + data.actual_time + "</p><p>Spend Time:" + data.spend_time + "</p></div>");
+                    $scope.InfoWindow.open($scope.Map, marker);
+                });
+            })(marker, data);
+
+            //shown label Dont delete
+            google.maps.event.addListener(marker, "mouseover", function(evt) {
+                var label = this.getLabel();
+                label.color = "black";
+                this.setLabel(label);
+            });
+            google.maps.event.addListener(marker, "mouseout", function(evt) {
+                var label = this.getLabel();
+                label.color = "white";
+                this.setLabel(label);
+            });
+
+
+            //Plotting the Marker on the Map.
+            $scope.Latlngbounds.extend(marker.position);
+        }
+
+        var polyline = new google.maps.Polyline({
+            path: latlong,
+            map: $scope.Map,
+            strokeColor: '#2962ff'
+        })
+        //Adjusting the Map for best display.
+        $scope.Map.setCenter($scope.Latlngbounds.getCenter());
+        $scope.Map.fitBounds($scope.Latlngbounds);
+
+    }
+
+}]);
+app_trackingrep.service("trackingser", function($http) {
+    this.setday = function(action, jsondata) {
+        var response = $http.get(Appname + "/setday/", {
+            params: {
+                "action": action,
+                "day": jsondata,
+            }
+        });
+        return response;
+    };
+
+    this.getlaglong = function(action, emp_gid, fromdate, todate) {
+        var response = $http.get(Appname + "/getlaglongfet/", {
+            params: {
+                "Action": action,
+                "Emp_gid": emp_gid,
+                "From_Date": fromdate,
+                "To_Date": todate
+            }
+        });
+        return response;
+    };
+});
+
+
+</script>
+{% endblock %}

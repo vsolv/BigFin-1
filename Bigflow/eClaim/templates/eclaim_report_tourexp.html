@@ -1,0 +1,387 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Expense{% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-cloak ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Expense Approval </h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                </div>
+                <div class="col-md-3">
+                </div>
+                <div class="col-md-3">
+                </div>
+                <div class="col-md-2">
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               href="tour_gen_xl?Type=TOUR_EXPENSE&tourgid={{tour_gid}}">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Download XL</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th class="text-center" scope="col">S.No</th>
+                    <!--                    <th class="text-center" scope="col">Expense Code</th>-->
+                    <th class="text-center" scope="col">Employee</th>
+                    <th class="text-center" scope="col">Designation</th>
+                    <th class="text-center" scope="col">Branch</th>
+                    <th class="text-center" scope="col">Tour NO</th>
+                    <th class="text-center" scope="col">Description</th>
+                    <th class="text-center" scope="col">Eligible Amount</th>
+                    <th class="text-center" scope="col">Claim Amount</th>
+                    <th class="text-center" scope="col" ng-show="applevel == 2 || claimstatus == 'APPROVED'">Approved
+                        Amount
+                    </th>
+                    <th class="text-center" scope="col">Requester Comment</th>
+                    <!--                    <th class="text-center" scope="col">Expense Details</th>-->
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="eClaim in eClaim_approval.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <!--                        <td class="text-center">{{eClaim.expsensecode}}</td>-->
+                        <td class="text-center">
+                            {{eClaim.employee_code}} - {{eClaim.employee_name}}
+                        </td>
+                        <td class="text-center">
+                            {{eClaim.employee_designation}}
+                        </td>
+                        <td class="text-center">
+                            {{eClaim.employee_branch}}
+                        </td>
+                        <td class="text-center">
+                            {{eClaim.requestno}}
+                        </td>
+                        <td class="text-center">{{eClaim.description}}</td>
+                        <td class="text-right">{{eClaim.eligibleamount}}</td>
+                        <td class="text-right">{{eClaim.claimedamount}}</td>
+                        <td class="text-right" ng-show="applevel == 2 || claimstatus == 'APPROVED'">
+                            {{eClaim.approvedamount}}
+                        </td>
+                        <td class="text-center">{{eClaim.requestorcomment}}</td>
+                        <!--                        <td class="text-center" ng-click="expense_view(eClaim)">-->
+                        <!--                            <a href=""><i class="material-icons">-->
+                        <!--                                visibility-->
+                        <!--                            </i></a>-->
+                        <!--                        </td>-->
+                    </tr>
+                    <tr ng-show="asset_check.length ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="eClaim_approval.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td class="text-left" colspan="1">
+                            <span>Total Eligible Amount:<br/> <b
+                                    class="text-right"> {{total_eligamount}}</b></span>
+                        </td>
+                        <td class="text-left" colspan="1">
+                            <span>Total Claim Amount:<br/> <b
+                                    class="text-right"> {{total_claimamount}}</b></span>
+                        </td>
+                        <td ng-show="applevel == 2 || claimstatus == 'APPROVED'" class="text-left" colspan="1">
+                            <span>Total Approved Amount:<br/> <b
+                                    class="text-right"> {{total_approveamount}}</b></span>
+                        </td>
+                        <td class="text-left" colspan="1">
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--Image start-->
+        <div class="row" ng-show="applevel == 2 || claimstatus == 'APPROVED'">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <md-button class="md-raised" ng-href="eClaim/eclaim_report_tour"
+                               type="button"
+                               value="Reject">Back
+                    </md-button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope,$sce,eclaimService,$http, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.remarks = false;
+    $scope.reason = false;
+    $scope.eClaim_approval = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.approvaldata = false;
+    $scope.advanceadjust = false;
+    $scope.cap_date = convertdate(td);
+
+    var travel_data =JSON.parse(sessionStorage.getItem('eClaim_exp_aprl'));
+    $scope.tour_gid = travel_data.tour_gid;
+    $scope.empgid = travel_data.empgid;
+    $scope.approvalgid = travel_data.approvalgid;
+    $scope.applevel = travel_data.applevel;
+    $scope.appcomment = travel_data.appcomment;
+    $scope.onbehalf_emp = travel_data.onbehalf_emp;
+    $scope.comments = "";
+    if(travel_data.claimstatus == "APPROVED" && travel_data.applevel == 1 ){
+        $scope.claimstatus = "ForwarderApproved";
+    }
+    else{
+        $scope.claimstatus = travel_data.claimstatus;
+    }
+    $scope.status_check = false;
+    if($scope.applevel == 1){
+        $scope.Approve_opt = true;
+        $scope.Reject_opt = false;
+        $scope.Higher_authority = false;
+    }
+    else  {
+        $scope.Approve_opt = false;
+        $scope.Reject_opt = false;
+        $scope.Higher_authority = true;
+    }
+
+    $scope.move_other = function(){
+        $scope.Approve_opt = true;
+        $scope.Reject_opt = false;
+        $scope.Higher_authority = false;
+    }
+
+    if($scope.claimstatus == 'RETURN' || $scope.claimstatus =='APPROVED'){
+        $scope.Approve_opt = false;
+        $scope.Reject_opt = false;
+        $scope.Higher_authority = false;
+    }
+
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_popup_img = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('attach_view')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.files =[];
+    loadeclaim();
+    function loadeclaim(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "CLAIMED_EXPENSE",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Claimrequest_Tourgid": $scope.tour_gid
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_drop_get(data)
+        get_eclaim.then(function(result) {
+                $scope.main = result.data.DATA;
+                $scope.files = result.data.FILE;
+                $scope.eClaim_approval = $scope.main;
+                if($scope.applevel == 1){
+                    if(result.data.MESSAGE == "FOUND"){
+                        if($scope.eClaim_approval[0].approvedby_fr != 0){
+                            if($scope.claimstatus == "PENDING" && $scope.applevel == 1){
+                                $scope.status_check = true;
+                            }
+                            $scope.searchbr = $scope.eClaim_approval[0].approver_branch;
+                            $scope.searchemp = $scope.eClaim_approval[0].approver_name;
+                            $scope.comments = $scope.eClaim_approval[0].appcomment_fr;
+                        }
+                    }
+                }
+                $scope.total_eligamount = 0;
+                $scope.total_claimamount = 0;
+                $scope.total_approveamount = 0;
+                angular.forEach($scope.eClaim_approval, function(item1) {
+                    $scope.total_eligamount = $scope.total_eligamount + item1.eligibleamount;
+                    $scope.total_claimamount = $scope.total_claimamount + item1.claimedamount;
+                    $scope.total_approveamount = $scope.total_approveamount + item1.approvedamount;
+                    $scope.advanceamount = item1.advanceamount;
+                });
+                $scope.net_amount = $scope.total_approveamount - $scope.advanceamount;
+                $scope.data_len = $scope.eClaim_approval.length;
+                $scope.pageLength = $scope.eClaim_approval.length;
+                $scope.Totalpages = Math.ceil($scope.eClaim_approval.length / $scope.itemsPerPage);
+        }).finally($scope.endloading);
+    }
+
+    $scope.expense_view = function(e) {
+        var eClaim_session = {
+                tour_gid: e.claimrequest_gid
+            };
+        if(e.expsensecode =="TRVL"){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_travel_exp";
+        }
+        else if(e.expsensecode =="MISC"){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_miscelan_exp";
+        }
+        else if( e.expsensecode =="LODG" ){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_lodg_exp";
+        }
+        else if(e.expsensecode =="LCONV" ){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_loc_conv_exp";
+        }
+        else if(e.expsensecode =="INCDL" ){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_incidental_exp";
+        }
+        else if(e.expsensecode =="DLYDM" ){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_dailydiem_exp";
+        }
+        else if(e.expsensecode =="PCKG" ){
+            session_data (e)
+            $window.location.href = "eClaim/eclaim_pkg_mov_dt";
+        }
+    }
+
+    function session_data (e){
+        if($scope.claimstatus == "APPROVED" || $scope.applevel == 2 ){
+            type = true;
+        }
+        else{
+            type = false;
+        }
+        var eClaim_travel_ses = {
+            claimreq_gid : e.claimreq_gid,
+            gid:e.gid,
+            description:e.description,
+            expsensecode:e.expsensecode,
+            expensegid:e.gid,
+            requestorcomment:e.requestorcomment,
+            approve:type,
+            applevel:$scope.applevel,
+            exp_add:false,
+        }
+        $scope.tavel_data=[];
+        $scope.tavel_data.push(eClaim_travel_ses);
+        sessionStorage.setItem('eClaim_tavel', JSON.stringify($scope.tavel_data));
+    }
+<!--    loadbranch();-->
+    function loadbranch(){
+        var data = {
+            params: {
+                "Type": "GET_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Limit_Start":0,
+                             "Limit_End":30,
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_branch_data = $scope.main;
+        });
+    }
+
+
+    $scope.brsearch = gotobranch;
+        function gotobranch(query) {
+             if(query == "undefined"){
+                query = "";
+            }
+            var datas = {
+                params: {
+                    "Type": "GET_BRANCH",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "Limit_Start":0,
+                                "Limit_End":30,
+                                "branch_name":"",
+                                "branch_code":"",
+                                "branch_detail":query
+                            }
+                        }
+                    }
+                }
+            }
+             return $http.get(Appname + '/eclaim_dropdata/' , datas).then(function(data) {
+                var final_values=data.data.DATA;
+<!--                console.log(final_values);-->
+                return final_values;
+             });
+    }
+
+});
+
+app.service('eclaimService', function($http) {
+
+    this.ecalim_data = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    }
+
+});
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

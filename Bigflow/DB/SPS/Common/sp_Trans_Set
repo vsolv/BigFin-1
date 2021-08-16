@@ -1,0 +1,499 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Trans_Set`(IN `Action` varchar(16),
+IN `li_ref_gid` varchar(64),
+IN `li_reftable_gid` int,
+IN `ls_status` varchar(64),
+IN `lc_totype` char(1),
+IN `li_tto` varchar(64),
+IN `ls_remarks` varchar(256),
+IN `li_entity_gid` varchar(10),
+IN `ls_create_by` int,
+OUT `Message` varchar(1000))
+Trans_Set:BEGIN
+
+#Vigneshwari       08-12-2017
+## Ramesh Remarks :: Sep 4 2019
+# Akshay : PR Sep 2019
+declare Tran_srch varchar(1000);
+declare Query_Insert text;
+declare ls_error varchar(100);
+declare countRow int;
+declare errno int;
+declare msg varchar(1000);
+declare ls_no varchar(64);
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    #SELECT errno AS MYSQL_ERROR;
+    set Message = concat(errno , msg);
+    #set Message = 'Error';
+    ROLLBACK;
+    END;
+
+set ls_error = '';
+set @lref_gid = '';
+set @lto_gid = '';
+
+if Action = 'Insert' then
+
+    if li_ref_gid = '' then
+		set ls_error = 'Ref Gid not Given ';
+	else    
+		set @err = concat('select case when isnull(ref_gid) then 0 else ref_gid end into @lref_gid from 
+        gal_mst_tref where ref_name = ''', li_ref_gid ,'''');
+		#select @err;
+        PREPARE stmt1 FROM @err;
+		EXECUTE stmt1;  
+		#set countRow = (select found_rows());
+		DEALLOCATE PREPARE stmt1;
+        
+        set li_ref_gid = @lref_gid;
+        #select li_ref_gid;
+        if li_ref_gid = 0 then
+			set ls_error = 'Given ref not in ref table';
+		end if;
+
+	end if;
+	
+	if li_reftable_gid = 0 then
+		set ls_error = 'Ref Gid not Given.';
+	end if;
+    
+    if li_tto = '' then
+		set ls_error = 'Tran To not Given.';
+	else 
+		set @err = concat('select case when isnull(role_gid) then 0 else role_gid end  into @lto_gid 
+        from gal_mst_trole where role_name = ''', li_tto ,'''');
+		#select @err;
+        PREPARE stmt1 FROM @err;
+		EXECUTE stmt1;  
+		#set countRow = (select found_rows());
+		DEALLOCATE PREPARE stmt1;
+        
+		set li_tto = @lto_gid;
+        #select li_tto;
+        if li_tto = 0 then
+			set ls_error = 'Role table not contain the given gid';
+		end if;
+	end if;
+    
+  /*  if lc_totype = '' then
+		set ls_error = 'Tran Totype not Given.';
+	end if;*/
+    /*
+    if lc_totype = 'I' then
+		
+        if li_date = 0 or li_date = '' then
+			set ls_error = ' Tran By Date Not Given. ';
+		end if;
+        
+		if li_tranby = 0 then
+			set ls_error = ' Tran By Not Given. ';
+		end if;
+        
+	end if;
+    */
+    
+    if ls_status = '' then
+		set ls_error = 'Status Not Given.';
+	end if;
+    
+    if ls_Remarks <> '' then
+		set @query1 = ',tran_remarks';
+        set @query2 = concat(',''',ls_remarks,'''');
+	else 
+		set @query1 = '';
+        set @query2 = '';
+	end if;
+    #select @query1,@query2;
+	if ls_error = '' then	
+	#select 1;
+    #SET autocommit = 1;   ### Added By Ramesh
+	#start transaction;    
+        
+		#if lc_totype = 'G' then
+
+			set Tran_srch = concat('INSERT INTO gal_trn_ttran (tran_ref_gid, tran_reftable_gid, tran_status, tran_from, 
+								tran_fromdate,tran_totype,tran_to,entity_gid, create_by',@query1,') VALUES 
+								(',li_ref_gid,',
+                                ',li_reftable_gid,',
+                                ''',ls_status,''',
+                                ',ls_create_by,',
+                                 ''',now(),''',
+                                 ''',lc_totype, ''',
+                                 ',li_tto,',
+                                 ',li_entity_gid,',
+                                 ',ls_create_by,'
+                                 ',@query2,')
+                                 ');
+		#end if;
+  /*      
+		if lc_totype = 'I' then
+       
+			set Tran_srch = concat('INSERT INTO gal_trn_ttran (tran_ref_gid, tran_reftable_gid, tran_status, tran_from, 
+								tran_fromdate,tran_totype,tran_to,tran_by,tran_date,entity_gid, create_by) VALUES 
+								(',li_ref_gid,',' ,li_reftable_gid, ',''' , ls_status , ''',' ,ls_create_by, ',now(),'''
+                                ,lc_totype, ''',' ,li_tto, ',' ,li_tranby, ',''',li_date, ''',' ,li_entity_gid, ','
+                                ,ls_create_by, ')');
+		end if;
+    */    
+		set @Tran_srch = Tran_srch;
+        #SELECT @Tran_srch;
+		PREPARE stmt FROM @Tran_srch;
+		EXECUTE stmt;  
+		set countRow = (select ROW_COUNT());
+		DEALLOCATE PREPARE stmt; 
+
+		if countRow >  0 then
+			select LAST_INSERT_ID() into Message ;
+			#commit;
+		else
+			set Message = 'FAIL';
+			rollback;
+		end if;
+	else
+		set Message = ls_error;
+	end if;
+end if;
+
+if Action = 'Update' then
+				set @query1 = '';
+				set @query2 = '';
+
+				if li_reftable_gid = 0 then
+					set ls_error = 'Ref Gid not Given.';
+				end if;
+				
+				if ls_status = '' then
+					set ls_error = 'Status Not Given.';
+				end if;
+				
+				if li_ref_gid = '' then
+					set ls_error = 'Ref Gid not Given ';
+				else    
+					set @err = concat('select case when isnull(ref_gid) then 0 else ref_gid end into @lref_gid 
+                    from gal_mst_tref where ref_name = ''', li_ref_gid ,'''');
+					  
+					PREPARE stmt1 FROM @err; 
+				  
+					EXECUTE stmt1;  
+					#set countRow = (select found_rows());
+					DEALLOCATE PREPARE stmt1;
+					
+					set li_ref_gid = @lref_gid;
+					#select li_ref_gid;
+					if li_ref_gid = 0 then
+						set ls_error = 'Given ref not in ref table';
+					end if;
+
+				end if;
+				
+				if lc_totype = '' then
+					set ls_error = 'Tran Totype not Given.';
+				end if;
+				
+				if lc_totype <> 'C' then
+					if li_tto = '' then
+						set ls_error = 'Tran To not Given.';
+					else 
+						set @err = concat('select case when isnull(role_gid) then 0 else role_gid end  into @lto_gid 
+						from gal_mst_trole where role_name = ''', li_tto ,'''');
+						#select @err;
+						PREPARE stmt1 FROM @err;
+						EXECUTE stmt1;  
+						DEALLOCATE PREPARE stmt1;
+
+						set li_tto = @lto_gid;
+						#select li_tto;
+						if li_tto = 0 then
+							set ls_error = 'Role table not contain the given gid';
+						else
+							set @query1 = ',tran_to';
+							set @query2 = concat(',''',li_tto,'''');
+						end if;
+					end if;
+				end if;
+
+				SET SQL_SAFE_UPDATES = 0;
+				
+				if ls_error = '' then
+				 #select ls_create_by,li_reftable_gid,li_ref_gid,ls_remarks;
+				 #SET autocommit = 1;   # Added By Ramesh
+					#start transaction;
+
+					Update gal_trn_ttran set tran_by = ls_create_by , tran_date = now() , update_by = ls_create_by , Update_date = now(),
+							tran_remarks = ls_remarks
+						where tran_reftable_gid  = li_reftable_gid  and tran_ref_gid = li_ref_gid and tran_isremoved  ='N'
+						and tran_by is null and tran_to is not null;
+					 #   select 1;
+
+					set countRow = (select row_count()) ;
+				   # select countRow; ### Remove It
+					#set Message = countRow;
+					#select 1;
+					if countRow > 0 then
+						   
+                           #select @query1,li_ref_gid,li_reftable_gid,ls_status,ls_create_by,lc_totype,li_entity_gid,ls_create_by,ls_remarks,@query2;
+                           
+					set @Tran_srch1 = concat('INSERT INTO gal_trn_ttran (tran_ref_gid, tran_reftable_gid, tran_status, tran_from, 
+													tran_fromdate,tran_totype,entity_gid, create_by,tran_remarks',@query1,') VALUES 
+													(',li_ref_gid,',' ,li_reftable_gid, ',''' , ls_status , ''',' ,ls_create_by, ',now(),'''
+													,lc_totype, ''',' ,li_entity_gid, ',' ,ls_create_by,',''',ls_remarks, ''' ',@query2,')');
+						#SELECT @Tran_srch1;
+						PREPARE stmt FROM @Tran_srch1;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt; 
+						# select countRow;
+						if countRow >  0 then
+							select LAST_INSERT_ID() into Message ;
+                            #select Message,'insert tran';
+							#commit;
+						else 
+							set Message = 'FAIL';
+							rollback;
+						end if;
+					else
+						set Message = 'Not Updated';
+						rollback;
+					end if;
+				else
+					set Message = ls_error;
+				end if;
+end if;
+
+       
+if Action = 'INSERT_PR' or  Action = 'DRAFT_TO_PENDING'   then
+ 
+	if li_ref_gid = '' then
+		set ls_error = 'Ref Gid not Given ';
+        leave Trans_Set;
+	else    
+		set @err = concat('select case when isnull(ref_gid) then 0 else ref_gid end into @lref_gid from gal_mst_tref where ref_name = ''', li_ref_gid ,'''');
+		#select @err;
+        PREPARE stmt1 FROM @err;
+		EXECUTE stmt1;  
+		#set countRow = (select found_rows());
+		DEALLOCATE PREPARE stmt1;
+        
+        set li_ref_gid = @lref_gid;
+        #select li_ref_gid;
+        if li_ref_gid = 0 then		
+			set ls_error = 'Given ref not in ref table';
+            leave Trans_Set;
+		end if;
+
+	end if;
+    
+    
+		if li_reftable_gid = 0 then
+			set ls_error = 'Ref Gid not Given.';
+            leave Trans_Set;
+		end if;
+        
+        if ls_status = '' or  ls_status is null then
+			set ls_error = 'ls_status is not Given.';
+            leave Trans_Set;
+		end if;
+        
+         if lc_totype = '' or  lc_totype is null then
+			set ls_error = 'lc_totype is not Given.';
+            leave Trans_Set;
+		end if;
+        
+        /*if  ls_remarks ='' or ls_remarks is null then
+			set ls_error ='ls_remarks is not Given';
+        end if;
+        
+         if  li_tto ='' or li_tto is null then
+			set ls_error ='li_tto is not Given';
+            leave Trans_Set;
+        end if;*/
+        
+        
+        if li_tto <> '' then
+			set @query3 = ',tran_to';
+			set @query4 = concat(',',li_tto,'');
+		else 
+			set @query3 = '';
+			set @query4 = '';
+		end if;
+        
+        if ls_remarks <> '' then
+			set @query1 = ',tran_remarks';
+			set @query2 = concat(',''',ls_remarks,'''');
+		else 
+			set @query1 = '';
+			set @query2 = '';
+		end if;
+        
+         set  Query_Insert = '';
+       #select  @li_ref_gid,@li_reftable_gid,@ls_status,@lc_totype,@li_tto,@ls_remarks,@Entity_Gid,@Create_by,@query1,@query2,@query3,@query4;
+    
+		 set Query_Insert = concat('INSERT INTO gal_trn_ttran 
+								(tran_ref_gid, 
+                                tran_reftable_gid, 
+                                tran_status, 
+                                tran_from, 
+								tran_fromdate,
+                                tran_totype,
+                                entity_gid, 
+                                create_by ',@query1,' ',@query3,') 
+								VALUES 
+								(',li_ref_gid,',
+                                ',li_reftable_gid,',
+                                ''',ls_status,''',
+                                ',ls_create_by,',
+                                 ''',now(),''',
+                                 ''',lc_totype, ''',
+                                 ',li_entity_gid,',
+                                 ',ls_create_by,'
+                                 ',@query2,' 
+                                 ',@query4,'
+                                 )
+                                 ');
+                                 
+						set @Insert_query = Query_Insert;	
+						#select Query_Insert; ## Remove It
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt; 
+                        
+                        if countRow > 0 then
+							set Message = 'SUCCESS';         
+							#commit;  
+						else
+							set Message = 'FAIL';
+                            leave Trans_Set;
+							#leave Cat_Subcat_Master_Set;
+						End if;
+    
+    
+ 
+ end if;
+
+if Action = 'INSERT_ECF'    then
+ 
+	if li_ref_gid = '' then
+		set ls_error = 'Ref Gid not Given ';
+        leave Trans_Set;
+	else    
+		set @err = concat('select case when isnull(ref_gid) then 0 else ref_gid end into @lref_gid from gal_mst_tref where ref_name = ''', li_ref_gid ,'''');
+		#select @err;
+        PREPARE stmt1 FROM @err;
+		EXECUTE stmt1;  
+		#set countRow = (select found_rows());
+		DEALLOCATE PREPARE stmt1;
+        
+        set li_ref_gid = @lref_gid;
+        #select li_ref_gid;
+        if li_ref_gid = 0 then		
+			set ls_error = 'Given ref not in ref table';
+            leave Trans_Set;
+		end if;
+
+	end if;
+    
+    
+		if li_reftable_gid = 0 then
+			set ls_error = 'Ref Gid not Given.';
+            leave Trans_Set;
+		end if;
+        
+        if ls_status = '' or  ls_status is null then
+			set ls_error = 'ls_status is not Given.';
+            leave Trans_Set;
+		end if;
+        
+         if lc_totype = '' or  lc_totype is null then
+			set ls_error = 'lc_totype is not Given.';
+            leave Trans_Set;
+		end if;
+        
+        /*if  ls_remarks ='' or ls_remarks is null then
+			set ls_error ='ls_remarks is not Given';
+        end if;
+        
+         if  li_tto ='' or li_tto is null then
+			set ls_error ='li_tto is not Given';
+            leave Trans_Set;
+        end if;*/
+        
+        
+        if li_tto <> '' then
+			set @query3 = ',tran_to';
+			set @query4 = concat(',',li_tto,'');
+		else 
+			set @query3 = '';
+			set @query4 = '';
+		end if;
+        
+        if ls_remarks <> '' then
+			set @query1 = ',tran_remarks';
+			set @query2 = concat(',''',ls_remarks,'''');
+		else 
+			set @query1 = '';
+			set @query2 = '';
+		end if;
+        
+         set  Query_Insert = '';
+       #select  @li_ref_gid,@li_reftable_gid,@ls_status,@lc_totype,@li_tto,@ls_remarks,@Entity_Gid,@Create_by,@query1,@query2,@query3,@query4;
+    
+    
+		Update gal_trn_ttran set tran_by = ls_create_by , tran_date = now() , update_by = ls_create_by , Update_date = now(),
+				tran_remarks = ls_remarks
+			where tran_reftable_gid  = li_reftable_gid  and tran_ref_gid = li_ref_gid and tran_isremoved  ='N'
+			and tran_by is null and tran_to is not null;
+		 #   select 1;
+
+		set countRow = (select row_count()) ;
+				   # select countRow; ### Remove It
+    
+		if countRow > 0 then
+		 set Query_Insert = concat('INSERT INTO gal_trn_ttran 
+								(tran_ref_gid, 
+                                tran_reftable_gid, 
+                                tran_status, 
+                                tran_from, 
+								tran_fromdate,
+                                tran_totype,
+                                entity_gid, 
+                                create_by ',@query1,' ',@query3,') 
+								VALUES 
+								(',li_ref_gid,',
+                                ',li_reftable_gid,',
+                                ''',ls_status,''',
+                                ',ls_create_by,',
+                                 ''',now(),''',
+                                 ''',lc_totype, ''',
+                                 ',li_entity_gid,',
+                                 ',ls_create_by,'
+                                 ',@query2,' 
+                                 ',@query4,'
+                                 )
+                                 ');
+                                 
+						set @Insert_query = Query_Insert;	
+						select Query_Insert; ## Remove It
+						PREPARE stmt FROM @Insert_query;
+						EXECUTE stmt;  
+						set countRow = (select ROW_COUNT());
+						DEALLOCATE PREPARE stmt; 
+                        
+                        if countRow > 0 then
+							select LAST_INSERT_ID() into Message ;
+							#commit;  
+						else
+							set Message = 'FAIL';
+                            leave Trans_Set;
+							#leave Cat_Subcat_Master_Set;
+						End if;
+				else
+					set Message = 'ERROR';
+				end if;
+    
+ 
+ end if;
+
+END

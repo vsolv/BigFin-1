@@ -1,0 +1,233 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Master Sync Data {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="App_maker_summary" ng-controller="Ctrl_Master_Sync">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Master Sync Data </h4>
+
+            </div>
+
+        </div>
+
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Date</label>
+                        <md-datepicker formatDate md-hide-icons="calendar"
+                                      ng-model="dates" ng-required="value"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Master</label>
+                        <md-select data-md-container-class="selectSelectHeader"
+                                   ng-model="ddlmaster">
+                            <md-select-header class="select-header">
+                                <input class="header-searchbox md-text"
+                                       ng-model="searchTerm"
+                                       placeholder="Search Master..."
+                                       type="search">
+                            </md-select-header>
+                            <md-option md-search-text="searchTerm" ng-repeat="ddlMaster in master_sync_get_summary | filter:searchTerm"
+                                       value="{{ddlMaster.DATA}}">{{ddlMaster.DATA}}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3" style="margin-top:12px">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="Searching()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>Date</th>
+                        <th>Masters</th>
+                        <th>Batch No</th>
+                        <th>Total Record</th>
+                        <th>Success</th>
+                        <th>Failed</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr align="center"
+                        ng-repeat="master in master_sync_get_summary | filter:search:strict">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{master.create_date}}</td>
+                        <td>{{master.DATA}}</td>
+                        <td>{{master.batchno}}</td>
+                        <td ng-click="view_data(master.DATA,' ',master.batchno)"> {{master.TOTAL_COUNT}}</td>
+                        <td ng-click="view_data(master.DATA,'SUCCESS',master.batchno)">{{master.SUCCESS_COUNT }}</td>
+                        <td ng-click="view_data(master.DATA,'FAILED',master.batchno)">{{master.FAILED_COUNT }}</td>
+                    </tr>
+                    <tr ng-show="master_sync_get_summary.length ==  0">
+                        <td class="warning" colspan="7">
+                            No Records Found.
+                        </td>   
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="7">
+                            <ul boundary-links="false" class="pagination-sm" items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-change="pagination_search()"
+                                ng-model="currentPage" total-items="Total_Row" uib-pagination></ul>
+                        </td>
+                        <!--<td colspan="3">
+                            Total Count:{{Total_Row}}
+                        </td>-->
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+   });
+myApp.controller('Ctrl_Master_Sync', ['$scope','master_sync_service','$mdDialog','$window','$filter', function($scope,master_sync_service,$mdDialog,$window,$filter) {
+    $scope.currentPage=1;
+    $scope.maxSize=5;
+    $scope.itemsPerPage=10;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+
+    $scope.Searching=function(){
+    $scope.ddlData=$scope.ddlmaster;
+    $scope.dates=$filter('date')($scope.dates, "yyyy-MM-dd");
+     $scope.get_master_sync_data();
+    }
+
+    $scope.pagination_search = function(){
+        debugger;
+                if($scope.master_sync_get_summary.length==0){
+                     $scope.currentPage=1;
+                }
+            $scope.get_master_sync_data();
+
+                }
+
+
+
+    debugger;
+    $scope.get_master_sync_data=function(){
+        debugger;
+
+
+         var datas={
+                 params:
+                        {
+                         "Group": "Master_Sync",
+                        "Type":"MASTER_SYNC",
+                        "Action":'GET',
+                        filter:{
+                        "Data_From": $scope.ddlData,
+                        "Master_Date":$scope.dates,
+                        }
+
+                            }
+                    };
+         $scope.loading();
+
+
+
+
+
+
+         var master_data = master_sync_service.get_master_data(datas);
+debugger;
+         master_data.then(function(result) {
+            var master_all_data = JSON.parse(result.data);
+            $scope.master_sync_get_summary = master_all_data.DATA;
+            console.log($scope.master_sync_get_summary )
+                  },
+            function(err) {
+                alert(master_all_data);
+        }).finally($scope.endloading);
+    }
+
+    $scope.get_master_sync_data();
+
+  $scope.view_data = function(data,Status,batchno) {
+         debugger;
+          var dataValues ={Status,batchno}
+        sessionStorage.setItem('mdata', JSON.stringify(dataValues));
+        if(data=="EMPLOYEE" && Status && batchno){
+             $window.location.href = "master_sync_employee/";  
+        }
+        else if(data=="BRANCH" && Status && batchno){
+             $window.location.href = "master_sync_branch/";  
+        }
+        else if(data=="GL" && Status && batchno){
+            $window.location.href = "master_sync_gl/";    
+        }
+    }
+
+   }]);
+
+ myApp.service("master_sync_service", function ($http) {
+debugger;
+    this.get_master_data=function (data) {
+        var response=$http.post(Appname+"/Master_Sync_Data/",data);
+        return response;
+    }
+
+
+
+ });
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+
+
+
+</style>
+{% endblock %}

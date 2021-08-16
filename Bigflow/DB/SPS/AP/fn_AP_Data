@@ -1,0 +1,51 @@
+CREATE DEFINER=`developer`@`%` FUNCTION `fn_AP_Data`( ls_Type varchar(64),Reftable_Gid int,
+Reftable_Value varchar(64),Reftable_Status varchar(64),Entity_Gid int,lj_data json) RETURNS varchar(15000) CHARSET utf8
+BEGIN
+### SELVA
+
+Declare Out_Message varchar(16000);
+Declare i varchar(1600);
+Declare ls_count varchar(1600);
+
+if ls_Type = 'MULTIUSER' then
+   if Reftable_Gid = 0 or Reftable_Gid is null THEN
+        set Out_Message = 0;
+       RETURN Out_Message;
+      End if;
+      
+      if Reftable_Value is null or Reftable_Value = '' THEN
+       set Out_Message = 0 ;
+       RETURN Out_Message;
+      End if;
+     
+      set @Is_data_Process = 0;	
+     set @ref_gid_fn = 0 ;
+     select ifnull(max(ref_gid),0) into @ref_gid_fn from gal_mst_tref where ref_name = Reftable_Value ;
+     
+     if @ref_gid_fn = 0 then
+      set Out_Message = 'ERROR';
+      RETURN Out_Message;
+     End if;
+    
+      Select ifnull(count(a.tran_gid),0) into @Is_data_Process from gal_trn_ttran as a
+		where a.tran_ref_gid = @ref_gid_fn
+		and a.tran_reftable_gid = Reftable_Gid
+		and a.tran_status = Reftable_Status
+		
+		and a.tran_isactive = 'Y' and a.tran_isremoved = 'N' 		
+		;
+	
+	   if @Is_data_Process >= 1 then
+	    set Out_Message = 'FAIL';
+	    RETURN Out_Message;
+	   elseif @Is_data_Process = 0 then
+	     set Out_Message = 'SUCCESS';
+   	    RETURN Out_Message;
+	   End if;
+End if;
+
+
+
+#set Out_Message = @ref_value;
+RETURN Out_Message;
+END

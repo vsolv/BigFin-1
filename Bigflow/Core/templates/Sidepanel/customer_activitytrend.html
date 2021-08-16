@@ -1,0 +1,151 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Activity Trend{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" id="maincontent">
+    <div ng-app="Appcuecard" ng-controller="Ctrlcuecard" class="container container1">
+
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Activity Trend</h4>
+            </div>
+        </div>
+                <div class="row">
+            <div class="col-md-12">
+                <br>
+            <div class="col-md-9 col-lg-8 ">
+                <md-autocomplete
+                        md-selected-item="selectedItem"
+                        md-search-text="searchText"
+                        md-selected-item-change="customerChange(item)"
+                        md-items="item in getcustomer(searchText)"
+                        md-item-text="item.customer_name"
+                        md-min-length=0
+                        placeholder="Customer Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.customer_name}} - {{item.location_name}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'cus_activityview'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+(function(angular,undefined) {
+    'use strict';
+
+    angular
+        .module('Appcuecard',['ngMaterial', 'ui.bootstrap'])
+        .config(configAddschedule)
+        .controller('Ctrlcuecard', Ctrlcuecard)
+        .service('Sercuecard',Sercuecard);
+
+    function configAddschedule($httpProvider){
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    }
+
+    Ctrlcuecard.$inject=['$scope','$mdDialog','Sercuecard','$filter'];
+
+    function Ctrlcuecard($scope,$mdDialog,Sercuecard,$filter) {
+        $scope.customer=[];
+        $scope.months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        $scope.getcustomer=gotoGetCustomer;
+        $scope.customerChange=gotoCustomerChange;
+          var jsonData = "{}"
+        var get_cust = Sercuecard.getcusomter(jsonData)
+        get_cust.then(function(result) {
+                $scope.customer=JSON.parse(result.data);
+        }, function(err) {
+                    alert('No data!.');
+        });
+
+        function gotoGetCustomer(query){
+            var result = $filter('filter')($scope.customer, {'customer_name': query });
+            return result;
+        }
+
+        function gotoCustomerChange(item){
+            gettrendsales(item.customer_gid);
+        }
+
+        function gettrendsales(cust_gid) {
+            var get_cust = Sercuecard.getsalesqty('','',cust_gid,'2015-01-01')
+            get_cust.then(function(result) {
+                var data=result.data
+                $scope.trendsaledetails=data.sales_details;
+                $scope.headers=data.headers;
+                $scope.header_month=data.header_month;
+                gettrendcoll(cust_gid);
+            }, function(err) {
+                    alert('No data!.');
+                    $scope.trendsaledetails ="";
+                    gettrendcoll(cust_gid);
+            });
+        }
+
+                function gettrendcoll(cust_gid) {
+            var get_cust = Sercuecard.getcollectqty('','',cust_gid,'2015-01-01')
+            get_cust.then(function(result) {
+                var data=result.data
+                $scope.trendcollectiondetails=data.collection_details;
+                $scope.headers=data.headers;
+                $scope.header_month=data.header_month;
+            }, function(err) {
+                    alert('No data!.');
+                    $scope.trendcollectiondetails = "";
+            });
+        }
+
+    }
+
+   function Sercuecard($http){
+      this.getcusomter = function(jsonData) {
+            var response = $http.get(Appname + "/customer_get/",{
+            params:{
+            'jsonData':jsonData
+            }
+            });
+            return response;
+        }
+        this.getsalesqty = function(tableName,searchGid, cust_gid,todate,tdate) {
+        var response = $http.get(Appname + "/trend_sale/", {
+            params: {
+                "table_name": tableName,
+                "search_gid": searchGid,
+                  "cust_gid": cust_gid,
+                   "todate": todate
+
+            }
+        });
+        return response;
+        };
+         this.getcollectqty = function(tableName,searchGid, cust_gid,todate,tdate) {
+        var response = $http.get(Appname + "/trend_coll/", {
+            params: {
+                "table_name": tableName,
+                "search_gid": searchGid,
+                  "cust_gid": cust_gid,
+                   "todate": todate
+
+            }
+        });
+        return response;
+        };
+
+    }
+
+})(angular);
+
+
+</script>
+{% endblock %}

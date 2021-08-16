@@ -1,0 +1,362 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} HSN Master {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>HSN Master</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>HSN CODE</label>
+                            <input maxlength="8" ng-change="myfun()" ng-model="hsn_code"
+                                   placeholder="HSN CODE"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="add_hsn()">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Add HSN</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th class="text-center" scope="col">HSN Code</th>
+                    <th scope="col" class="text-center">HSN Description</th>
+                    <th scope="col" class="text-center">HSN CGST Rate</th>
+                    <th scope="col" class="text-center">HSN SGST Rate</th>
+                    <th scope="col" class="text-center">HSN IGST Rate</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="hsn in hsn_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{hsn.hsn_code}}</td>
+                        <td class="text-left">{{hsn.hsn_description}}</td>
+                        <td class="text-left">{{hsn.hsn_cgstrate}}</td>
+                        <td class="text-center">{{hsn.hsn_sgstrate}}</td>
+                        <td class="text-right">{{hsn.hsn_igstrate}}</td>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="4">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{asset.length}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!-- Add HSN-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="addhsn" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Add HSN</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="col-md-3">
+                                                <md-input-container class="md-block inputcontainer">
+                                                    <label>HSN CODE</label>
+                                                    <input maxlength="8" ng-change="" ng-model="hsn.hsn_code"
+                                                           placeholder="HSN CODE"
+                                                           type="text"/>
+                                                </md-input-container>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>HSN CGST</label>
+                                                <md-autocomplete
+                                                        md-no-cache="true"
+                                                        md-selected-item="hsn.selectedcgst"
+                                                        md-search-text="searchcgst"
+                                                        md-selected-item-change="selectchange(item)"
+                                                        md-items="item in taxsearch(searchcgst)"
+                                                        md-item-text="item.taxrate_name"
+                                                        md-min-length=0
+                                                        placeholder="HSN CGST">
+                                                    <md-item-template>
+                                                        <span md-highlight-text="searchText"> {{item.taxrate_name}} - {{item.taxrate_rate}} </span>
+                                                    </md-item-template>
+                                                    <md-not-found>
+                                                        No HSN CGST matching "{{searchcgst}}" were found.
+                                                    </md-not-found>
+                                                </md-autocomplete>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>HSN SGST</label>
+                                                <md-autocomplete
+                                                        md-no-cache="true"
+                                                        md-selected-item="hsn.selectedsgst"
+                                                        md-search-text="searchsgst"
+                                                        md-selected-item-change="selectchange(item)"
+                                                        md-items="item in taxsearch(searchsgst)"
+                                                        md-item-text="item.taxrate_name"
+                                                        md-min-length=0
+                                                        placeholder="HSN SGST">
+                                                    <md-item-template>
+                                                        <span md-highlight-text="searchText"> {{item.taxrate_name}} - {{item.taxrate_rate}} </span>
+                                                    </md-item-template>
+                                                    <md-not-found>
+                                                        No HSN SGST matching "{{searchsgst}}" were found.
+                                                    </md-not-found>
+                                                </md-autocomplete>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>HSN IGST</label>
+                                                <md-autocomplete
+                                                        md-no-cache="true"
+                                                        md-selected-item="hsn.selectedigst"
+                                                        md-search-text="searchigst"
+                                                        md-selected-item-change="selectchange(item)"
+                                                        md-items="item in taxsearch(searchigst)"
+                                                        md-item-text="item.taxrate_name"
+                                                        md-min-length=0
+                                                        placeholder="HSN IGST">
+                                                    <md-item-template>
+                                                        <span md-highlight-text="searchText"> {{item.taxrate_name}} - {{item.taxrate_rate}} </span>
+                                                    </md-item-template>
+                                                    <md-not-found>
+                                                        No HSN IGST matching "{{searchigst}}" were found.
+                                                    </md-not-found>
+                                                </md-autocomplete>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="col-md-3">
+                                                <md-input-container class="md-block inputcontainer">
+                                                    <label>HSN Description</label>
+                                                    <input maxlength="30" ng-change="" ng-model="hsn.hsn_des"
+                                                           placeholder="HSN Description"
+                                                           type="text"/>
+                                                </md-input-container>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12 text-center">
+                                            <md-button class="btn btn-info custbutton" ng-click="Save(hsn)">Submit
+                                                <md-tooltip>Submit</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-raised" data-dismiss="modal">Back
+                                                <md-tooltip>close</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.enable_update = true;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.hsn = [];
+    $scope.data_len = 0;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_pop = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('addhsn')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    loadhsn();
+    function loadhsn(){
+        var data1 ={};
+        var data = {
+        params: {
+                "Group": "GET_HSN_DATA",
+                "json" : data1,
+            }
+        }
+        var get_hsn = newservice.hsn_detail(data)
+        get_hsn.then(function(result) {
+            $scope.loading();
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.hsn_data = $scope.main;
+            $scope.data_len = $scope.hsn_data.length;
+            $scope.pageLength = $scope.hsn_data.length;
+            $scope.Totalpages = Math.ceil($scope.hsn_data.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.hsn_data.length;
+        }).finally($scope.endloading);
+    }
+    loadtax();
+    function loadtax(){
+        var data1 ={};
+        var data = {
+        params: {
+                "Group": "GET_TAX_DATA",
+                "json" : data1,
+            }
+        }
+        var get_tax = newservice.hsn_detail(data)
+        get_tax.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_tax_data = $scope.main;
+
+        });
+    }
+    $scope.taxsearch = gototax;
+        function gototax(query) {
+            var result = $filter('filter')($scope.get_tax_data, {
+                'taxrate_name': query
+            });
+            return result;
+        }
+    $scope.myfun = function() {
+            if($scope.hsn_code == ""){
+                loadhsn();
+            }
+            else{
+                $scope.hsn_data = $filter('filter')($scope.hsn_data, {
+                    "hsn_code": $scope.hsn_code,
+                });
+            }
+        }
+    $scope.add_hsn = function(){
+         modalshow('addhsn');
+    }
+    $scope.save_data = function(hsn){
+         var Hsn_Add = {
+             "HSN_Code":hsn.hsn_code,
+             "CGST_Gid":hsn.selectedcgst.taxrate_gid,
+             "SGST_Gid" :hsn.selectedsgst.taxrate_gid,
+             "IGST_Gid" :hsn.selectedigst.taxrate_gid,
+             "HSN_Desc" :hsn.hsn_des,
+        };
+        var save_data = {
+            "Params": {
+                "DETAILS": Hsn_Add,
+            }
+        };
+        var data = {
+        params: {
+                "Group": "SET_HSN_DATA",
+                "Action" : "INSERT",
+                "Type": "HSN",
+                "Sub_Type": "DETAILS",
+                "json" : save_data,
+            }
+        }
+        save_file(data);
+    }
+    $scope.Save = function(hsn) {
+        if(hsn.hsn_code != undefined && hsn.selectedcgst != undefined && hsn.selectedsgst != undefined && hsn.selectedigst != undefined && hsn.hsn_des != undefined  ){
+            $scope.save_data(hsn);
+        }
+        else{
+            error_toast(not_enter_date,time_toast);
+            return false;
+        }
+    }
+    function save_file(save_data) {
+        $scope.loading_pop();
+        var get_hsn = newservice.hsn_detail(save_data)
+        get_hsn.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                modalhide('addhsn');
+                loadhsn();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+   }
+
+});
+app.service('newservice', function($http) {
+    this.hsn_detail = function(data) {
+        var response = $http.post(Appname + "/hsn_data/", data);
+        return response;
+    }
+});
+
+
+
+
+</script>
+
+{% endblock %}

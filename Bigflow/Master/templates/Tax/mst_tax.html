@@ -1,0 +1,920 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Tax Master {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Tax Master</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Tax Name</label>
+                            <input maxlength="8" ng-change="myfun()" ng-model="taxname"
+                                   placeholder="Tax Name"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>SubTax Name</label>
+                            <input maxlength="8" ng-change="myfun()" ng-model="subtaxname"
+                                   placeholder="SubTax Name"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Tax Rate</label>
+                            <input maxlength="16" ng-change="myfun()" ng-model="taxrate"
+                                   placeholder="Tax Rate"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="add_tax()">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Add Tax</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th class="text-center" scope="col">Tax Name</th>
+                    <th scope="col" class="text-center">Sub Tax Name</th>
+                    <th scope="col" class="text-center">Tax Rate Name</th>
+                    <th scope="col" class="text-center">Tax Rate</th>
+                    <th scope="col" class="text-center">Action</th>
+
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="tax in tax_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center">{{tax.tax_name}}</td>
+                        <td class="text-left">{{tax.subtax_name}}</td>
+                        <td class="text-left">{{tax.taxrate_name}}</td>
+                        <td class="text-center">{{tax.taxrate_rate}}</td>
+                        <td align="center">
+                            <span class="material-icons"
+                                  ng-class="tax.subtax_isactive=='Y'? 'editlink':''"
+                                  ng-click="activeDeactive_click(tax.subtax_isactive,tax.subtax_gid)"
+                                  title="{{tax.subtax_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny
+                            </span>
+                        </td>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="4">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-center">
+                            <span>Total Count:{{tax_data.length}}</span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!-- Add Tax-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="addtax" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Add Tax Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <md-subheader class="md-accent">Add Tax</md-subheader>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <label>Tax Name</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="selectedtaxname"
+                                                    md-search-text="searchtname"
+                                                    md-selected-item-change="select_taxchange(item)"
+                                                    md-items="item in taxsearch(searchtname)"
+                                                    md-item-text="item.tax_name"
+                                                    md-min-length=0
+                                                    placeholder="Tax Name">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.tax_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Tax Name matching "{{searchtname}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-2" ng-show="showtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Tax Name</label>
+                                                <input ng-model="taxdetails.tax_name" placeholder="Tax Name"
+                                                       required ng-pattern-restrict
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-2" ng-show="showtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Is Receivable</label>
+                                                <md-select md-container-class="popup_select"
+                                                           ng-model="taxdetails.is_receivable">
+                                                    <md-option ng-repeat="y in Choose_dt" ng-value="y.id">
+                                                        {{y.data}}
+                                                    </md-option>
+                                                </md-select>
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-2" ng-show="showtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Is Payable</label>
+                                                <md-select md-container-class="popup_select"
+                                                           ng-model="taxdetails.is_payable">
+                                                    <md-option ng-repeat="t in Choose_dt" ng-value="t.id">
+                                                        {{t.data}}
+                                                    </md-option>
+                                                </md-select>
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-2" ng-show="showtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>GL No</label>
+                                                <input ng-model="taxdetails.gl_no" placeholder="GL No"
+                                                       maxlength="16" numbers-only
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-1" ng-show="showtax_input">
+                                            <md-button class="md-icon-button md-primary" aria-label="Setting"
+                                                       ng-click="insert_tax(taxdetails)">
+                                                <md-icon>add</md-icon>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <br/>
+                            <div class="row">
+                                <md-subheader class="md-accent">Add SubTax</md-subheader>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <label>Tax Name</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="subtaxdtls.selectedtax_name"
+                                                    md-search-text="searcht_name"
+                                                    md-selected-item-change="selecttax_change(item)"
+                                                    md-items="item in tax_search(searcht_name)"
+                                                    md-item-text="item.tax_name"
+                                                    md-min-length=0
+                                                    placeholder="Tax Name">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.tax_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Tax Name matching "{{searcht_name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Sub Tax Name</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="subtaxdtls.selectedtaxsub_name"
+                                                    md-search-text="searchtsname"
+                                                    md-selected-item-change="select_subtaxchange(item)"
+                                                    md-items="item in taxsub_search(searchtsname)"
+                                                    md-item-text="item.subtax_name"
+                                                    md-min-length=0
+                                                    placeholder="Sub Tax Name">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.subtax_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Sub Tax Name matching "{{searchtsname}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3" ng-show="showsubtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>SubTax Name</label>
+                                                <input ng-model="subtaxdtls.subtax_name" placeholder="SubTax Name"
+                                                       ng-pattern-restrict required
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-3" ng-show="showsubtax_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>SubTax Remarks</label>
+                                                <input ng-model="subtaxdtls.subtax_rmks" placeholder="SubTax Remarks"
+                                                       ng-pattern-restrict required
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row" ng-show="showsubtax_input">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <label>Choose Category</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="subtaxdtls.category_name"
+                                                    md-search-text="search_category"
+                                                    md-selected-item-change="CategoryChanged(item.category_gid)"
+                                                    md-items="item in getCategoryName(search_category)"
+                                                    md-item-text="item.category_name"
+                                                    md-min-length=0
+                                                    placeholder="Category">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.category_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Category Name matching "{{search_category}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Choose Sub Category</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="sub.subcategory_name"
+                                                    md-search-text="search_sub_category"
+                                                    md-selected-item-change="SubCategoryChanged(sub.subcategory_gid,sub.subcategory_glno)"
+                                                    md-items="sub in getSubCategoryName(search_sub_category)"
+                                                    md-item-text="sub.subcategory_name"
+                                                    md-min-length=0
+                                                    placeholder="Sub Category">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{sub.subcategory_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Sub Category Name matching "{{search_sub_category}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>GL No</label>
+                                                <input ng-model="subtaxdtls.gl_no"
+                                                       placeholder="GL No"
+                                                       maxlength="16" numbers-only disabled
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <md-button class="md-icon-button md-primary" aria-label="Setting"
+                                                       ng-click="insert_subtax(subtaxdtls)">
+                                                <md-icon>add</md-icon>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <br/>
+                            <div class="row">
+                                <md-subheader class="md-accent">Add Tax Rate</md-subheader>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <label>Sub Tax Name</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="taxratedtls.selectedsubtax_name"
+                                                    md-search-text="searchst_name"
+                                                    md-selected-item-change="selectsubtax_change(item)"
+                                                    md-items="item in subtax_search(searchst_name)"
+                                                    md-item-text="item.subtax_name"
+                                                    md-min-length=0
+                                                    placeholder="Sub Tax Name">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.subtax_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Sub Tax Name matching "{{searchst_name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Tax Rate</label>
+                                            <md-autocomplete
+                                                    md-no-cache="true"
+                                                    md-selected-item="selected_taxrate"
+                                                    md-search-text="search_taxrate"
+                                                    md-selected-item-change="selecttaxrate_change(item)"
+                                                    md-items="item in taxrate_search(search_taxrate)"
+                                                    md-item-text="item.taxrate_name"
+                                                    md-min-length=0
+                                                    placeholder="Tax Rate">
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchText"> {{item.taxrate_name}} </span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Tax Rate matching "{{search_taxrate}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3" ng-show="showstaxrate_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Tax Rate Name</label>
+                                                <input ng-model="taxratedtls.taxrate_name" placeholder="Tax Rate Name"
+                                                       ng-pattern-restrict required
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-2" ng-show="showstaxrate_input">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Tax Rate</label>
+                                                <input ng-model="taxratedtls.tax_rate"
+                                                       ng-pattern="/^[123456789][.0-9]{0,10}$/" step="0.01"
+                                                       placeholder="Tax Rate"
+                                                       maxlength="16" valid-number
+                                                       type="text"
+                                                />
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-1" ng-show="showstaxrate_input">
+                                            <md-button class="md-icon-button md-primary" aria-label="Setting"
+                                                       ng-click="insert_taxrate(taxratedtls)">
+                                                <md-icon>add</md-icon>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 text-center">
+                                    <md-button class="md-raised" data-dismiss="modal">Back
+                                        <md-tooltip>close</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.enable_update = true;
+    $scope.showtax_input = false;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.taxdetails = [];
+    $scope.subtaxdtls = [];
+    $scope.taxratedtls = [];
+    $scope.hsn = [];
+    $scope.data_len = 0;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.loading_pop = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('addtax')),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    loadstax();
+    function loadstax(){
+        var data1 ={
+            "Params": {
+                "FILTER": {},
+            }
+        };
+        var data = {
+        params: {
+                "Group": "GET_TAX_DATA",
+                "Groups": "TAX_DATA",
+                "Sub_Type": "SUMMARY",
+                "Type": "TAX",
+                "json" : data1,
+            }
+        }
+        $scope.loading();
+        var get_tax = newservice.tax_detail(data)
+        get_tax.then(function(result) {
+            $scope.endloading();
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.tax_data = $scope.main;
+            $scope.tax_data_filter = $scope.main;
+            console.log( $scope.tax_data);
+            $scope.data_len = $scope.tax_data.length;
+            $scope.pageLength = $scope.tax_data.length;
+            $scope.Totalpages = Math.ceil($scope.tax_data.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.tax_data.length;
+        }).finally($scope.endloading);
+    }
+    loadtax();
+    function loadtax(){
+        var data_tax = {
+        params: {
+                "Groups": "GET_TAX",
+            }
+        }
+        var get_tax = newservice.tax_detail(data_tax)
+        get_tax.then(function(result) {
+            $scope.get_tax_data =[];
+            $scope.main = JSON.parse(result.data);
+            $scope.get_tax_data =  JSON.parse($scope.main).DATA;
+            $scope.endloading();
+            $scope.get_taxdata =[];
+                dta = {
+                    "tax_gid" : 0,
+                    "tax_name": "AddNewTax",
+                }
+                $scope.get_tax_data.push(dta);
+            $scope.get_taxdata = JSON.parse($scope.main).DATA;
+        });
+
+        var data_subtax = {
+        params: {
+                "Groups": "GET_SUB_TAX",
+                "Tax_Gid": "",
+            }
+        }
+        var get_subtax = newservice.tax_detail(data_subtax)
+        get_subtax.then(function(result) {
+            $scope.get_subtax_data =[];
+            $scope.main = JSON.parse(result.data);
+            $scope.get_subtaxdata = JSON.parse($scope.main).DATA;
+        });
+    }
+    $scope.Choose_dt = [{
+        id: 'Y',
+        data: 'YES'
+    }, {
+        id: 'N',
+        data: 'NO'
+    }];
+    $scope.taxsearch = gototax;
+        function gototax(query) {
+            var result = $filter('filter')($scope.get_tax_data, {
+                'tax_name': query
+            });
+            return result;
+        }
+    $scope.tax_search = goto_tax;
+        function goto_tax(query) {
+            var result = $filter('filter')($scope.get_taxdata, {
+                'tax_name': query
+            });
+            return result;
+        }
+    $scope.subtax_search = goto_subtax;
+        function goto_subtax(query) {
+            var result = $filter('filter')($scope.get_subtaxdata, {
+                'subtax_name': query
+            });
+            return result;
+        }
+    $scope.taxsub_search = goto_taxsub;
+        function goto_taxsub(query) {
+            var result = $filter('filter')($scope.get_taxsub_data, {
+                'subtax_name': query
+            });
+            return result;
+        }
+    $scope.taxrate_search = goto_taxrate;
+        function goto_taxrate(query) {
+            var result = $filter('filter')($scope.get_taxrate_data, {
+                'taxrate_name': query
+            });
+            return result;
+        }
+
+    $scope.select_taxchange = function(v){
+        $scope.showtax_input = false;
+        if(v.tax_name == "AddNewTax"){
+            $scope.showtax_input = true;
+        }
+        else{
+            $scope.tax_search(v);
+        }
+    }
+    $scope.select_subtaxchange = function(v){
+        $scope.showsubtax_input = false;
+        if(v.subtax_name == "AddNewSubTax"){
+            $scope.showsubtax_input = true;
+        }
+        else{
+            $scope.taxsub_search(v);
+        }
+    }
+
+    $scope.selecttaxrate_change = function(v){
+        $scope.showstaxrate_input = false;
+        if(v.taxrate_name == "AddTaxRate"){
+            $scope.showstaxrate_input = true;
+        }
+        else{
+            $scope.taxrate_search(v);
+        }
+    }
+    $scope.selecttax_change = function(v){
+        var data_subtax = {
+        params: {
+                "Groups": "GET_SUB_TAX",
+                "Tax_Gid": v.tax_gid,
+            }
+        }
+        var get_subtax = newservice.tax_detail(data_subtax)
+        get_subtax.then(function(result) {
+            $scope.get_taxsub_data =[];
+            $scope.main = JSON.parse(result.data);
+            if(JSON.parse($scope.main).MESSAGE == "FOUND"){
+                $scope.get_taxsub_data = JSON.parse($scope.main).DATA;
+                dta = {
+                        "subtax_gid":0,
+                        "subtax_name": "AddNewSubTax",
+                    }
+                $scope.get_taxsub_data.push(dta);
+            }
+            else{
+                dta = {
+                        "subtax_gid":0,
+                        "subtax_name": "AddNewSubTax",
+                    }
+                $scope.get_taxsub_data.push(dta);
+            }
+        });
+    }
+    $scope.selectsubtax_change = function(v){
+        var data_subtax = {
+        params: {
+                "Groups": "GET_TAX_RATE",
+                "SubTax_Gid": v.subtax_gid,
+            }
+        }
+        var get_taxrate = newservice.tax_detail(data_subtax)
+        get_taxrate.then(function(result) {
+            $scope.get_taxrate_data =[];
+            $scope.main = JSON.parse(result.data);
+            if(JSON.parse($scope.main).MESSAGE == "FOUND"){
+                $scope.get_taxrate_data = JSON.parse($scope.main).DATA;
+                dta = {
+                        "taxrate_gid":0,
+                        "taxrate_name": "AddTaxRate",
+                    }
+                $scope.get_taxrate_data.push(dta);
+            }
+            else{
+                dta = {
+                        "taxrate_gid":0,
+                        "taxrate_name": "AddTaxRate",
+                    }
+                $scope.get_taxrate_data.push(dta);
+            }
+        });
+    }
+    $scope.myfun = function() {
+        $scope.tax_data = $filter('filter')($scope.tax_data_filter, {
+            "tax_name": $scope.taxname,
+            "subtax_name": $scope.subtaxname,
+            "taxrate_rate": $scope.taxrate,
+        });
+
+        }
+    $scope.add_tax = function(){
+         modalshow('addtax');
+    }
+    $scope.tax_save = function(dt){
+    var data = {
+        params: {
+                "Groups": "TAX_DATA",
+                "Group": "SET_TAX_DATA",
+                "Action" : "INSERT",
+                "Type": "TAX",
+                "Sub_Type": "TAX_NAME",
+                "json" : {
+                        "Params": {
+                            "DETAILS":{
+                                "Tax_Name":dt.tax_name,
+                                "Is_Receivable":dt.is_receivable,
+                                "Is_Payable":dt.is_payable,
+                                "GL_No":dt.gl_no,
+                            }
+                        }
+                     },
+                }
+        }
+      save_tax(data);
+    }
+
+    $scope.subtax_save = function(dt){
+    debugger;
+    var data = {
+        params: {
+                "Groups": "TAX_DATA",
+                "Group": "SET_TAX_DATA",
+                "Action" : "INSERT",
+                "Type": "SUB_TAX",
+                "Sub_Type": "SUBTAX_NAME",
+                "json" : {
+                        "Params": {
+                            "DETAILS":{
+                                "Tax_Gid":dt.selectedtax_name.tax_gid,
+                                "SubTax_Name":dt.subtax_name,
+                                "SubTax_Remarks":dt.subtax_rmks,
+                                "GL_No":dt.gl_no,
+                                "cat_gid":$scope.cat_gid,
+                                "sub_cat_gid":$scope.sub_cat_gid,
+                            }
+                        }
+                     },
+                }
+        }
+      save_tax(data);
+    }
+
+    $scope.taxrate_save = function(dt){
+    var data = {
+        params: {
+                "Groups": "TAX_DATA",
+                "Group": "SET_TAX_DATA",
+                "Action" : "INSERT",
+                "Type": "TAX_RATE",
+                "Sub_Type": "TAX_RATE_NAME",
+                "json" : {
+                        "Params": {
+                            "DETAILS":{
+                                "SubTax_Gid":dt.selectedsubtax_name.subtax_gid,
+                                "Tax_Rate_Name":dt.taxrate_name,
+                                "Tax_Rate":dt.tax_rate
+                            }
+                        }
+                     },
+                }
+        }
+      save_taxrate(data);
+    }
+
+    $scope.insert_tax = function(dt) {
+        if(dt.tax_name != undefined && dt.is_receivable != undefined && dt.is_payable != undefined && dt.gl_no != undefined  ){
+            $scope.tax_save(dt);
+        }
+        else{
+            error_toast(not_enter_date,time_toast);
+            return false;
+        }
+    }
+    $scope.insert_subtax = function(dt) {
+        if(dt.selectedtax_name != undefined && dt.subtax_name != undefined && dt.subtax_rmks != undefined && dt.gl_no != undefined  ){
+            $scope.subtax_save(dt);
+        }
+        else{
+            error_toast(not_enter_date,time_toast);
+            return false;
+        }
+    }
+    $scope.insert_taxrate = function(dt){
+        if(dt.selectedsubtax_name != undefined && dt.taxrate_name != undefined && dt.tax_rate != undefined ){
+            $scope.taxrate_save(dt);
+        }
+        else{
+            error_toast(not_enter_date,time_toast);
+            return false;
+        }
+    }
+    function save_taxrate(save_data) {
+        $scope.loading_pop();
+        var get_tax_subtax = newservice.tax_detail(save_data)
+        get_tax_subtax.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                $window.location.href="mst_tax"
+<!--                modalhide('addtax');-->
+<!--                loadstax();-->
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+   }
+   function save_tax(save_data) {
+        $scope.loading_pop();
+        var get_tax_subtax = newservice.tax_detail(save_data)
+        get_tax_subtax.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                loadtax();
+                loadstax();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+   }
+
+
+
+   $scope.activeDeactive_click = function(is_active,gid){
+        if (is_active == 'Y') {
+            $scope.final_status="N";
+        } else {
+            $scope.final_status="Y";
+        }
+        var data = {
+            params: {
+                    "Groups": "TAX_DATA",
+                    "Group": "SET_TAX_DATA",
+                    "Action" : "UPDATE",
+                    "Type": "TAX",
+                    "Sub_Type": "ISACTIVE",
+                    "json" : {
+                            "Params": {
+                                "DETAILS":{"tax_gid":gid,"ISACTIVE": $scope.final_status
+                                }
+                            }
+                         }
+                    }
+            }
+          save_tax(data);
+   }
+
+
+   var data = {
+            "Table_name": "ap_mst_tcategory",
+            "Column_1": "category_gid, category_code, category_no, category_name, category_glno, category_isactive",
+            "Column_2": "",
+            "Where_Common": "category",
+            "Where_Primary": "",
+            "Primary_Value": "",
+            "Order_by": "gid"
+   }
+
+    var patch = {
+        Action: "",
+        Entity_Gid: $scope.entity_gid,
+        data: data
+    }
+
+    var getcat = newservice.getcategory(patch);
+        getcat.then(function(result) {
+        debugger;
+            $scope.category_all = result.data;
+            $scope.category_all_copy=$scope.category_all;
+            console.log($scope.category_all);
+        }, function(err) {
+            alert('No data!.');
+    }).finally();
+
+    $scope.getCategoryName = Change_Cate_Name;
+    function Change_Cate_Name(query) {
+       var result = $filter('filter')($scope.category_all, {
+       'category_name': query
+         });
+       return result;
+    }
+
+    $scope.CategoryChanged=function(cat_gid){
+
+       $scope.cat_gid=cat_gid;
+        var data={"FILTER":{"category_gid":[$scope.cat_gid]}}
+        var datam={
+                    "Group":"CCBS_MASTER",
+                    "Type":"ccbs_category",
+                    "Sub_type":"get",
+                    "data":data
+        }
+    var sub_category_get=newservice.get_subcategory(datam);
+         sub_category_get.then(function(result)
+         {
+          $scope.sub_category_all = result.data;
+            $scope.sub_category_all_copy=$scope.category_all;
+            console.log($scope.sub_category_all);
+        }, function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+    };
+
+    $scope.getSubCategoryName = Change_SubCate_Name;
+    function Change_SubCate_Name(query) {
+       var result = $filter('filter')($scope.sub_category_all, {
+       'subcategory_name': query
+         });
+       return result;
+    }
+
+    $scope.SubCategoryChanged=function(sub_cat_gid,gl_no){
+        $scope.sub_cat_gid=sub_cat_gid;
+        $scope.subtaxdtls.gl_no=gl_no;
+    }
+
+
+
+
+});
+app.service('newservice', function($http) {
+    this.tax_detail = function(data) {
+        var response = $http.post(Appname + "/tax_data/", data);
+        return response;
+    }
+
+    this.getcategory = function(patch){
+        var respons = $http.post(Appname + "/get_tablevalue/", patch);
+        return respons;
+    }
+
+    this.get_subcategory = function(patch){
+        var respons = $http.post(Appname + "/get_subcate_data/", patch);
+        return respons;
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+{% endblock %}

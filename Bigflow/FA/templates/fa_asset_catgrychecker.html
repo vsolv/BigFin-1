@@ -1,0 +1,708 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Category {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1">
+        <div ng-app="dateapp" ng-cloak ng-controller="datectrl">
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>Asset Category Change Checker Summary </h4>
+                </div>
+            </div>
+            <div class="row" class="col-md-12">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Asset Id</label>
+                                <input maxlength="30" ng-change="" ng-model="assetdetails_id" numbers-only
+                                       placeholder="Asset id"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Asset Value</label>
+                                <input ng-change="" ng-model="assetdetails_value" placeholder="Asset Value"
+                                       type="text"
+                                />
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Cap Date</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                               ng-change="selectdate()"
+                                               ng-model="assetdetails_cpdate"></md-datepicker>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Category</label>
+                            <md-autocomplete
+                                    md-no-cache="true"
+                                    md-selected-item="selectedcat"
+                                    md-search-text="searchcat"
+                                    md-selected-item-change="selectchange(item)"
+                                    md-items="item in catsearch(searchcat)"
+                                    md-item-text="item.assetcat_subcatname"
+                                    md-min-length=0
+                                    placeholder="Category">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Catagory matching "{{searchText}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Branch</label>
+                                <input ng-change="" ng-model="assetdetails_branch" placeholder="Branch"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-3">
+                            <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                                <md-icon>search</md-icon>
+                                <md-tooltip>Search</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row table-responsive">
+                <div class="col-md-12 col-lg-12 col-sm-12">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th scope="col" class="text-center">S.No</th>
+                        <th scope="col" class="text-center"><a
+                                ng-click="orderByField='asset_id'; reverseSort = !reverseSort"
+                                style="color:white">Asset Transaction Id
+                            <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                        <th scope="col" class="text-center">Product</th>
+                        <th scope="col" class="text-center">Old Category</th>
+                        <th scope="col" class="text-center">New Category</th>
+                        <th scope="col" class="text-center">Capitalization Date</th>
+                        <th scope="col" class="text-center">Asset Value</th>
+                        <th scope="col" class="text-center">Old Book Value</th>
+                        <th scope="col" class="text-center">New Book Value</th>
+                        <th scope="col" class="text-center">Branch</th>
+                        <th scope="col" class="text-center">Location Name</th>
+                        <th scope="col" class="text-center">Remark</th>
+                        <th scope="col" class="text-center">Status</th>
+                        <th scope="col" class="text-center">Action
+                            <input ng-click="selectall()"
+                                   ng-model="checkall" ng-checked="checkall"
+                                   type="checkbox">
+
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="ast in catchecker.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center">
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-right" ng-click="imgshow($index)">{{ast.assetdetails_id}}</td>
+                            <td class="text-right">{{ast.product_displayname}}</td>
+                            <td class="text-left">{{ast.assetcatchange_oldcat}}</td>
+                            <td class="text-left">{{ast.new_catname}}</td>
+                            <td class="text-left">{{ast.cap_date }}</td>
+                            <td class="text-left">{{ast.assetdetails_value | number : fractionSize}}</td>
+                            <td class="text-right">{{ast.old_cost | number : fractionSize }}</td>
+                            <td class="text-right">{{ast.new_cost | number : fractionSize }}</td>
+                            <td class="text-left" data-ng-repeat="view in ast.lj_default_details">{{view.branch_name}} - {{view.branch_code}}</td>
+                            <td class="text-left">{{ast.assetlocation_name}}</td>
+                            <!--                            <td class="text-left">{{ast.assetcatchange_reason}}</td>-->
+                            <td class="text-center" ng-click="reason_check($index)"><p style="color:green;">Reason</p>
+                            </td>
+                            <td class="text-left">{{ast.assetcatchange_status}}</td>
+                            <td class="text-center">
+                                <input ng-change=""
+                                       ng-click="selectEntity()"
+                                       ng-model="ast.isChecked" ng-checked="isChecked"
+                                       type="checkbox"> &nbsp &nbsp &nbsp
+                                <!--                                <span class="editlink" ng-click="viewdet(ast)">View</span>-->
+                            </td>
+                        </tr>
+                        <tr ng-show="data_len ==  0">
+                            <td class="warning" colspan="15">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+
+                        <tr>
+                            <td colspan="12">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="catchecker.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <td colspan="2" class="text-left">
+                     <span>Total Count:<br/> <b
+                             class="text-centre"> {{catchecker.length}}</b></span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <!--Remarks Show-->
+            <div class="text-center" ng-show="remarks">
+                <md-dailog>
+                    <md-content>
+                        <h4>
+                            Reason : {{assetcatchange_reason}}
+                        </h4>
+                    </md-content>
+                </md-dailog>
+            </div>
+            <div ng-show="reason">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Rejection Reason</label>
+                                <input class="textboxline" maxlength="60"
+                                       placeholder="Comments for reject"
+                                       ng-model="comments" required/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="reject_Asset(em)">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Reject</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <md-button class="btn btn-info custbutton" ng-click="Save()"
+                               ng-disabled="enable_update">Approve
+                        <md-tooltip>Approve</md-tooltip>
+                    </md-button>
+                    <md-button type="button" value="Reject"
+                               ng-click="reject()"
+                               ng-disabled="enable_reject"
+                               class="md-raised md-warn">Reject
+                    </md-button>
+                </div>
+            </div>
+
+            <!--Image start-->
+            <div ng-include="'fa_image_popup'"></div>
+
+            <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade"
+                 data-backdrop="static"
+                 data-keyboard="false"
+                 id="viewmodal" role="dialog"
+                 style="height:auto;width:100%" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel">
+                                    <strong>Category Checker PopUp</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-sm-12">
+                                        <div class="row table-responsive">
+                                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                                    <thead class="header">
+                                                    <th scope="col" class="text-center">S.No</th>
+                                                    <th scope="col" class="text-center">Asset Id</th>
+                                                    <th scope="col" class="text-center">Product</th>
+                                                    <th scope="col" class="text-center">Capitalization Date</th>
+                                                    <th scope="col" class="text-center">Location Floor</th>
+                                                    <th scope="col" class="text-center">Location Name</th>
+                                                    <th scope="col" class="text-center">Old Category</th>
+                                                    <th scope="col" class="text-center">New Category</th>
+                                                    <th scope="col" class="text-center">Branch</th>
+                                                    <th scope="col" class="text-center">Remark</th>
+                                                    <th scope="col" class="text-center">Status</th>
+                                                    <th scope="col" class="text-center">Action
+                                                        <input ng-click="selectall()"
+                                                               ng-model="checkall" ng-checked="checkall"
+                                                               type="checkbox">
+                                                    </th>
+
+                                                    </thead>
+
+
+                                                    <tbody>
+                                                    <tr ng-repeat="em in catchecker.slice(((currentPage_popup-1)*itemsPerPage_popup), ((currentPage_popup)*itemsPerPage_popup))">
+                                                        <td class="text-center" style="width:20%;">
+                                                            <center>
+                                                                {{((currentPage_popup-1)*itemsPerPage_popup)+$index+1}}
+                                                            </center>
+                                                        </td>
+                                                        <td class="text-right" ng-click="imgshow($index)">
+                                                            {{em.assetdetails_id}}
+                                                        </td>
+
+                                                        <td class="text-center" style="width:20%;">
+                                                            {{em.product_displayname}}
+                                                        </td>
+                                                        <td class="text-center" style="width:20%;">
+                                                            {{em.cap_date | date:'dd-MMM-yyyy'}}
+                                                        <td class="text-center" style="width:20%;">
+                                                            {{em.assetlocation_floor}}
+                                                        </td>
+                                                        <td class="text-center" style="width:20%;">
+                                                            {{em.assetlocation_name}}
+                                                        </td>
+                                                        <td class="text-left">{{em.assetcatchange_oldcat}}</td>
+                                                        <td class="text-left" ng-repeat="view in em.lj_default_details">
+                                                            {{view.asset_cat_name}}
+                                                        </td>
+
+                                                        <td class="text-center" style="width:20%;">
+                                                            {{em.branch_name}}
+                                                        </td>
+                                                        <td class="text-left">{{em.assetcatchange_reason}}</td>
+                                                        <td class="text-left">{{em.assetcatchange_status}}</td>
+
+
+                                                        <td class="text-center" style="width:10px;">
+                                                            <input
+                                                                    ng-change=""
+                                                                    ng-click="selectEntity()"
+                                                                    ng-model="em.isChecked"
+                                                                    ng-checked="isChecked"
+                                                                    type="checkbox"></td>
+                                                    </tr>
+                                                    <tr ng-show="asset.length ==  0">
+                                                        <td class="warning" colspan="8">
+                                                            No Records Found.
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                    <tfoot>
+                                                    <tr>
+                                                        <td colspan="5">
+                                                            <ul boundary-links="true"
+                                                                class="pagination-sm cust_pagination"
+                                                                items-per-page="itemsPerPage_popup"
+                                                                max-size="maxSize_popup"
+                                                                ng-model="currentPage_popup"
+                                                                total-items="pageLength_popup"
+                                                                uib-pagination></ul>
+                                                        </td>
+                                                        <td colspan="1">
+                                                            <label>Page Count:</label>
+                                                            <select type="text" style="width:100px;"
+                                                                    class="form-control" placeholder="count"
+                                                                    ng-model="itemsPerPage_popup">
+                                                                <option ng-value="10">10</option>
+                                                                <option ng-value="20">20</option>
+                                                                <option ng-value="30">30</option>
+                                                                <option ng-value="40">40</option>
+                                                                <option ng-value="50">50</option>
+
+                                                            </select>
+                                                        </td>
+                                                        <td colspan="2" class="text-left">
+                                                            <span>Total Count:<br/> <b class="text-centre"> {{asset_data.length}}</b></span>
+                                                        </td>
+                                                    </tr>
+
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div ng-show="reason">
+                                    <div class="col-md-4">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="row">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Rejection Reason</label>
+                                                <input class="textboxline" maxlength="60"
+                                                       placeholder="Comments for reject"
+                                                       ng-model="comments" required/>
+                                            </md-input-container>
+                                            <md-button class="md-icon-button" aria-label="Reject"
+                                                       ng-click="reject_Asset(em)">
+                                                <md-icon class="material-icons editlink">done</md-icon>
+                                                <md-tooltip>Reject</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 text-center">
+                                        <md-button class="btn btn-info custbutton" ng-click="Save(em)"
+                                                   ng-disabled="enable_update">Approve
+                                            <md-tooltip>Approve</md-tooltip>
+                                        </md-button>
+                                        <md-button type="button" value="Reject"
+                                                   ng-click="reject()"
+                                                   ng-disabled="enable_reject"
+                                                   class="md-raised md-warn">Reject
+                                        </md-button>
+                                    </div>
+                                </div>
+
+
+                                <!--                    <div class="row">-->
+                                <!--                        <div class="col-md-12 text-center">-->
+                                <!--                            <md-button class="btn btn-info custbutton" ng-click="Save(em)"-->
+                                <!--                                       ng-disabled="enable_update">Submit-->
+                                <!--                                <md-tooltip>Submit</md-tooltip>-->
+                                <!--                            </md-button>-->
+                                <!--                            <md-button class="md-raised" data-dismiss="modal">Back-->
+                                <!--                                <md-tooltip>close</md-tooltip>-->
+                                <!--                            </md-button>-->
+                                <!--                        </div>-->
+                                <!--                    </div>-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.maxSize_popup = 5;
+	$scope.itemsPerPage_popup = 10;
+	$scope.currentPage_popup = 1;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.enable_reject = true;
+    $scope.enable_update = true;
+    $scope.remarks = false;
+    $scope.catchecker = [];
+    $scope.main=[];
+    $scope.add = [];
+    $scope.data_len = 0;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    var td = detail.date
+    $scope.cap_date = convertdate(td);
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    $scope.loading = function () {
+		$mdDialog.show({
+			templateUrl: 'loaderSpinner',
+			parent: angular.element(document.body),
+			clickOutsideToClose: false
+		});
+	};
+	$scope.loading_popup = function () {
+		$mdDialog.show({
+			templateUrl: 'loaderSpinner',
+			parent: angular.element(document.getElementById('viewmodal')),
+			clickOutsideToClose: false
+		});
+	};
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+            }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+            }
+    }
+    $scope.selectdate = function() {
+        $scope.assetdetails_capdate = $filter('date')(new Date($scope.assetdetails_cpdate),'yyyy-MM-dd');
+    }
+    $scope.search = function() {
+        loaddata();
+    }
+    loaddata();
+    function loaddata() {
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Asset_Id": $scope.assetdetails_id,
+                    "Asset_Value": $scope.assetdetails_value,
+                    "Cap_Date": $scope.assetdetails_capdate,
+                    "Asset_Code": $scope.catagry,
+                    "Branch": $scope.assetdetails_branch,
+                    "Asset_Group":"N"
+                },
+            }
+        };
+
+        var get_cat = newservice.cat_detail(data)
+        get_cat.then(function(result) {
+            $scope.loading();
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.catchecker = $scope.main;
+            $scope.data_len = $scope.catchecker.length;
+            $scope.pageLength_popup = $scope.catchecker.length;
+<!--            $scope.pageLength = $scope.catchecker.length;-->
+            $scope.Totalpages = Math.ceil($scope.main.length / $scope.itemsPerPage);
+            $scope.pageLength_popup = $scope.catchecker.length;
+        }).finally($scope.endloading);
+    }
+    loadcat();
+    function loadcat(){
+        var get_drop = newservice.drop_data()
+        get_drop.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.get_drop_data = $scope.main;
+
+        });
+    }
+    $scope.catsearch = gotocat;
+        function gotocat(query) {
+            var result = $filter('filter')($scope.get_drop_data, {
+                'assetcat_subcatname': query
+            });
+            return result;
+        }
+    $scope.reason_check = function(id){
+            $scope.assetcatchange_reason = $scope.catchecker[id].assetcatchange_reason ;
+            $scope.remarks = true;
+    }
+    $scope.viewdet = function(e) {
+        $scope.assetdetails_id = e.assetdetails_id;
+        $scope.branch_name = e.branch_name;
+        $scope.assetdetails_value = e.assetdetails_value;
+        $scope.oldcapdate = e.oldcapdate;
+        $scope.new_capdate = e.new_capdate;
+        $scope.assetdetails_gid = e.assetdetails_gid;
+        $scope.assetdetails_branchgid = e.assetdetails_branchgid;
+        $scope.assetcapdate_reason = e.assetcapdate_reason;
+        $scope.assetdetails_status = e.assetdetails_requeststatus;
+        modalshow('viewmodal');
+
+        $scope.asset_data = [{
+            "asset_id": $scope.assetdetails_id,
+            "asset_value": $scope.assetdetails_value,
+            "cap_date": $scope.oldcapdate,
+            "cap_date1": $scope.new_capdate,
+            "asset_code": $scope.assetdetails_gid,
+            "branch": $scope.branch_name,
+            "reason": $scope.assetcapdate_reason,
+            "status": $scope.assetdetails_status,
+        }];
+    }
+     $scope.selectEntity = function() {
+        for (var i = 0; i < $scope.catchecker.length; i++) {
+           if ($scope.catchecker[i].isChecked == true) {
+                $scope.enable_update = false;
+                $scope.enable_reject = false;
+                $scope.reason = false;
+                $scope.checkall = false;
+                $scope.comments = "";
+                return
+            }
+            else if ($scope.catchecker[i].isChecked == false){
+                $scope.reason = false;
+                $scope.enable_update = true;
+                $scope.enable_reject = true;
+            }
+        }
+     };
+
+         $scope.imgshow = function(id){
+         if($scope.catchecker[id].assetdetails_imagepath != null){
+
+             modalshow('viewmodals');
+             $scope.asset_img =$scope.catchecker[id].assetdetails_imagepath;
+             }
+         }
+
+        $scope.myfun = function(e) {
+        $scope.catchecker = $filter('filter')($scope.main, {
+            "assetdetails_id": e.asset_id,
+            "product_displayname":e.asset_product,
+            "assetcatchange_oldcat": e.old_cat,
+            "assetlocation_name": e.locationname,
+            "branch_name": e.asset_branch,
+        });
+
+
+    };
+
+
+    $scope.selectall = function () {
+        if($scope.checkall == true){
+            for (var i = 0; i < $scope.catchecker.length; i++) {
+			    $scope.catchecker[i].isChecked = true;
+			    $scope.enable_update = false;
+			    $scope.enable_reject = false;
+		}
+		}
+		else if ($scope.checkall == false){
+            for (var i = 0; i < $scope.catchecker.length; i++) {
+			    $scope.catchecker[i].isChecked = false;
+		}
+		     $scope.enable_update = true;
+		     $scope.enable_reject = true;
+        }
+	};
+
+ $scope.Save = function(entity) {
+        $scope.asset_grp = [];
+        for (i = 0; i < $scope.catchecker.length; i++) {
+            if ($scope.catchecker[i].isChecked) {
+                var datas_asset = ($scope.catchecker[i].assetdetails_gid).toString();
+                $scope.asset_grp.push(datas_asset);
+            }
+        };
+        $scope.asset = {
+            "Asset_Gid": $scope.asset_grp,
+            "Asset_Group_Id":"",
+        };
+        var details = {
+            "ASSET": $scope.asset
+        };
+        var save_data = {
+            "Params": {
+                "DETAILS": details,
+                "CHANGE": {},
+                "STATUS": {
+                    "Status": "APPROVED",
+<!--                    "Trn_Ref_Name":"FA_CPDATE"-->
+                },
+            }
+        };
+        save_file(save_data);
+    }
+
+    function save_file(save_data) {
+        var asset_group = newservice.assets_group(save_data,employgid);
+        $scope.loading();
+        asset_group.then(function(res) {
+            $scope.set_msg = res.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+            }
+            else{
+                alert($scope.set_msg);
+            }
+             $window.location.href = "fa_asset_catgrychecker";
+        }).finally($scope.endloading);
+   }
+
+        $scope.reject = function() {
+         $scope.reason = true;
+         $scope.enable_update = true;
+         $scope.enable_reject = true;
+    };
+    $scope.selectreason = "";
+
+$scope.reject_Asset = function(){
+    if ($scope.comments == undefined ){
+        error_toast(not_enter_reason,time_toast);
+        return false;
+    }
+    else{
+     $scope.asset_grp = [];
+        for (i = 0; i < $scope.catchecker.length; i++) {
+            if ($scope.catchecker[i].isChecked) {
+                var datas_asset = ($scope.catchecker[i].assetdetails_gid).toString();
+                $scope.asset_grp.push(datas_asset);
+
+            }
+        };
+        $scope.asset = {
+            "Asset_Gid": $scope.asset_grp,
+            "Asset_Group_Id":"",
+        };
+        var details = {
+            "ASSET": $scope.asset
+        };
+        var save_data = {
+            "Params": {
+                "DETAILS": details,
+                "CHANGE": {},
+                "STATUS": {
+                    "Status": "REJECTED",
+                    "Remark" : $scope.comments,
+<!--                    "Trn_Ref_Name":"FA_CPDATE"-->
+                },
+            }
+        };
+        save_file(save_data);
+    }
+    }
+
+});
+app.service('newservice', function($http) {
+    this.cat_detail = function(data) {
+        var response = $http.post(Appname + "/asset_details/", {
+            params: {
+                 "Sub_Type": "CHECKER_SUMMARY",
+                 "Type": "CAT_DETAILS",
+                 "Group": "FA_ASSET_TRAN_SUMMARY",
+                 "json": data,
+        }
+    });
+        return response;
+    }
+
+    this.assets_group = function(save_data,employgid) {
+        var response = $http.post(Appname + "/writeoff_summary/", {
+            params: {
+                "Sub_Type": "CHECKER",
+                "Type": "ASSET_CAT",
+                "Group": "FA_ASSET_TRAN",
+                "Action": "UPDATE",
+                "Employee_Gid": employgid,
+                "json": save_data,
+            }
+        });
+        return response;
+    }
+    this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+     }
+});
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,256 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PAR MAKER SUMMARY{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="APP_PAR_Summary" ng-controller="PAR_Sumamry_ctrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong>PAR MAKER SUMMARY</strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Par Number</label>
+                        <input type="text" no-Special-Char maxlength="16" ng-model="parno" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Par Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-open-on-focus md-min-date="minDate"
+                                       md-max-date="maxDate"
+                                       ng-model="pardate" formatDate
+                                       ng-change="search_par(parsearch)"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Par Year</label>
+                        <input type="text" numbers-only minlength="4" maxlength="4" ng-model="paryear" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Par Amount</label>
+                        <input type="text" numbers-only maxlength="16" ng-model="paramount" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3" layout="row" style="margin-top:30px">
+                    Is Budgeted
+                    <md-radio-group layout="row" ng-model="isbudgeted" ng-change="search_par(parsearch)">
+                        <md-radio-button value="Y" class="md-primary" style="margin-left:20px;">Yes</md-radio-button>
+                        <md-radio-button value="N">No</md-radio-button>
+                    </md-radio-group>
+                </div>
+                <div class="col-md-1">
+                    </br>
+                </div>
+                <div class="col-md-3">
+                    </br>
+                    <md-button class="md-fab md-mini md-primary custbutton" type="submit" ng-href="PAR_Add"
+                               ng-click="addfun()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Add</md-tooltip>
+                    </md-button>
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="Parmaker_Search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Par Number</th>
+                        <th>Par Date</th>
+                        <th>Par Year</th>
+                        <th>Par Amount</th>
+                        <th>Is Budgeted</th>
+                        <th>utilized Amount</th>
+                        <th>Balance Amount</th>
+                        <th>Par Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in get_pardatas.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{emp.par_no}}</td>
+                        <td>{{emp.par_date | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{emp.par_year}}</td>
+                        <td>{{emp.par_originalamount}}</td>
+                        <td>{{emp.par_isbudgeted}}</td>
+                        <td>{{emp.par_utilized}}</td>
+                        <td>{{emp.par_balance}}</td>
+                        <td>{{emp.par_status}}</td>
+                        <td align="center">
+                            <span title="Edit" ng-click="edit_data(emp,'editpartner')" align="center"
+                                  class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul uib-pagination total-items="get_pardatas.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="3">
+                            Total Count:{{get_pardatas.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <!--        <div ng-include="'atma_editdetails'"></div>-->
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('APP_PAR_Summary', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+        myApp.controller('PAR_Sumamry_ctrl', ['$scope', '$mdDialog','ParSummaryService', '$rootScope', '$window', '$filter','SerCommon',
+            function($scope, $mdDialog,ParSummaryService, $rootScope, $window, $filter,SerCommon) {
+    $scope.alldetails=[];
+    $scope.viewdetail=[];
+
+    $scope.itemsPerPage=10;
+    $scope.maxSize = 3;
+    $scope.currentPage = 1;
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.create_by = detail.employee_gid;
+    getpardata_fn();
+    $scope.Parmaker_Search=function(){
+    if($scope.pardate==null){
+    $scope.searchdate='';
+    }else{
+    $scope.searchdate=formatStringDate(new Date($scope.pardate), 'yyyy-mm-dd');
+    }
+    getpardata_fn();
+    }
+    function getpardata_fn(){
+        var data = {
+                "Params": {
+                    "Filter":{"PAR_RIGHTS":"PAR MAKER",
+                            "PAR_NO":$scope.parno,
+                            "PAR_DATE":$scope.searchdate,
+                            "PAR_YEAR":$scope.paryear,
+                            "PAR_AMOUNT":$scope.paramount,
+                            "PAR_BUDGETED":$scope.isbudgeted,
+                    },
+                    "Classification": {"Entity_Gid": $scope.entity_gid},
+                    "Group": "PAR_GET",
+                    "Action": "Par_Get",
+                    "Create_By":$scope.create_by ,
+                    "Entity_Gid":$scope.entity_gid ,
+                    "Type": ""
+                }
+         }
+         var get_data = ParSummaryService.getpar_service(data)
+            get_data.then(function(result) {
+            $scope.get_pardatas=result.data.DATA;
+            $scope.search_get_pardatas=result.data.DATA;
+            }),
+            function(err) {
+                alert('no data');
+            }
+     }
+     $scope.search_par=function(a){
+
+         if(a.parno != undefined && a.parno != null && a.parno !='' )
+            {
+                var parname= a.parno;
+         }
+         else
+            {
+                var parname='';
+         }
+        if(a.pardate != undefined && a.pardate != null && a.pardate !='' )
+        {
+        var temp312=formatStringDate(new Date(a.pardate), 'yyyy-mm-dd');;
+        var temp3=Date.parse(temp312);
+        }
+    else
+        {
+        var temp3='';
+        }
+    $scope.get_pardatas=$filter('filter')($scope.search_get_pardatas,{
+    "par_no":  a.parno == null || a.parno == undefined || a.parno == '' ? '' : a.parno ,
+    "par_year": a.paryear  == null || a.paryear  == undefined || a.paryear  == '' ? '' : a.paryear  ,
+    "par_amount":  a.paramount == null || a.paramount == undefined || a.paramount == '' ? '' : a.paramount ,
+    "par_isbudgeted": a.isbudgeted == null ||  a.isbudgeted == undefined  || a.isbudgeted == '' ? '' : a.isbudgeted,
+    "par_date":temp3 == null ||  temp3 == undefined  || temp3 == '' ? '' : temp3,
+    })
+    }
+     $scope.edit_data=function(emp,e){
+
+        var Par_data =
+        {
+            par_data: emp,
+            view: "UPDATE"
+        };
+        sessionStorage.setItem('par_summary_session', JSON.stringify(Par_data));
+        $window.location.href = "PAR_Add";
+    }
+     $scope.addfun= function(){
+    var Par_data = {
+        par_data: {"par_gid":0},
+        view:"INSERT"
+        };
+    sessionStorage.setItem('par_summary_session', JSON.stringify(Par_data));
+    $window.location.href="atma_partneradd";
+ }
+
+
+}
+]);
+
+myApp.service("ParSummaryService", function($http) {
+    this.getpar_service = function(get_data) {
+        var response = $http.post(Appname + "/Par_Get/", get_data);
+        return response;
+    }
+
+});
+
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Bank Branch{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="APP_Branch_Summary" ng-controller="APP_Branch_Summary" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong> Bank Branch Summary</strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Bank Name</label>
+                        <input type="text" ng-model="bankname" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Branch Name</label>
+                        <input type="text" ng-model="branchname" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>IFSC Code</label>
+                        <input type="text" ng-model="ifsccode" autocomplete="off"
+                               ng-change="search_par(parsearch)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3" style="margin-top:px;"><br>
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchbankbranch()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                    <md-button class="md-fab md-mini md-primary custbutton" type="submit" ng-href=""
+                               ng-click="addfun()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Add</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Bank Name</th>
+                        <th>Branch Name</th>
+                        <th>Ifsc Code</th>
+                        <th>Micro Code</th>
+
+
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in bankbranch_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{emp.bankbranch_name}}</td>
+                        <td>{{emp.bankbranch_name}}</td>
+                        <td>{{emp.bankbranch_ifsccode}}</td>
+                        <td>{{emp.bankbranch_microcode}}</td>
+                        <td align="center">
+
+                            <span title="Edit" ng-click="edit_data(emp)" align="center"
+                                  class="editlink" ng-hide="{{(emp.bankbranch_isactive=='Y') ? false : true}}">
+                                    <i class="material-icons">edit</i>
+                                </span>
+
+                            <span class="material-icons" ng-class="emp.bankbranch_isactive=='Y'? 'editlink':''"
+                                  ng-click="activeDeactive_click(emp.bankbranch_isactive,emp.bankbranch_gid)"
+                                  title="{{emp.bankbranch_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny
+                            </span>
+                        </td>
+                    </tr>
+                    <tr ng-show="bankbranch_data.length == undefined">
+                            <td class="warning" colspan="8">
+                                No Records Found.
+                            </td>
+                    </tbody>
+                   <tr>
+                        <td colspan="3">
+                            <ul uib-pagination total-items="bankbranch_data.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="6">
+                            Total Count:{{bankbranch_data.length}}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+
+
+    </div>
+</div>
+
+{% endverbatim %}
+
+
+<script>
+    var myApp = angular.module('APP_Branch_Summary', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+
+})
+
+
+        myApp.controller('APP_Branch_Summary', ['$scope', '$mdDialog','BranchSummaryService', '$rootScope', '$window', '$filter','SerCommon',
+            function($scope , $mdDialog,BranchSummaryService, $rootScope, $window, $filter,SerCommon,$mdSelect) {
+    $scope.alldetails=[];
+    $scope.viewdetail=[];
+
+    $scope.itemsPerPage=10;
+    $scope.maxSize = 3;
+    $scope.currentPage = 1;
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.entity_gid = detail.entity_gid;
+    $scope.create_by = detail.employee_gid;
+
+
+    $scope.addfun= function(){
+    debugger;
+        var memo_data = {
+            memodata: {"bankbranch_gid":0},
+            view:"INSERT"
+        };
+        sessionStorage.setItem('memo_summary_session', JSON.stringify(memo_data));
+        $window.location.href="Bankbranch_Add";
+    }
+    $scope.edit_data=function(emp,e){
+        var memo_data =
+        {
+            memodata: emp,
+            view: "UPDATE"
+        };
+        sessionStorage.setItem('memo_summary_session', JSON.stringify(memo_data));
+        $window.location.href = "Bankbranch_Add";
+    }
+   $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+   $scope.endloading = function() {
+        $mdDialog.hide();
+   };
+    $scope.searchbankbranch=function(){
+    debugger;
+    fn_getbranch();
+    }
+
+   fn_getbranch();
+   function fn_getbranch(){
+        var data={
+            "Params":{
+                "Filter":{
+                "Bank_Name":$scope.bankname,
+                "BankBranch_Name":$scope.branchname,
+                "BankBr_ifsccode":$scope.ifsccode,
+                },
+                "Classification": {"Entity_Gid": $scope.entity_gid},
+                "Group":"Get_bankbranchdetails",
+                "Action":"BANK_BRANCH",
+                "Type":"SUMMARY",
+            }
+        }
+        $scope.loading();
+        var getbankbranch=BranchSummaryService.getbbranchdetails(data)
+        getbankbranch.then(function(result){
+        $scope.bankbranch_data=result.data.DATA
+        //alert(JSON.stringify($scope.bankbranch_data));
+        }).finally($scope.endloading);
+
+   }
+   $scope.activeDeactive_click=function(e,a){
+    debugger;
+        if(e=='Y'){
+            var active="IN_ACTIVE"
+        }else{
+            var active="ACTIVE"
+        }
+        var data={
+            "Params":{
+                "Filter":{
+                    "BankBranch_Gid":a,
+                    "Active_Flag":active,
+                },
+                "Classification": {"Entity_Gid": $scope.entity_gid},
+                "AddJson":{},
+                "Group":"Active_Inactive",
+                "Action":"UPDATE",
+                "Type":"BANK_BRANCH",
+                "SubType":"ACTIVE_INACTIVE",
+                "Create_by":$scope.create_by
+            }
+        }
+        var set_active=BranchSummaryService.set_inactive(data)
+        set_active.then(function(result){
+            $scope.activemsg=result.data;
+
+            if($scope.activemsg=="SUCCESS"){
+           if(active=="IN_ACTIVE") {
+           alert("SUCCESSFULLY INACTIVE")
+           fn_getbranch();
+           }else{
+           alert("SUCCESSFULLY ACTIVE")
+           fn_getbranch();
+           }
+            }else{
+            alert(JSON.stringify($scope.activemsg));
+            }
+        })
+    }
+
+}
+]);
+
+myApp.service("BranchSummaryService", function($http) {
+    this.getbbranchdetails = function(get_data) {
+        var response = $http.post(Appname + "/Bankbranch_setdetails/", get_data);
+        return response;
+    }
+    this.set_inactive = function(get_data) {
+        var response = $http.post(Appname + "/Bankbranch_setdetails/", get_data);
+        return response;
+    }
+     this.getsubcategory = function(partnergroup) {
+        var respons = $http.post(Appname + "/prodget/", partnergroup);
+        return respons;
+    }
+
+
+});
+
+
+
+
+
+
+
+</script>
+{% endblock %}

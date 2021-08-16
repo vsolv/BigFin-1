@@ -1,0 +1,791 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Customer Approver  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appemployee" ng-controller="Ctrlemployee" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Customer Approver Rate Card Summary</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <br>
+            <div class="col-md-4">
+                <md-autocomplete
+                        md-item-text="item.campaign_name"
+                        md-items="item in querySearch(searchTex)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchTex"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="ACselectchange(item.campaign_name)"
+                        md-floating-label="Campaign"
+                        md-clear-button="true"
+                >
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.campaign_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No product matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-4">
+                <md-autocomplete
+                        md-item-text="item.customergroup_name"
+                        md-items="item in getcustmer(searchTet)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchTet"
+                        md-selected-item="selectedIte"
+                        md-selected-item-change="ACselectchange(item.customergroup_gid)"
+                        ng-disabled="Customer_disable"
+                        md-floating-label="Customer Group Name"
+                        md-clear-button="true"
+                >
+                    <md-item-template>
+                        <span md-highlight-text="searchTet"> {{item.customergroup_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No product matching "{{searchTet}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-4">
+                <md-autocomplete
+                        md-item-text="item.product_name"
+                        md-items="item in getproduct(searchText)"
+                        md-min-length=0
+                        md-no-cache="true"
+                        md-search-text="searchText"
+                        md-selected-item="selectedone"
+                        md-selected-item-change="ACselectchange(item)"
+                        ng-disabled="Customer_disable"
+                        md-floating-label="Product"
+                        md-clear-button="true"
+                >
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.product_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No product matching "{{searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block">
+                            <label>From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-clear-button="true"
+                                           md-max-date="today_date" ng-model="searchquery_StartDate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block ">
+                            <label>To Date</label>
+                            <md-datepicker md-hide-icons="calendar" ng-model="searchquery_EndDate"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2" style="margin-top:12px">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="serch()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>State Name</th>
+                        <th>Campaign</th>
+                        <th>Customer Group Name</th>
+                        <th>Product</th>
+                        <th>Valid From</th>
+                        <th>Valid To</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Select<br>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in empsmry.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{emp.state_name}}</td>
+                        <td class="text-center">{{emp.campaign_name }}</td>
+                        <td class="text-center">{{emp.customergroup_name}}</td>
+                        <td class="text-center">{{emp.product_name}}</td>
+                        <td class="text-center">{{emp.ratecard_validfrom}}</td>
+                        <td class="text-center">{{emp.ratecard_validto}}</td>
+                        <td class="text-right">{{emp.ratecard_finalrate}}</td>
+                        <td>{{emp.ratecard_status}}</td>
+                        <td class="text-center"><input ng-click="selectEntity(emp)"
+                                                       ng-model="emp.isChecked"
+                                                       type="checkbox"
+                        ></td>
+                        <td class="text-center"> <span class="editlink" ng-click="aprvpop(emp)"
+                                                       title="Edit">
+                                    <i class="material-icons">edit</i>
+                                </span></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="12">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row" class="container container1">
+            <div class="col-md-12">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-5">
+                    <div class="col-md-12">
+                        <div class="col-md-4">
+                            <md-button class="btn btn-info custbutton" ng-click="bulkaprv()" ng-disabled="bulksbmtshw"
+                                       ng-show="hdeapr">Bulk
+                                Approver
+                            </md-button>
+                            <div ng-hide="bulk_reject_data">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>Reject Reason</label>
+                                    <input maxlength="24" name="pckt" name="text" ng-model="remarks"
+                                            required/>
+                                </md-input-container>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <md-button class="btn btn-info custbutton" ng-click="Bulk_Reject()"
+                                       ng-disabled="bulksbmtshw"
+                                       ng-show="shwrej">Reject
+                            </md-button>
+                            <md-button class="md-raised custbutton md-warn" ng-click="bulkrejct()" ng-show="shwbulkrej">
+                                Bulk Reject
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'custpopup'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appemployee', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrlemployee', ['$scope', 'testService', '$mdDialog', '$rootScope', '$window', '$filter',
+    function($scope, testService, $mdDialog, $rootScope, $window, $filter) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.emp_gid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+        $scope.empsmry = [];
+        $scope.shwrej = true;
+        $scope.hdeapr = true;
+        $scope.bulksbmtshw = true;
+        $scope.disblpop = false;
+        $scope.bulk_reject_data = false;
+        $scope.currentPage = 1;
+        $scope.bulk_reject_data = true;
+        $scope.maxSize = 3;
+        $scope.showfr = true;
+        $scope.showfr1 = false;
+        $scope.reject = true;
+        $scope.getcompaign = [];
+        $scope.today_date=new Date();
+        $scope.add = [];
+        $scope.itemsPerPage = 10;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.querySearch = gotoGetdata;
+        $scope.getcustmer = gotocustmr;
+        $scope.getproduct = gotoprod;
+        $scope.getcompaign = [];
+
+        function gotoGetdata(query) {
+            var result = $filter('filter')($scope.getcompaign, {
+                'campaign_name': query
+            });
+            return result;
+        }
+
+        function gotocustmr(query) {
+            var result = $filter('filter')($scope.mullti, {
+                'customergroup_name': query
+            });
+            return result;
+        }
+
+        function gotoprod(query) {
+            var result = $filter('filter')($scope.prodnme, {
+                'product_name': query
+            });
+            return result;
+        }
+
+        $scope.hide_data = function() {
+            $scope.reject = false;
+            $scope.rejctclk = true;
+            $scope.showfr = false;
+        }
+
+        $scope.Bulk_Reject = function() {
+            $scope.bulk_reject_data = false;
+            $scope.hdeapr = false;
+            $scope.shwbulkrej = true;
+            $scope.shwrej = false;
+        }
+
+        $scope.aprvpop = function(emp) {
+            modalshow('mdl_present');
+            $scope.add.camname = emp.ratecard_campaigngid;
+            $scope.add.prodname = emp.product_gid;
+            $scope.add.custgrp = emp.customergroup_gid;
+            $scope.add.valdfrmdte = convertdate(emp.ratecard_validfrom);
+            $scope.add.valdtodate = convertdate(emp.ratecard_validto);
+            $scope.add.minqn = emp.ratecard_minqty;
+            $scope.add.maxqn = emp.ratecard_maxqty;
+            $scope.add.AWS_no = emp.ratecard_finalrate;
+            $scope.add.dirprice = emp.ratecard_dealerprice;
+            $scope.add.atdl = emp.ratecard_discount;
+            $scope.add.statnme = emp.state_gid;
+            $scope.gid = emp.ratecard_gid;
+            $scope.dealgid = emp.ratecard_dealerpricegid;
+            $scope.add.actve = emp.ratecard_isactive;
+            $scope.disblpop = true;
+        }
+
+        $scope.serch = function() {
+           $scope.loading();
+            if ($scope.selectedItem !== null) {
+                $scope.campid = $scope.selectedItem.campaign_gid;
+            } else {
+                $scope.campid = 0;
+            }
+            if ($scope.selectedIte !== null) {
+                $scope.custgid = $scope.selectedIte.customergroup_gid;
+            } else {
+                $scope.custgid = 0;
+            }
+            if ($scope.selectedone !== null) {
+                $scope.prod_id = $scope.selectedone.product_gid;
+            } else {
+                $scope.prod_id = 0;
+            }
+
+            if ($scope.searchquery_StartDate == undefined && $scope.searchquery_EndDate == undefined) {
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            Campaign_Id: $scope.campid,
+                            Customer_Group_Gid: $scope.custgid,
+                            Product_Gid: $scope.prod_id,
+                            Valid_From: '',
+                            Valid_To: '',
+                            Status: 'PENDING'
+                        },
+                        "CLASSIFICATION": {
+                            Entity_Gid: [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.searchquery_StartDate != undefined && $scope.searchquery_EndDate == undefined) {
+                $scope.searchquery_EndDate = new Date();
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            Campaign_Id: $scope.campid,
+                            Customer_Group_Gid: $scope.custgid,
+                            Product_Gid: $scope.prod_id,
+                            Valid_From: formatStringDate($scope.searchquery_StartDate, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.searchquery_EndDate, 'yyyy-mm-dd'),
+                            Status: 'PENDING'
+                        },
+                        "CLASSIFICATION": {
+                            Entity_Gid: [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.searchquery_EndDate != undefined && $scope.searchquery_StartDate != undefined) {
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            Campaign_Id: $scope.campid,
+                            Customer_Group_Gid: $scope.custgid,
+                            Product_Gid: $scope.prod_id,
+                            Valid_From: formatStringDate($scope.searchquery_StartDate, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.searchquery_EndDate, 'yyyy-mm-dd'),
+                            Status: 'PENDING'
+                        },
+                        "CLASSIFICATION": {
+                            Entity_Gid: [$scope.entity_gid]
+                        }
+                    }
+                }
+            } else if ($scope.searchquery_EndDate != undefined && $scope.searchquery_StartDate == undefined) {
+                $scope.searchquery_StartDate = $scope.searchquery_EndDate;
+                var data = {
+                    "Params": {
+                        "FILTER": {
+                            Campaign_Id: $scope.campid,
+                            Customer_Group_Gid: $scope.custgid,
+                            Product_Gid: $scope.prod_id,
+                            Valid_From: formatStringDate($scope.searchquery_StartDate, 'yyyy-mm-dd'),
+                            Valid_To: formatStringDate($scope.searchquery_EndDate, 'yyyy-mm-dd'),
+                            Status: 'PENDING'
+                        },
+                        "CLASSIFICATION": {
+                            Entity_Gid: [$scope.entity_gid]
+                        }
+                    }
+                }
+            }
+
+            var data_int = {
+                Sub_Type: 'SUMMARY_PENDING',
+                Type: 'SUMMARY',
+                Group: 'SUMMARY',
+                Employee_Gid: $scope.emp_gid,
+                Limit: 1500,
+                data: data
+            };
+            prodmapsm(data_int);
+            $scope.endloading();
+        }
+
+        $scope.rejctpop = function(add) {
+            $scope.loading();
+            var dta = {
+                "Params": {
+                    "DATA": {
+                        "Sales_Rate": [{
+                            "Ratecard_Gid": $scope.gid,
+                            "Remarks": $scope.add.packets,
+                            "Status": 'REJECTED',
+                            "CampaignGid": $scope.add.camname,
+                            "Customer_GroupGid": $scope.add.custgrp,
+                            "ProductGid": $scope.add.prodname,
+                            "DealerPriceGid": $scope.dealgid,
+                            "MinQty": $scope.add.minqn,
+                            "MaxQty": $scope.add.maxqn,
+                            "ValidFrom": formatStringDate($scope.add.valdfrmdte, 'yyyy-mm-dd'),
+                            "ValidTo": formatStringDate($scope.add.valdtodate, 'yyyy-mm-dd'),
+                            "Is_Active": $scope.add.actve,
+                        }]
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var data = {
+                "Group": 'STATUS',
+                "Action": 'Update',
+                "Type": 'STATUS',
+                "Employee_Gid": $scope.emp_gid,
+                "data": dta
+            }
+            setapprv(data);
+            $scope.endloading();
+        }
+
+        $scope.bulkrejct = function() {
+
+            $scope.loading();
+            $scope.bulky = [];
+            var data = [];
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].isChecked) {
+                    $scope.empsmry[i].ratecard_validfrom = convertdate($scope.empsmry[i].ratecard_validfrom);
+                    $scope.empsmry[i].ratecard_validto = convertdate($scope.empsmry[i].ratecard_validto);
+                    data = {
+                        "Ratecard_Gid": $scope.empsmry[i].ratecard_gid,
+                        "Remarks": $scope.remarks,
+                        "Status": 'REJECTED',
+                        "CampaignGid": $scope.empsmry[i].ratecard_campaigngid,
+                        "Customer_GroupGid": $scope.empsmry[i].customergroup_gid,
+                        "ProductGid": $scope.empsmry[i].product_gid,
+                        "DealerPriceGid": $scope.empsmry[i].ratecard_dealerpricegid,
+                        "MinQty": $scope.empsmry[i].ratecard_minqty,
+                        "MaxQty": $scope.empsmry[i].ratecard_maxqty,
+                        "ValidFrom": formatStringDate($scope.empsmry[i].ratecard_validfrom, 'yyyy-mm-dd'),
+                        "ValidTo": formatStringDate($scope.empsmry[i].ratecard_validto, 'yyyy-mm-dd'),
+
+                        "Is_Active": $scope.add.actve,
+                    }
+                    $scope.bulky.push(data);
+                }
+            }
+
+            var dta = {
+                "Params": {
+                    "DATA": {
+                        "Sales_Rate": $scope.bulky
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var data = {
+                "Group": 'STATUS',
+                "Action": 'Update',
+                "Type": 'STATUS',
+                "Employee_Gid": $scope.emp_gid,
+                "data": dta
+            }
+            setapprv(data);
+            $scope.endloading();
+        }
+
+        $scope.bulkaprv = function(add) {
+            $scope.loading();
+            $scope.bulky = [];
+            var data = [];
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].isChecked) {
+                    $scope.empsmry[i].ratecard_validfromdate = convertdate($scope.empsmry[i].ratecard_validfrom);
+                    $scope.empsmry[i].ratecard_validtodate = convertdate($scope.empsmry[i].ratecard_validto);
+                    data = {
+                        "Ratecard_Gid": $scope.empsmry[i].ratecard_gid,
+                        "Remarks": $scope.add.packets,
+                        "Status": 'APPROVED',
+                        "CampaignGid": $scope.empsmry[i].ratecard_campaigngid,
+                        "Customer_GroupGid": $scope.empsmry[i].customergroup_gid,
+                        "ProductGid": $scope.empsmry[i].product_gid,
+                        "DealerPriceGid": $scope.empsmry[i].ratecard_dealerpricegid,
+                        "MinQty": $scope.empsmry[i].ratecard_minqty,
+                        "MaxQty": $scope.empsmry[i].ratecard_maxqty,
+                        "FinalRate":parseFloat($scope.empsmry[i].ratecard_finalrate).toFixed(2),
+                        "ValidFrom": formatStringDate($scope.empsmry[i].ratecard_validfromdate, 'yyyy-mm-dd'),
+                        "ValidTo": formatStringDate($scope.empsmry[i].ratecard_validtodate, 'yyyy-mm-dd'),
+                        "Is_Active": $scope.add.actve,
+                    }
+                    $scope.bulky.push(data);
+                }
+            }
+
+            var dta = {
+                "Params": {
+                    "DATA": {
+                        "Sales_Rate": $scope.bulky
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+            var data = {
+                "Group": 'STATUS',
+                "Action": 'Update',
+                "Type": 'STATUS',
+                "Employee_Gid": $scope.emp_gid,
+                "data": dta
+            }
+            setapprv(data);
+            $scope.endloading();
+        }
+
+
+        $scope.clspop = function(){
+          $scope.showfr = true;
+          $scope.rejctclk = false;
+          $scope.reject =true;
+        }
+        $scope.aprv = function(add) {
+           $scope.loading();
+            var dta = {
+                "Params": {
+                    "DATA": {
+                        "Sales_Rate": [{
+                            "Ratecard_Gid": $scope.gid,
+                            "Remarks": $scope.add.packets,
+                            "Status": 'APPROVED',
+                            "CampaignGid": $scope.add.camname,
+                            "Customer_GroupGid": $scope.add.custgrp,
+                            "ProductGid": $scope.add.prodname,
+                            "DealerPriceGid": $scope.dealgid,
+                            "MinQty": $scope.add.minqn,
+                            "MaxQty": $scope.add.maxqn,
+                            "ValidFrom": formatStringDate($scope.add.valdfrmdte, 'yyyy-mm-dd'),
+                            "ValidTo": formatStringDate($scope.add.valdtodate, 'yyyy-mm-dd'),
+                            "Is_Active": $scope.add.actve,
+                        }]
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var data = {
+                "Group": 'STATUS',
+                "Action": 'Update',
+                "Type": 'STATUS',
+                "Employee_Gid": $scope.emp_gid,
+                "data": dta
+            }
+            setapprv(data);
+            $scope.endloading();
+        }
+
+        function setapprv(data) {
+            var get_prodmap = testService.prodmapsmry(data)
+            get_prodmap.then(function(result) {
+                    $scope.maintab = result.data.MESSAGE;
+                    if ($scope.maintab == 'SUCCESS') {
+                        alert($scope.maintab+" Data is moved Customer Maker Screen");
+                        $window.location.href = "custpdctratecardapprover";
+                    } else {
+                        alert($scope.maintab);
+                    }
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        var data = {
+            "Parms": {
+                "Classification": {
+                    "Entity_Gid": [$scope.entity_gid]
+                },
+                "Filter": {
+                    "XXXXX": ""
+                }
+            }
+        }
+
+        var dta = {
+            Group: 'CAMPAIGN_GET',
+            Type: 'INVOICE',
+            SubType: 'SALES',
+            data: data
+        }
+
+        var getcompaig = testService.getdrpdwn(dta)
+        getcompaig.then(function(result) {
+            $scope.getcompaign = result.data.DATA;
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+
+        var data = {
+            Group: 'CUST_GROUP_GET',
+            Entity_Gid: $scope.entity_gid,
+            Cust_Group_Gid: 0,
+            Cust_Group_Code: 0,
+            Cust_Group_Name: '',
+            Query_Limit: ' 1,1000'
+        }
+
+        var custgrpddl = testService.getcustgrp(data)
+        custgrpddl.then(function(result) {
+                $scope.mullti = [];
+                $scope.mullti = result.data.DATA;
+                if ($scope.selectedcustgrp != undefined) {
+                    textvalue($scope.selectedcustgrp)
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+
+        var get_employ = testService.getprod('100', '')
+        get_employ.then(function(result) {
+                $scope.prodnme = [];
+                $scope.prodnme = result.data.DATA;
+                if ($scope.selectedcustgrp != undefined) {
+                    textvalue($scope.selectedcustgrp)
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+
+        $scope.selectEntity = function(data) {
+            for (var i = 0; i < $scope.empsmry.length; i++) {
+                if ($scope.empsmry[i].isChecked) {
+                    $scope.bulksbmtshw = false;
+                    $scope.empsmry.allItemsSelected = false;
+                    return;
+                } else {
+                    $scope.bulksbmtshw = true;
+                    $scope.shwrej = true;
+                    $scope.shwbulkrej = false;
+                    $scope.hdeapr = true;
+                    $scope.bulk_reject_data= true;
+                    $scope.empsmry.allItemsSelected = false;
+                }
+            }
+            $scope.empsmry.allItemsSelected = false;
+        };
+
+        $scope.review_status = [{
+            status: "YES",
+            value: 'Y'
+        }, {
+            status: "NO",
+            value: 'N'
+        }]
+
+        $scope.loading();
+        loaddata();
+        loadstate();
+        $scope.endloading()
+
+        function loadstate() {
+            var data = {
+                "Parms": {
+                    "Classification": {
+                        entity_gid: [$scope.entity_gid]
+                    },
+                    "Filter": {
+                        State_gid: ""
+                    }
+                }
+            }
+
+            var data_in = {
+                Subtype: 'MAKER',
+                Type: 'DDL',
+                Emp_Gid: $scope.emp_gid,
+                data: data
+            };
+            getstatenme(data_in);
+        }
+
+        function getstatenme(data_in) {
+            var get_state = testService.getstate(data_in)
+            get_state.then(function(result) {
+                    $scope.statesmry = result.data.DATA;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+
+        function loaddata() {
+            var data = {
+                "Params": {
+                    "FILTER": {
+                        Campaign_Id: '',
+                        Customer_Group_Gid: '',
+                        Product_Gid: '',
+                        Valid_From: '',
+                        Valid_To: '',
+                        Status: 'PENDING'
+                    },
+                    "CLASSIFICATION": {
+                        Entity_Gid: [$scope.entity_gid]
+                    }
+                }
+            }
+
+            var data_int = {
+                Sub_Type: 'SUMMARY_PENDING',
+                Type: 'SUMMARY',
+                Group: 'SUMMARY',
+                Employee_Gid: $scope.emp_gid,
+                Limit: 1500,
+                data: data
+            };
+            prodmapsm(data_int);
+        }
+
+        function prodmapsm(data_int) {
+            var get_prodmap = testService.prodmapsmry(data_int)
+            get_prodmap.then(function(result) {
+                    $scope.maintable = result.data.DATA;
+                    $scope.empsmry = $scope.maintable
+                    $scope.pageLength = $scope.empsmry.length;
+                    $scope.Totalpages = Math.ceil($scope.empsmry.length / $scope.itemsPerPage);
+                    $scope.pageLength = $scope.empsmry.length;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                .finally();
+        };
+    }
+]);
+
+myApp.service("testService", function($http) {
+    this.prodmapsmry = function(custid) {
+        var respons = $http.post(Appname + "/pmapsmry/",
+            custid
+        );
+        return respons;
+    }
+    this.getdrpdwn = function(custid) {
+        var respons = $http.post(Appname + "/compgn/",
+            custid
+        );
+        return respons;
+    }
+    this.getcustgrp = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.getprod = function(lmt, prodnme) {
+        var response = $http.get(Appname + "/prodgett/", {
+            params: {
+                "Limit": lmt,
+                "Product_Name": prodnme
+            }
+        });
+        return response;
+    }
+    this.getstate = function(custid) {
+        var respons = $http.post(Appname + "/stateget/",
+            custid
+        );
+        return respons;
+    }
+});
+</script>
+{% endblock %}

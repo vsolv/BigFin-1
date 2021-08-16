@@ -1,0 +1,1889 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}PR Approved Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+<link href="{% static 'Content/font-awesome-4.1.0.css' %}" rel="stylesheet">
+<link href="{% static 'Content/robotofonttext400300.css' %}" rel="stylesheet">
+<link href="{% static 'Content/textangular.css' %}" rel="stylesheet">
+<script src="{% static 'Scripts/Core/textAngular-rangy.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular-sanitize.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular.js' %}"></script>
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="prApproved" ng-controller="CtrlprApproved" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PR Approved Summary</h4>
+            </div>
+        </div>
+            <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewnotepad" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Note Pad</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <div text-angular="text-angular" id="con"  name="htmlcontent" ng-focus="displaynamechng('content_flag')" ng-model="htmlcontent" ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>PR NO</label>
+                    <input type="text" ng-model="prno" letter-numbers maxlength="64>=1" ng-required="value">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Commodity Name</label>
+                    <input type="text" ng-model="commo" letter-numbers maxlength="64>=1" ng-required="value">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Branch Name</label>
+                    <input type="text" ng-model="branch" letter-numbers maxlength="64>=1" ng-required="value">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Supplier Name</label>
+                    <input type="text" ng-model="supp_1" letter-numbers maxlength="64>=1" ng-required="value">
+                </md-input-container>
+            </div>
+            <div class="col-md-12 text-right">
+                <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:0px" ng-click="getpoheader('search')"
+                           ng-disabled="">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <form name="demoForm">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>PR Number</th>
+                            <th>Product Name</th>
+                            <th>Commodity Name</th>
+                            <th>Branch Name</th>
+                            <th>Supplier Name</th>
+                            <th>MEP Number</th>
+                            <th>Request Quantity</th>
+                            <th>Delivery Quantity</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-class="{selected: emp.isChecked}" ng-repeat="emp in listproductnamepo">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{emp.prheader_no}}</td>
+                            <td class="text-center">{{emp.product_name}}</td>
+                            <td class="text-center">{{emp.commodity_name}}</td>
+                            <td class="text-center">{{emp.branch_name}}</td>
+                            <td class="text-center">
+                                {{emp.Supplier_code}}--{{emp.supplier_name}}--{{emp.supplier_branchname}}
+                            </td>
+                            <td class="text-right" ng-hide="true">{{emp.supplierproduct_unitprice}}</td>
+                            <td class="text-center">{{emp.prheader_mepno}} {{emp.supplierproduct_dts}}</td>
+                            <td ng-hide="true" ng-if="emp.supplierproduct_dts=='Y' "
+                                ng-class="emp.supplierproduct_dts=='Y' ? 'text-success':''">
+                                DTS
+                            </td>
+                            <td ng-hide="true" ng-if="emp.supplierproduct_dts=='N' "
+                                ng-class="emp.supplierproduct_dts=='N' ? 'info':'danger'">
+                                NON-DTS
+                            </td>
+                            <td class="text-right">
+                                {{emp.prdetails_qty}}
+                            </td>
+                            <td align="center">
+                                <button class="btn btn-success" ng-click="ccbs_popup(emp)">
+                                    Add Quantity
+                                    <md-tooltip>Add Quantity</md-tooltip>
+                                </button>
+                            </td>
+                            <td><input ng-click="selectEntity(emp)"
+                                                       ng-model="emp.isChecked"
+                                                       type="checkbox"
+                        ></td>
+                            <!-- <td class="text-right">{{emp.prdetails_qty-emp.prdetails_qty1}}</td> -->
+                            <td align="right" ng-hide="true">
+                                <form name="demoForm_form" novalidate>
+                                    <input align="right" name="qty" type="text" maxlength="4"
+                                           ng-model="emp.prdetails_qty1" ng-init="emp.prdetails_qty1=0"
+                                           ng-disabled="addfun" numbers-only class="form-control" ng-change="emp.prdetails_qty1<=emp.remaining_qty ||
+                                                  emp.prdetails_qty1 == '' ||
+                                                  emp.prdetails_qty1 == undefined ||
+                                                  emp.prdetails_qty1 == null
+                                                   ?
+                                                  emp.prdetails_qty1=emp.prdetails_qty1:
+                                                  emp.prdetails_qty1=0 " required>
+                                </form>
+                            </td>
+                            <td style="width:100px" align="center" ng-hide="true">
+                                <div class="btn-group btn-group-sm" aria-label="Basic example">
+                                    <button type="button" ng-click="emp.prdetails_qty1<emp.remaining_qty ?
+                                            emp.prdetails_qty1=(emp.prdetails_qty1*1)+(1*1)  : '' "
+                                            class="btn btn-secondary" style="background-color:green;color:white;
+                                            border-color:green">
+                                        +{{emp.prdetails_qty1}}
+                                    </button>
+                                    <button type="button" ng-click="emp.prdetails_qty1>0 ?
+                                            emp.prdetails_qty1=(emp.prdetails_qty1*1)-(1*1) : '';
+                                            " class="btn btn-secondary" style="background-color:white;color:green;
+                                            border-color:green">
+                                        -
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-right" ng-hide="true">{{emp.hsn_igstrate}}</td>
+                            <td class="text-right" ng-model="emp.tot" ng-if="emp.prdetails_qty1!=undefined"
+                                ng-hide="true">
+                                    <span ng-model="emp.tot">
+                                        {{
+                                emp.prdetails_qty1*emp.supplierproduct_unitprice+
+                                (emp.prdetails_qty1*emp.supplierproduct_unitprice*
+                                emp.hsn_igstrate/100) |number :2
+                                }}
+                                    </span>
+                            </td>
+                            <td ng-if="emp.prdetails_qty1==undefined" ng-hide="true"></td>
+                            <td ng-hide="true">
+                                <input type="checkbox" ng-model="emp.checked" ng-click="checkbox(emp)"/>
+                            </td>
+                            <td ng-hide="true">
+                                <!--                            ng-class="custo.customer_isactive=='Y'? 'editlink':''"-->
+                                <button class="btn btn-success" ng-init="emp.add_button=0;"
+                                        ng-model="emp.add_button" ng-click="gotoDetails(emp);
+                                    emp.remaining_qty=emp.remaining_qty-emp.prdetails_qty1;
+                                    emp.prdetails_qty1=0;
+                                    " ng-disabled="emp.prdetails_qty1*1>0 &&
+                                    (emp.remaining_qty*1-emp.prdetails_qty1*1-emp.add_button*1+1)>0
+                                    ? false : true">
+                                    <!--                                {{emp.prdetails_qty1}}-->
+                                    <!--                                {{add_dis}}-->
+                                    ADD
+                                </button>
+                            </td>
+                        </tr>
+                        <tr ng-show="listproductnamepo.length ==  0">
+                            <td class="warning" colspan="21">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <td colspan="7">
+                                    <ul uib-pagination total-items="Total_Length" ng-model="currentPage"
+                                        max-size="maxSize" ng-change="getpoheader()" class="pagination-sm"
+                                        boundary-links="true" items-per-page="itemsPerPage"></ul>
+                                </td>
+                                <td>
+                                    <md-input-container class="md-block inputcontainer">
+                    <label>Retired Remarks</label>
+                    <input id="prremarksapp" maxlength="56" letter-Only ng-change="approvelreject=''"
+                        ng-model="Retired_remarks" />
+                </md-input-container>
+                                <md-button class="btn btn-info custbutton" ng-click="Save()"
+                                           ng-disabled="demoForm.$dirty && demoForm.$invalid">Retired
+                                    <md-tooltip>Retired</md-tooltip>
+                                </md-button>
+
+                                </td>
+                            </div>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <md-subheader class="md-accent">
+                <h4>PO Aggregated Summary :</h4>
+            </md-subheader>
+        </div>
+        <div class="modal fade" id="potermview_modal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel1">
+                                <strong>PO TEMPLATE Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="col-md-12">
+                                <md-input-container class="md-block inputcontainer">
+                                    <md-radio-group layout="row" ng-change="check_radio()" ng-model="radio_data">
+                                        <md-radio-button value="P"><b>Product Template</b></md-radio-button>
+                                        <md-radio-button value="S"><b>Service Template</b></md-radio-button>
+                                        <md-radio-button value="N"><b>Click To Add New Template</b></md-radio-button>
+                                    </md-radio-group>
+                                </md-input-container>
+                                <br>
+                                <div ng-hide="create_temp" ng-repeat="tempobj in fulltemplate">
+                                    <input type="checkbox" ng-model="tempobj.Selected"/>
+
+                                    <span style="margin-right:12px">{{tempobj.potermstemplate_desc}}</span>
+                                </div>
+                                <div ng-show="create_temp">
+                                    <form name="potemp">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>New Template</label>
+                                            <input ng-model="new_template" autocomplete="off" required/>
+                                        </md-input-container>
+                                    </form>
+                                    <md-button class="md-raised custbutton" ng-if="potemp.$valid"
+                                               ng-click="addintable()">Submit
+                                        <md-tooltip>Submit</md-tooltip>
+                                    </md-button>
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                        <thead class="header">
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Template(s)</th>
+                                            <th>Delete</th>
+                                        </tr>
+                                        </thead>
+                                        <tr ng-repeat="obj in Add_Templates">
+                                            <td class="text-center">{{$index + 1}}</td>
+                                            <td class="text-center">{{obj.new_template}}</td>
+                                            <td align="center"><a href="" ng-click="deletetemp($index)"><i
+                                                    class="material-icons"
+                                                    style="material-icons.line-height:3px">delete</i></a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <br>
+                                <form name="form_name">
+                                    <div class="col-md-6" ng-hide="create_temp">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>PO Term Name</label>
+                                            <input type="text" ng-model="po_name" letter-numbers autocomplete="off"
+                                                   maxlength="64"
+                                                   required/>
+                                        </md-input-container>
+                                    </div>
+                                </form>
+                                <form name="form_name_1">
+                                    <div class="col-md-6" ng-show="create_temp">
+                                        <md-autocomplete md-clear-button="true" md-floating-label="PO Template Name"
+                                                         md-item-text="item.poterms_name" md-input-maxlength=126
+                                                         md-min-length=0
+                                                         md-items="item in getpoterm(searchText)" md-no-cache="true"
+                                                         md-search-text="searchText" md-selected-item="ddlpoterms"
+                                                         required>
+                                            <md-item-template>
+                                                <span md-highlight-text="searchText"> {{item.poterms_name}} </span>
+                                            </md-item-template>
+                                            <md-not-found>
+                                                No Template matching "{{searchText}}" were found.
+                                            </md-not-found>
+                                        </md-autocomplete>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" align="center">
+                            <md-button class="md-raised custbutton" ng-if="form_name.$valid" ng-click="submitclck()">
+                                Submit
+                            </md-button>
+                            <md-button class="md-raised custbutton" ng-show="create_temp" ng-if="form_name_1.$valid"
+                                       ng-click="submitclck_temp()">
+                                Submit
+                            </md-button>
+                            <md-button class="md-raised" data-dismiss="modal">
+                                close
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false" id="imdiate_view" role="dialog" style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>view</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <img src="{{file_path }}" style="width:870px;height:500px"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="potermview_template" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>VIEW TEMPLATE Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="col-md-12">
+                                <br>
+                                <div ng-repeat="tempobj in slectedtemplate">
+                                    <span style="margin-right:12px">{{tempobj.potermstemplate_desc}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" align="center">
+                            <md-button class="md-raised" data-dismiss="modal">
+                                close
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <marquee behavior="scroll" direction="left" onmousedown="this.stop();" onmouseup="this.start();">
+            <h5>Note : Choose the Approperiate Data from PR Aggregate Summary</h5>
+        </marquee>
+        <br>
+        <div class="row">
+            <div class="modal-body popup-body">
+                <form id="create" method="post" name="prform">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="sub_supplier_clear_button"
+                                             md-floating-label="Supplier Name" md-item-text="item.supplier_name"
+                                             md-input-maxlength=126 md-min-length=0
+                                             md-items="item in getsupper(searchText2)"
+                                             md-no-cache="true" md-search-text="searchText2"
+                                             md-selected-item="chk.ddlstatus"
+                                             md-selected-item-change="supplierclick(item)" required>
+                                <md-item-template>
+                                    <span md-highlight-text="searchText2">{{item.supplier_name}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No dispatch matching "{{searchText2}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3" style="margin-top:34px">
+                            Supplier Name :
+                            <span style="color:#534fd9;font-size:13px">
+                                {{chk.ddlstatus.supplier_name}}--{{chk.ddlstatus.Supplier_code}}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="true" md-floating-label="Choose Approver"
+                                             md-input-maxlength=126 md-item-text="item.employee_name"
+                                             md-items="item in getcust(searcheployee)" md-min-length=0
+                                             md-no-cache="true"
+                                             md-search-text="searcheployee" md-selected-item="chk.lim"
+                                             required>
+                                <md-item-template>
+                                    <td md-highlight-text="searcheployee" ng-value="item.employee_gid">
+                                        <code>{{item.employee_code}}</code>
+                                        {{item.employee_name}}
+                                        <span>{{&nbsp;&nbsp;&nbsp;&nbsp;}}</span>
+                                        <span ng-if="item.delmat_limit > 0">
+                                            <code>{{item.delmat_limit}}</code>
+                                        </span>
+                                        <span ng-if="item.delmat_limit == undefined">
+                                            {{item.delmat_limit}}
+                                        </span>
+                                    </td>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Approver matching "{{searchText}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+     <div class="col-md-3" id="uploadFile" ng-show="shwchoosefiles">
+                <input type="file" multiple name="files" minsize="500" style="margin-top: 30px;"
+                       onchange="angular.element(this).scope().imageUpload(event)" id="file"/>
+            </div>
+                <div class="col-md-3" class="text-right" ng-show="shwdelete">
+                    <b>All Files</b>
+                    <span class="editlink" onclick="clearallFile('uploadFile')" ng-show="shwallremve" ng-click="clk()">
+                        <span class="material-icons removelink">delete</span>
+                        <md-tooltip>Remove All</md-tooltip>
+                    </span>
+                </div>
+                <table>
+                    <tr ng-repeat="e in filenames" id="viki" class="text-right" style="width:170px;height:5px;">
+                        <td class="text-left" aria-label="Close" class="btn" ng-click="viewimage($index)">
+                            {{$index+1}}. {{e}}
+                            <span class="editlink" ng-click="clearFileInputField($index,e)">
+                                <span class="material-icons" ng-hide="fileshidebtn">delete</span>
+                                <md-tooltip>Remove</md-tooltip>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-1">
+                                <md-button class="md-fab md-mini md-primary custbutton" ng-click="addtermsandcond(pr)">
+                                    <md-icon>add</md-icon>
+                                    <md-tooltip>Create New Terms and Conditions</md-tooltip>
+                                </md-button>
+                            </div>
+                            <div class="col-md-3">
+                                <md-autocomplete md-clear-button="true" md-floating-label="Term And Condition"
+                                                 md-item-text="item.poterms_name" md-input-maxlength=126 md-min-length=0
+                                                 md-items="item in getcond(searchText3)" md-no-cache="true"
+                                                 md-search-text="searchText3" md-selected-item="chk.ddlstatus1"
+                                                 md-selected-item-change="ccbsglno(chk)" required>
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText3"> {{item.poterms_name}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Term matching "{{searchText2}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div class="col-md-1" style="margin-top:25px">
+                                <a title="" align="center" style='cursor: pointer; text-decoration:none;'
+                                   ng-click="viewpo()">
+                                    <i class="material-icons">remove_red_eye</i>
+                                    <md-tooltip>View Term Templates</md-tooltip>
+                                </a>
+                            </div>
+                            <div class="col-md-2">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>From Date</label>
+                                    <md-datepicker md-hide-icons="calendar" ng-model="chk.searchquery_StartDate"
+                                                   md-min-date="minDate" required></md-datepicker>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-2">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>To Date</label>
+                                    <md-datepicker ng-model="chk.invdate1" md-hide-icons="calendar"
+                                                   md-min-date="chk.searchquery_StartDate" required>
+                                    </md-datepicker>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3">
+                                <md-autocomplete md-clear-button="true" md-floating-label="Branch Name"
+                                                 md-input-maxlength=126 md-item-text="item.branch_name"
+                                                 md-items="item in getbranch(searchText1)" md-min-length=0
+                                                 md-no-cache="true"
+                                                 md-search-text="searchText1" md-selected-item="chk.branch_name"
+                                                 md-selected-item-change="ACselectchange(item)" required>
+                                    <md-item-template>
+                                        <td md-highlight-text="searchText1">
+                                            {{item.branch_name}}-{{item.branch_code}}
+                                        </td>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>On Order Acceptance</label>
+                                <input numbers-only maxlength="3" ng-model="chk.orderaccept">
+                            </md-input-container>
+                            </div>
+                            <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>On Delivery</label>
+                                <input numbers-only maxlength="3" ng-model="chk.delivery">
+                            </md-input-container>
+                            </div>
+                            <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>On Installation</label>
+                                <input numbers-only maxlength="3" ng-model="chk.installation">
+                            </md-input-container>
+                            </div>
+                            <div class="col-md-1" style="margin-top:16px">
+                            <span title="Add a Note" ng-click="notepad(chk)" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                        </span>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <div class="row table-responsive">
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+                            <!-- <form name="demoForm"> -->
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                <thead class="header">
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Product Name</th>
+                                    <th>Product qty</th>
+                                    <th>Supplier unit price</th>
+<!--                                    <th>Tax Percent</th>-->
+<!--                                    <th>Tax Amount</th>-->
+                                    <th>Po Amount</th>
+<!--                                    <th>Po Total</th>-->
+                                    <th>Commodity Name</th>
+                                    <th>AMC(%)</th>
+                                    <th>Delivery Period</th>
+                                    <th>Image Upload</th>
+                                    <th>Delivery Details</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="po in poaggre_grid">
+                                    <td>
+                                        <center>{{$index+1}}</center>
+                                    </td>
+                                    <td class="text-center">{{po.Product_name}}</td>
+                                    <td class="text-center">{{po.Total_qty}}</td>
+                                    <td class="text-center">{{po.supplier_unit_price}}</td>
+<!--                                    <td class="text-center">{{po.tax_percent}}</td>-->
+<!--                                    <td class="text-center">{{po.tax_amount}}</td>-->
+<!--                                    <td class="text-center">{{po.po_amount}}</td>-->
+                                    <td class="text-center">{{po.podetails_totalamount|number:2}}</td>
+                                    <td class="text-center">{{po.commodity}}</td>
+                                    <td class="text-center">
+                                        <form name="demoForm_form">
+                                            <input align="right" style="width:102px" name="qty" type="text"
+                                                ng-model="po.podetails_amcvalue" class="form-control"
+                                                 numbers-only>
+                                        </form>
+
+                                    </td>
+                                    <td class="text-center">
+                                        <form name="demoForm_form">
+                                            <input align="right" style="width:102px" name="qty" type="text"
+                                                ng-model="po.podetails_deliveryperiod" class="form-control"
+                                                 numbers-only>
+                                        </form>
+
+                                    </td>
+                                    <td>
+                                        <input type="file" ng-init="po.fileinput = {{$index}}"
+                                               ng-model="po.fileinput" name="files" base-sixty-four-input minsize="500"
+                                               style="width:140px;" id="file_cwip{{$index}}"/>
+                                        <md-checkbox ng-model="sum.selected" ng-class="md-warn"
+                                                     ng-true-value="'true'" ng-false-value="'false'"
+                                                     ng-change="change_invoice($index)" type="checkbox">
+                                        </md-checkbox>
+                                    </td>
+                                    <td ng-click="delivery_details(po)" class="text-center">
+                                        <i class="  material-icons" style="color:#297338;font-size:31px;">
+                                            local_shipping
+                                        </i>
+                                    </td>
+                                    <td class="text-center">
+                                            <span>
+                                                <i class="material-icons" class='btn btn-danger'
+                                                   ng-click="removeddl(po,$index)"
+                                                   style="font-size:30px;color:#cc0000">
+                                                    delete_forever
+                                                </i>
+                                                <md-tooltip>Remove Cart</md-tooltip>
+                                            </span>
+                                    </td>
+                                </tr>
+                                <tr ng-show="poaggre_grid.length ==  0">
+                                    <td class="warning" colspan="10">
+                                        No Records Found.
+                                    </td>
+                                </tr>
+                                </tbody>
+                                <span style="display: none;">Total: {{ getInvTotal() }}</span>
+                                <tfoot>
+                                <tr>
+                                    <td>
+                                        Total
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+<!--                                    <td>{{Amount_todb_sum | number:2}}</td>-->
+                                    <td></td>
+<!--                                    <td>{{taxamt | number:2}}</td>-->
+<!--                                    <td>{{poamt_ | number:2}}</td>-->
+                                    <td class="text-right"> {{totalpoamt_ | number:2}}</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-12 text-right">
+            <md-button href="po_maker" class="md-raised">Back
+                <md-tooltip>Back</md-tooltip>
+            </md-button>
+            <md-button class="md-raised md-warn" ng-click="submitfun(poaggre_array,chk)" ng-disabled="prform.$invalid">
+                submit
+                <md-tooltip>Submit</md-tooltip>
+            </md-button>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'prheader_ccbs'"></div>
+        </div>
+        </form>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    function clearallFile(tagId) {
+        document.getElementById(tagId).innerHTML =
+            document.getElementById(tagId).innerHTML;
+    }
+</script>
+<script>
+    var myApp = angular.module('prApproved', ['ngMaterial', 'ui.bootstrap', 'ngMessages', 'AppCommon','textAngular'])
+        .config(function ($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+    myApp.run(function ($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function (date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+
+    myApp.directive('letternumbers', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z. ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+    myApp.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            link: function (scope, element, attrs) {
+                element.bind('change', function () {
+                    $parse(attrs.fileModel).assign(scope, element[0].files)
+                    scope.$apply();
+                });
+            }
+        };
+    }]);
+
+    myApp.directive('numbersOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9]/g, '');
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+    myApp.controller('CtrlprApproved', ['$scope', 'ApprovedtService', '$mdDialog', 'SerCommon', '$mdToast',
+        '$rootScope', '$window', '$filter', '$interval', '$timeout', '$element','$http','$q',
+        function ($scope, ApprovedtService, $mdDialog, SerCommon, $mdToast, $rootScope, $window, $filter,
+            $interval, $timeout, $element,$http,$q) {
+
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.currentPage2 = 1;
+            $scope.maxSize2 = 3;
+            $scope.itemsPerPage2 = 10;
+            $scope.currentPage1 = 1;
+            $scope.maxSize1 = 3;
+            $scope.itemsPerPage1 = 10;
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+            $scope.today1 = detail.date;
+             $scope.create_temp = false;
+
+            $scope.check_radio = function () {
+            $scope.ddlpoterms = "";
+            $scope.po_name = '';
+            $scope.Add_Templates = [];
+            $scope.new_template = "";
+                if ($scope.radio_data == "P") {
+                    var e = $scope.radio_data;
+                    $scope.create_temp = false;
+                    getfulltemplate(e)
+                } else if($scope.radio_data == "S") {
+                    var e = $scope.radio_data;
+                    $scope.create_temp = false;
+                    getfulltemplate(e)
+                }
+                 else {
+                    var e = $scope.radio_data;
+                    $scope.create_temp = true;
+                }
+            }
+
+
+
+            $scope.viewimage = function (e) {
+                $scope.file_path = $scope.stepsModel[e];
+                var model = modalshow('imdiate_view');
+            }
+
+
+     $scope.deleted_files = [];
+            $scope.clearFileInputField = function (e,file_name) {
+                $scope.file_imglength = document.getElementById('file').files.length;
+                for (i = 0; i < $scope.file_imglength; i++) {
+                    if (i == e) {
+                        $scope.filenames.splice(i, 1);
+                        var file_img = document.getElementById('file').files[i];
+
+                $scope.deleted_files.push({"file_names":file_name});
+
+                    }
+
+                }
+            }
+
+
+
+
+
+$scope.Add_Templates = [];
+            $scope.addintable = function(){
+
+                        if ($scope.new_template != undefined) {
+                var movie = [];
+                movie.new_template = $scope.new_template;
+                $scope.Add_Templates.push(movie);
+                $scope.new_template = null;
+            }
+
+            }
+            $scope.deletetemp = function(index){
+            $scope.Add_Templates.splice(index, 1);
+            }
+
+
+        $scope.selectEntity = function(e){
+<!--var f = e.prdetails_gid;-->
+<!--let index = $scope.listproductnamepo.findIndex( record => record.isChecked === false );-->
+<!--for (i = 0; i < $scope.listproductnamepo.length; i++) {-->
+
+
+<!--if(index == i){-->
+<!--$scope.listproductnamepo[i].isChecked = true;-->
+<!--}-->
+
+<!--else{-->
+<!--$scope.listproductnamepo[i].isChecked = false;-->
+<!--}-->
+
+<!--}-->
+
+        }
+
+
+
+
+         $scope.notepad = function(){
+         if($scope.file_path_notepad == ' '){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad == undefined){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad){
+                      var data = {
+                        "Filename": $scope.file_path_notepad
+                    }
+                    var getdept_name = ApprovedtService.get_file_read(data)
+                    getdept_name.then(function(result) {
+                    $scope.htmlcontent = result.data.file_path
+                     modalshow('viewnotepad');
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally();
+                }
+
+                else{
+                 modalshow('viewnotepad');
+                }
+        }
+
+
+
+
+
+
+        $scope.Save = function() {
+
+            for(i=0;i<$scope.listproductnamepo.length;i++){
+                if($scope.listproductnamepo[i].isChecked==true){
+                    $scope.prheader_gid=$scope.listproductnamepo[i].prheader_gid;
+                }
+             }
+
+        var data = {"params":{
+                     "status_pr": 'RETIRED',
+                    "prheader": $scope.prheader_gid,
+                    "lsremaks": $scope.Retired_remarks,
+                    "empname": ''
+}
+                }
+
+                var set_state = ApprovedtService.trnapp(data)
+                set_state.then(function (result) {
+
+                        var approval = JSON.parse(result.data)
+
+                    if (approval == "SUCCESS") {
+                            alert(approval)
+                            $window.location.href = "po_maker";
+                        }
+                        else{
+                         alert(approval);
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+
+
+
+
+
+
+        }
+
+            function getfulltemplate(e) {
+                var data = {
+                    "Params": {
+                        "DETAIL": {
+                            "potermstemplate_type": e
+                        }
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+                var data = {
+                    "Action": "GET_ALLTEMPLATE",
+                    "Type": "PO_TEMPLATE",
+                    "DETAIL": data,
+                }
+
+                var set_state = ApprovedtService.set_poterms(data)
+                set_state.then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.fulltemplate = result.data.DATA;
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            }
+            $scope.addtermsandcond = function () {
+                $scope.radio_data = "P"
+                var e = $scope.radio_data;
+                modalshow('potermview_modal');
+                getfulltemplate(e)
+            }
+
+            $scope.shwallremve = true;
+            $scope.fileshidebtn = false;
+            $scope.shwchoosefiles = true;
+            $scope.clk = function () {
+                $scope.filenames = [];
+                $scope.shwchoosefiles = true;
+                $scope.shwdelete = false;
+            }
+
+            $scope.stepsModel = [];
+            $scope.shwdelete = false;
+            $scope.filenames = [];
+            $scope.imageUpload = function (event) {
+                $scope.filenames = [];
+                $scope.shwchoosefiles = false;
+                $scope.shwdelete = true;
+                var files = event.target.files; //FileList object
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var reader = new FileReader();
+                    reader.onload = $scope.imageIsLoaded;
+                    reader.readAsDataURL(file);
+                    $scope.filenames.push(file.name);
+                }
+            }
+            $scope.imageIsLoaded = function (e) {
+                $scope.$apply(function () {
+                    $scope.stepsModel.push(e.target.result);
+                });
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            $scope.viewpo = function () {
+                modalshow('potermview_template');
+                var data = {
+                    "Params": {
+                        "DETAIL": {
+                            "Po_termsgid": $scope.chk.ddlstatus1.poterms_gid
+                        }
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+                var data = {
+                    "Action": "VIEW_ALLTEMPLATE",
+                    "Type": "PO_TERMSVIEW",
+                    "DETAIL": data,
+                }
+
+                var set_state = ApprovedtService.set_poterms(data)
+                set_state.then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.slectedtemplate = result.data.DATA;
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            }
+
+            $scope.submitclck_temp = function(){
+
+            $scope.fulltemp = [];
+            for(i=0;i<$scope.Add_Templates.length;i++){
+
+            if($scope.Add_Templates[i].new_template!= ''){
+            $scope.fulltemp.push($scope.Add_Templates[i].new_template)
+            }
+
+
+            }
+
+
+
+            var data = {
+                    "Params": {
+                        "DETAIL": {
+                            "Po_Gid": $scope.ddlpoterms.poterms_gid,
+                            "Po_templatetype": $scope.ddlpoterms.poterms_value,
+                            "Po_Details_Template": $scope.fulltemp
+                        }
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+                var data = {
+                    "Action": "INSERT",
+                    "Type": "PO_TERMS_TEMPLATE",
+                    "DETAIL": data,
+                }
+                var set_state = ApprovedtService.set_poterms(data)
+                set_state.then(function (result) {
+                        $scope.prodge = result.data.DATA[0];
+                        if ($scope.prodge == "SUCCESS") {
+                            alert($scope.prodge);
+                            $window.location.href = "prfinalapproval";
+                        } else {
+                            alert($scope.prodge);
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            };
+
+
+            $scope.submitclck = function () {
+                $scope.ary = [];
+                for (i = 0; i < $scope.fulltemplate.length; i++) {
+                    if ($scope.fulltemplate[i].Selected) {
+                        var ary = {
+                            "Gid": $scope.fulltemplate[i].potermstemplate_gid
+                        }
+                        $scope.ary.push(ary);
+                    }
+                }
+
+                var data = {
+                    "Params": {
+                        "DETAIL": {
+                            "Po_Name": $scope.po_name,
+                            "Po_Details_Gid": $scope.ary,
+                            "Po_Suppliergid": $scope.chk.ddlstatus.supplier_gid
+                        }
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+                var data = {
+                    "Action": "INSERT",
+                    "Type": "PO_TERMS",
+                    "DETAIL": data,
+                }
+                var set_state = ApprovedtService.set_poterms(data)
+                set_state.then(function (result) {
+                        $scope.prodge = result.data[0];
+                        if ($scope.prodge == "SUCCESS") {
+                            alert($scope.prodge);
+                            loadpoterm($scope.chk.ddlstatus.supplier_gid);
+                        } else {
+                            alert($scope.prodge);
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            };
+
+            $scope.empcode = detail.employee_code
+            $scope.empsmry = [];
+            $scope.maintable = [];
+            $scope.maintemp_data = [];
+            //$scope.count=0;
+            $scope.addfun = false;
+            $scope.poaggre_array = [];
+            $scope.poaggre_grid = [];
+            $scope.delivery_details_array = [];
+            $scope.total1 = 0;
+            $scope.vendor_array = [];
+            $scope.sub_supplier_clear_button = true;
+            $scope.ccbsdetailarray = [];
+            $scope.listproductnamepo = [];
+            //$scope.maintemp_data=[];
+            $scope.emp = [];
+            $scope.temparray = [];
+            $scope.POsupplier_list = [];
+            $scope.temparray = [];
+            $scope.img_files1 = {
+                "File_Name": "",
+                "File_Extension": "",
+                "File_Base64data": "",
+            };
+
+            $scope.product_suppl = []
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+            $scope.getpoheader = function (a) {
+                $scope.loading();
+                if(a=='search'){$scope.currentPage=1}
+                data = {
+                    "Params": {
+                        "filter": {
+                            "prheader_no": $scope.prno,
+                            "branch_name": $scope.branch,
+                            "commodity_name": $scope.commo,
+                            "supplier_name": $scope.supp_1,
+
+                            "Page_Index": $scope.currentPage - 1,
+                            "Page_Size": $scope.itemsPerPage
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_gid": ""
+                        },
+                        "type": "PO_DETAILS",
+                        "Action": "Get"
+                    },
+                }
+
+
+                var get_state = ApprovedtService.Pr_approvalget(data)
+                get_state.then(function (result) {
+                        if (result.data.MESSAGE == 'FOUND') {
+                            
+                            $scope.listproductnamepo = result.data.DATA;
+                            $scope.Total_Length = $scope.listproductnamepo[0].Total_Count;
+                        } else {
+                            $scope.listproductnamepo = [];
+                            // $scope.endloading();
+                        }
+                    })
+                    .finally($scope.endloading);
+            }
+
+            $scope.getpoheader()
+            $scope.ccbs_popup = function (emp) {
+                $scope.loading();
+                $scope.prheader_no = emp.prheader_no;
+                $scope.commodity = emp.commodity_name;
+
+                var data = {
+                    "Params": {
+                        "filter": {
+                            // "prheader_no": "",
+                            // "branch_name": "",
+                            // "commodity_name": "",
+                            // "Page_Index": $scope.currentPage - 1,
+                            // "Page_Size": $scope.itemsPerPage,
+                            "podetails_gid": emp.prdetails_gid
+                        },
+                        "type": "PO_DETAILS_CCBS",
+                        "Action": "Get"
+                    },
+                }
+                var get_state = ApprovedtService.Pr_approvalget(data)
+                get_state.then(function (result) {
+                        $scope.ccbsdetailarray = result.data.DATA;
+                        modalshow('mdl_present');
+
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            }
+
+            $scope.get_ccbs_total = function () {
+                var total = 0;
+                for (var i = 0; i < $scope.ccbsdetailarray.length; i++) {
+                    var product = $scope.ccbsdetailarray[i];
+                    if (product.ccbs_qty == undefined) {
+                        product.ccbs_qty = 0;
+                    }
+                    total = parseInt(total) + parseInt(product.ccbs_qty);
+                }
+                return total;
+            }
+
+            function javascript_abort() {
+                throw new Error('This is not an error. This is just to abort javascript');
+            }
+
+            function onlyUnique(value, index, self) {
+                return self.indexOf(value) === index;
+            }
+
+            $scope.insert_flag = 0;
+            $scope.ccbs_sub = function (ccbsdetailarray) {
+                $scope.loading();
+                $scope.c_gid = ccbsdetailarray[0].prheader_commodity_gid;
+                $scope.prheader_mepno=ccbsdetailarray[0].prheader_mepno;
+                $scope.Balance_in_MEP = -1;
+                $scope.prdetails_installationrequired = ccbsdetailarray[0].prdetails_installationrequired;
+                $scope.prdetails_capitalized = ccbsdetailarray[0].prdetails_capitalized;
+                if($scope.poaggre_grid.length>0){
+                    for(var i=0;i<$scope.poaggre_grid.length;i++){
+                        if($scope.poaggre_grid[i].commodity!=$scope.commodity)
+                            {   alert('Select the Same Commodity Name');
+                                $scope.endloading();
+                                javascript_abort();
+                            }
+                            // prheader_mepno
+                            if($scope.poaggre_grid[i].prheader_mepno!=$scope.prheader_mepno){
+                                alert('Select the Same MEP Number');
+                                $scope.endloading();
+                                javascript_abort();
+                            }
+                    }
+                }
+
+               
+                //  $scope.poaggre_array =ccbsdetailarray;
+                angular.forEach(ccbsdetailarray, function (clickvalue, clickkey) {
+                    $scope.insert_flag = 0
+
+                    if (clickvalue.ccbs_qty > 0) {
+                        angular.forEach($scope.poaggre_array, function (povalue, key) {
+                                if (clickvalue.prccbs_gid == povalue.prccbs_gid) {
+                                    povalue.ccbs_qty = clickvalue.ccbs_qty;
+                                    $scope.insert_flag = 1;
+                                    podata_unique();
+                                }
+                            
+                        });
+
+                        if ($scope.insert_flag == 0) {
+                            $scope.poaggre_array.push(clickvalue);
+                            $scope.product_suppl.push(clickvalue.product_gid);
+                            $scope.unique = $scope.product_suppl.filter(onlyUnique);
+                            $scope.unique.sort(function (a, b) {
+                                return a - b
+                            });
+                            podata_unique();
+                        }
+                    }
+                })
+                $scope.endloading();
+
+
+
+                if($scope.prheader_mepno!= null){
+
+                                var data = {
+                    "Params": {
+                        "Group":"PR_MEP",
+                        "Type": "Mep",
+                        "SubType": "PR_MEP_NUM",
+                        "FILTER": {
+                            "mepno": $scope.prheader_mepno,
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": ""
+                        }
+                    }
+                };
+                $scope.mepdata = [];
+                $scope.MEP_details = [];
+                $scope.Product_Details = [];
+                $scope.PR_MEPUtilized=0;
+                return $http.post(Appname + "/mep_number/", data)
+                    .then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.mepdata = result.data.DATA;
+                            $scope.Balance_in_MEP = $scope.mepdata.po_balance[0];
+                        } else {
+                            $scope.mepdata = [];
+                            alert('Not  Valid  MEP')
+                        }
+                    })
+                }
+            }
+
+            function podata_unique() {
+                $scope.poaggre_grid = [];
+                const grouped = groupBy($scope.poaggre_array, pet => pet.product_gid);
+                angular.forEach($scope.unique, function (uniquevalue, key) {
+                    var data = grouped.get(uniquevalue);
+                    var sum_qty = 0;
+                    angular.forEach(data, function (groupeddata, groupedkey) {
+                        sum_qty += parseInt(groupeddata.ccbs_qty);
+                    })
+                    $scope.poaggre_grid.push({
+                        "prheader_mepno":$scope.prheader_mepno,
+                        "delivery_details": data,
+                        "prdetails_installationrequired": $scope.prdetails_installationrequired,
+                        "prdetails_capitalized": $scope.prdetails_capitalized,
+                        "commodity": $scope.commodity,
+                        "Total_qty": sum_qty,
+                        "Product_name": data[0].product_name,
+                        "product_gid": data[0].product_gid,
+                        "total_quatity": sum_qty,
+                        "podetails_uom": data[0].uom_name,
+                        "supplier_unit_price": "0",
+                        "po_amount": "0",
+                        "tax_amount": "0",
+                        "tax_percent": "0",
+                        "podetails_totalamount": "0",
+                        "image": {
+                            "File_Name": "",
+                            "File_Extension": "",
+                            "File_Base64data": "",
+                        }
+                    })
+                });
+                getsupplier_data();
+            }
+
+            function groupBy(list, keyGetter) {
+                const map = new Map();
+                list.forEach((item) => {
+                    const key = keyGetter(item);
+                    const collection = map.get(key);
+                    if (!collection) {
+                        map.set(key, [item]);
+                    } else {
+                        collection.push(item);
+                    }
+                });
+                return map;
+            }
+
+            $scope.closefunction = function () {
+                modalhide('mdl_present');
+            }
+
+            function getsupplier_data() {
+                var data = {
+                    "Params": {
+                        "filter": {
+                            "product_gid": $scope.unique
+                        },
+                        "type": "SUPPLIER_PRODUCT_MAPPING",
+                        "Action": "Get"
+                    },
+                }
+
+                var get_supplier = ApprovedtService.Pr_approvalget(data)
+                get_supplier.then(function (result) {
+                        $scope.SupplierData = result.data.DATA;
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            }
+
+            $scope.getsupper = getsupplier1;
+
+            function getsupplier1(query) {
+                var result = $filter('filter')($scope.SupplierData, {
+                    'supplier_name': query
+                });
+                return result;
+            }
+
+            $scope.supplierclick = function (value) {
+                loadpoterm(value.supplier_gid)
+                var data = {
+                    "Params": {
+                        "filter": {
+                            "product_gid": $scope.unique,
+                            "supplier_gid": value.supplier_gid
+                        },
+                        "type": "SUPPLIER_PRODUCT_DETAIL",
+                        "Action": "Get"
+                    },
+                }
+                var get_supplier_price = ApprovedtService.Pr_approvalget(data)
+                get_supplier_price.then(function (result) {
+                        $scope.SupplierproductData = result.data.DATA;
+                        angular.forEach($scope.poaggre_grid, function (value, key) {
+                            var data = $filter('filter')($scope.SupplierproductData, {
+                                product_gid: value.product_gid
+                            }, 'exact')[0];
+                            value.supplier_unit_price = data.supplierproduct_unitprice
+                            value.tax_percent = data.hsn_igstrate;
+                            value.tax_amount = ((parseInt(value.Total_qty) * parseFloat(data
+                                .supplierproduct_unitprice)) * parseFloat(data
+                                .hsn_igstrate)) / 100;
+                            value.po_amount = (parseInt(value.Total_qty) * parseFloat(data
+                                .supplierproduct_unitprice));
+                            value.podetails_totalamount = (parseInt(value.Total_qty) *
+                                    parseFloat(data.supplierproduct_unitprice))
+                        })
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            }
+
+            $scope.getInvTotal = function () {
+                var sum = 0;
+                for (var i = 0; i < $scope.poaggre_grid.length; i++) {
+                    if ($scope.poaggre_grid[i].podetails_totalamount !== undefined && $scope.poaggre_grid[i]
+                        .podetails_totalamount !== "") {
+                        sum += parseFloat($scope.poaggre_grid[i].podetails_totalamount);
+                    }
+
+
+                }
+                $scope.totalpoamt_ = sum;
+                return sum;
+            }
+
+            $scope.allfile = true;
+            $scope.change_invoice = function (index) {
+                var file_img = document.getElementById('file_cwip' + index).files[0];
+                var img = new FormData();
+                img.append('file', file_img);
+                if (file_img != undefined) {
+                    $scope.type = '.' + file_img.name.split('.').pop();
+                    $scope.name = file_img.name;
+                    var img = new FormData();
+                    img.append('file', file_img);
+                }
+                var img_upld = ApprovedtService.imageup(img);
+                img_upld.then(function (res) {
+
+                    $scope.imagebase64 = res.data;
+                    $scope.img_files = {
+                        "File_Name": $scope.name,
+                        "File_Extension": $scope.type,
+                        "File_Base64data": $scope.imagebase64,
+                    };
+                    for (i = 0; i < $scope.poaggre_grid.length; i++) {
+                        if (i == index) {
+                            $scope.poaggre_grid[i].image = $scope.img_files
+                        }
+                    }
+                });
+            }
+
+            $scope.fileup_podet = function (index) {
+                $scope.prform.$invalid = true;
+                $scope.shwbtn = true;
+            }
+
+
+
+
+
+
+ $scope.file_path="";
+        $scope.file_count=0;
+        $scope.file_stored_data=[];
+        $scope.duplicate_images=1;
+        $scope.number_of_message=1;
+  $scope.fullfile = [];
+  $scope.img_files1 = [];
+        $scope.loaddata_ = function(file_img,img, callback) {
+                var deferred = $q.defer();
+                var promise = deferred.promise;
+                promise.then(function() {
+                    var file_img_length = document.getElementById('file').files.length;
+                    if(file_img_length!=0){
+                        for(l=0;l<file_img_length;l++){
+                            var file_img = document.getElementById('file').files[l];
+                            $scope.type = '.' + file_img.name.split('.').pop();
+                                    $scope.name = file_img.name;
+                            var file_name=file_img.name;
+                            $scope.new_file_name=file_img.name;
+                            var imgs = new FormData();
+                            imgs.append('file', file_img);
+                            imgs.append('name', file_name);
+                            $scope.duplicate_images=1;
+                            for(var p=0;p<$scope.deleted_files.length;p++){
+                                $scope.temp_file_names=$scope.deleted_files[p].file_names;
+                                if($scope.new_file_name==$scope.temp_file_names){
+                                    $scope.duplicate_images=0;
+                                    $scope.file_count=$scope.file_count+1;
+                                }
+                            }
+                            if(file_img!=undefined&&$scope.duplicate_images==1){
+                              $scope.loading();
+                                 var upload = ApprovedtService.imageup(imgs);
+                                 upload.then(function(result) {
+                                 if($scope.all_datas != ''){
+                                    $scope.all_datas= result.data;
+                                        $scope.img_files1 = {
+                                                "File_Name": $scope.name,
+                                                "File_Extension": $scope.type,
+                                                "File_Base64data": $scope.all_datas,
+                                            };
+                                            $scope.fullfile.push($scope.img_files1);
+
+                                    $scope.file_count=$scope.file_count+1;
+                                    $scope.file_status=1;
+                                    }
+                                    else{
+   $scope.file_status=2;
+                                    }
+
+
+
+                                    callback();
+                                }).finally($scope.endloading);
+                            }
+                            else{
+                                $scope.file_status=0;
+                                callback();
+                            }
+                        }
+                    }
+                     else{
+<!--                        alert("Please Attache File...");-->
+                        $scope.file_status=1;
+                        $scope.endloading();
+                        callback();
+                     }
+                }).then(function() {
+                    // callback();
+                });
+                deferred.resolve();
+
+        };
+
+
+
+
+
+            $scope.submitfun = function (poaggre_array, chk) {
+                    if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+                    $scope.htmlcontent = "";
+                    }
+                    if(chk.installation == undefined || chk.installation == "" ){
+                    chk.installation = 0;
+                    }
+                    if(chk.delivery == undefined || chk.delivery == "" ){
+                    chk.delivery = 0;
+                    }
+                    if(chk.orderaccept == undefined || chk.orderaccept == "" ){
+                    chk.orderaccept = 0;
+                    }
+                    var val = parseInt(chk.delivery) + parseInt(chk.installation) + parseInt(chk.orderaccept)
+                    if(val < 100 || val > 100){
+                    alert('Pay Mode Should Be on 100%');
+                    return false;
+                    }
+
+
+              var sum = 0;
+                for (var i = 0; i < $scope.poaggre_grid.length; i++) {
+                    if ($scope.poaggre_grid[i].podetails_totalamount !== undefined && $scope.poaggre_grid[i]
+                        .podetails_totalamount !== "") {
+                        sum += parseFloat($scope.poaggre_grid[i].podetails_totalamount);
+                    }
+                }
+                $scope.totalpoamt_ = sum;
+                if($scope.Balance_in_MEP >=0 ){
+                if($scope.totalpoamt_ > $scope.Balance_in_MEP){
+                alert('MEP Exceeds Limit')
+                return false;
+                }
+                }
+
+
+               $scope.loading()
+                if(poaggre_array[0].prheader_mepno==null){
+                    poheader_mepno = "";
+                }
+                else{
+                    poheader_mepno = poaggre_array[0].prheader_mepno;
+                }
+
+                $scope.prform.$invalid=true;
+
+
+                  var file_img = document.getElementById('file').files[0];
+            $scope.list_of_files= document.getElementById('file').files.length;
+            var img = new FormData();
+            var UPLOAD_FILE="";
+
+            if(file_img!=undefined){
+                $scope.file_status=0;
+                var file_name=file_img.name;
+
+                var filename = file_img.name;
+                var index = filename.lastIndexOf(".");
+                $scope.strsubstring = filename.substring(index, filename.length);
+
+                img.append('file', file_img);
+                img.append('name', filename);
+            }
+                $scope.loaddata_(file_img,img,function () {
+                if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
+                var filter_ = {
+                    "Params": {
+                        "filter": {
+                            "poheader_date": formatStringDate($scope.chk.invdate1, 'yyyy-mm-dd'),
+                            "supplier_gid": chk.ddlstatus.supplier_gid,
+                            "Emp_mail":chk.lim.employee_emailid,
+                            "teamandcont_gid": $scope.chk.ddlstatus1.poterms_gid,
+                            "total_amount": $scope.totalpoamt_,
+                            "poheader_onacceptance" : $scope.chk.orderaccept,
+                            "poheader_ondelivery" : $scope.chk.delivery,
+                            "poheader_oninstallation" : $scope.chk.installation,
+                            "amement_gid": 1,
+                            "vesion_gid": 1,
+                            "commodity_gid": poaggre_array[0].prheader_commodity_gid,
+                            "branch_gid": chk.branch_name.branch_gid,
+                            "poheader_mepno":poheader_mepno,
+                            "poheader_status": "Pending for next level to " + chk.lim.employee_code,
+                            "from_date": formatStringDate($scope.chk.searchquery_StartDate,
+                                'yyyy-mm-dd'),
+                            "to_date": formatStringDate($scope.chk.invdate1, 'yyyy-mm-dd'),
+                            "tran_to": chk.lim.employee_gid,
+                           "ref_name":'POMAKER',
+                    "podetails": $scope.poaggre_grid,
+                    "Header_img":$scope.fullfile,
+                    "Notepad" : $scope.htmlcontent
+                        },
+                        "type": "INSERT",
+                        "Action": "submit",
+                        "Subtype": "APPROVAL"
+                    },
+                }
+
+                var set_pofinal = ApprovedtService.PO_finalinsert(filter_)
+                set_pofinal.then(function (result) {
+                    if (result.data == 'SUCCESS') {
+                        alert("Inserted Successfully");
+                        $window.location.href = "po_maker";
+                        $scope.endloading()
+                    }
+                }, function () {
+                    alert('No data!.');
+                    $scope.endloading()
+                });
+                }
+            });
+            }
+
+
+
+
+            $scope.getcond = getcondition;
+            $scope.getpoterm = getpoterm;
+            $scope.PO_Terms = [{"poterms_name":"PRODUCTS","poterms_value":"P","poterms_gid":"1"},
+            {"poterms_name":"SERVICES","poterms_value":"S","poterms_gid":"2"}]
+              function getpoterm(query) {
+                var result = $filter('filter')($scope.PO_Terms, {
+                    'poterms_name': query
+                });
+                return result;
+            }
+
+            function getcondition(query) {
+                var result = $filter('filter')($scope.POTerms_Condt, {
+                    'poterms_name': query
+                });
+                return result;
+            }
+            loadpoterm(0)
+
+            function loadpoterm(e) {
+                var data = {
+                    "Params": {
+                        "DETAIL": {
+                            "Po_Suppliergid": e
+                        }
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+                var data = {
+                    "Action": "GET_ALLTERM",
+                    "Type": "PO_TERMS",
+                    "DETAIL": data
+                }
+
+                var set_state = ApprovedtService.set_poterms(data)
+                set_state.then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.POTerms_Condt = result.data.DATA;
+                        }
+                    }, function (err) {
+                        alert('No data!.');
+                    })
+                    .finally();
+            }
+
+
+
+            $scope.getbranch= function goto(query) {
+                       data = {
+                    "Table_name": "gal_mst_tbranch",
+                    "Column_1": "branch_gid,branch_code,branch_name",
+                    "Column_2": "",
+                    "Where_Common": "branch",
+                    "Where_Primary": "code",
+                    "Primary_Value": "",
+                    "Search_Column_Name":query,
+                    "Limits": 0 + "," + 30,
+                    "Order_by": "gid"
+                }
+
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.brncode = result.data.DATA;
+                        } else {
+                            $scope.brncode = [];
+                        }
+                        return $scope.brncode;
+                    });
+            }
+
+
+            //dropdown for appeoval
+            $scope.getcust =function gotocust(query) {
+               var data = {
+                    'commodity_gid': $scope.c_gid,
+                    "employee_name":"",
+                    "employee_detail":query,
+                    'Limit_Start': 0,
+                    'Limit_End': 50,
+                }
+                var params1 = {
+                    'params': data,
+                    'action': 'limit',
+                    'type': 'po_Dir_limit',
+                    'amount': 0,
+
+                }
+
+            return $http.post(Appname + "/approvalview/", params1)
+                    .then(function (data) {
+                        $scope.limitamt_copy = JSON.parse(data.data);
+                        return $scope.limitamt_copy;
+                    });
+
+
+            }
+
+
+
+
+
+
+        
+
+
+            $scope.delivery_details = function (a) {
+                $scope.DDL = a.delivery_details;
+                modalshow('delivery_details');
+            }
+
+            $scope.removeddl = function (array, $index) {
+                $scope.poaggre_grid.splice($index, 1);
+                // alert("Deleted ");
+            }
+
+              }  
+              
+              ]);
+               myApp.service("ApprovedtService", function ($http) {
+        this.imageup = function (custid) {
+            var respons = $http.post(Appname + "/imageconvert/",
+                custid, {
+                    transformRequest: angular.identity,
+                    headers: {
+                        'Content-Type': undefined
+                    }
+                }
+            );
+            return respons;
+        }
+        this.Pr_approvalget = function (data) {
+            var response = $http.post(Appname + "/Pr_approvalget/", data)
+
+            return response;
+        }
+
+        this.PO_finalinsert = function (filterdata) {
+            var response = $http.post(Appname + "/PO_finalinsert/", filterdata)
+            return response;
+        }
+        this.getdropdown = function (tablename) {
+            var responsee = $http.post(Appname + "/Dropdown_details/", {
+                params: {
+                    "tablename": tablename,
+                    "gid": 0,
+                    "name": ''
+                }
+            });
+            return responsee;
+        }
+      
+        this.set_poterms = function (data) {
+            var response = $http.post(Appname + "/setpoterms/", data)
+            return response;
+        }
+                this.trnapp = function (data) {
+
+            var response = $http.post(Appname + "/Prapproval_set/", data)
+
+            return response;
+        }
+        this.get_file_read = function (data) {
+            var response = $http.post(Appname + "/common_read_file/", data);
+            return response;
+        }
+    });
+
+</script>
+{% endblock %}

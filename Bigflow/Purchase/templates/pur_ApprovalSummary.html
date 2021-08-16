@@ -1,0 +1,513 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Approval {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App" ng-controller="Ctrl" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PR Approval Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>PR No</label>
+                        <input id="premarks" maxlength="256"  letter-Only ng-model="prheader_no" />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Supplier Name</label>
+                        <input type="text" ng-model="supp_1" letter-Only maxlength="64>=1">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Commodity Name</label>
+                        <input type="text" ng-model="commo" letter-Only maxlength="64>=1" ng-change="searchDetails(commo)">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-fab md-mini md-primary custbutton" style="margin-top:15px; margin-left:70px; "
+                        ng-click="getpoheader('search')" ng-disabled="">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                    md-progress="deferred">
+                    <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>PR No</th>
+                            <th>PR Date</th>
+                            <th>Commodity</th>
+                            <th>Supplier Name</th>
+                            <th>PR Raised By</th>
+                            <th>PR Status</th>
+                            <th>Amount</th>
+                            <th>File</th>
+                            <th>Action</th>
+                            <th>Tran History</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="prapp in prappheader">
+                            <td>
+                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                            </td>
+                            <td>{{prapp.prheader_no }}</a></td>
+                            <td>{{prapp.prheader_date| date:'dd-MMM-y'}}</td>
+                            <td>{{prapp.commodity_name}}</td>
+                            <td>{{prapp.Supplier_code}}--{{prapp.supplier_name}}--{{prapp.supplier_branchname}}</td>
+                            <td>{{prapp.employee_name}}</td>
+                            <td>{{prapp.prheader_status}}</td>
+                            <td align="right">{{prapp.prheader_totalamount |number:amount}}</td>
+                            <td> <a> <span class="editlink"
+                                        ng-click="prheader(prapp)">
+                                        <i class="material-icons">visibility</i>
+                                        <md-tooltip>View</md-tooltip>
+                                    </span></a></td>
+                            <td align="center">
+                                <a href="approvalview"> <span class="editlink"
+                                        ng-click="prviewapp(prapp.prheader_gid,prapp.prheader_status,prapp.prheader_commodity_gid,prapp.prheader_totalamount)">
+                                        <i class="material-icons">visibility</i>
+                                        <md-tooltip>View</md-tooltip>
+                                    </span></a>
+                            </td>
+                            <td class="text-center">
+                                <span title="Transaction History" ng-click="tran_history(prapp)" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                                </span>
+                            </td>
+
+                        </tr>
+                        <tr ng-show="prappheader.length ==  0">
+                            <td class="warning" colspan="10">
+                                No Records Found.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="11">
+                                <ul uib-pagination total-items="Total_Length" ng-model="currentPage" max-size="maxSize"
+                                    ng-change="getpoheader()" class="pagination-sm" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewprheader" role="dialog" style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> PR Header File(s) for {{prheadernum}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table
+                                        class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                        md-progress="deferred">
+                                        <thead class="header">
+                                            <tr>
+                                                <td>
+                                                    S.No
+                                                </td>
+                                                <td>File Name</td>
+                                                <td>Download File</td>
+                                                <td>View File</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="obj in prsummary1">
+                                                <td>
+                                                    <center>{{$index+1}}</center>
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.file_path}}
+                                                </td>
+                                                <td class="text-center">
+                                                    <span title="Download {{obj.file_path}}" class="editlink">
+                                                        <a class="material-icons"
+                                                            href="/common_downloadfile/?filename={{obj.file_path}}"
+                                                            target="_blank">get_app</a>
+                                                    </span>
+                                                </td>
+                                                       <td class="text-center">
+                                                    <span title="View {{obj.file_path}}"
+                                                          class="editlink">
+                                                        <a
+                                                           class="material-icons" onclick="clk()"
+                                                           ng-click="clkview(obj.file_path)"
+                                                           target="_blank">touch_app</a>
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+           <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewprfile" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Viewing {{filename}}</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-md-12 text-center">
+<span title="Zoom in">
+     <a href="" onclick="zoomin()" style="font-size:50px"><i style="font-size:50px" class="material-icons">zoom_in
+                        </i></a>
+</span>
+                                    <span title="Zoom Out">
+                        <a href="" onclick="zoomout()" style="font-size:50px"><i style="font-size:50px"
+                                                                                 class="material-icons">
+                            zoom_out
+                        </i></a>
+                                        </span>
+                                </div>
+                            </div>
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                       <img src="{{viewfilepath}}"
+            id="zooming" GFG="250">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+         <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewtranhistory" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> View Transaction History Against {{Number}} </strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table
+                                        class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                        md-progress="deferred">
+                                        <thead class="header">
+                                            <tr>
+                                                <td>
+                                                    S.No
+                                                </td>
+                                                <td>PR Header No</td>
+                                                <td>Transaction Date</td>
+                                                <td>Status</td>
+                                                <td>Employee Name</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="obj in viewtran">
+                                                <td>
+                                                    <center>{{$index+1}}</center>
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.prheader_no}}
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.Tran_End_Date |date:'dd-MMM-y HH:mm:ss'}}
+                                                </td>
+                                                <td class="text-center">
+                                                    {{obj.status}}
+                                                </td>
+                                                       <td class="text-center">
+                                                    {{obj.Approved_Name}}
+                                                </td>
+                                            </tr>
+
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+        function zoomin() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth + 150) + "px";
+        }
+        function zoomout() {
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (currWidth - 150) + "px";
+        }
+        function clk(){
+            var GFG = document.getElementById("zooming");
+            var currWidth = GFG.clientWidth;
+            GFG.style.width = (892) + "px";
+        }
+</script>
+<script>
+    var myApp = angular.module('App', ['ngMaterial', 'ui.bootstrap']).config(function ($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    myApp.directive('letterOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z./'-: ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+
+    myApp.controller('Ctrl', ['$scope', '$filter','$http', 'prapprovelservice', '$mdDialog', function ($scope, $filter,$http,
+        prapprovelservice, $mdDialog) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.maintable = [];
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employgid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+        $scope.employee_code = detail.employee_code;
+        $scope.prappheader = [];
+        $scope.endloading = function () {
+            $mdDialog.hide();
+        };
+
+        $scope.loading = function () {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+<!--        $scope.mailcheck=function(){-->
+<!--          return $http.post(Appname + "/mailcheck/", 1)-->
+<!--                    .then(function (result) {-->
+<!--                    alert(result.data.Message)-->
+<!--                    });-->
+<!--        }-->
+
+
+<!--        $scope.mailcheck1=function(){-->
+<!--          return $http.post(Appname + "/mailcheck1/", 1)-->
+<!--                    .then(function (result) {-->
+<!--                    alert(result.data.Message)-->
+<!--                    });-->
+<!--        }-->
+
+        $scope.tran_history = function(e){
+        $scope.Number = e.prheader_no;
+        var data= {"DETAIL":{
+        "Prheader_Gid":e.prheader_gid
+        }
+        ,
+          "CLASSIFICATION": {
+                            "Entity_Gid": $scope.entity_gid
+                        }
+        }
+        var data = {
+                    "Group":"PR_HISTORY",
+                    "Type": "GET",
+                    "SubType": "PR_HISTORY",
+                    "DETAIL": data
+                }
+            var get_purchase = prapprovelservice.getviewtran(data)
+                get_purchase.then(function (result) {
+                debugger;
+                if(result.data.MESSAGE == "FOUND"){
+                    $scope.viewtran = result.data.DATA;
+                    }
+                    modalshow('viewtranhistory');
+                }).finally($scope.endloading);
+        }
+
+        $scope.prheader = function(e){
+            $scope.prheadernum = e.prheader_no;
+            $scope.prsummary1 = JSON.parse(e.file_path);
+            if($scope.prsummary1.length>0){
+            if($scope.prsummary1[0].file_path!= null){
+            modalshow('viewprheader');
+            }
+            else{
+            alert("No File for against "+e.prheader_no);
+            }
+            }
+            }
+
+                                    $scope.clkview = function(e){
+$scope.filename = e;
+var data ={"Filename":e}
+            var get_purchase = prapprovelservice.getviewfile(data)
+                get_purchase.then(function (result) {
+                    $scope.viewfilepath = result.data;
+                    if($scope.viewfilepath != ''){
+                    modalshow('viewprfile');
+                    }
+                }).finally($scope.endloading);
+            }
+
+        $scope.getpoheader = function (a) {
+            $scope.loading();
+            if(a=='search'){$scope.currentPage=1}
+            data = {
+                "filter": {
+                    "employee_code": $scope.employee_code,
+                    "Page_Index": $scope.currentPage - 1,
+                    "Page_Size": $scope.itemsPerPage,
+                    "prheader_no": $scope.prheader_no,
+                    "supplier_name": $scope.supp_1,
+                    "commodity_name": $scope.commo,
+                    "prheader_totalamount": ""
+                },
+                "Action": "GET",
+                "Type": "PR",
+
+            }
+
+            var getprheader = prapprovelservice.getprheader(data)
+            getprheader.then(function (result) {
+                    
+                    $scope.maintable = result.data;
+                    $scope.prappheader = $scope.maintable;
+                    $scope.Total_Length = $scope.prappheader[0].Total_Row;
+
+                },
+                function () {
+                    alert('no data');
+                }).finally($scope.endloading);
+        }
+        $scope.getpoheader();
+        $scope.prviewapp = function (prheader_gid, status, prheader_commodity_gid, prheader_totalamount) {
+            $scope.loading();
+            $scope.prheader_gid1 = prheader_gid;
+            sessionStorage.setItem('prapp_gid', prheader_gid);
+            sessionStorage.setItem('commodity_gid', prheader_commodity_gid);
+            sessionStorage.setItem('prheader_totalamount', prheader_totalamount);
+            $window.location.href = "approvalview";
+
+
+
+
+        }
+
+
+
+    }]);
+
+    myApp.service("prapprovelservice", function ($http) {
+        this.getprheader = function (data) {
+            var response = $http.post(Appname + "/Prapproval_get/", data)
+            return response;
+        }
+              this.getviewfile = function (data) {
+            var response = $http.post(Appname + "/common_viewfile/", data);
+            return response;
+        }
+             this.getviewtran = function (data) {
+            var response = $http.post(Appname + "/Get_Tran_History/", data);
+            return response;
+        }
+
+     
+
+    });
+</script>
+{% endblock %}

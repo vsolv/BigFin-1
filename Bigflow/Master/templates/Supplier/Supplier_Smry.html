@@ -1,0 +1,266 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Supplier Rate Master {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appsupplierrate" ng-controller="Ctrlsupplierrate" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Supplier Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Supplier Code</label>
+                    <input type="text" ng-model="searchquery_code" ng-change="filtersearch()">
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block ">
+                    <label>Supplier Name</label>
+                    <input type="text" ng-model="searchquery_name" autocomplete="off" ng-change="filtersearch()">
+                    <md-icon>search</md-icon>
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-href="supplier" ng-model="create">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Create New</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Supplier Code</th>
+                        <th>Supplier Name</th>
+                        <th>City Name</th>
+                        <th>District Name</th>
+                        <th>Contact Person</th>
+                        <th>Contact Number</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat=" obj in supplierrate.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center"><span class="editlink"
+                                                      ng-hide="{{(obj.supplier_isactive=='Y') ? false : true}}"
+                                                      ng-click="view_data(obj)">{{obj.supplier_code }}</span>
+                            <span ng-if="obj.supplier_isactive=='Y' ? false : true">{{obj.supplier_code }}</span>
+                        </td>
+                        <td class="text-left">{{obj.supplier_name}}</td>
+                        <td class="text-left">{{obj.city_name}}</td>
+                        <td class="text-left">{{obj.district_name}}</td>
+                        <td class="text-left">{{obj.contact_personname}}</td>
+                        <td class="text-right">{{obj.contact_mobileno}}</td>
+                        <td class="text-center">
+                            <i class="material-icons" ng-class="obj.supplier_isactive=='Y'? 'editlink':''"
+                               ng-click="activeDeactive_click(obj.supplier_isactive,obj.supplier_gid)"
+                               title="{{obj.supplier_isactive=='Y' ? 'Click to Inactive':'Click to active'}}">wb_sunny</i>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul uib-pagination total-items="supplierrate.length" ng-model="currentPage"
+                                max-size="maxSize" class="pagination-sm" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="4">
+                            Total Count:{{supplierrate.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Appsupplierrate', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function(
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('Ctrlsupplierrate', ['$scope', 'Supplierservice', '$window', '$mdDialog', '$filter', '$http',
+    'SerCommon', '$element',
+    function($scope, Supplierservice, $window, $mdDialog, $filter, $http, SerCommon, $element) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.create = sessionStorage.removeItem('emp_details');
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.employee_gid = detail.employee_gid;
+        $scope.entity_gid = detail.entity_gid;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.activeDeactive_click = function(is_active, sup_gid) {
+            if (is_active == 'Y') {
+                $scope.inactive(sup_gid)
+            } else {
+                $scope.active(sup_gid)
+            }
+        }
+
+        $scope.filtersearch = function() {
+            $scope.supplierrate = $filter('filter')($scope.maintable, {
+                "supplier_code": $scope.searchquery_code,
+                "supplier_name": $scope.searchquery_name,
+            });
+        }
+
+        $scope.active = function(sup_gid) {
+            var dta = {
+                "parms": {
+                    "supplier": {
+                        "Supplier_Gid": sup_gid
+                    },
+                    "classification": {
+                        "entity_gid": $scope.entity_gid,
+                        "Update_By": $scope.employee_gid
+                    }
+                }
+            }
+            var jdata = {
+                Group: "Active_INactive_supplier",
+                Action: "Active",
+                SubType: "SUPPLIER",
+                data: dta
+            }
+            var sup_act = Supplierservice.delsupplier(jdata);
+            sup_act.then(function(result) {
+                    if (result.data.MESSAGE === "SUCCESS") {
+                        alert("Activated Succesfully");
+                        loadsmry();
+                    } else {
+                        alert("Not Activated");
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+        $scope.inactive = function(sup_gid) {
+            var dta = {
+                "parms": {
+                    "supplier": {
+                        "Supplier_Gid": sup_gid
+                    },
+                    "classification": {
+                        "entity_gid": $scope.entity_gid,
+                        "Update_By": $scope.employee_gid
+                    }
+                }
+            }
+            var jdata = {
+                Group: "Active_INactive_supplier",
+                Action: "Inactive",
+                SubType: "SUPPLIER",
+                data: dta
+            }
+            var sup_inact = Supplierservice.delsupplier(jdata);
+            sup_inact.then(function(result) {
+                    if (result.data.MESSAGE === "SUCCESS") {
+                        alert("InActivated Succesfully");
+                        loadsmry();
+                    } else {
+                        alert("Not InActivated");
+                    }
+                }),
+                function() {
+                    alert('no data');
+                };
+        };
+
+        loadsmry();
+
+        function loadsmry() {
+            var data = {
+                "Params": {
+                    "Details": {
+                        "Supplier_Gid": "",
+                        "Supplier_Code": ""
+                    },
+                    "Classification": {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+            }
+            var jdata = {
+                Group: "Supplier_Get",
+                Type: "SUMMARY",
+                SubType: "SUPPLIER",
+                data: data
+            }
+            $scope.loading();
+            var get_supplierproduct = Supplierservice.getsupplierrate(jdata)
+            get_supplierproduct.then(function(result) {
+                    $scope.maintable = result.data.DATA
+                    $scope.supplierrate = $scope.maintable
+                },
+                function() {
+                    alert('no data');
+                }).finally();
+            $scope.endloading();
+        }
+
+        $scope.edit_data = function(supplier_code, e) {
+            var supplier = {
+                supt_gid: supplier_code,
+                view: e
+            };
+            sessionStorage.setItem('emp_details', JSON.stringify(supplier));
+            $window.location.href = "supplier";
+        }
+
+        $scope.view_data = function(supplier_code, e) {
+            $scope.loading();
+            var supplier = {
+                supt_gid: supplier_code,
+                view: e
+            };
+            debugger;
+            sessionStorage.setItem('emp_details', JSON.stringify(supplier));
+            $window.location.href = "supplier";
+        }
+    }
+]);
+//service
+app.service("Supplierservice", function($http) {
+    this.getsupplierrate = function(data1) {
+        var response = $http.post(Appname + "/Supplier_Master/", data1);
+        return response;
+    }
+    this.delsupplier = function(sup_gid) {
+        var response = $http.post(Appname + "/Supplier_Master/", sup_gid);
+        return response;
+    }
+});
+</script>
+{% endblock %}

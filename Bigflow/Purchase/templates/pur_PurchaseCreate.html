@@ -1,0 +1,2006 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Purchase {% endblock %}
+{% block content %}
+{% csrf_token %}
+<link href="{% static 'Content/font-awesome-4.1.0.css' %}" rel="stylesheet">
+<link href="{% static 'Content/robotofonttext400300.css' %}" rel="stylesheet">
+<link href="{% static 'Content/textangular.css' %}" rel="stylesheet">
+<script src="{% static 'Scripts/Core/textAngular-rangy.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular-sanitize.js' %}"></script>
+<script src="{% static 'Scripts/Core/textAngular.js' %}"></script>
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appprcreate" ng-controller="Ctrlprcreate" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PR Creation
+                <label style="margin-left:50px;color:green;font-size:14px"
+                ng-show="hideadesc">MEP Description:<label style="color:blue">{{description}}</label></label></h4>
+            </div>
+        </div>
+               <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewnotepad" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Note Pad</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <div text-angular="text-angular" id="con"  name="htmlcontent" ng-focus="displaynamechng('content_flag')" ng-model="htmlcontent" ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <form id="create" name="prform" method="post">
+            <div class="col-md-12">
+
+                    <div class="col-md-2">
+                        <span ng-hide="mep_icon" style="color:rgb(40, 112, 146);" ng-click="MEP_popup()">
+                            <span class="material-icons" style="font-size:30px;">
+                                forum
+                            </span>
+                            <md-tooltip>MEP Details</md-tooltip>
+                        </span>
+                <md-autocomplete
+                        md-clear-button="true"
+                        md-floating-label="MEP Number"
+                        md-input-maxlength=126
+                        md-item-text="item.mep_no"
+                        md-items="item in getmepnum(searchTex)"
+                        md-min-length=0
+                        md-search-text="searchTex"
+                        md-selected-item="selectedItem"
+                        md-selected-item-change="mep_data(item);mep_changedata(item)"
+                        placeholder="Customer Group Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchTex"> {{item.mep_no}}</span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name matching "{{searchTex}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+
+                    </div>
+                    <!-- Product cat -->
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true" md-floating-label="Product Category"
+                             md-item-text="item.productcategory_name"
+                            md-items="item in productcat(searchText1)" md-min-length=0 md-no-cache="true"
+                            md-search-text="searchText1" md-selected-item="pr.selectedcustcate"
+                            md-selected-item-change="cat_type(item.productcategory_gid,pr)" required>
+                            <md-item-template>
+                                <span md-highlight-text="searchText1"> {{item.productcategory_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                Not found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <!-- Dts -->
+                    <div class="col-md-1">
+                        <md-input-container class="md-block inputcontainer">
+                            <md-checkbox ng-model="dts" aria-label="Checkbox 1" ng-click="dtsflag(dts)">
+                                DTS
+                            </md-checkbox>
+                        </md-input-container>
+                    </div>
+                    <!-- Product subcat -->
+                    <div class="col-md-3">
+
+                        <md-autocomplete md-clear-button="true" md-floating-label="Product Type"
+                            md-item-text="item.producttype_name" md-search-text="ptype"
+                            md-items="item in productcat_type(ptype)" md-min-length=0 md-no-cache="true"
+                            md-selected-item="pr.selectedcustcattype"
+                            md-selected-item-change="cat_type_product(pr.selectedcustcate,pr.selectedcustcattype)"
+                            required>
+                            <md-item-template>
+                                <span md-highlight-text="ptype"> {{item.producttype_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                Not found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <!-- Product name -->
+                    <di class="col-md-3">
+                        <md-autocomplete md-clear-button="true" md-floating-label="Product Name"
+                            md-item-text="item.product_name" md-items="item in product_(productname)" md-min-length=0
+                            md-no-cache="cachep" md-search-text="productname" md-selected-item="pr.product1"
+                            md-selected-item-change="p_supplier(pr.product1)" required>
+                            <md-item-template>
+                                <span md-highlight-text="productname"> {{item.product_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                Not found."{{productname}}"
+                            </md-not-found>
+                        </md-autocomplete>
+                    </di>
+            </div>
+            <!-- Commodity Name -->
+            <div class="col-lg-12">
+
+                <div class="col-md-3">
+                    <md-autocomplete md-clear-button="true" md-floating-label="Commodity Name"
+                        md-item-text="item.commodity_name" md-items="item in Commodity_search(commo_)" md-min-length=0
+                        md-no-cache="true" md-search-text="commo_" md-selected-item="pr.commodity" required>
+                        <md-item-template>
+                            <span md-highlight-text="commo_"> {{item.commodity_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            Not found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <!-- Supplier name -->
+                <div class="col-md-3">
+                    <md-autocomplete md-clear-button="true" md-floating-label="Supplier Name"
+                        md-item-text="supplier.supplier_name" md-items="supplier in supplier_search(suppl)"
+                        md-min-length=0 md-no-cache="true" md-search-text="suppl" md-selected-item="pr.ddlproduct"
+                        required>
+                        <md-item-template>
+                            <span md-highlight-text="suppl">
+                                {{supplier.Supplier_code}}-{{supplier.supplier_name}}</span>
+                        </md-item-template>
+                        <md-not-found>
+                            Not found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <!-- Branch -->
+                <div class="col-md-3">
+                    <md-autocomplete md-clear-button="true" md-floating-label="Branch code"
+                        md-item-text="item.branch_code" md-items="item in brancode_search(branchddl)" md-min-length=0
+                        md-no-cache="true" md-search-text="branchddl" md-selected-item="pr.branch_gid"
+                        md-selected-item-change="branchnameget(pr.branch_gid,pr)" required>
+                        <md-item-template>
+                            <span md-highlight-text="branchddl"> {{item.branch_code}}--{{item.branch_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            Not found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+
+                <div class="col-md-3" id="uploadFile" ng-show="shwchoosefiles">
+                <input type="file" multiple name="files" minsize="500" style="margin-top: 30px;"
+                       onchange="angular.element(this).scope().imageUpload(event)" id="file"/>
+                </div>
+                <div class="col-md-3" class="text-right" ng-show="shwdelete">
+                    <b>All Files</b>
+                    <span class="editlink" onclick="clearallFile('uploadFile')" ng-show="shwallremve" ng-click="clk()">
+                        <span class="material-icons removelink">delete</span>
+                        <md-tooltip>Remove All</md-tooltip>
+                    </span>
+                </div>
+                <table>
+                    <tr ng-repeat="e in filenames" id="viki" class="text-right" style="width:170px;height:5px;">
+                        <td class="text-left" aria-label="Close" class="btn" ng-click="viewimage($index)">
+                            {{$index+1}}. {{e}}
+                            <span class="editlink" ng-click="clearFileInputField($index,e)">
+                                <span class="material-icons" ng-hide="fileshidebtn">delete</span>
+                                <md-tooltip>Remove</md-tooltip>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+            </form>
+        </div>
+        <div class="row">
+
+           <div class="col-md-12  text-right">
+               <div class="col-md-10" style="margin-top:16px">
+                     <span title="Add a Note" ng-click="notepad(pr)" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                        </span>
+               </div>
+               <div class="col-md-2">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="addproduct(pr)"
+                        ng-disabled="prform.$invalid">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+               </div>
+                </div>
+        </div>
+        </br>
+        <div class="col-md-12">
+            <form name="demoForm" novalidate>
+                <div class="row table-responsive">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                            md-progress="deferred">
+                            <thead class="header">
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Product Name</th>
+                                    <th>Commodity Name</th>
+                                    <th>Supplier Name</th>
+                                    <th>Branch</th>
+                                    <th>UOM</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Amount</th>
+                                    <th>Image Upload</th>
+                                    <th>CCBS</th>
+                                    <th>Installation Required</th>
+                                    <th>Capitalize Required</th>
+                                    <th ng-hide="disable">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody ng-init="total = 0">
+                                <tr ng-repeat="pur in purchase " ng-if="pur.detail_edit!='R'">
+                                    <td>
+                                        <center>{{$index+1}}</center>
+                                    </td>
+                                    <td>{{pur.product_name}}</td>
+                                    <td>{{pur.commodity_name}}</td>
+                                    <td>{{pur.supplier_name}}</td>
+                                    <td>{{pur.branch_name}}</td>
+                                    <td>{{pur.uom_name}}</td>
+                                    <td align="right">
+                                        <form name="demoForm_form">
+                                            <input align="right" style="width:102px" name="qty" type="text"
+                                                ng-model="pur.quantity" class="form-control"
+                                                ng-blur="MEP_Validation($index,pur)" required
+                                                ng-disabled="pur.qty_match" numbers-only>
+                                            <div ng-messages="demoForm_form.qty.$error">
+                                                <div ng-message="number">Should be a number</div>
+                                                <div ng-message="max">your quantity order exceeds 10000</div>
+                                                <div ng-message="min">your quantity should not be zero</div>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    <td align="right">{{pur.supplierproduct_unitprice |number:amount}}</td>
+
+                                    <td ng-model="pur.totalamt" align="right">
+                                        <span ng-if="pur.quantity != undefined"
+                                            ng-model="pur.totalamt">{{pur.quantity*pur.supplierproduct_unitprice |number:amount}}</span>
+                                    </td>
+                                    <input type="hidden" ng-model="new" name="custId">
+                                    <td>
+                                        <input type="file" ng-model="pur.fileinput" name="files" base-sixty-four-input
+                                            minsize="500" style="width:140px;" ng-change="file_change($index)"
+                                            id="file_cwip{{$index}}" />
+                                    </td>
+                                    <td align="center" ng-if="pur.quantity==undefined||pur.quantity==0">
+                                        <span class="editlink"> <a><i class="material-icons">send</i></a>
+                                            <md-tooltip>Send</md-tooltip>
+                                        </span>
+                                    </td>
+                                    <td align="center" ng-if="pur.quantity>0" ng-disabled="pur.ccbs_match">
+                                        <span class="editlink"><a style="color:green;" ng-click="Addccbs($index,pur)">
+                                                <i class="material-icons">send</i></a>
+                                            <md-tooltip>Send</md-tooltip>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <md-checkbox ng-init="pur.Installation_needed='N'"  ng-true-value="'Y'"
+                                             ng-false-value="'N'"  ng-model="pur.Installation_needed" ng-class="md-warn"
+                                         type="checkbox">
+                                        </md-checkbox>
+                                    </td>
+                                    <td>
+                                        <md-checkbox ng-init="pur.capitalize_needed='N'"  ng-true-value="'Y'"
+                                             ng-false-value="'N'"  ng-model="pur.capitalize_needed" ng-class="md-warn"
+                                         type="checkbox">
+                                        </md-checkbox>
+                                    </td>
+
+                                    <td ng-hide="disable">
+                                        <span class="editlink" ng-click="purdelete(pur,pur.prdetails_gid,
+                                 ((currentPage-1)*itemsPerPage)+ $index,prdelete)">
+                                            <i class="material-icons">delete</i>
+                                            <md-tooltip>Delete</md-tooltip>
+                                        </span>
+                                    </td>
+
+
+                                <tr ng-show="purchase.length ==  0">
+                                    <td class="warning" colspan="12">
+                                        No Records Found.
+                                    </td>
+                                </tr>
+                                <tr ng-show="purchase.length >0">
+                                    <td colspan="8" align="right"><b>Total</b></td>
+                                    <td colspan="1" align="right" style="background: white;">
+                                        <span ng-if="purchase.length == 0"><b>{{total}}</b></span>
+                                        <span ng-if="purchase.length > 0"><b>{{loaddata()| number:2}}</b></span>
+                                    </td>
+                                    <input type="hidden" id="postId" value="34657">
+                                </tr>
+                            <tfoot>
+                                <tr>
+
+                                </tr>
+                            </tfoot>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-12 ">
+                    <div class="col-md-5 "></div>
+                    <form name="demoForm_form" novalidate>
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="true" md-floating-label="Choose Approver"
+                                 md-item-text="item.employee_name"
+                                md-menu-class="md-virtual-repeat-container" md-items="item in approval_search(appl)"
+                                md-min-length=0 md-no-cache="true" md-search-text="appl" md-selected-item="pur.limi"
+                                required>
+                                <md-item-template>
+                                    <span md-highlight-text="appl">{{item.employee_code}}--
+                                        {{item.employee_name}}--{{item.delmat_limit}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    Not found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-2 ">
+                            <md-input-container class="md-block inputcontainer">
+                                <label class="md-required">Employee Code </label>
+                                <input ng-model="pur.limi.employee_code" maxlength="16" ng-disabled="true"
+                                    capitalize="">
+
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-2 ">
+                            <md-input-container class="md-block inputcontainer">
+                                <label class="md-required">Employee Limit </label>
+                                <input ng-model="pur.limi.delmat_limit" maxlength="16" ng-disabled="true" capitalize="">
+                            </md-input-container>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="col-md-12">
+                    <md-input-container class="md-block inputcontainer">
+
+                        <input ng-model="e" maxlength="16" ng-disabled="true" capitalize="" required="">
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-12 text-right">
+                    <md-button ng-click="close()" class="md-raised md-warn">Close
+                        <md-tooltip>Close</md-tooltip>
+                    </md-button>
+                    <md-button ng-click="save_prdetailsdraft('draft',$scope.prheader_gid)" ng-disabled="draftdisable"
+                        class="md-primary">Draft
+                        <md-tooltip>Draft</md-tooltip>
+                    </md-button>
+                    <md-button ng-click="save_prdetails('submit',$scope.prheader_gid,pur.limi)" ng-disabled="IsDisabled"
+                        class="btn btn-info custbutton">Submit
+                        <md-tooltip>Submit</md-tooltip>
+                    </md-button>
+                </div>
+            </form>
+        </div>
+        <div ng-include="'commodityadd'"></div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="imdiate_view" role="dialog" style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>view</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <img src="{{file_path }}" style="width:870px;height:500px" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+    .btn-file {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-file input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        filter: alpha(opacity=0);
+        opacity: 0;
+        outline: none;
+        background: white;
+        cursor: inherit;
+        display: block;
+    }
+</style>
+<script>
+    function clearallFile(tagId) {
+        document.getElementById(tagId).innerHTML =
+            document.getElementById(tagId).innerHTML;
+    }
+</script>
+<script>
+    var myApp = angular.module('Appprcreate', ['ngMaterial', 'ui.bootstrap', 'ngMessages', 'AppCommon','textAngular']).config(
+        function (
+            $httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+    myApp.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            link: function (scope, element, attrs) {
+                element.bind('change', function () {
+                    $parse(attrs.fileModel).assign(scope, element[0].files)
+                    scope.$apply();
+                });
+            }
+        };
+    }]);
+    myApp.directive('numbersOnly', function(){
+   return {
+     require: 'ngModel',
+     link: function(scope, element, attrs, modelCtrl) {
+       modelCtrl.$parsers.push(function (inputValue) {
+           // this next if is necessary for when using ng-required on your input.
+           // In such cases, when a letter is typed first, this parser will be called
+           // again, and the 2nd time, the value will be undefined
+           if (inputValue == undefined) return ''
+           var transformedInput = inputValue.replace(/^[^1-9]*|[^0-9]/g, '');
+           if (transformedInput!=inputValue) {
+              modelCtrl.$setViewValue(transformedInput);
+              modelCtrl.$render();
+           }
+
+           return transformedInput;
+       });
+     }
+   };
+});
+
+
+
+    myApp.directive('letterOn', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9a-zA-Z. ]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+    myApp.controller('Ctrlprcreate', ['$scope', '$http', 'orderByFilter', 'Serviceprcreate', '$mdDialog', '$element',
+        '$filter', '$window', 'SerCommon', '$timeout','$q','$interval',
+        function ($scope, $http, orderBy, Serviceprcreate, $mdDialog, $element, $filter, $window, SerCommon,
+            $timeout,$q,$interval) {
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.maintable = [];
+            $scope.IsHidden1 = true;
+            $scope.IsDisabled = true;
+            $scope.mep_icon = true;
+            $scope.product_ddl = [];
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+            $scope.shwchoosefiles = true;
+            $scope.clk = function () {
+                $scope.filenames = [];
+                $scope.shwchoosefiles = true;
+                $scope.shwdelete = false;
+            }
+
+
+
+
+
+
+
+
+     $scope.getmepnum = function(query) {
+ var data = {
+                "Params": {
+                    "Filter":{"Mep_No":query},
+                    "Classification": {"Entity_Gid": $scope.entity_gid},
+                    "Group": "MEP_GET",
+                    "Action": "MEPCODE_GET",
+                    "Create_By":$scope.employgid ,
+                    "Entity_Gid":$scope.entity_gid ,
+                    "Type": ""
+                }
+        }
+
+   return $http.post(Appname + "/Par_Get/",
+                        data
+                    )
+                    .then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                        $scope.hideadesc = false;
+                            $scope.mepnum = result.data.DATA;
+                        } else {
+                            $scope.mepnum = [];
+                        }
+                        return $scope.mepnum;
+                    });
+            }
+
+
+            //Get Branch Code
+            $scope.ccbsbranch = [];
+            $scope.brncode = [];
+            // $scope.pur.qty_match=false;
+
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.employgid = detail.employee_gid;
+            $scope.entity_gid = detail.entity_gid;
+            $scope.empcode = detail.employee_code
+            $scope.today = detail.date
+            $scope.ccbsddl = [];
+            $scope.img_files1 = [];
+            $scope.bsdatatt = [];
+            $scope.finccname = [];
+            $scope.mepno = " ";
+            // $scope.dts=true;
+
+                   $scope.viewimage = function (e) {
+                $scope.file_path = $scope.stepsModel[e];
+                var model = modalshow('imdiate_view');
+            }
+
+
+     $scope.deleted_files = [];
+            $scope.clearFileInputField = function (e,file_name) {
+                $scope.file_imglength = document.getElementById('file').files.length;
+                for (i = 0; i < $scope.file_imglength; i++) {
+                    if (i == e) {
+                        $scope.filenames.splice(i, 1);
+                        var file_img = document.getElementById('file').files[i];
+                $scope.deleted_files.push({"file_names":file_name});
+                    }
+                    var d = $scope.file_imglength;
+                }
+            }
+
+
+
+
+            $scope.stepsModel = [];
+            $scope.shwdelete = false;
+            $scope.filenames = [];
+            $scope.imageUpload = function (event) {
+                $scope.filenames = [];
+                $scope.shwchoosefiles = false;
+                $scope.shwdelete = true;
+                var files = event.target.files; //FileList object
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var reader = new FileReader();
+                    reader.onload = $scope.imageIsLoaded;
+                    reader.readAsDataURL(file);
+                    $scope.filenames.push(file.name);
+                }
+            }
+            $scope.imageIsLoaded = function (e) {
+                $scope.$apply(function () {
+                    $scope.stepsModel.push(e.target.result);
+                });
+            }
+
+
+            $scope.Addccbs = function (index, e) {
+                $scope.branchdd = branchddl
+                $scope.godown = godown1
+                if ($scope.purchase[index].action == 'draft' && $scope.purchase[index].CCBS == null) {
+                    $scope.purchase[index].CCBS = [];
+                }
+                // $scope.purchase[index].append({"ccbs_check":})
+                $scope.CCBS_DETAILS = $scope.purchase[index].CCBS;
+                $scope.ccbsddl = $scope.purchase[index].CCBS;
+                $scope.ccbsindex = index;
+                $currentindex = index;
+                $scope.allocatedqty = $scope.purchase[index].quantity;
+                $scope.canin = index;
+                loadimagetobase64(index)
+                modalshow('mdl_present1');
+            }
+
+
+            $scope.mep_data = function (e) {
+            $scope.loading();
+            $scope.hideadesc = true;
+            $scope.description = e.mep_justification;
+             if(e == undefined){
+              $scope.mepnumber = '';
+              $scope.mep_gid = "";
+              $scope.mepno = "";
+             }
+             $scope.mepno = e.mep_no;
+             $scope.mep_gid = e.mep_gid;
+                $scope.mep_icon = false;
+
+                var data = {
+                    "Params": {
+                        "Group":"PR_MEP",
+                        "Type": "Mep",
+                        "SubType": "PR_MEP_AMT",
+                        "FILTER": {
+                            "mepgid": e.mep_gid,
+                        },
+                        "CLASSIFICATION": {
+                            "Entity_Gid": ""
+                        }
+                    }
+                };
+                $scope.mepdata = [];
+                $scope.MEP_details = [];
+                $scope.Product_Details = [];
+                $scope.PR_MEPUtilized=0;
+                return $http.post(Appname + "/mep_number/", data)
+                    .then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.mepdata = result.data.DATA;
+                            $scope.MEP_NO = $scope.mepdata.mep_no[0];
+                            $scope.MEP_Actual_amt = $scope.mepdata.mep_amount[0];
+                            $scope.PR_MEPUtilized = $scope.mepdata.pr_amt[0];
+                            $scope.PO_MEPUtilized = $scope.mepdata.po_amt[0];
+                            $scope.Balance_in_MEP = $scope.mepdata.pr_balance[0];
+                            return $scope.mepdata;
+
+                        } else {
+                            $scope.mepdata = [];
+                            alert('Not  Valid  MEP')
+                            $scope.pr.mepnumber = '';
+                            $scope.mep_icon = true;
+                            return false
+                        }
+                    }).finally($scope.endloading);
+            }
+
+            $scope.MEP_popup = function () {
+                modalshow('mep_details_pr');
+            }
+
+            $scope.MEP_Validation = function (i, pur) {
+                if ($scope.MEP_NO) {
+                    if ($scope.Balance_in_MEP == $scope.MEP_Actual_amt) {
+                        if ($scope.loaddata() <= $scope.MEP_Actual_amt) {
+                            $scope.mepworking = 0;
+                        } else {
+                            alert("Mep Exceed it limits")
+                            $scope.purchase[i].quantity = 0;
+                            $scope.pur.quantity = 0;
+                            return false
+                        }
+                        if ($scope.MEP_details.length > 0) {
+                            var amt = $scope.purchase[i].supplierproduct_unitprice * $scope.purchase[i]
+                                .quantity;
+                            for (var g = 0; g < $scope.MEP_details.length; g++) {
+                                if ($scope.MEP_details[g].mepdetails_productgid == $scope.purchase[i]
+                                    .product_gid) {
+                                    if (amt > $scope.MEP_details[g].mepdetails_totalamt) {
+                                        alert("Mep Exceed it limits for this Product")
+                                        $scope.purchase[i].quantity = 0;
+                                        $scope.pur.quantity = 0;
+                                        return false
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if ($scope.loaddata() <= $scope.Balance_in_MEP) {
+                            $scope.mepworking = 0;
+                        } else {
+                            alert("Mep Exceed it limits")
+                            $scope.purchase[i].quantity = 0;
+                            $scope.pur.quantity = 0;
+                            return false
+                        }
+                        if ($scope.Product_Details.length > 0) {
+                            var amt = $scope.purchase[i].supplierproduct_unitprice * $scope.purchase[i]
+                                .quantity;
+                            for (var g = 0; g < $scope.Product_Details.length; g++) {
+                                if ($scope.Product_Details[g].prdetails_product_gid == $scope.purchase[i]
+                                    .product_gid) {
+                                    if (amt > $scope.Product_Details[g].Balance_pd_mepamt) {
+                                        alert("Mep Exceed it limits for this Product")
+                                        $scope.purchase[i].quantity = 0;
+                                        $scope.pur.quantity = 0;
+                                        return false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //Drop down details
+            $scope.productcat = function (query) {
+                var data = {
+                    "Action": "GET",
+                    "Type": "PRODUCT_CATEGORY",
+                    "main_data": {
+                        "productcategory_gid": "",
+                        "productcategory_name": query,
+                        "mep_gid":$scope.mep_gid,
+                        "Limit_Start": 0,
+                        "Limit_End": 50
+                    },
+                    "classification": {}
+                };
+                return $http.post(Appname + "/pr_productcategory/", data)
+                    .then(function (data) {
+                        $scope.prcat_list = data.data;
+                        return $scope.prcat_list;
+                    });
+            }
+
+            $scope.productcat_type = function (query) {
+                var data1 = {
+                    "Action": "GET",
+                    "Type": "PRODUCT_TYPE",
+                    "main_data": {
+                        "producttype_productcategory_gid": $scope.pr_productcategory_gid.toString(),
+                        "productcategory_name": query,
+                        "mep_gid":$scope.mep_gid,
+                        "Limit_Start": 0,
+                        "Limit_End": 30
+                    },
+                    "classification": {}
+                };
+                return $http.post(Appname + "/pr_productcategory/", data1)
+                    .then(function (data) {
+                        $scope.prcat_type_list = data.data;
+                        if ($scope.prcat_type_list.length == 0 || !$scope.pr_productcategory_gid) {
+                            $scope.prcat_type_list = [];
+                        }
+                        return $scope.prcat_type_list;
+                    });
+            }
+
+            $scope.product_ = function (query) {
+                var dar = {
+                    "Action": "GET",
+                    "Type": "PRODUCT",
+                    "main_data": {
+                        "producttype_gid": $scope.pr_producttype_gid.toString(),
+                        "productcategory_name": query,
+                        "mep_gid": $scope.mep_gid,
+                        "supplierproduct_dts": $scope.dts_flag,
+                        "Limit_Start": 0,
+                        "Limit_End": 30
+                    },
+                    "classification": {}
+
+                };
+
+                return $http.post(Appname + "/pr_productcategory/", dar)
+                    .then(function (data) {
+                        $scope.product_ddl = data.data;
+                        return $scope.product_ddl;
+                    });
+            }
+            $scope.Commodity_search = function (query) {
+
+                var commodity_json = {
+                    Action: 'PR_Commodityprod_Get',
+                    data: {
+                        "Commodityprod_Productgid": $scope.pr_pgid,
+                        "Commodity_Name": query,
+                        "Limit_Start": 0,
+                        "Limit_End": 30
+                    },
+                    endata: {
+                        "Entity_Gid": $scope.entity_gid
+                    }
+                }
+
+                return $http.post(Appname + "/commodity_pdata/", commodity_json)
+                    .then(function (result) {
+                        $scope.commodity_list = result.data;
+
+                        return $scope.commodity_list;
+                    });
+            }
+            $scope.supplier_search = function (query) {
+                var product_json = {
+                    "params": {
+                        'action': 'SUPPLIER_PRODUCT_MAPPING',
+                        'type': '',
+                        "product_gid": {
+                            'product_gid': $scope.pr_pgid,
+                            "Supplier_name": query,
+                            "supplierproduct_dts":$scope.dts_flag,
+                            "Limit_Start": 0,
+                            "Limit_End": 30
+                        }
+                    }
+                }
+                return $http.post(Appname + "/supplier_details/", product_json)
+                    .then(function (result) {
+                        $scope.Prsupplier_list = JSON.parse(result.data);
+                        if ($scope.Prsupplier_list.length < 0) {
+                            $scope.Prsupplier_list = [];
+                        }
+                        return $scope.Prsupplier_list;
+                    });
+            }
+
+            $scope.brancode_search = function (query) {
+                data = {
+                    "Table_name": "gal_mst_tbranch",
+                    "Column_1": "branch_gid,branch_code,branch_name",
+                    "Column_2": "",
+                    "Where_Common": "branch",
+                    "Where_Primary": "code",
+                    "Primary_Value": "",
+                    "Search_Column":query,
+                    "Limits": 0 + "," + 30,
+                    "Order_by": "gid"
+                }
+
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.brncode = result.data.DATA;
+                        } else {
+                            $scope.brncode = [];
+                        }
+                        return $scope.brncode;
+                    });
+            }
+
+         $scope.notepad = function(){
+         if($scope.file_path_notepad == ' '){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad == undefined){
+                modalshow('viewnotepad');
+                return false;
+                }
+                if($scope.file_path_notepad){
+                      var data = {
+                        "Filename": $scope.file_path_notepad
+                    }
+                    var getdept_name = Serviceprcreate.get_file_read(data)
+                    getdept_name.then(function(result) {
+                    $scope.htmlcontent = result.data.file_path
+                     modalshow('viewnotepad');
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally();
+                }
+                else{
+                 modalshow('viewnotepad');
+                }
+        }
+
+            $scope.get_commodity_gid = function () {
+                if ($scope.purchase.length > 0) {
+                    if ($scope.status == "Draft") {
+                        for (var i = 0; i <= $scope.purchase.length; i++) {
+                            if ($scope.purchase[i].detail_edit != "R") {
+                                $scope.c_gid = $scope.purchase[i].commodity_gid;
+                                i = $scope.purchase.length;
+                                break;
+                            }
+                        }
+                    } else {
+                        $scope.c_gid = $scope.purchase[0].commodity_gid;
+                    }
+                } else {
+                    $scope.c_gid = 0;
+                }
+                return $scope.c_gid;
+            }
+            $scope.approval_search = function (query) {
+                $scope.c_gid = $scope.get_commodity_gid();
+
+                var data = {
+                    'commodity_gid': $scope.c_gid,
+                    "employee_gid": "",
+                    "employee_name": "",
+                    "employee_detail":query,
+                    'Limit_Start': 0,
+                    'Limit_End': 50,
+                }
+                var params1 = {
+                    'params': data,
+                    'action': 'limit',
+                    'type': 'pr_Dir_limit',
+                    'amount': 0,
+                }
+
+                return $http.post(Appname + "/approvalview/", params1)
+                    .then(function (data) {
+                        $scope.limitamt_copy = JSON.parse(data.data);
+                        return $scope.limitamt_copy;
+                    });
+            }
+
+            function loadimagetobase64(e) {
+                var file_img = document.getElementById('file_cwip' + e).files[0];
+                if (file_img != undefined) {
+                    $scope.type = '.' + file_img.name.split('.').pop();
+                    $scope.name = file_img.name;
+                    var img = new FormData();
+                    img.append('file', file_img);
+                    imageupload(img, e);
+                } else {
+                    $scope.img_files = {
+                        "File_Name": "",
+                        "File_Extension": "",
+                        "File_Base64data": "",
+                    };
+                    for (i = 0; i < $scope.purchase.length; i++) {
+                        if (i == e) {
+                            $scope.purchase[i].image = $scope.img_files
+                        }
+                    }
+                }
+            }
+
+            function imageupload(img, e) {
+                var img_upld = Serviceprcreate.imageup(img);
+                img_upld.then(function (res) {
+                    $scope.imagebase64 = res.data;
+                    $scope.img_files = {
+                        "File_Name": $scope.name,
+                        "File_Extension": $scope.type,
+                        "File_Base64data": $scope.imagebase64,
+                    };
+                    for (i = 0; i < $scope.purchase.length; i++) {
+                        if (i == e) {
+                            $scope.purchase[i].image = $scope.img_files
+                        }
+                    }
+                });
+            }
+            //pop up data bsname
+            $scope.prc = [];
+            //$scope.prc.tname='';
+            $scope.bsname = bsname1;
+            $scope.tsname = tsname1;
+
+            function godown1(query) {
+                var data = {
+                    "Table_name": "gal_mst_tgodown",
+                    "Column_1": "godown_gid,godown_code,godown_name",
+                    "Column_2": "",
+                    "Where_Common": "godown",
+                    "Where_Primary": "name",
+                    "Primary_Value": query,
+                    "Limits": "0,30",
+                    "Order_by": "gid"
+                }
+
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.deliverydd = result.data.DATA;
+                        } else {
+                            $scope.deliverydd = [];
+                        }
+                        return $scope.deliverydd;
+                    });
+            }
+
+            function branchddl(query) {
+                data = {
+                    "Table_name": "gal_mst_tbranch",
+                    "Column_1": "branch_gid,branch_code,branch_name",
+                    "Column_2": "",
+                    "Where_Common": "branch",
+                    "Where_Primary": "code",
+                    "Primary_Value": "",
+                    "Search_Column":query,
+                    "Limits": 0 + "," + 30,
+                    "Order_by": "gid"
+                }
+
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+                        if (result.data.MESSAGE == "FOUND") {
+                            $scope.ccbsbranch = result.data.DATA;
+                        } else {
+                            $scope.ccbsbranch = [];
+                        }
+                        return $scope.ccbsbranch;
+                    });
+            }
+
+            function tsname1(query) {
+                var data = {
+                    "Params": {
+                        "filter": {
+                            "bs_gid": $scope.pr_tbsgid,
+                            "Page_Index": 0,
+                            "Page_Size": 100,
+                            "tcc_name":query
+                        },
+                        "type": "CC_BS",
+                        "Action": "Get",
+                    },
+                }
+
+                // window.location.href = "generate_asst"
+                return $http.post(Appname + "/Pr_approvalget/", data)
+                   .then(function (result) {
+                        if (result.data.MESSAGE == "NOT_FOUND" || !$scope.pr_tbsgid) {
+                            $scope.finccname = [];
+                        } else if (result.data.MESSAGE == "FOUND") {
+                            $scope.finccname = result.data.DATA;
+                        }
+                        return $scope.finccname;
+                    });
+            }
+
+            function bsname1(query) {
+                var data = {
+                    "Table_name": "ap_mst_tbs",
+                    "Column_1": "tbs_code,tbs_gid,tbs_name,tbs_description",
+                    "Column_2": "",
+                    "Where_Common": "tbs",
+                    "Where_Primary": "name",
+                    "Primary_Value": query,
+                    "Limits": 0 + "," + 50,
+                    "Order_by": "gid"
+                }
+                return $http.post(Appname + "/prodget/", {
+                        "data": data,
+                        "Action": ''
+                    })
+                    .then(function (result) {
+                        $scope.bsdatatt = result.data.DATA;
+                        if ($scope.bsdatatt.length < 0) {
+                            $scope.bsdatatt = [];
+                        }
+                        return $scope.bsdatatt;
+                    });
+            }
+
+            $scope.reset = function () {
+                $scope.prform.$setPristine();
+                $scope.prform.$setUntouched();
+            }
+
+            $scope.cancel = function ($index) {
+                if ($scope.totalamtccbs != $scope.allocatedqty) {
+                    if (confirm('Are You sure to clear the records!!?')) {
+                        $scope.purchase[$scope.ccbsindex].CCBS = [];
+                        modalhide('mdl_present1');
+                        $scope.purchase[$index].ccbs_match = "false"
+                    } else {
+                        return false
+                    }
+                } else {
+                    modalhide('mdl_present1');
+                }
+            };
+            $scope.prc.delivery_type = 'PO_BRANCH';
+            $scope.addccbs = function (pr, index) {
+
+                $scope.prc.bsdata = ''
+                $scope.finccname = [];
+                if (pr.delivery_type == undefined) {
+                    pr.delivery_type = 'PO_BRANCH'
+                }
+
+                $scope.p = $filter('filter')($scope.purchase[$scope.ccbsindex].CCBS, {
+                    "prccbs_bs": pr.bname.tbs_gid,
+                    "prccbs_cc": pr.tname.tcc_gid,
+                    "delivery_type": pr.delivery_type,
+                    "prccbs_edit": "N"
+                }, true);
+
+                if ($scope.p.length > 0) {
+                    alert('This Record is Already Exists');
+                    return false
+                }
+                if ($scope.purchase[$scope.ccbsindex].action == 'draft' && $scope.purchase[$scope.ccbsindex]
+                    .CCBS.length != 0) {
+                    $scope.purchase[$scope.ccbsindex].CCBS.push({
+                        "prccbs_bs": pr.bname.tbs_gid,
+                        "prbs_code": pr.bname.tbs_code,
+                        "prbs_name": pr.bname.tbs_name,
+                        "prbs_description": pr.bname.tbs_description,
+                        "prccbs_cc": pr.tname.tcc_gid,
+                        "prcc_code": pr.tname.tcc_code,
+                        "prcc_name": pr.tname.tcc_name,
+                        "prcc_description": pr.tname.tcc_description,
+                        "prccbs_code": '0',
+                        "delivery_type": pr.delivery_type,
+                        "prccbs_reftablegid": "",
+                        "prccbs_remarks": " ",
+                        "prccbs_edit": "N",
+                        "prccbs_GID": 0,
+                        "total": $scope.totalamtccbs
+                    })
+                    return false
+                }
+
+                if ($scope.purchase[$scope.ccbsindex].detail_edit == 'Y') {
+                    $scope.purchase[$scope.ccbsindex].CCBS.push({
+                        "prccbs_bs": pr.bname.tbs_gid,
+                        "prbs_code": pr.bname.tbs_code,
+                        "prbs_name": pr.bname.tbs_name,
+                        "prbs_description": pr.bname.tbs_description,
+                        "prccbs_cc": pr.tname.tcc_gid,
+                        "prcc_code": pr.tname.tcc_code,
+                        "prcc_name": pr.tname.tcc_name,
+                        "prcc_description": pr.tname.tcc_description,
+                        "prccbs_code": '0',
+                        "delivery_type": pr.delivery_type,
+                        "prccbs_reftablegid": "",
+                        "prccbs_remarks": " ",
+                        "prccbs_edit": "N",
+                        "prccbs_GID": 0,
+                    })
+                    return false
+                }
+                $scope.purchase[$scope.ccbsindex].CCBS.push({
+                    "prccbs_bs": pr.bname.tbs_gid,
+                    "prbs_code": pr.bname.tbs_code,
+                    "prbs_name": pr.bname.tbs_name,
+                    "prbs_description": pr.bname.tbs_description,
+                    "prccbs_cc": pr.tname.tcc_gid,
+                    "prcc_code": pr.tname.tcc_code,
+                    "prcc_name": pr.tname.tcc_name,
+                    "prcc_description": pr.tname.tcc_description,
+                    "prccbs_code": '0',
+                    "delivery_type": pr.delivery_type,
+                    "prccbs_reftablegid": "",
+                    "prccbs_remarks": " ",
+                    "prccbs_edit": "N",
+                    "total": $scope.totalamtccbs
+                });
+
+                if (pr.delivery_type == 'PO_BRANCH') {
+                    $scope.branchdd = branchddl
+                }
+                if (pr.delivery_type == 'PO_GODOWN') {
+                    $scope.godown = godown1
+                }
+            }
+
+            $scope.totalqty = function (pur) {
+                var sum = 0;
+                for (var i = 0; i < $scope.ccbsddl.length; i++) {
+                    if ($scope.ccbsddl[i].prccbs_qty == undefined) {
+                        var unity = 0;
+                    } else {
+                        var unity = $scope.ccbsddl[i].prccbs_qty;
+                    }
+                    sum = sum + parseInt(unity);
+                }
+                $scope.totalamtccbs = sum;
+                $scope.totalamtccbs;
+                return sum;
+            }
+
+            $scope.grandqtytotal = function () {
+                var sum = 0;
+                for (var i = 0; i <= $scope.purchase.length; i++) {
+                    sum = sum + $scope.purchase[i].parseInt(quantity)
+                }
+                $scope.qty1 = sum
+                return sum;
+            }
+
+            $scope.grandccbsqty = function () {
+                var sum = 0;
+                for (var i = 0; i <= $scope.purchase.length; i++) {
+                    for (var j = 0; i <= $scope.purchase.CCBS.length; j++) {
+                        sum = sum + $scope.purchase[i].CCBS[j].parseInt(prccbs_qty)
+                    }
+                }
+                $scope.qty2 = sum
+                return sum;
+            }
+
+            $scope.loaddata = function () {
+                var sum = 0;
+                for (var i = 0; i < $scope.purchase.length; i++) {
+                    if ($scope.purchase[i].quantity == undefined) {
+                        var unity = 0;
+                    } else {
+                        var unity = $scope.purchase[i].quantity;
+                    }
+                    sum += (unity * $scope.purchase[i].supplierproduct_unitprice)
+                }
+                $scope.totalamt = sum;
+                return sum;
+            }
+
+            $scope.count3 = 0;
+            $scope.pr_pgid = '';
+            $scope.p_supplier = function (data) {
+
+                if (data == null || data == undefined) {
+                    $scope.pr.commodity = '';
+                    $scope.pr.ddlproduct = '';
+                    $scope.Prsupplier_list = [];
+                    $scope.commodity_list = [];
+                }
+
+                if (data != undefined) {
+                    $scope.pr_pgid = data.product_gid;
+                }
+            }
+
+            //pr_type
+            $scope.count1 = 0;
+            $scope.cat_type = function (productcategory_gid, pr) {
+                if (productcategory_gid == null || productcategory_gid == undefined ||
+                    productcategory_gid == "") {
+                    $scope.pr.selectedcustcattype = '';
+                    $scope.pr.product1 = '';
+                    $scope.pr.commodity = '';
+                    $scope.pr.ddlproduct = '';
+                    $scope.pr.branch_gid = '';
+                    productcategory_gid = '';
+                    $scope.prcat_type_list = [];
+                    $scope.ptype = '';
+                    $scope.pr_productcategory_gid = productcategory_gid;
+                    $scope.productcat_type(" ");
+
+
+                }
+
+                if (productcategory_gid > 0) {
+                    $scope.pr_productcategory_gid = productcategory_gid;
+                    // $scope.productcat_type('');
+                }
+            }
+            $scope.productdata = [];
+            //product
+            $scope.cat_type_product = function (data, sditem) {
+
+                if (!sditem) {
+                    $scope.pr.product1 = '';
+                    $scope.pr.commodity = '';
+                    $scope.pr.ddlproduct = '';
+                    $scope.Prsupplier_list = [];
+                    $scope.commodity_list = [];
+                    $scope.productdata = [];
+                }
+                $scope.pr_producttype_gid = sditem.producttype_gid;
+
+                if ($scope.dts) {
+
+                    $scope.dts_flag = "Y"
+                } else {
+                    $scope.dts_flag = "N"
+
+                }
+
+
+            }
+
+            $scope.dtsflag = function (dts) {
+                if (dts) {
+                    $scope.pr.selectedcustcattype = '';
+                    $scope.pr.product1 = '';
+                }
+            }
+
+            //Draft pr-details
+            $scope.purchase = [];
+            $scope.draftdata = [];
+            var pr_gid = sessionStorage.getItem('pr_draft_gid');
+            $scope.status = sessionStorage.getItem('prheader_status');
+            if($scope.status == 'Draft'){
+
+            $scope.draftdisable = false;
+            }
+            if($scope.status == 'Rejected'){
+            $scope.draftdisable = true;
+            }
+            $scope.draft_commodity = sessionStorage.getItem('commodity_gid');
+            $scope.prid = pr_gid;
+            if ($scope.prid) {
+                var get_prdetails = Serviceprcreate.getprdetails(pr_gid)
+                get_prdetails.then(function (result) {
+                        angular.forEach(result.data, function (value, key) {
+                            var CCBS = JSON.parse(value.CCBS)
+                            value.CCBS = CCBS
+                        })
+
+                        $scope.purchase = result.data;
+                        $scope.draftdata = $scope.purchase;
+                        $scope.file_path_notepad = $scope.purchase[0].prheader_notepad;
+                    }),
+                    function () {
+                        alert('no data');
+                    };
+            }
+
+            //pr details
+            $scope.purchase = [];
+
+            $scope.shwallremve = true;
+            $scope.fileshidebtn = false;
+            $scope.addproduct = function (pr) {
+
+                $scope.fileshidebtn = true;
+                $scope.shwallremve = false;
+                if (pr.commodity == undefined) {
+                    alert('Select Commodity Name');
+                    return false
+                }
+                if (pr.branch_gid == undefined) {
+                    alert('Select Branch Code');
+                    return false
+                }
+                if (pr.selectedcustcate == undefined) {
+                    alert('Select Product Category');
+                    return false
+                }
+                if (pr.selectedcustcattype == undefined) {
+                    alert('Select Product Type');
+                    return false
+                }
+                if (pr.ddlproduct == undefined) {
+                    alert('Select Supplier Name');
+                    return false
+                }
+
+                var editstatus = "Y";
+                if ($scope.purchase.length > 0) {
+
+                    if ($scope.purchase[0].action == 'draft') {
+                        editstatus = "N";
+                    }
+                }
+
+                $scope.p = $filter('filter')($scope.purchase, {
+                    'product_name': pr.product1.product_name,
+                    'branch_gid': pr.branch_gid.branch_gid,
+                    'commodity_name': pr.commodity.commodity_name,
+                    'commodity_gid': pr.commodity.commodityprod_commoditygid,
+                    'product_gid': pr.product1.product_gid,
+                    'supplierproduct_unitprice': pr.ddlproduct.unitprice,
+                    'supplierproduct_gid': pr.ddlproduct.supplierproduct_gid,
+                    'supplier_gid': pr.ddlproduct.supplier_gid,
+                    'uom_name': pr.product1.uom_name,
+                    'supplier_name': pr.ddlproduct.supplier_name,
+                    'branch_name': pr.branch_gid.branch_name,
+
+                }, true);
+                if ($scope.p.length > 0) {
+                    alert('This Record is Already Exists');
+                } else {
+
+                    $scope.branch_gid = pr.branch_gid.branch_gid;
+                    $scope.commodity_gid = pr.commodity.commodityprod_commoditygid;
+
+                    var pr_details = {
+                        'product_name': pr.product1.product_name,
+                        'branch_gid': pr.branch_gid.branch_gid,
+                        'commodity_name': pr.commodity.commodity_name,
+                        'commodity_gid': pr.commodity.commodityprod_commoditygid,
+                        'product_gid': pr.product1.product_gid,
+                        'supplierproduct_unitprice': pr.ddlproduct.unitprice,
+                        'supplierproduct_gid': pr.ddlproduct.supplierproduct_gid,
+                        'supplier_gid': pr.ddlproduct.supplier_gid,
+                        'uom_name': pr.product1.uom_name,
+                        'supplier_name': pr.ddlproduct.supplier_name,
+                        'branch_name': pr.branch_gid.branch_name,
+                        "detail_edit": editstatus,
+                        'ref_name': 'PR',
+                        "image_header": [],
+                        "PRdetail_gid": 0,
+                        'CCBS': []
+                    }
+
+                    $scope.purchase.push(pr_details);
+
+                    if ($scope.purchase.length > 1) {
+                        if ($scope.purchase[0].detail_edit != 'R') {
+                            if ($scope.purchase[0].commodity_gid != pr.commodity
+                                .commodityprod_commoditygid) {
+                                alert('Select the Same Commodity Name')
+                                i = $scope.purchase.length;
+                                $scope.purchase.pop(i, 1); // removes the matched element
+                                return false
+                            }
+                            if ($scope.purchase[0].branch_gid != pr.branch_gid.branch_gid) {
+                                alert('Select the Same branch')
+                                i = $scope.purchase.length;
+                                $scope.purchase.pop(i, 1); // removes the matched element
+                                return false
+                            }
+                            if ($scope.purchase[0].supplier_gid != pr.ddlproduct.supplier_gid) {
+                                alert('Select the Same Supplier Name')
+                                i = $scope.purchase.length;
+                                $scope.purchase.pop(i, 1); // removes the matched element
+                                return false
+                            }
+                        } else if ($scope.purchase[0].detail_edit == 'R') {
+                            for (var j = 1; j < $scope.purchase.length; j++) {
+                                if ($scope.purchase[j].detail_edit == 'R') {
+                                    if ($scope.purchase[j].commodity_gid != pr.commodity
+                                        .commodityprod_commoditygid) {
+                                        alert('Select the Same Commodity Name')
+                                        i = $scope.purchase.length;
+                                        $scope.purchase.pop(i, 1); // removes the matched element
+                                        return false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // alert($scope.purchase)
+                    $scope.searchText = null;
+                }
+            }
+
+
+
+ $scope.file_path="";
+        $scope.file_count=0;
+        $scope.file_stored_data=[];
+        $scope.duplicate_images=1;
+        $scope.number_of_message=1;
+  $scope.fullfile = [];
+  $scope.img_files1 = [];
+        $scope.loaddata_ = function(file_img,img, callback) {
+                var deferred = $q.defer();
+                var promise = deferred.promise;
+                promise.then(function() {
+                    var file_img_length = document.getElementById('file').files.length;
+                    if(file_img_length!=0){
+                        for(l=0;l<file_img_length;l++){
+                            var file_img = document.getElementById('file').files[l];
+                            $scope.type = '.' + file_img.name.split('.').pop();
+                                    $scope.name = file_img.name;
+                            var file_name=file_img.name;
+                            $scope.new_file_name=file_img.name;
+                            var imgs = new FormData();
+                            imgs.append('file', file_img);
+                            imgs.append('name', file_name);
+                            $scope.duplicate_images=1;
+                            for(var p=0;p<$scope.deleted_files.length;p++){
+                                $scope.temp_file_names=$scope.deleted_files[p].file_names;
+                                if($scope.new_file_name==$scope.temp_file_names){
+                                    $scope.duplicate_images=0;
+                                    $scope.file_count=$scope.file_count+1;
+                                }
+                            }
+                            if(file_img!=undefined&&$scope.duplicate_images==1){
+                              $scope.loading();
+                                 var upload = Serviceprcreate.imageup(imgs);
+                                 upload.then(function(result) {
+                                 if($scope.all_datas != ''){
+                                    $scope.all_datas= result.data;
+                                        $scope.img_files1 = {
+                                                "File_Name": $scope.name,
+                                                "File_Extension": $scope.type,
+                                                "File_Base64data": $scope.all_datas,
+                                            };
+                                            $scope.fullfile.push($scope.img_files1);
+
+                                    $scope.file_count=$scope.file_count+1;
+                                    $scope.file_status=1;
+                                    }
+                                    else{
+   $scope.file_status=2;
+                                    }
+
+
+
+                                    callback();
+                                }).finally($scope.endloading);
+                            }
+                            else{
+                                $scope.file_status=0;
+                                callback();
+                            }
+                        }
+                    }
+                     else{
+<!--                        alert("Please Attache File...");-->
+                        $scope.file_status=1;
+                        $scope.endloading();
+                        callback();
+                     }
+                }).then(function() {
+                    // callback();
+                });
+                deferred.resolve();
+
+        };
+
+
+
+
+
+
+
+
+            //draft button
+            $scope.save_prdetailsdraft = function (action1, prheader_gid, limi) {
+                if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+                    $scope.htmlcontent = "";
+                    }
+
+                $scope.draftdisable = true;
+                $scope.loading();
+                $scope.imgary = {
+                    "File_Name": "",
+                    "File_Extension": "",
+                    "File_Base64data": "",
+                }
+
+                var status, type, gid
+                gid = $scope.prid;
+                $scope.branch_gid = $scope.purchase[0].branch_gid;
+                $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                var tt = 'PR_DRAFT_INSERT'
+                var dd = 'PR_DETAILS_DRAFT'
+
+                if (action1 == 'draft' && $scope.prid == undefined) {
+                    limi = 0;
+                    status = 'Draft';
+                    type = dd;
+                    action = 'INSERT'
+                    gid = $scope.prid;
+                    $scope.branch_gid = $scope.purchase[0].branch_gid;
+                    $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                }
+                if (action1 == 'draft' && $scope.prid != undefined) { //alert('ooo')
+                    action = 'UPDATE';
+                    status = 'Draft';
+                    type = tt;
+                    for (var i = 0; i < $scope.purchase.length; i++) {
+                        if ($scope.purchase[i].CCBS == null) {
+                            // alert(type($scope.purchase[0].CCBS))
+                            $scope.purchase[i].CCBS = "{}"
+
+                        }
+                    }
+                }
+
+                  var file_img = document.getElementById('file').files[0];
+            $scope.list_of_files= document.getElementById('file').files.length;
+            var img = new FormData();
+            var UPLOAD_FILE="";
+
+            if(file_img!=undefined){
+                $scope.file_status=0;
+                var file_name=file_img.name;
+
+                var filename = file_img.name;
+                var index = filename.lastIndexOf(".");
+                $scope.strsubstring = filename.substring(index, filename.length);
+
+                img.append('file', file_img);
+                img.append('name', filename);
+            }
+
+                $scope.loaddata_(file_img,img,function () {
+          if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
+
+
+
+                var prdate = Date.parse($scope.today)
+                prdate = $filter('date')(prdate, "yyyy-MM-dd");
+                var details = {
+                    'HEADER': [{
+                        "Date": prdate,
+                        "Emp_gid": $scope.employgid,
+                        "Emp_mail": '',
+                        "Statuss": status,
+                        "Branchgid": $scope.branch_gid,
+                        "Totalamount": $scope.totalamt,
+                        "Commodity_gid": $scope.commodity_gid,
+                        "mepno": $scope.mepno,
+                        "PR_Header_Gid": parseInt(gid),
+                        "Header_img": $scope.img_files1,
+                        "Notepad" : $scope.htmlcontent
+                    }]
+                }
+                $scope.purchase[0].image_header = $scope.fullfile;
+                var ddl = {
+                    'DETAIL': $scope.purchase
+                }
+
+                var mainprdata = {
+                    "Action": action,
+                    "Type": type,
+                    "PR_Header": details,
+                    "PR_Products": ddl,
+                    "File": $scope.imgary,
+                    "Header_img": [$scope.img_files1]
+                }
+                if ($scope.purchase.length == 0) {
+                    alert("Pls select any one product");
+                } else {
+                    var prdatas = Serviceprcreate.setprsave(mainprdata)
+
+                    prdatas.then(function (result) {
+                            if (result.data == "SUCCESS") {
+                                alert(" Added to Draft list");
+                                sessionStorage.setItem('pr_header', '');
+                                $window.location.href = "pr_maker";
+                            } else {
+                                alert("Not able to proceed");
+                                $scope.draftdisable = false;
+                                return false
+                                sessionStorage.setItem('pr_header', '');
+                                $window.location.href = "pr_maker";
+                            }
+                        }),
+                        function () {
+                            alert('no data');
+                        }.finally($scope.endloading);
+                }
+                }
+                });
+            }
+
+
+            $scope.save_prdetails = function (action, prheader_gid, limi) {
+                if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+                    $scope.htmlcontent = "";
+                    }
+                $scope.IsDisabled = true;
+                $scope.imgary = [];
+                for (i = 0; i < $scope.purchase.length; i++) {
+                    if ($scope.purchase[i].image != '') {
+                        $scope.imgary.push($scope.purchase[i].image);
+                    }
+                    if($scope.purchase[i].CCBS.length == 0){
+                    alert('Please Fill CCBS against '+ $scope.purchase[i].product_name);
+                    return false;
+                    }
+                    if ($scope.purchase[i].qty_match != 'true') {
+                        $scope.IsDisabled = "false";
+                    }
+
+                }
+                var status, type, prgid
+                prgid = $scope.prid;
+                $scope.branch_gid = $scope.purchase[0].branch_gid;
+                $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                var limi_gid;
+
+                if (limi == undefined) {
+                    alert('Please choose pr approver')
+                    $scope.IsDisabled = false;
+                    return false
+                }
+                if ($scope.status == 'Draft') {
+
+                    action = 'Update';
+                    type = 'PR_DRAFT_INSERT'
+                    status = "Pending for next level to " + limi.employee_code;
+                    limi_gid = limi.employee_gid;
+                    prgid = $scope.prid;
+                    $scope.branch_gid = $scope.purchase[0].branch_gid;
+                    $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                }
+                 if ($scope.status == 'Rejected') {
+                    action = 'Update';
+                    type = 'PR_RESUBMIT'
+                    status = "Pending for next level to " + limi.employee_code;
+                    limi_gid = limi.employee_gid;
+                    prgid = $scope.prid;
+                    $scope.branch_gid = $scope.purchase[0].branch_gid;
+                    $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                }
+                if (prgid == undefined) {
+                    action = 'insert';
+                    type = 'PR_DETAILS_INSERT'
+                    status = "Pending for next level to " + limi.employee_code;
+                    prgid = 0;
+                    $scope.branch_gid = $scope.purchase[0].branch_gid;
+                    $scope.commodity_gid = $scope.purchase[0].commodity_gid;
+                    limi_gid = limi.employee_gid;
+                }
+
+                  var file_img = document.getElementById('file').files[0];
+            $scope.list_of_files= document.getElementById('file').files.length;
+            var img = new FormData();
+            var UPLOAD_FILE="";
+
+            if(file_img!=undefined){
+                $scope.file_status=0;
+                var file_name=file_img.name;
+
+                var filename = file_img.name;
+                var index = filename.lastIndexOf(".");
+                $scope.strsubstring = filename.substring(index, filename.length);
+
+                img.append('file', file_img);
+                img.append('name', filename);
+            }
+
+                $scope.loaddata_(file_img,img,function () {
+          if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
+
+                var prdate = Date.parse($scope.today)
+                prdate = $filter('date')(prdate, "yyyy-MM-dd");
+                var details = {
+                    'HEADER': [{
+                        "Date": prdate,
+                        "Emp_gid": $scope.employgid,
+                        "Emp_mail": limi.employee_emailid,
+                        "Statuss": status,
+                        "Branchgid": $scope.branch_gid,
+                        "Totalamount": $scope.totalamt,
+                        "Commodity_gid": $scope.commodity_gid,
+                        "mepno": $scope.mepno,
+                        "PR_Header_Gid": parseInt(prgid),
+                        "dropdown_gid": limi_gid,
+                        "Header_img": $scope.fullfile,
+                        "Notepad" : $scope.htmlcontent
+                    }]
+                }
+                $scope.purchase[0].image_header = $scope.fullfile;
+                var ddl = {
+                    'DETAIL': $scope.purchase
+                }
+
+
+                var mainprdata = {
+                    "Action": action,
+                    "Type": type,
+                    "PR_Header": details,
+                    "PR_Products": ddl,
+                    "File":$scope.imgary,
+                    "Header_img": $scope.fullfile
+                }
+                if ($scope.purchase.length == 0) {
+                    alert("Add Atleast one product?");
+                    $scope.IsDisabled = false;
+                } else {
+                    $scope.loading();
+                    var prdatas = Serviceprcreate.setprsave(mainprdata)
+                    prdatas.then(function (result) {
+                            if (result.data == "SUCCESS") {
+                                alert("Inserted Successfully");
+                                sessionStorage.setItem('pr_header', '');
+                                $window.location.href = "pr_maker";
+                            } else {
+                                alert("Not Inserted ");
+                                $scope.endloading()
+                                $scope.IsDisabled = false;
+                                return false
+                                sessionStorage.setItem('pr_header', '');
+                                $window.location.href = "pr_maker";
+                            }
+                        }),
+                        function () {
+                            alert('no data');
+                        }.finally($scope.endloading);
+                }
+                }
+                  });
+
+            }
+
+
+            $scope.prdelete = [];
+            $scope.purdelete = function (pur, purchase_gid, $index) {
+
+                if (pur.action != undefined) {
+                    $scope.purchase[$index].detail_edit = "R";
+                    $scope.purchase[$index].quantity = 0;
+                    $scope.purchase[$index].CCBS = '{}'
+                    return false
+                }
+
+                if (purchase_gid == undefined || purchase_gid == "") {
+                    $scope.purchase.splice($index, 1);
+                    alert("Deleted ");
+                } else {
+                    // $scope.prdelete.push(purchase_gid);
+                    $scope.purchase.splice($index, 1);
+                    alert("Deleted ");
+                }
+                if ($scope.status = 'Draft') {
+                    var d1 = {
+                        "prdetails_prheader_gid": $scope.prid,
+                        "prdetails_product_gid": pur.prdetails_product_gid
+                    }
+                    var data = {
+                        'action': 'delete',
+                        'data': d1
+                    }
+                }
+                if ($scope.purchase.length == 0) {
+                    $scope.MEP_STATUS = false;
+                }
+            }
+            $scope.close = function () {
+                sessionStorage.setItem('pr_header', '');
+                $window.location.href = "pr_maker";
+            }
+            //ccbs
+
+            $scope.bstocc = function (bs) {
+                if (bs != undefined || bs != null) {
+                    $scope.pr_tbsgid = bs;
+                } else {
+                    $scope.prc.tname = '';
+                    $scope.pr_tbsgid = '';
+
+                }
+            }
+
+            $scope.ccbsstatus = function (a, index) {
+                $scope.draftdata[$scope.ccbsindex].CCBS[index].prccbs_edit = "R";
+            }
+            $scope.removeddl = function (a, index) {
+
+                if (a.status != undefined) {
+                    $scope.purchase[$scope.ccbsindex].CCBS[index].prccbs_edit = "R";
+                    $scope.purchase[$scope.ccbsindex].CCBS[index].prccbs_qty = 0;
+                    return false
+                }
+                for (var i = 0; i < $scope.ccbsddl.length; i++) {
+                    if ($scope.ccbsddl[i] == a) {
+                        $scope.ccbsddl.splice(i, 1); // removes the matched element
+                        i = $scope.ccbsddl.length;
+                    }
+                }
+            }
+            $scope.pur = [];
+            $scope.databranch = function (index, id, par) {
+
+                if (id == -1) {
+                    var data = {
+                        "branch_gid": id
+                    }
+
+                    $scope.branchnameget2(data);
+                    par.location = null;
+                }
+                if ($scope.ccbsddl[index].delivery_type == 'PO_BRANCH') {
+                    $scope.ccbsddl[index].prccbs_reftablegid = id
+                    return false
+                }
+                if ($scope.ccbsddl[index].delivery_type == 'PO_GODOWN') {
+                    $scope.ccbsddl[index].prccbs_reftablegid = id
+                    return false
+                }
+            }
+
+            $scope.finalccbs = [];
+            $scope.saveccbsdata = function (pur, a, b) {
+
+                if ($scope.totalamtccbs == $scope.allocatedqty) {
+                    modalhide('mdl_present1');
+
+                    if ($scope.purchase[$currentindex].quantity == $scope.totalamtccbs) {
+                        $scope.IsDisabled = false;
+                        $scope.purchase[$currentindex].qty_match = true;
+                    }
+
+                } else {
+                    alert('qty shuld be mached')
+                    return false
+                }
+            }
+            $scope.checkddl = function (index, a) {
+
+                $scope.data = $filter('filter')($scope.purchase, {
+
+                }, true);
+                if ($scope.totalamtccbs > $scope.allocatedqty) {
+                    alert('qty shuld be mached');
+                }
+
+            }
+
+
+        }
+    ]);
+    myApp.service("Serviceprcreate", function ($http) {
+        //Draft data
+
+        this.getprdetails = function (prheader_gid) {
+            var response = $http.post(Appname + "/Prdraftdata/", {
+                params: {
+                    'prheader_gid': prheader_gid,
+                }
+            })
+            return response;
+        }
+
+        //ccbs
+        this.setprsave = function (data) {
+            var response = $http.post(Appname + "/saveccbs/", data);
+            return response;
+        }
+
+this.get_file_read = function (data) {
+            var response = $http.post(Appname + "/common_read_file/", data);
+            return response;
+        }
+
+        this.imageup = function (custid) {
+            var respons = $http.post(Appname + "/imageconvert/",
+                custid, {
+                    transformRequest: angular.identity,
+                    headers: {
+                        'Content-Type': undefined
+                    }
+                }
+            );
+            return respons;
+        }
+    });
+</script>
+{% endblock %}

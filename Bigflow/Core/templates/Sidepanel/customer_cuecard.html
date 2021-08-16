@@ -1,0 +1,184 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Cue Card{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" id="maincontent">
+    <div ng-app="Appcuecard" ng-controller="Ctrlcuecard" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Cue Card</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>From Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" ng-change="minDate" formatDate
+                                       ng-model="frmdate"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>To Date</label>
+                        <md-datepicker formatDate ng-model="todat" md-hide-icons="calendar" md-min-date="minDate"
+                                       ng-click="date()"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <br>
+                <div class="col-md-9 col-lg-8">
+                    <md-autocomplete
+                            md-selected-item="selectedItem"
+                            md-search-text="searchText"
+                            md-selected-item-change="customerChange(item)"
+                            md-items="item in getcustomer(searchText)"
+                            md-item-text="item.customer_name"
+                            md-min-length=0
+                            placeholder="Customer Name">
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.customer_name}} - {{item.location_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Customer Name matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'cus_cuecardview'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    (function(angular, undefined) {
+        'use strict';
+
+        var myapp = angular
+            .module('Appcuecard', ['ngMaterial', 'ui.bootstrap'])
+            .config(configAddschedule)
+            .controller('Ctrlcuecard', Ctrlcuecard)
+            .service('Sercuecard', Sercuecard);
+
+        function configAddschedule($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        }
+        myapp.run(function($mdDateLocale, $filter) {
+            $mdDateLocale.formatDate = function(date) {
+                return $filter('date')(date, "dd-MMM-yyyy");
+            };
+        })
+        Ctrlcuecard.$inject = ['$scope', '$mdDialog', 'Sercuecard', '$filter'];
+
+        function Ctrlcuecard($scope, $mdDialog, Sercuecard, $filter) {
+
+           var detail = JSON.parse(sessionStorage.getItem('today'));
+        var td = detail.date
+           $scope.dbdate = convertdate(td);
+
+            $scope.frmdate = convertdate(td);
+            $scope.todat = convertdate(td);
+            var fromdate = formatDate($scope.frmdate);
+            var todate = formatDate($scope.todat);
+            $scope.customer = [];
+            $scope.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            $scope.getcustomer = gotoGetCustomer;
+            $scope.customerChange = gotoCustomerChange;
+        var jsonData = "{}"
+            var get_cust = Sercuecard.getcusomter(jsonData)
+            get_cust.then(function(result) {
+                $scope.customer = JSON.parse(result.data);
+            }, function(err) {
+                alert('No data!.');
+            });
+
+            function gotoGetCustomer(query) {
+                var result = $filter('filter')($scope.customer, {
+                    'customer_name': query
+                });
+                return result;
+            }
+
+            function gotoCustomerChange(item) {
+                debugger;
+                getsalesquantity(item.customer_gid);
+                <!--getdpprice(item.customer_gid);-->
+            }
+
+            function getsalesquantity(cust_gid, fromdate, todate) {
+                var get_cust = Sercuecard.getsalesqty('', '', cust_gid, formatDate($scope.frmdate), formatDate($scope.todat))
+                get_cust.then(function(result) {
+                    var data = result.data
+                    $scope.customer_name = data.customer_name;
+                    $scope.employee_name = data.employee_name;
+                    $scope.salesdetails = data.sales_details;
+                    $scope.headers = data.headers;
+                    getdpprice(cust_gid);
+                }, function(err) {
+                    alert('No data!.');
+                    getdpprice(cust_gid);
+                });
+                $scope.customer_name = "";
+                $scope.salesdetails = "";
+
+            }
+
+            function getdpprice(cust_gid, fromdate, todate) {
+                var get_cust = Sercuecard.getdp('', '', cust_gid, formatDate($scope.frmdate), formatDate($scope.todat))
+                get_cust.then(function(result) {
+                debugger;
+                    var data = result.data
+                    $scope.customer_name = data.customer_name;
+                    $scope.employee_name = data.employee_name;
+                    $scope.dpdetails = data.dp_details;
+                    $scope.headers = data.headers;
+                }, function(err) {
+                    alert('No data!.');
+                });
+                $scope.dpdetails = "";
+                $scope.customer_name = "";
+            }
+        }
+
+        function Sercuecard($http) {
+          this.getcusomter = function(jsonData) {
+            var response = $http.get(Appname + "/customer_get/",{
+            params:{
+            'jsonData':jsonData
+            }
+            });
+            return response;
+        }
+            this.getsalesqty = function(tableName, searchGid, cust_gid, fromdate, todate) {
+                var response = $http.get(Appname + "/customersales/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "cust_gid": cust_gid,
+                        "fromdate": fromdate,
+                        "todate": todate
+                    }
+                });
+                return response;
+            };
+            this.getdp = function(tableName, searchGid, cust_gid, fromdate, todate) {
+                var response = $http.get(Appname + "/dp_get/", {
+                    params: {
+                        "table_name": tableName,
+                        "search_gid": searchGid,
+                        "cust_gid": cust_gid,
+                        "fromdate": fromdate,
+                        "todate": todate
+                    }
+                });
+                return response;
+            };
+        }
+
+    })(angular);
+
+</script>
+{% endblock %}

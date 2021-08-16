@@ -1,0 +1,528 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APProperty_Set`(
+IN `Type` varchar(300),
+IN `Sub_Type` varchar(300),
+IN `lj_filters` json,
+IN `lj_classification` json,
+OUT `Message` text )
+ap_property_Set :BEGIN
+
+
+#selva       23-09-2019
+declare Query_Insert text; 
+declare Query_Update varchar(1000);
+declare query_column varchar(1000);
+declare query_value varchar(1000);
+declare errno int;
+declare msg varchar(1000);
+declare PV_NO varchar(16);
+declare countRow int;
+declare ls_count int;
+declare i,j int;
+declare lj_Inv_Status json;
+DECLARE done INT UNSIGNED DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+
+#select 5;
+
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;    
+    
+    SET autocommit = 0; 
+    start transaction;    
+    
+    select JSON_LENGTH(lj_filters,'$') into @li_json_count;
+    select JSON_LENGTH(lj_classification,'$') into @li_json_count1; 
+        
+         if  @li_json_count <=0  then
+                set Message = 'No Data in Json Object';
+                leave ap_property_Set;
+        end if;
+     
+       if  @li_json_count1 <=0  then
+                set Message = 'No classification in Json Object';
+                leave ap_property_Set;
+       end if;
+      
+ if Type = 'INSERT' and  Sub_Type='property'  then
+ 
+        #select lj_filters;
+        #select lj_classification;
+       # select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_code'))) into @property_code;        
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_name'))) into @property_name;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_type'))) into @property_type;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_locationgid'))) into @property_locationgid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_addressgid'))) into @property_addressgid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_landmark'))) into @property_landmark;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_inchargegid'))) into @property_inchargegid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_alternativeinchargegid'))) into @property_alternativeinchargegid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_usage'))) into @property_usage;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_controloffice'))) into @property_controloffice;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_controlby'))) into @property_controlby;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_status'))) into @property_status;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_remarks'))) into @property_remarks;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Create_by'))) into @Create_by;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.ADDRESS'))) into @ADDRESS;
+        select JSON_LENGTH(@ADDRESS,'$')into @li_address_count;
+        select JSON_LENGTH(@ADDRESS,'$') into @lnth;  
+        set j = 0;
+            WHILE j<= @lnth - 1 Do
+                            
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address1'))) into @address1;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address2'))) into @address2;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address3'))) into @address3;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Pincode'))) into @pincode;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].District_Gid'))) into @district_gid;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].City_Gid'))) into @city_gid;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].State_Gid'))) into @state_gid;
+                            
+                                   call sp_Address_Set('Insert',0,'PROPERTY',@address1,@address2,@address3,@pincode,@district_gid,@city_gid,@state_gid,@Entity_gid,@Create_by,@Message);
+                                      select @Message into @Out_Message_Address;
+                                      #select @Out_Message_Address;
+                                      select SUBSTRING_INDEX(@Out_Message_Address,',',1) into @add_max_gid;
+                              set j = j + 1;
+                END WHILE;       
+       
+  
+       
+       if @property_name = '' or  @property_name is null then
+              set Message ='property_name  Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       if @property_type = '' or  @property_type is null then
+              set Message ='property_type Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+        
+       
+          if @property_landmark = '' or  @property_landmark is null  then
+              set  @property_landmark='';
+         end if;
+       
+        if @property_inchargegid = '' or  @property_inchargegid is null  or  @property_inchargegid =0 then
+              set Message ='property_inchargegid Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+        if @property_alternativeinchargegid = '' or  @property_alternativeinchargegid is null  or  @property_alternativeinchargegid =0 then
+              set Message ='property_alternativeinchargegid Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       if @property_usage = '' or  @property_usage is null then
+              set Message ='property_usage Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       if @property_controloffice = '' or  @property_controloffice is null then
+              set Message ='property_controloffice Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       
+        if @property_controlby = '' or  @property_controlby is null  then
+              set Message ='property_controlby Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       
+       if @property_status = '' or  @property_status is null then
+              set Message ='property_status Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       
+       
+       if @property_remarks = ''  or  @property_remarks is null then
+              set Message ='property_remarks Is Not Given';
+              rollback;
+              leave ap_property_Set;
+       end if;
+       select ifnull(max(property_code),0) into @codes from ap_mst_tproperty where property_gid =(select max(property_gid) 
+         from ap_mst_tproperty where property_isremoved='N') ;
+       # select @codes;
+            call sp_Generatecode_Get('WITH_DATE','PRO','100',@codes,@Message);
+            #select @Message;
+            #call sp_Generate_number_get('PT','000',@Messagee);
+            select @Message into @_code from dual;
+          #select @_code;
+       
+       set  Query_Insert = '';
+       set Query_Insert = concat('insert into ap_mst_tproperty 
+                                                    (property_code,
+                                                    property_name,
+                                                    property_type,
+                                                    property_locationgid,
+                                                    property_addressgid,
+                                                    property_landmark,
+                                                    property_inchargegid,
+                                                    property_alternativeinchargegid,
+                                                    property_usage,
+                                                    property_controloffice,
+                                                    Property_controlby,
+                                                    property_status,
+                                                    property_remarks,
+                                                    entity_gid,
+                                                    create_by
+                                                    )
+                                                    values(''',@_code,''',
+                                                               ''',@property_name,''',
+                                                               ''',@property_type,''',
+                                                               ''',@property_locationgid,''',
+                                                               ''',@add_max_gid,''',
+                                                               ''',@property_landmark,''', 
+                                                                ''',@property_inchargegid,''',
+                                                               ''',@property_alternativeinchargegid,''',
+                                                               ''',@property_usage,''',
+                                                               ''',@property_controloffice,''',
+                                                               ''',@property_controlby,''',
+                                                               ''',@property_status,''',
+                                                               ''',@property_remarks,''',
+                                                               ''',@Entity_Gid,''',
+                                                               ''',@Create_by,''')');
+                                       
+                                set @Insert_query = Query_Insert;   
+                                #select Query_Insert; ## Remove It
+                                PREPARE stmt FROM @Insert_query;
+                                EXECUTE stmt;  
+                                set countRow = (select ROW_COUNT());
+                                DEALLOCATE PREPARE stmt;                  
+ 
+                                if countRow > 0 then
+                                set Message = 'SUCCESS';         
+                                commit;  
+                                 else
+                                set Message = 'FAIL';   
+                                leave ap_property_Set;
+                                End if;
+                    
+                
+end if;
+            
+ if Type = 'Update' and  Sub_Type='property'  then
+        
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_gid'))) into @property_gid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_name'))) into @property_name;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_type'))) into @property_type;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_locationgid'))) into @property_locationgid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_addressgid'))) into @property_addressgid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_landmark'))) into @property_landmark;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_inchargegid'))) into @property_inchargegid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_alternativeinchargegid'))) into @property_alternativeinchargegid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_usage'))) into @property_usage;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_controloffice'))) into @property_controloffice;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_controlby'))) into @property_controlby;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_status'))) into @property_status;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_remarks'))) into @property_remarks;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Create_by'))) into @Create_by;
+    select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.ADDRESS'))) into @ADDRESS;
+            select JSON_LENGTH(@ADDRESS,'$') into @lnth;  
+        set Query_Update = concat('Update ap_mst_tproperty set update_by = ', @Create_by,', ');
+                
+                if @property_name <> '' then
+                    set Query_Update = concat(Query_Update, ' property_name = ''',@property_name,''', ');
+                End if;
+                
+                  if @property_type <> '' then
+                    set Query_Update = concat(Query_Update, ' property_type = ''',@property_type,''', ');
+                End if;
+                
+                  if @property_status <> '' then
+                    set Query_Update = concat(Query_Update, ' property_status = ''',@property_status,''', ');
+                End if;
+                                 
+                  if @property_inchargegid <> '' then
+                    set Query_Update = concat(Query_Update, ' property_inchargegid = ''',@property_inchargegid,''', ');
+                End if;   
+                
+                if @property_controlby <> '' then
+                    set Query_Update = concat(Query_Update, ' Property_controlby = ''',@property_controlby,''', ');
+                End if;
+                
+                  if @property_alternativeinchargegid <> '' then
+                    set Query_Update = concat(Query_Update, ' property_alternativeinchargegid = ''',@property_alternativeinchargegid,''', ');
+                    
+                  
+                End if;
+                    
+                  if @property_landmark <> '' then
+                    set Query_Update = concat(Query_Update, ' property_landmark = ''',@property_landmark,''', ');
+                End if;                
+                
+                if @property_remarks <> '' then
+                    set Query_Update = concat(Query_Update, ' property_remarks = ''',@property_remarks,''', ');
+                End if;    
+                
+               
+                
+               set Query_Update = concat(Query_Update, 'Update_date = current_timestamp()  where property_gid = ',@property_gid,'  ' );
+                   
+                   
+                  #select Query_Update;
+                   #select @lnth;
+  
+            set j = 0;
+            WHILE j<= @lnth - 1 Do
+                            
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address1'))) into @address1;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address2'))) into @address2;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address3'))) into @address3;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Pincode'))) into @pincode;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].District_Gid'))) into @district_gid;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].City_Gid'))) into @city_gid;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].State_Gid'))) into @state_gid;
+                                 select JSON_UNQUOTE(JSON_EXTRACT(@ADDRESS,CONCAT('$[',j,'].Address_Gid'))) into @Address_Gid;
+                            #select @Address_Gid;
+                                   call sp_Address_Set('Update',@Address_Gid,'PROPERTY',@address1,@address2,@address3,@pincode,@district_gid,@city_gid,@state_gid,@Entity_gid,@Create_by,@Message);
+                                      select @Message into @Out_Message_Address;
+                                # select @Out_Message_Address;
+                                      #select SUBSTRING_INDEX(@Out_Message_Address,',',1) into @add_max_gid;
+                              set j = j + 1;
+                END WHILE;   
+                
+                    set @Query_Update = '';
+                    set @Query_Update = Query_Update;                       
+                    #select @Query_Update; ### Remove IT
+                    PREPARE stmt FROM @Query_Update;
+                    EXECUTE stmt;  
+                    set countRow = (select ROW_COUNT());
+                    DEALLOCATE PREPARE stmt; 
+                   
+                   
+                   if countRow > 0 then
+                        set Message = 'SUCCESS';         
+                    commit;  
+                     else
+                        set Message = 'FAIL';   
+                        leave ap_property_Set;
+                    End if;
+    
+end if;     
+
+if Type = 'INSERT' and  Sub_Type='Property_Branch'  then
+
+				#select 1;
+				select JSON_LENGTH(lj_filters,'$.Data') into @lj_filters_count;
+				select JSON_LENGTH(lj_classification,'$') into @lj_classification_count; 
+				#select @lj_filters_count;
+				#select @lj_classification_count;
+    
+						 if  @lj_filters_count <=0  then
+								set Message = 'No Data in Json Object';
+                                rollback;
+								leave ap_property_Set;
+						end if;
+				 
+					    if  @lj_classification_count <=0  then
+								set Message = 'No classification in Json Object';
+                                rollback;
+								leave ap_property_Set;
+					    end if;
+                 # select 2;
+                set i=0;
+                while i<@lj_filters_count do
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Data[',i,'].branch_gid'))) into @propertybranch_branchgid;
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Data[',i,'].property_gid'))) into @propertybranch_propertygid;
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.Data[',i,'].propertybranch_remarks'))) into @propertybranch_remarks;
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Create_by'))) into @Create_by;
+						   
+						  # select  @propertybranch_branchgid,@propertybranch_propertygid,@Entity_Gid,@create_by;
+						      
+							set query_column='';
+							set query_value='';
+							
+                            if @propertybranch_remarks<>'' or @propertybranch_remarks is not null then 
+							  set query_column=concat(',propertybranch_remarks');
+							  set query_value=concat(',''',@propertybranch_remarks,''' ');
+							end if;
+						   
+						   #select query_column;
+						   #select query_value;
+						 
+							set Query_Insert='';
+							set Query_Insert=concat('insert into ap_map_tpropertybranch
+														 (propertybranch_branchgid,propertybranch_propertygid,
+														 entity_gid,create_by ',query_column,')
+														value
+														(',@propertybranch_branchgid,',',@propertybranch_propertygid,',
+														 ',@Entity_Gid,',',@Create_by,' ',query_value,')');
+												
+						  # select Query_Insert;                         
+						   set @p=Query_Insert ;
+						   prepare stmt from @p;
+						   execute stmt;
+					set i=i+1;
+               end while;
+						   select row_count() into ls_count;
+							   if ls_count >0 then
+									set message='SUCCESS';
+							     commit;
+							   else
+									set message='NOT SUCCESS';
+							     rollback;
+							   end if;
+         end if;                      
+      
+      if Type = 'INSERT' and  Sub_Type='Property_Branch_Insert'  then
+      #select 5;
+      /*
+				select JSON_LENGTH(lj_filters,'$') into @lj_filters;
+				select JSON_LENGTH(lj_classification,'$') into @lj_classification; 
+                select  @lj_filters;
+                select  @lj_classification;
+              select 1;  
+						if  @lj_filters <=0  then
+								set Message = 'No Data in Json Object';
+						rollback;
+						leave ap_property_Set;
+						end if;
+				 
+					    if  @lj_classification <=0  then
+								set Message = 'No classification in Json Object';
+						rollback;
+						leave ap_property_Set;
+					    end if;
+                     */   
+                      #select 2;
+		   	     select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.branch_gid'))) into @branch_gid;
+		   	     select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_gid'))) into @property_gid;
+                 select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+				 select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Create_by'))) into @Create_by; 
+                 
+                 set @GID=''; 
+			     SELECT EXISTS(select propertybranch_gid  from ap_map_tpropertybranch 
+				 where propertybranch_propertygid= @property_gid and propertybranch_branchgid= @branch_gid and 
+					   propertybranch_isactive='Y') into @GID; 
+				 #select @GID;
+                
+                 SELECT EXISTS(select propertybranch_gid   from ap_map_tpropertybranch 
+				 where propertybranch_propertygid= @property_gid and propertybranch_branchgid= @branch_gid and 
+					   propertybranch_isactive='N') into @IS_ACTIVE;
+                       
+                       #select @IS_ACTIVE;
+                       
+                       if @GID=1  then
+						  set message='Already EXISTS';
+						  leave ap_property_Set;
+					   
+                       elseif @IS_ACTIVE=1 then
+                       
+                               set query_update='';
+                               set query_update=concat('UPDATE ap_map_tpropertybranch SET propertybranch_isactive=''Y'',
+                                                                                          update_by=',@Create_by,',
+                                                                                          update_date=now()
+															  WHERE propertybranch_propertygid in (',@property_gid,') and 
+															  propertybranch_branchgid in (',@branch_gid,') ');
+                                set @p=query_update ;
+								prepare stmt from @p;
+								execute stmt;
+								select row_count() into ls_count;
+									   if ls_count >0 then
+											set message='SUCCESS';
+										 commit;
+									   else
+											set message='NOT SUCCESS';
+										 rollback;
+									   end if;                              
+                                                              
+					    elseif @GID=0 and @IS_ACTIVE=0 then  
+                                set query_column='';
+								set query_value='';
+								
+								if @propertybranch_remarks<>'' or @propertybranch_remarks is not null then 
+								  set query_column=concat(',propertybranch_remarks');
+								  set query_value=concat(',''',@propertybranch_remarks,''' ');
+								end if;
+                             # select @branch_gid,@property_gid,@Entity_Gid,@Create_by;
+                                set Query_Insert='';
+							    set Query_Insert=concat('insert into ap_map_tpropertybranch
+														 (propertybranch_branchgid,propertybranch_propertygid,
+														 entity_gid,create_by ',query_column,')
+														value
+														(',@branch_gid,',',@property_gid,',
+														 ',@Entity_Gid,',',@Create_by,' ',query_value,')'); 
+                 
+								# select Query_Insert;                         
+								   set @p=Query_Insert ;
+								   prepare stmt from @p;
+								   execute stmt;
+							
+								   select row_count() into ls_count;
+									   if ls_count >0 then
+											set message='SUCCESS';
+										 commit;
+									   else
+											set message='NOT SUCCESS';
+										 rollback;
+									   end if;
+                                     
+                        end if;     
+                        
+       end if;
+       
+       
+        if Type = 'UPDATE' and  Sub_Type='ACTIVE_STATUS' then
+       # select 1;
+           select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.branch_gid'))) into @branch_gid;
+		   select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.property_gid'))) into @property_gid;
+		   select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Create_by'))) into @Create_by;
+           
+           #select @branch_gid,@property_gid,@Create_by;
+			
+            set @ACTIVE='';
+            
+           select propertybranch_isactive into @ACTIVE
+		   from ap_map_tpropertybranch 
+		   where propertybranch_branchgid=@branch_gid and propertybranch_propertygid=@property_gid ;
+           #select @ACTIVE;
+           SET SQL_SAFE_UPDATES = 0;
+         
+           if  @ACTIVE='N' then
+               set  @ACTIVE='Y';
+           elseif  @ACTIVE='Y' then 
+                set @ACTIVE='N';
+           end if;     
+							   
+                               set query_update='';
+							   set query_update=concat('UPDATE ap_map_tpropertybranch SET propertybranch_isactive=''',@ACTIVE,''',
+                                                                                          update_by=',@Create_by,',
+                                                                                          update_date=now()
+															  WHERE propertybranch_propertygid in (',@property_gid,') and 
+															  propertybranch_branchgid in (',@branch_gid,')');
+							
+							   #select query_update;                         
+							   set @p=query_update ;
+							   prepare stmt from @p;
+							   execute stmt;
+                               select row_count() into ls_count;
+							   #select @ls_count;
+								   if ls_count >0 then
+										set message='SUCCESS';
+									 commit;
+								   else
+										set message='NOT SUCCESS';
+									 rollback;
+								   end if;
+		
+        
+        
+
+  end if;                             
+  
+END

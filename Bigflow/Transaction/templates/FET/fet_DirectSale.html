@@ -1,0 +1,2144 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Direct {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appdrctsale" ng-controller="Ctrldrctsale">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong> {{title}}</strong></h4>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Client Name</label>
+                        <md-select ng-change="chngclnt(sltdclient)" ng-model="sltdclient">
+                            <md-optgroup label="Client Name">
+                                <md-option ng-repeat="c in clientname" ng-value="c.client_gid"> {{c.client_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-if="details_show">
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Search by Customer</label>
+                    <input maxlength="16" ng-change="filtersearch()" ng-model="customername" type="text"/>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Search by Type</label>
+                    <input maxlength="16" ng-change="filtersearch()" ng-model="typ" type="text"/>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Search by status</label>
+                    <input maxlength="16" ng-change="filtersearch()" ng-model="stats" type="text"/>
+                </md-input-container>
+            </div>
+            <div class="col-md-6" ng-cloak>
+                <md-fab-speed-dial md-direction="right" md-open="false" ng-class="selectedMode">
+                    <md-fab-trigger>
+                        <md-button aria-label="Add" class="md-fab custbutton ">
+                            <md-icon class="material-icons">add</md-icon>
+                        </md-button>
+                    </md-fab-trigger>
+                    <md-fab-actions>
+                        <div ng-repeat="type in schType">
+                            <md-button aria-label="Add" class="md-fab md-raised md-mini"
+                                       ng-click="gotoDetails(type)">
+                                <label>{{type.scheduletype_name[0]}}</label>
+                                <md-tooltip>{{type.scheduletype_name}}</md-tooltip>
+                            </md-button>
+                        </div>
+                    </md-fab-actions>
+                </md-fab-speed-dial>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                           ng-model="from_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>To Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-min-date="from_date"
+                                           md-open-on-focus ng-model="to_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button aria-label="Search" class="md-icon-button md-primary" ng-click="clck()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive" ng-if="details_show">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Name</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <!--<th>Status</th>-->
+                        <th>Complete For</th>
+                        <th>Sales Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-class="sale.schedule_gid > 0?'danger':''"
+                        ng-repeat="sale in salesSchedule.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{sale.display_name}}</td>
+                        <td>{{sale.schedule_date | date:"dd-MMM-yyyy"}}</td>
+                        <td>{{sale.scheduletype_name}}</td>
+                        <!--<td>{{sale.schedule_status == 'OPEND'?'OPENED':sale.schedule_status}}</td>-->
+                        <td>{{sale.followupreason_name }}</td>
+                        <td>{{sale.Sales_Status}}</td>
+                        <td class="text-center">
+                             <span class="editlink"
+                                   ng-click="edit_click(sale)" ng-hide="{{((sale.followupreason_name =='Sales'||'Cash') && (sale.Sales_Status!='CANCELLED')) ? false : true}}">
+                               <span class="material-icons">mode_edit</span>
+                                <md-tooltip>Edit</md-tooltip>
+                             </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination" items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="salesSchedule.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{salesSchedule.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+                <p ng-show="shwremarks"> Remarks for Rejected is <span
+                        class="removelink">{{remar}}</span></p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <ng-view></ng-view>
+            </div>
+        </div>
+        <!--spinner-->
+        <div style="visibility: hidden">
+            <div class="md-dialog-container" id="myDialog">
+                <md-dialog style="height:20% !important;overflow: hidden;">
+                    <h3 style="text-align:center">Loading..</h3>
+                    <div layout="row" layout-align="space-around" layout-sm="column">
+                        <md-progress-circular md-diameter="40" md-mode="indeterminate"
+                        ></md-progress-circular>
+                    </div>
+                </md-dialog>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appdrctsale', ['ngMaterial', 'ui.bootstrap', 'ngMessages', 'ngRoute', 'AppCommon']);
+    myApp.config(function($httpProvider, $routeProvider, $locationProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    $routeProvider
+        .when("/Sales", {
+            templateUrl: "salecreate",
+            controller: "Ctrlsales"
+        })
+        .when('/Collection', {
+            templateUrl: "collectioncreate",
+            controller: "Ctrlcollection"
+        })
+        .when('/Stocktaken', {
+            templateUrl: "stocktkncreate",
+            controller: "Ctrlstocktaken"
+        })
+    $locationProvider.html5Mode(true);
+});
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+myApp.controller('Ctrldrctsale', ['$scope', 'Servicedrctsale', '$filter', '$location', '$rootScope', '$mdDialog', '$timeout', 'SerCommon',
+        function($scope, Servicedrctsale, $filter, $location, $rootScope, $mdDialog, $timeout, SerCommon, $mdToast) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.salesSchedule = [];
+        var overallSchedule = [];
+        $scope.details_show = true;
+        $scope.title = 'View Task Details';
+        $scope.selectedMode = 'md-fling';
+        var myvalue = "";
+        $scope.loading = function() {
+            $mdDialog.show({
+                contentElement: '#myDialog',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        var td = detail.date
+        $scope.dbdate = convertdate(td);
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $rootScope.$on('loading', function(event, data) {
+            $scope.loading();
+        });
+
+        $rootScope.$on('endloading', function(event, data) {
+            $scope.endloading();
+        });
+
+        format = function date2str(x, y) {
+            var z = {
+                M: x.getMonth() + 1,
+                d: x.getDate(),
+                h: x.getHours(),
+                m: x.getMinutes(),
+                s: x.getSeconds()
+            };
+            y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+                return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-2)
+            });
+            return y.replace(/(y+)/g, function(v) {
+                return x.getFullYear().toString().slice(-v.length)
+            });
+        }
+
+        $scope.clck = function() {
+            var jsonData = {
+                from_date: format(($scope.from_date), 'yyyy-MM-dd'),
+                to_date: format(($scope.to_date), 'yyyy-MM-dd'),
+            }
+            loadMain(formatDate(convertdate(td)), jsonData);
+        }
+
+        $scope.chngclnt = gotoClientChange;
+
+        function gotoClientChange(c) {
+            loadMain(formatDate(convertdate(td)), {}, c)
+        }
+
+        function loadMain(date_input, jsondata, Cname) {
+            if (Cname == undefined) {
+                Cname = ''
+            } else {
+                Cname = $scope.sltdclient;
+            }
+            $scope.loading()
+            var overalldtl = Servicedrctsale.getschedulelist(date_input, jsondata, Cname);
+            overalldtl.then(function(res) {
+                    $scope.overallSchedule = res.data;
+                    $scope.salesSchedule = $scope.overallSchedule;
+                    <!--$scope.salesSchedule = JSON.parse(rolegrouplist.data);-->
+                    var myObject = $scope.salesSchedule;
+                    $scope.pageLength = $scope.salesSchedule.length;
+                }, function(err) {
+                    alert(err);
+                })
+                .finally($scope.endloading);
+        }
+        $scope.filtersearch = function() {
+            $scope.salesSchedule = $filter('filter')($scope.overallSchedule, {
+                "display_name": $scope.customername,
+                "schedule_status": $scope.stats,
+                "scheduletype_name": $scope.typ,
+            });
+            $scope.userTotalItems = $scope.salesSchedule.length;
+            $scope.Totalpages = Math.ceil($scope.salesSchedule.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.salesSchedule.length;
+        }
+        loadMain(formatDate(convertdate(td)), '{}');
+        var overalldtl = Servicedrctsale.getScheduleType();
+        overalldtl.then(function(res) {
+            $scope.schType = res.data;
+        }, function(err) {
+            alert(err);
+        });
+        $scope.gotoDetails = function(details) {
+            $scope.loading();
+            window.localStorage.setItem("previousUrl", document.URL);
+            var url_go;
+            $rootScope.scheduleType_gid = details.scheduletype_gid;
+            $rootScope.schedule_edit = false;
+            var type = details.scheduletype_name;
+            $scope.details_show = false;
+            if (type == 'BOOKING') {
+                $scope.title = 'Create Sales';
+                url_go = 'Sales'
+            } else if (type == 'COLLECTION') {
+                $scope.title = 'Create Collection';
+                url_go = 'Collection'
+            } else if (type == 'SERVICES') {
+                $scope.title = 'Create Services';
+                url_go = 'Services'
+            } else if (type == 'STOCK') {
+                $scope.title = 'Create Stocktaken';
+                url_go = 'Stocktaken'
+            } else {
+                $scope.title = 'Create Others';
+                url_go = ''
+            }
+            $location.path(url_go);
+            $scope.endloading();
+        }
+        var client = Servicedrctsale.getclient('')
+        client.then(function(result) {
+                $scope.clientname = [];
+                $scope.clientname = JSON.parse(result.data);
+            }),
+            function() {
+                alert('no data');
+            };
+        $scope.edit_click = function(details) {
+
+        $rootScope.ref_gid = details.Schedule_ref_gid;
+        if(details.followupreason_name == 'Sales'){
+            var confirmEdit = confirm("Sales already entered!. Do you want to edit this sales!");
+            }
+            else if(details.scheduletype_name == 'COLLECTION') {
+            var confirmEdit = confirm("Collection already entered!. Do you want to edit this Collection!");
+            }
+            if (confirmEdit) {
+                $rootScope.schedule_gid = details.schedule_gid;
+                $rootScope.schedule_customer_gid = details.schedule_customer_gid;
+                if (($rootScope.schedule_gid > 0)|| ($rootScope.schedule_customer_gid > 0)) {
+                    $rootScope.schedule_edit = true;
+                    $rootScope.noschedule_edit = false;
+                    $rootScope.scheduleType_gid = details.schedule_scheduletype_gid;
+                    $rootScope.schedule_head = details.Schedule_ref_gid
+                    $scope.details_show = false;
+                    if (details.scheduletype_name == 'BOOKING') {
+                        $scope.title = 'Edit Sales';
+                        $location.path('Sales');
+                    } else if (details.scheduletype_name == 'COLLECTION') {
+                        $location.path('Collection');
+                    } else if (details.schedule_status == 'SERVICE') {
+                    } else if (details.schedule_status == 'OTHERS') {
+                    } else if (details.schedule_status == 'STOCK') {
+                        $location.path('Stocktaken');
+                    }
+                } else {
+                    $rootScope.noschedule_edit = true;
+                    $rootScope.schedule_edit = false;
+                    $rootScope.Schedule_ref_gid = details.Schedule_ref_gid;
+                    if (details.followupreason_name == 'Sales') {
+                        $location.path('Sales');
+                    }
+                }
+            }
+        };
+        }
+    ]);
+<!--Sales script-->
+myApp.controller('Ctrlsales', function($scope, Servicedrctsale, $rootScope, $mdDateLocale, $timeout, $filter, $window, $http, SerCommon, $mdToast, $location) {
+    $scope.shwfrsale = true;
+    $scope.hideponum = true;
+    $scope.mullti = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.entity_gid = detail.entity_gid;
+    $scope.dbdate = convertdate(td);
+    var scheduleType_gid = $rootScope.scheduleType_gid;
+    var employee_gid = $rootScope.emp_gid;
+    $scope.ls_followup_date = convertdate(td);
+    angular.element(document)
+        .find('input')
+        .on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+    var customer = Servicedrctsale.getMappedCustomer('customer')
+    customer.then(function(result) {
+
+        $scope.mullti = result.data;
+    }, function() {
+        $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+    });
+    $rootScope.close = function() {
+        $window.location.href = "direct";
+    }
+    function loadType(SchReason_gid) {
+        var followup = Servicedrctsale.getfollewup(scheduleType_gid)
+        followup.then(function(result) {
+                $scope.types = result.data;
+                if ($rootScope.schedule_edit) {
+                    var te = $filter('filter')($scope.types, {
+                        followupreason_gid: SchReason_gid
+                    }, true);
+                    $scope.rbtFollowup = te[2];
+                    $scope.type_Selected($scope.rbtFollowup);
+                }
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    }
+    function loadTyp(SchReason_gid) {
+        var followup = Servicedrctsale.getfollewup('21')
+        followup.then(function(result) {
+                $scope.types = result.data;
+                if ($rootScope.noschedule_edit) {
+                    var te = $filter('filter')($scope.types, {
+                        followupreason_gid: SchReason_gid
+                    }, true);
+                    $scope.rbtFollowup = te[2];
+                    $scope.type_Select($scope.rbtFollowup);
+                }
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    }
+
+    if ($rootScope.schedule_edit) {
+        $rootScope.$emit('loading');
+        Servicedrctsale.getEditSchedule($rootScope.schedule_gid)
+            .then(function(res) {
+                var details = [];
+                details = res.data;
+                if (details.length > 0) {
+                    loadType(details[0].schedule_followupreason_gid);
+                    $scope.ddlcustomer = details[0].soheader_customer_gid;
+                    $scope.customer_change();
+                } else {
+                    alert(res.data)
+                }
+            }, function(err) {
+                alert(err)
+            })
+            .finally($rootScope.$emit('endloading'))
+    } else if ($rootScope.noschedule_edit) {
+        $rootScope.$emit('loading');
+        Servicedrctsale.geteditdrt('BY_REF_GID', $rootScope.Schedule_ref_gid)
+            .then(function(res) {
+                var details = [];
+                details = res.data;
+                if (details.length > 0) {
+                    loadTyp(details[0].soheader_customer_gid);
+                    $scope.ddlcustomer = details[0].soheader_customer_gid;
+                    $scope.customer_change();
+                } else {
+                    alert(res.data)
+                }
+            }, function(err) {
+                alert(err)
+            })
+            .finally($rootScope.$emit('endloading'))
+    } else {
+        loadType('')
+    }
+
+    $scope.type_Select = function() {
+        var type = 'Sales'
+        if (type == "Sales") {
+            $scope.show_sales = true
+            sales_click();
+        }
+    };
+
+    $scope.type_Selected = function(details) {
+        var type = details.followupreason_name;
+        if (!$scope.ddlcustomer) {
+            $scope.rbtFollowup = null;
+            alert('Please select customer!.')
+        } else {
+            if (type == "Sales") {
+                $scope.show_sales = true
+                sales_click();
+                getPriceType();
+            } else if (type == "Promise To Buy") {
+                $scope.show_sales = false
+                $scope.show_tobuy = true
+                $scope.show_notnow = false
+                $scope.ls_Remarks = "";
+                $scope.ls_followup_date = "";
+            } else if (type == "Not Now") {
+                $scope.show_sales = false
+                $scope.show_tobuy = false
+                $scope.show_notnow = true
+                $scope.ls_Remarks = "";
+            }
+        }
+    };
+    $scope.minDate = new Date(
+        $scope.ls_followup_date.getFullYear(),
+        $scope.ls_followup_date.getMonth(),
+        $scope.ls_followup_date.getDate() + 1
+    );
+    $scope.maxDate = new Date(
+        $scope.ls_followup_date.getFullYear(),
+        $scope.ls_followup_date.getMonth() + 3,
+        $scope.ls_followup_date.getDate() + 1
+    );
+
+    <!--date picker format-->
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')($scope.ls_followup_date, "dd-MMM-yyyy");
+    };
+
+    $scope.querySearch = function(query) {
+        if (query) {
+            query = query.replace(/[\s]/g, '')
+        } else {
+            query = ''
+        }
+        var result = $http.get(Appname + "/Productjson/")
+            .then(function(response) {
+                var res = JSON.parse(response.data);
+                te = res.filter(function(val) {
+                    var t = val.product_displayname.replace(/[\s]/g, '')
+                        .toLowerCase();
+                    var r = t.indexOf(query)
+                    return r != -1;
+                });
+                var data = te.filter(function(obj) {
+                    var data_prod = $filter('filter')($scope.product, {
+                        sodetails_product_gid: obj.product_gid
+                    }, true)[0];
+                    if (data_prod == undefined) {
+                        return obj.name.replace(/[\s]/g, '')
+                            .toLowerCase()
+                            .indexOf(query) != -1;
+                    }
+                });
+                return data;
+            });
+        return result;
+    }
+    $scope.ACselectchange = function(query) {
+        $scope.productdetail = [];
+        $scope.productdetail = query;
+    }
+    $scope.add = function() {
+        $scope.priceadd = [];
+        var data = {
+            "Parms": {
+                "Classification": {
+                    "Entity_Gid": [$scope.entity_gid]
+                },
+                "Filter": {
+                    "Customer_Gid": $scope.custid,
+                    "Product_Gid": $scope.productdetail.product_gid
+                }
+            }
+        }
+
+        var params = {
+            Group: 'CAMPAIGN_GET',
+            Type: 'INVOICE',
+            SubType: 'CUSTOMERGROUP',
+            data: data
+        }
+        var reqPriceType = Servicedrctsale.getPriceType(params)
+        reqPriceType.then(function(result) {
+
+            $scope.priceadd = result.data.DATA;
+            $scope.message = result.data.MESSAGE;
+    if ($scope.message == "FOUND") {
+                if ($scope.productdetail != undefined && $scope.productdetail != 0) {
+                    var product_displayname = {
+                        "product_displayname": $scope.productdetail.product_displayname,
+                        "sodetails_product_gid": $scope.productdetail.product_gid,
+                        "sodetails_gid": $scope.productdetail.sodetails_gid,
+                        "soheader_gid": $scope.productdetail.soheader_gid,
+                        "campaign_gid": $scope.priceadd[0].campaign_gid,
+                        "priceTypes": $scope.priceadd
+                    };
+                    $scope.product.splice(0, 0, product_displayname);
+                    $scope.searchText = '';
+                }
+            } else {
+                alert('Price Type Not Updated for Selected Product')
+            }
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+
+    $scope.customer_change = function() {
+        $scope.custid = $scope.ddlcustomer;
+        getPriceType();
+    };
+
+    function getPriceType() {
+
+        $scope.priceTypes = [];
+        var data = {
+            "Parms": {
+                "Classification": {
+                    "Entity_Gid": [$scope.entity_gid]
+                },
+                "Filter": {
+                    "Customer_Gid": $scope.custid
+                }
+            }
+        }
+        var params = {
+            Group: 'CAMPAIGN_GET',
+            Type: 'INVOICE',
+            SubType: 'CUSTOMERGROUP',
+            data: data
+        }
+        var reqPriceType = Servicedrctsale.getPriceType(params)
+        reqPriceType.then(function(result) {
+            $scope.priceTypes = result.data.DATA;
+
+
+       <!--set dropdown value-->
+            var filterValue = $filter('filter')($scope.priceTypes, function(value) {
+                return value.IS_Default == "Y" || value.IS_Default == "N";
+            });
+
+            if (filterValue) {
+                var defaultPriceType = filterValue[0].campaign_gid;
+                for (var i = 0; i < $scope.product.length; i++) {
+                    var filterProduct = $filter('filter')($scope.priceTypes, function(item) {
+                        product_gid = item.product_gidS;
+                        if (product_gid != "") {
+                            product_gidList = product_gid.split(',');
+                            check_product_gid = $scope.product[i].sodetails_product_gid;
+                            var plist = $filter('filter')(product_gidList, function(item) {
+                                var pro_gid = parseInt(item);
+                                if (pro_gid == check_product_gid)
+                                    return true;
+                            }, true)
+                            if (plist.length > 0) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    })
+                    if (filterProduct.length > 0) {
+                        $scope.product[i].priceTypes = filterProduct;
+                        $scope.product[i].campaign_gid = filterProduct[0].campaign_gid;
+                    } else {
+                        $scope.product[i].priceTypes = [];
+                    }
+                }
+            }
+            if ($rootScope.schedule_edit) {
+                edit_details();
+            }
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+    function sales_click() {
+        $scope.show_sales = true;
+        $scope.show_tobuy = false;
+        $scope.show_notnow = false;
+        var salordr = Servicedrctsale.getfavr($scope.ddlcustomer)
+        salordr.then(function(result) {
+            $scope.product = result.data;
+
+            edit_details();
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+        });
+    }
+
+
+
+
+    function edit_details() {
+        if ($rootScope.schedule_gid > 0) {
+            var editordr = Servicedrctsale.getEditSchedule($rootScope.schedule_gid)
+        } else {
+            var editordr = Servicedrctsale.geteditdrt('BY_REF_GID', $rootScope.Schedule_ref_gid)
+        }
+        editordr.then(function(result, index) {
+                $scope.produc = result.data;
+                if ($scope.produc.length > 0) {
+                    for (var i = 0; i < $scope.produc.length; i++) {
+                        var stats = $scope.produc[i].soheader_status;
+                        $scope.stats = stats;
+                        var remar = $scope.produc[i].soheader_remarks;
+                        $scope.remar = remar;
+                        $scope.shwstats = true;
+                        var product_gid = $scope.produc[i].sodetails_product_gid;
+                        var data_product = $filter('filter')($scope.product, {
+                            sodetails_product_gid: product_gid
+                        }, true)[0];
+                        if (data_product != null) {
+                            $scope.show_update = true;
+                            $scope.show_submit = true;
+                            $scope.ptobuy = true;
+                            $scope.shwbtn = true;
+                            $scope.show_cancel = true;
+                            $scope.notnw = true;
+                            $scope.show_updat = true;
+                            window.scrollBy(0, 150);
+                            var is_approve = $scope.produc[0]["soheader_status"];
+                            if (is_approve == "APPROVED") {
+                                $scope.show_updat = false;
+                                $scope.show_cancel = true;
+                                $scope.show_update = false;
+                                $scope.shwbtn = false;
+                                $scope.disabl = true;
+                            }
+                            if (is_approve == 'REJECTED') {
+                                $scope.shwremarks = true;
+                            }
+                            if (data_product.sodetails_product_gid != null) {
+                                var index = $scope.product.indexOf(data_product);
+                                $scope.shwdrp = true;
+                                $scope.product[index]["quantity"] = $scope.produc[i].quantity;
+                                $scope.product[index]["sodetails_gid"] = $scope.produc[i].sodetails_gid;
+                                $scope.product[index]["soheader_gid"] = $scope.produc[i].soheader_gid;
+                                $scope.product[index]["campaign_gid"] = $scope.produc[i].sodetails_campaign_gid;
+                            }
+                        } else {
+                            $scope.product.push($scope.produc[i]);
+                            $scope.shwbtn = true;
+                            $scope.show_update = true;
+                            $scope.show_cancel = true;
+                            $scope.show_updat = true;
+                        };
+                    }
+                }
+                check_sales();
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    };
+    $scope.Save = function() {
+        if (!$scope.rbtFollowup) {
+            alert('Please fill required field!.');
+            return;
+        };
+        var type = $scope.rbtFollowup.followupreason_name
+        if (type == "Promise To Buy") {
+            if (!$scope.form_tobuy.$valid) {
+                alert('Fill Requried field');
+                return false;
+            }
+            createSchedule(type);
+        } else if (type == "Not Now") {
+            if (!$scope.form_notnow.$valid) {
+                alert('Fill Requried field');
+                return false;
+            }
+            createSchedule(type);
+        } else if (type == "Sales") {
+            var result = checkSalesDetails('save');
+            if (!result) {
+                alert('Please enter valid data.!');
+                return false;
+            }
+            var Product = [];
+            Product = $filter('filter')($scope.product, function(item) {
+                return parseInt(item.quantity) < 1000
+            })
+            if (Product.length == 0) {
+                alert('No detail to save.!');
+                return false;
+            }
+            createSchedule(type, Product);
+        }
+        $scope.endloading();
+    }
+    function setflowup(schedule_gid, followupreason_gid) {
+        var sales_save = Servicedrctsale.setFollowup(schedule_gid, followupreason_gid, formatDate($scope.ls_followup_date), $scope.ls_Remarks, "INDATE");
+        sales_save.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    $mdToast.show(SerCommon.new_toast('success', "Data Inserted Successfully..!"));
+                    $window.location.href = "direct";
+                } else {
+                    alert(result.data);
+                }
+            }),
+            function(err) {
+                $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+            };
+    };
+    function setNotnow(schedule_gid, followupreason_gid) {
+        var sales_save = Servicedrctsale.setNotnow(schedule_gid, followupreason_gid, $scope.ls_Remarks, "INDATE");
+        sales_save.then(function(result) {
+            alert(result.data);
+            $window.location.href = "direct";
+        }, function(err) {
+            alert('Faild to save.!');
+        });
+    };
+    function setsecondsalesDtl(schedule_gid, followupreason_gid, salesData) {
+        var custid = $scope.ddlcustomer;
+        var emp_gid = $scope.emp_gid;
+        var in_data = {
+            sodetails: salesData,
+            "Schedule_Affect": "Yes"
+        };
+        var salesdetails = Servicedrctsale.setSales(0, 0, custid, in_data, 'Insert');
+        salesdetails.then(function(result) {
+            if (result.data == 'SUCCESS') {
+                $scope.product = {};
+                $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                $window.location.href = "direct";
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+        });
+    };
+    function setsalesDtl(schedule_gid, followupreason_gid, salesData) {
+        var custid = $scope.ddlcustomer;
+        var emp_gid = $scope.emp_gid;
+        var in_data = {
+            sodetails: salesData,
+            "Schedule_Affect": "Yes"
+        };
+        var salesdetails = Servicedrctsale.setSales(0, 0, custid, in_data, 'Insert');
+        salesdetails.then(function(result) {
+            if (result.data == 'SUCCESS') {
+                $scope.product = {};
+                var resechedule_date = '';
+                $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                $window.location.href = "direct";
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+        });
+    };
+    function createSchedule(type, salesData) {
+        $scope.loading();
+        var cus_gid = $scope.ddlcustomer;
+        var schType_gid = $rootScope.scheduleType_gid;
+        var followReason_gid = $scope.rbtFollowup.followupreason_gid;
+        var type = $scope.rbtFollowup.followupreason_name;
+        var todayDate = formatDate(convertdate(td));
+        var en = Servicedrctsale.setSchDtl(cus_gid, schType_gid, 'SCHEDULE', todayDate);
+        en.then(function(en) {
+            var sch_gid = (en.data)[0]
+            if (sch_gid > 0) {
+                if (type == "Promise To Buy") {
+                    setflowup(sch_gid, followReason_gid)
+                } else if (type == "Not Now") {
+                    setNotnow(sch_gid, followReason_gid)
+                } else if (type == "Sales") {
+                    setsalesDtl(sch_gid, followReason_gid, salesData)
+                }
+            } else if (type == "Sales") {
+                setsecondsalesDtl('', followReason_gid, salesData)
+            } else {
+                alert(sch_gid);
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+        }).finally($scope.endloading);
+    };
+    function checkSalesDetails(type) {
+        var result = false;
+        if (!$scope.demoForm.$valid) {
+            return result;
+        }
+        if (type == '') {
+            var Product = [];
+            Product = $filter('filter')($scope.product, function(item) {
+                return (item.sodetails_gid != null) && (item.quantity == null)
+            })
+            if (Product.length > 0) {
+                alert('Edit details Not allow null.!');
+                return result;
+            } else {
+                result = true;
+                return result;
+            }
+        } else {
+            result = true;
+            return result;
+        }
+    }
+    $scope.Update = function() {
+        var result = checkSalesDetails('');
+        if (!result) {
+            alert('Please enter valid data.!');
+            return false;
+        }
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return parseInt(item.quantity) < 1000
+        });
+        if (Product.length == 0) {
+            alert('No detail to save.!');
+            return false;
+        }
+        if ($scope.produc[0]["soheader_status"] == "REJECTED") {
+            var in_data = {
+                sodetails: Product,
+                soheader: {
+                    status: "RESUBMIT",
+                }
+            };
+        } else {
+            var in_data = {
+                sodetails: Product
+            };
+        }
+        $rootScope.$emit('loading');
+        var salesdetails = Servicedrctsale.setSales(0, 0, $scope.ddlcustomer, in_data, 'Update');
+        salesdetails.then(function(responce) {
+            if (responce.data == 'SUCCESS') {
+                $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                $scope.product = {};
+                $window.location.href = "direct";
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+        }).finally($rootScope.$emit('endloading'));
+    }
+    $scope.Delete = function() {
+        var r = confirm("Do You Want To Cancel This Sales!");
+        if (r == true) {
+            salesfulldelete();
+        } else {
+            $window.location.href = "direct";
+        }
+    }
+    function salesfulldelete() {
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return parseInt(item.quantity) <= 1000
+        });
+        if (Product.length == 0) {
+            alert('No detail to Delete');
+            return false;
+        }
+        $rootScope.$emit('loading');
+        if ($rootScope.schedule_gid > 0) {
+            var in_data = {
+                sodetails: Product,
+                schedule_gid: $rootScope.schedule_gid
+            };
+            var cusid = $scope.ddlcustomer
+            var salesdetails = Servicedrctsale.setSales('0', 0, cusid, in_data, 'Delete');
+        } else {
+            var in_data = {
+                sodetails: Product,
+            };
+            var cusid = $scope.ddlcustomer
+            var salesdetails = Servicedrctsale.setSales('0', $rootScope.Schedule_ref_gid, cusid, in_data, 'DIRECTSALE_DELETE');
+        }
+        salesdetails.then(function(response) {
+            if (response.data != '') {
+                alert(response.data);
+                $window.location.href = "direct";
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Deleted..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Deleted..!"));
+        }).finally($rootScope.$emit('endloading'));
+    };
+    $scope.sodelete = function(sodtl_gid, hdr_gid, index) {
+        $rootScope.$emit('loading');
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return item.sodetails_gid;
+        });
+        if (Product.length > 1) {
+            var sodetails_gid = {
+                sodetails_gid: sodtl_gid
+            };
+            var in_data = {
+                sodetails: sodetails_gid
+            };
+            var sodeletedtl = Servicedrctsale.setSales('0', '0', $scope.ddlcust, in_data, 'Delete');
+            sodeletedtl.then(function(response) {
+                if (response.data == 'SUCCESS') {
+                    $mdToast.show(SerCommon.new_toast('success', "Deleted Successfully..!"));
+                    $scope.product.splice(index, 1);
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Deleted Successfully..!"));
+                }
+            }, function(err) {
+                $mdToast.show(SerCommon.new_toast('error', "Not Deleted Successfully..!"));
+            }).finally($rootScope.$emit('endloading'));
+        } else {
+            alert('If you want to Delete this Record Please Select Sales Cancel... ');
+        }
+    };
+});
+<!--Collection script-->
+myApp.controller('Ctrlcollection', function($scope, Servicedrctsale, $rootScope, $window, $timeout, $mdDateLocale, $filter, SerCommon, $mdToast, $location) {
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.dbdate = convertdate(td);
+    $scope.cheques = [];
+    var scheduleType_gid = $rootScope.scheduleType_gid;
+    var custmer_gid =  $rootScope.schedule_customer_gid;
+    $scope.cheque_date = convertdate(td);
+    $scope.payed = convertdate(td);
+
+    var myvalue = "";
+    if ($location.search().hasOwnProperty('gid')) {
+        myvalue = $location.search()['gid'];
+    }
+    $scope.minDate = new Date(
+        $scope.payed.getFullYear(),
+        $scope.payed.getMonth(),
+        $scope.payed.getDate() + 1
+    );
+    $scope.maxDate = new Date(
+        $scope.payed.getFullYear(),
+        $scope.payed.getMonth() + 12,
+        $scope.payed.getDate()
+    );
+
+    $scope.minDate = new Date(
+        $scope.cheque_date.getFullYear(),
+        $scope.cheque_date.getMonth() - 1,
+        $scope.cheque_date.getDate()
+    );
+    $scope.maxDate = new Date(
+        $scope.cheque_date.getFullYear(),
+        $scope.cheque_date.getMonth() + 3,
+        $scope.cheque_date.getDate()
+    );
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')($scope.payed, "dd-MMM-yyyy");
+    };
+    $rootScope.close = function() {
+        $scope.loading();
+        $window.location.href = "direct";
+        $scope.endloading();
+    }
+    $scope.getbankdetails = function(searchtext) {
+        var result = $filter('filter')($scope.banklist, {
+            'bank_name': searchtext
+        });
+        return result;
+    }
+    $scope.banklist = [];
+    function bankdetails() {
+        var getbank = SerCommon.getdropdown('bank', 0, '')
+        getbank.then(function(result) {
+                $scope.banklist = JSON.parse(result.data);
+            }, function(err) {
+                alert("Bank details not loaded!.");
+            })
+            .finally();
+    }
+      if ($rootScope.schedule_edit) {
+        $rootScope.$emit('loading');
+        Servicedrctsale.getEditSchedule($rootScope.schedule_gid)
+            .then(function(res) {
+                var details = [];
+                details = res.data;
+                if (details.length > 0) {
+                    $scope.selectedmullti = $rootScope.schedule_customer_gid;
+                    $scope.auto_Selected(details[0].fetcollectionheader_mode);
+                } else {
+                    alert(res.data)
+                }
+            }, function(err) {
+                alert(err)
+            })
+            .finally($rootScope.$emit('endloading'))
+    }
+
+    $scope.addCheque = function() {
+       if (!$scope.form_cheque.$valid) {
+            alert("Please fill required input field!.");
+            return false;
+        } else if ($scope.cheque_gid > 0) {
+
+            if ($scope.selectedItem.bank_name == undefined) {
+                var Bankname = $scope.selectedItem
+                var flagg = 'y'
+
+            } else {
+                var Bankname = $scope.selectedItem.bank_name
+                var flagg = 'n'
+            }
+            var data = {
+                 Cheque_No: $scope.Chqno,
+                Cheque_Date: $filter('date')($scope.cheque_date, "dd-MMM-yyyy"),
+                disply_date: $filter('date')($scope.cheque_date, "dd-MMM-yyyy"),
+                Cheque_Amount: $scope.Chqamt,
+                Bank_Name: $scope.selectedItem.bank_name,
+                bank_details: $scope.selectedItem
+            };
+            if ($scope.is_edit) {
+                $scope.cheques[$scope.edit_index] = data;
+            } else {
+                $scope.cheques.push(data);
+            }
+            $scope.cheque_no = '';
+            $scope.cheque_date = '';
+            $scope.cheque_amt = '';
+            $scope.is_edit = false;
+            $scope.form_cheque.$setPristine();
+            $scope.form_cheque.$setUntouched();
+        } else {
+            var data = {
+                 Cheque_No: $scope.Chqno,
+                 Cheque_Date: $filter('date')($scope.cheque_date, "dd-MMM-yyyy"),
+                 disply_date:$filter('date')($scope.cheque_date, "dd-MMM-yyyy"),
+                Cheque_Amount: $scope.Chqamt,
+                Bank_Name: $scope.selectedItem.bank_name,
+                bank_details: $scope.selectedItem
+            };
+
+            if ($scope.is_edit) {
+                $scope.cheques[$scope.edit_index] = data;
+            } else {
+                $scope.cheques.push(data);
+            }
+            $scope.cheque_no = '';
+            $scope.cheque_date = '';
+            $scope.cheque_amt = '';
+            $scope.is_edit = false;
+            $scope.form_cheque.$setPristine();
+            $scope.form_cheque.$setUntouched();
+        }
+    }
+    $scope.editCheque = function(index) {
+        $scope.Chqno = $scope.cheques[index].Cheque_No;
+        $scope.cheque_date = $scope.cheques[index].disply_date;
+        $scope.Chqamt = $scope.cheques[index].Cheque_Amount;
+        $scope.selectedItem = $scope.cheques[index].bank_details;
+        $scope.is_edit = true;
+        $scope.edit_index = index;
+    }
+    $scope.removeCheque = function(index) {
+        $scope.cheques.splice(index, 1)
+    }
+    function calamount() {
+        var amt = 0;
+        angular.forEach($scope.cheques, function(user) {
+            amt += parseInt(user.Cheque_Amount);
+        });
+        return amt;
+    }
+    $scope.mullti = [];
+    var product = Servicedrctsale.getMappedCustomer('customer')
+    product.then(function(result) {
+
+            $scope.mullti = result.data;
+            if (myvalue != "") {
+                $scope.selectedmullti = myvalue;
+            }
+        }),
+        function() {
+            $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+        };
+    var d = convertdate(td);
+    var curr_date = d.getDate();
+    var curr_month = d.getMonth();
+    curr_month++;
+    var curr_year = d.getFullYear();
+    $scope.date = curr_year + "-" + curr_month + "-" + curr_date;
+    angular.element(document)
+        .find('input')
+        .on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+    var followup = Servicedrctsale.getfollewup(scheduleType_gid)
+    followup.then(function(result) {
+            $scope.type = result.data;
+        }),
+        function() {
+            $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+        };
+    $scope.auto_Selected = function(e){
+     if (e == "CASH") {
+      $scope.selected = "Cash";
+          typecash();
+        } else if (e == "Cheque") {
+        $scope.selected = "Cheque";
+            typecheque();
+        } else if (e == "Promised To Pay") {
+            $scope.showcash = false;
+            $scope.showpromised = true;
+            $scope.promisedamt = "";
+            $scope.form_pay.$setPristine();
+            $scope.form_pay.$setUntouched();
+            $scope.payed = "";
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        } else if (e == "Transfer") {
+        $scope.selected = "Transfer";
+      typetransfer();
+        } else {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        };
+}
+      $scope.type_Selected = function(e) {
+
+        if (!$scope.form_select.$valid) {
+            alert("Please fill the customer field");
+            return false;
+        }
+        if (e.followupreason_name == "Cash") {
+         $scope.showcash = true;
+            $scope.Amount = "";
+            $scope.showpromised = false;
+            $scope.form_amount.$setPristine();
+            $scope.form_amount.$setUntouched();
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        } else if (e.followupreason_name == "Cheque") {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = true;
+            $scope.form_cheque.$setPristine();
+            $scope.form_cheque.$setUntouched();
+            $scope.Chqno = "";
+            $scope.Chqamt = "";
+            $scope.showresch = false;
+            bankdetails();
+        } else if (e.followupreason_name == "Promised To Pay") {
+            $scope.showcash = false;
+            $scope.showpromised = true;
+            $scope.promisedamt = "";
+            $scope.form_pay.$setPristine();
+            $scope.form_pay.$setUntouched();
+            $scope.payed = "";
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        } else if (e.followupreason_name == "Transfer") {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = false;
+            $scope.form_transfer.$setPristine();
+            $scope.form_transfer.$setUntouched();
+            $scope.showresch = true;
+            $scope.neft_amt = "";
+        } else {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        };
+    };
+    function typetransfer() {
+        $scope.showcash = false;
+        $scope.showpromised = false;
+        $scope.showcheque = false;
+        $scope.showresch = true;
+        $scope.form_transfer.$setPristine();
+        $scope.form_transfer.$setUntouched();
+        $scope.show_submit = true;
+        $scope.neft_amt = "";
+        $scope.ref_num = "";
+        if ($rootScope.ref_gid > 0) {
+            var data = {
+                "params": {
+                    "CLASSIFICATION": {
+                        entity_gid: [
+                            $scope.entity_gid
+                        ],
+                        client_gid: []
+                    },
+                    DATA: {
+                        CustGroup_Gid: 0,
+                        Customer_Name: "",
+                        Cheque_From_Date: '',
+                        Cheque_To_date: '',
+                        Status: 'Received',
+                        Cheque_No: "",
+                        Courier_Name: "",
+                        AWB_no: ""
+                    }
+                }
+            }
+            var data_int = {
+                Action: 'COLLECTION',
+                Type: 'SUMMARY',
+                Group: 'GET_CLTN_PAYMENT_SUMMARY',
+                Collection_Gid: 0,
+                collectionheader_gid: $rootScope.ref_gid,
+                Collection_Date: '',
+                CHEQUE: data
+            };
+            var followup = Servicedrctsale.getfollew(data_int)
+            followup.then(function(result) {
+
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cashdis = true;
+                    $scope.cheqdis = true;
+                    $scope.ptpdis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    $scope.neft_amt = $scope.fullcollection[0].fetcollectionheader_amount;
+                }
+            }, function(err) {
+            })
+        }
+    }
+    function typecheque() {
+            $scope.showcash = false;
+            $scope.showpromised = false;
+            $scope.showcheque = true;
+            $scope.form_cheque.$setPristine();
+            $scope.form_cheque.$setUntouched();
+            $scope.Chqno = "";
+            $scope.Chqamt = "";
+            $scope.showresch = false;
+            bankdetails();
+        if ($rootScope.ref_gid > 0) {
+            var data = {
+                "params": {
+                    "CLASSIFICATION": {
+                        entity_gid: [
+                            $scope.entity_gid
+                        ],
+                        client_gid: []
+                    },
+                    DATA: {
+                        CustGroup_Gid: 0,
+                        Customer_Name: "",
+                        Cheque_From_Date: '',
+                        Cheque_To_date: '',
+                        Status: 'Received',
+                        Cheque_No: "",
+                        Courier_Name: "",
+                        AWB_no: ""
+                    }
+                }
+            }
+            var data_int = {
+                Action: 'COLLECTION',
+                Type: 'SUMMARY',
+                Group: 'GET_CLTN_PAYMENT_SUMMARY',
+                Collection_Gid: 0,
+                collectionheader_gid: $rootScope.ref_gid,
+                Collection_Date: '',
+                CHEQUE: data
+            };
+            var followup = Servicedrctsale.getfollew(data_int)
+            followup.then(function(result) {
+
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cashdis = true;
+                    $scope.ptpdis = true;
+                    $scope.trandis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    for (var i = 0; i < $scope.fullcollection.length; i++) {
+                        $scope.cheque_gid = $scope.fullcollection[i].fetcollectionchq_gid;
+                        var data = {
+                            Cheque_gid: $scope.fullcollection[i].fetcollectionchq_gid,
+                            Cheque_No: $scope.fullcollection[i].fetcollectionheader_chequeno,
+                            Cheque_Date: $scope.fullcollection[i].fetcollectionheader_chequedate,
+                            disply_date: $scope.fullcollection[i].fetcollectionheader_chequedate,
+                            Cheque_Amount: $scope.fullcollection[i].fetcollectionheader_amount,
+                            Bank_Name: $scope.fullcollection[i].bank_name,
+                            bank_details: $scope.selectedItem
+                        };
+                        $scope.cheques.push(data);
+                    }
+                }
+            }, function(err) {})
+        }
+    }
+    function typecash() {
+     $scope.showcash = true;
+            $scope.Amount = "";
+            $scope.showpromised = false;
+            $scope.form_amount.$setPristine();
+            $scope.form_amount.$setUntouched();
+            $scope.showcheque = false;
+            $scope.showresch = false;
+        if ($rootScope.ref_gid > 0) {
+            var data = {
+                "params": {
+                    "CLASSIFICATION": {
+                        entity_gid: [
+                            $scope.entity_gid
+                        ],
+                        client_gid: []
+                    },
+                    DATA: {
+                        CustGroup_Gid: 0,
+                        Customer_Name: "",
+                        Cheque_From_Date: '',
+                        Cheque_To_date: '',
+                        Status: 'Received',
+                        Cheque_No: "",
+                        Courier_Name: "",
+                        AWB_no: ""
+                    }
+                }
+            }
+            var data_int = {
+                Action: 'COLLECTION',
+                Type: 'SUMMARY',
+                Group: 'GET_CLTN_PAYMENT_SUMMARY',
+                Collection_Gid: 0,
+                collectionheader_gid: $rootScope.ref_gid,
+                Collection_Date: '',
+                CHEQUE: data
+            };
+            var followup = Servicedrctsale.getfollew(data_int)
+            followup.then(function(result) {
+                $scope.fullcollection = JSON.parse(result.data);
+                if (result.data.length > 0) {
+                    $scope.cheqdis = true;
+                    $scope.ptpdis = true;
+                    $scope.trandis = true;
+                    $scope.show_updte = true;
+                    $scope.show_submit = false;
+                    $scope.Amount = $scope.fullcollection[0].fetcollectionheader_amount;
+                }
+            }, function(err) {
+            })
+        }
+    }
+    $scope.toggled = function() {
+        $timeout(function() {
+            $('#chqno')
+                .focus();
+            $('#prmspay')
+                .focus();
+            $('#tamount')
+                .focus();
+            $('#amount')
+                .focus();
+        }, 50);
+    }
+    $scope.bank_details = function() {
+        $scope.loading();
+        var get_bankdetail = Servicedrctsale.get_bankdetails()
+        get_bankdetail.then(function(result) {
+            $scope.bank_detail = result.data;
+            $('#Bank_view')
+                .modal('show');
+        })
+        $scope.endloading();
+    };
+    $scope.save = function() {
+
+        if (!$scope.selected) {
+            alert('Please fill required field!.');
+            return;
+        }
+        $scope.loading();
+        var type = $scope.selected.followupreason_name;
+        if (type == "Cash") {
+            if (!$scope.form_amount.$valid) {
+                alert("Please fill required input field");
+                return false;
+            } else if (!$scope.form_select.$valid) {
+                alert("Please fill the customer field");
+                return false;
+            }
+            create_Schedule("Cash")
+        } else if (type == "Cheque") {
+            if ($scope.cheques.length == 0) {
+                alert("Please enter any one cheque!.");
+                return false;
+            } else if (!$scope.form_select.$valid) {
+                alert("Please fill the customer field");
+                return false;
+            }
+            create_Schedule("Cheque")
+        } else if (type == "Promised To Pay") {
+            if (!$scope.form_pay.$valid) {
+                alert("Please fill required input field");
+                return false;
+            } else if (!$scope.form_select.$valid) {
+                alert("Please fill the customer field");
+                return false;
+            }
+            create_Schedule("Promised To Pay")
+        } else if (type == "Transfer") {
+
+            if (!$scope.form_transfer.$valid) {
+                alert("Please fill required input field");
+                return false;
+            } else if (!$scope.form_select.$valid) {
+                alert("Please fill the customer field");
+                return false;
+            }
+            create_Schedule("Transfer")
+        } else {
+            var data_int = [{
+                cust_gid: $scope.selectedmullti,
+                collection_mode: $scope.selected,
+                collection_amount: $scope.Amount,
+                cheque_no: '',
+                date: $scope.date
+                }];
+            var collection_save = Servicedrctsale.setcollection(data_int)
+            collection_save.then(function(result) {
+
+                    alert(result.data);
+                }),
+                function() {
+                    $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+                };
+        }
+        $scope.endloading();
+    }
+    function collectionCash(schedule_gid) {
+         var data = {
+        "Params":{
+            Bank_Gid: "0",
+            "Ref_No": '',
+            "Collection_Status": 'RECEIVED',
+            "File":[]
+             }
+
+        }
+        var data_int = {
+            Action: 'Insert',
+            Type: 'INITIAL',
+            Group: 'SET_INITIAL',
+            Customer_Gid: parseInt($scope.selectedmullti),
+            Employee_Gid: 13,
+            leadref_gid: 2,
+            Collection_Mode: "CASH",
+            Collection_Amount: parseInt($scope.Amount),
+            Collection_Date: $scope.date,
+            Collection_Description: '',
+            Entity_Gid: $scope.entity_gid,
+            Collection_Gid: 0,
+             Params: data
+        };
+        var collection_save = Servicedrctsale.setcollection(data_int)
+        collection_save.then(function(result) {
+                var followupreason_gid = 24;
+                var sechedule_ref = result.data;
+                var resechedule_date = '';
+                if ((sechedule_ref > 0) || (sechedule_ref != '')) {
+                    Servicedrctsale.setschedule(schedule_gid, $scope.date, $scope.selectedmullti, followupreason_gid, sechedule_ref[0], resechedule_date);
+                    $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                    $window.location.href = "direct";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                }
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    }
+    function collectioncheque(schedule_gid) {
+         var data = {
+        "Params":{
+        "CHEQUE":{
+
+            Bank_Gid: $scope.selectedItem.bank_gid,
+            CHEQUE: $scope.cheques,
+            "Ref_No": "",
+            "Collection_Status": "RECEIVED"},
+            "File":[]
+
+}
+        }
+        var data_int = {
+            Action: 'Insert',
+            Type: 'INITIAL',
+            Group: 'SET_INITIAL',
+            Customer_Gid: parseInt($scope.selectedmullti),
+            Employee_Gid: 13,
+            leadref_gid: 2,
+            Collection_Mode: "Cheque",
+            Collection_Amount: calamount(),
+            Collection_Date: $scope.date,
+            Collection_Description: '',
+            Entity_Gid: $scope.entity_gid,
+            Collection_Gid: 0,
+            Params: data
+        };
+        var collection_save = Servicedrctsale.setcollection(data_int)
+        collection_save.then(function(result) {
+                var followupreason_gid = 25;
+                var sechedule_ref = result.data;
+                var resechedule_date = '';
+                if (sechedule_ref.MESSAGE == "SUCCESS") {
+                    Servicedrctsale.setschedule(schedule_gid, $scope.date, $scope.selectedmullti, followupreason_gid, sechedule_ref, resechedule_date);
+                    $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                    $window.location.href = "direct";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                }
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    }
+    function ColctnPromstopay(schedule_gid) {
+         var data_int = {
+            Action: 'Insert',
+            cust_gid: $scope.selectedmullti,
+            collection_mode: "p_toPay",
+            collection_amount: $scope.promisedamt,
+            cheque_no: '',
+            date:  $scope.date
+        };
+
+        sch_update(0, 23, formatDate($scope.payed),schedule_gid);
+    }
+
+         function sch_update(sechedule_ref, followupreason_gid, resechedule_date,schedule_gid) {
+          var set_schedule =  Servicedrctsale.setschedule(schedule_gid, $scope.date,  $scope.selectedmullti, followupreason_gid,sechedule_ref, resechedule_date,
+           resechedule_date);
+            set_schedule.then(function(res){
+              if (res.data == 'SUCCESS') {
+                    $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                    $window.location.href = "direct";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                }
+            }),
+             function() {
+                 $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+           };
+            }
+
+    function Collectiontransfer(schedule_gid) {
+       var data = {
+        "Params":{
+        "CHEQUE":{
+            Bank_Gid: "0",
+            "Ref_No": $scope.ref_num,
+            "Collection_Status": 'RECEIVED'},
+            "File":[]
+            }
+         }
+        var data_int = {
+            Action: 'Insert',
+            Type: 'INITIAL',
+            Group: 'SET_INITIAL',
+            Customer_Gid: parseInt($scope.selectedmullti),
+            Employee_Gid: 13,
+            leadref_gid: 2,
+            Collection_Mode: "Transfer",
+            Collection_Amount: parseInt($scope.neft_amt),
+            Collection_Date: $scope.date,
+            Collection_Description: '',
+            Entity_Gid: $scope.entity_gid,
+            Collection_Gid: 0,
+            Params: data
+        };
+        var collection_save = Servicedrctsale.setcollection(data_int)
+        collection_save.then(function(result) {
+                var followupreason_gid = 26;
+                var sechedule_ref = result.data;
+                if (sechedule_ref.MESSAGE == "SUCCESS") {
+                    Servicedrctsale.setschedule(schedule_gid, $scope.date, $scope.selectedmullti, followupreason_gid, sechedule_ref, '');
+                    $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                    $window.location.href = "direct";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                }
+            }),
+            function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            };
+    }
+
+    function create_Schedule(type) {
+        var cus_gid = $scope.selectedmullti;
+        var schType_gid = $rootScope.scheduleType_gid;
+        var followReason_gid = $scope.selected.followupreason_gid;
+        var type = $scope.selected.followupreason_name;
+        var todayDate = formatDate(convertdate(td));
+        var en = Servicedrctsale.setSchDtl(cus_gid, schType_gid, 'SCHEDULE', todayDate);
+        en.then(function(en) {
+            var sch_gid = (en.data)[0]
+            if (sch_gid > 0) {
+                if (type == "Cash") {
+                    collectionCash(sch_gid)
+                } else if (type == "Cheque") {
+                    collectioncheque(sch_gid)
+                } else if (type == "Promised To Pay") {
+                    ColctnPromstopay(sch_gid)
+                } else if (type == "Transfer"){
+                    Collectiontransfer(sch_gid)
+                }
+            } else {
+                alert(sch_gid);
+            }
+        }, function() {
+            $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+        });
+    }
+});
+
+<!--Stock Taken controller-->
+myApp.controller('Ctrlstocktaken', function($scope, Servicedrctsale, $rootScope, $window, $timeout, $mdDateLocale, $filter, SerCommon, $http, $mdToast) {
+    $scope.customer = [];
+    $scope.product = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.dbdate = convertdate(td);
+    var scheduleType_gid = $rootScope.scheduleType_gid;
+    $scope.date = convertdate(td);
+    $scope.getcustomer = gotoGetCustomer;
+    $scope.customerChange = gotoCustomerChange;
+
+    var jsonData = {
+        "isactive": "Y"
+    }
+
+    var get_cust = Servicedrctsale.getcusomter(jsonData)
+    get_cust.then(function(result) {
+        $scope.customer = JSON.parse(result.data);
+    }, function(err) {
+        $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+    });
+
+    function gotoGetCustomer(query) {
+        var result = $filter('filter')($scope.customer, {
+            'customer_name': query
+        });
+        return result;
+    }
+
+    function gotoCustomerChange(item) {
+        getsalesquantity(item.customer_gid);
+    }
+
+    function getsalesquantity(custid) {
+        var stck = Servicedrctsale.getstck('SALESTOCK', "", custid, "")
+        stck.then(function(result) {
+                $scope.product = result.data;
+                $scope.pageLength = $scope.product.length;
+                edit_details(custid);
+                $rootScope.show_submit = true;
+            }, function() {
+                $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+            })
+            .finally($scope.endloading);
+    }
+
+    $scope.querySearch = function(query) {
+        var result = $http.get(Appname + "/Productjson/")
+            .then(function(response) {
+                te = $filter('filter')(JSON.parse(response.data), {
+                    'product_displayname': query
+                });
+                var res = te.filter(function(obj) {
+                    var data_prod = $filter('filter')($scope.product, {
+                        product_gid: obj.product_gid
+                    }, true)[0];
+                    if (data_prod != undefined) {
+                        return obj.name.toLowerCase()
+                            .indexOf(query) != -1;
+                    }
+                });
+                return res;
+            });
+        return result;
+    }
+
+    $scope.ACselectchange = function(query) {
+        $scope.productdetail = [];
+        $scope.productdetail = query;
+    }
+
+    function edit_details(custid) {
+        var editordr = Servicedrctsale.geteditt('SALESTOCK', "EDIT", custid, formatDate($scope.date))
+        editordr.then(function(result, index) {
+            $scope.produc = result.data;
+            if ($scope.produc.length > 0) {
+                for (var i = 0; i < $scope.produc.length; i++) {
+                    var product_gid = $scope.produc[i].product_gid;
+                    var data_product = $filter('filter')($scope.product, {
+                        product_gid: product_gid
+                    }, true)[0];
+                    if (data_product != null) {
+                        if (data_product.product_gid != null) {
+                            var index = $scope.product.indexOf(data_product);
+                            $scope.product[index]["product_gid"] = $scope.produc[i].product_gid;
+                            $scope.product[index]["quantity"] = $scope.produc[i].stock_qty;
+                            $scope.product[index]["remarks"] = $scope.produc[i].stock_remarks;
+                            if (data_product.quantity == 0 && data_product.remarks == 0) {
+                                $scope.product[index]["quantity"] = '';
+                                $scope.product[index]["remarks"] = '';
+                            }
+                            if (data_product.quantity > 0) {
+                                $rootScope.show_update = true;
+                                $rootScope.show_submit = false;
+                            }
+                            if (data_product.remarks != "") {
+                                $rootScope.show_update = false;
+                                $rootScope.show_submit = true;
+                            }
+                        }
+                    } else {
+                        $scope.product.push($scope.produc[i]);
+                    };
+                }
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('info', "No Data..!"));
+        }).finally();
+    }
+
+    var m = [];
+    var details = [];
+
+    $scope.Save = function(m) {
+        $scope.loading();
+        var todayDate = formatDate(convertdate(td));
+        var custid = m[0].customer_gid;
+        var en = Servicedrctsale.setSchDtl(custid, $rootScope.scheduleType_gid, 'SCHEDULE', todayDate);
+        en.then(function(en) {
+            var sch_gid = (en.data)[0]
+            if (sch_gid > 0) {
+                for (var i = 0; i < m.length; i++) {
+                    details.push({
+                        "product_gid": m[i].product_gid,
+                        "stock_qty": m[i].quantity,
+                        "remark": m[i].remarks
+                    })
+                    var Product = [];
+                    Product = $filter('filter')(details, function(item) {
+                        return parseInt(item.stock_qty) > 0
+                    });
+                    var stckdet = {
+                        FET_STOCK: Product,
+                        "Schedule_Affect": "YES"
+                    };
+                }
+
+                var stock_save = Servicedrctsale.setStock('Insert', custid, formatDate($scope.date), stckdet);
+                stock_save.then(function(result) {
+                    if (result.data == "SUCCESS") {
+                        var alrt = Servicedrctsale.setscheduleSales(0, sch_gid, $rootScope.scheduleType_gid, formatDate(convertdate(td)), custid, 28, result.data, '');
+                        $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                        $window.location.href = "direct";
+                    } else {
+                        $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                    }
+                }, function(err) {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+                });
+            }
+        });
+        $scope.endloading();
+    }
+
+    $scope.Update = function(m) {
+        $scope.loading();
+        var todayDate = formatDate(new Date());
+        var custid = m[0].customer_gid;
+        var en = Servicedrctsale.setSchDtl(custid, $rootScope.scheduleType_gid, 'SCHEDULE', todayDate);
+        en.then(function(en) {
+            var sch_gid = (en.data)[0]
+            if (sch_gid > 0) {
+                for (var i = 0; i < m.length; i++) {
+                    details.push({
+                        "product_gid": m[i].product_gid,
+                        "stock_qty": m[i].quantity,
+                        "remark": m[i].remarks,
+                        "stock_gid": m[i].stock_gid
+                    })
+                    var Product = [];
+                    Product = $filter('filter')(details, function(item) {
+                        return parseInt(item.stock_qty) > 0
+                    });
+                    var stckdet = {
+                        FET_STOCK: Product,
+                        "Schedule_Affect": "YES"
+                    };
+                }
+                var stock_update = Servicedrctsale.updateStock('Update', custid, formatDate($scope.date), stckdet);
+                stock_update.then(function(result) {
+                    if (result.data == "SUCCESS") {
+                        alert(result.data);
+                        var alrt = Servicedrctsale.setscheduleSales(0, sch_gid, $rootScope.scheduleType_gid, formatDate(new Date()), custid, 28, result.data, '');
+                        $mdToast.show(SerCommon.new_toast('success', "Not Updated Successfully..!"));
+                        $window.location.href = "direct";
+                    } else {
+                        $mdToast.show(SerCommon.new_toast('error', "Not Updated Successfully..!"));
+                    }
+                }, function(err) {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Updated Successfully..!"));
+                });
+            }
+        });
+        $scope.endloading();
+    }
+    $rootScope.close = function() {
+        $window.location.href = "direct";
+    }
+});
+
+myApp.service("Servicedrctsale", function($http) {
+    this.getschedulelist = function(date, jsondata, Cname) {
+        var response = $http.post(Appname + "/pre_schedule_get/", {
+            parms: {
+                "action": "view",
+                "f_date": date,
+                "jsondata": jsondata,
+                "Client_gid": Cname
+            }
+        });
+        return response;
+    };
+    this.getMappedCustomer = function(action) {
+        var response = $http.get(Appname + "/mapped_customer/", {
+            params: {
+                'action': action
+            }
+        });
+        return response;
+    }
+    this.getScheduleType = function() {
+        var response = $http.get(Appname + "/schedule_type");
+        return response;
+    };
+    this.getfollewup = function(type_gid) {
+        var response = $http.get(Appname + "/followup_reason/", {
+            params: {
+                'schType_gid': type_gid
+            }
+        });
+        return response;
+    };
+    this.getcusomter = function(jsonData) {
+        var response = $http.get(Appname + "/customer_get/", {
+            params: {
+                'jsonData': jsonData
+            }
+        });
+        return response;
+    }
+    this.updateStock = function(action, custid, todaydate, stckdet) {
+        var response = $http.post(Appname + "/stockset/", {
+            parms: {
+                "action": action,
+                "custid": custid,
+                "todaydate": todaydate,
+                "stckdet": stckdet
+            }
+        });
+        return response;
+    }
+    this.geteditt = function(action, type, custid, todaydate) {
+        var response = $http.post(Appname + "/stockeditget/", {
+            parms: {
+                "action": action,
+                "type": type,
+                "custid": custid,
+                "todaydate": todaydate
+            }
+        });
+        return response;
+    }
+    this.setStock = function(action, custid, todaydate, stckdet) {
+        var response = $http.post(Appname + "/stockset/", {
+            parms: {
+                "action": action,
+                "custid": custid,
+                "todaydate": todaydate,
+                "stckdet": stckdet
+            }
+        });
+        return response;
+    }
+    this.get_bankdetails = function(e) {
+        var response = $http.get(Appname + "/bank_detail/");
+        return response;
+    };
+    this.setcollection = function(data) {
+        var response = $http.post(Appname + "/setcoll/", data);
+        return response;
+    };
+    this.setschedule = function(schedule_gid, date, cust_gid, followupreason_gid, sechedule_ref, resechedule_date,followup_date) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                "schedule_type_gid": 2,
+                "TYPE": "UPDATE",
+                "schedule_gid": schedule_gid,
+                "Date": date,
+                "ls_followup_date": followup_date,
+                "ls_Remarks":"None",
+                "cust_gid": cust_gid,
+                "followupreason_gid": followupreason_gid,
+                "sechedule_ref": sechedule_ref,
+                "resechedule_date": resechedule_date
+            }
+        });
+        return response;
+    };
+    this.setSchDtl = function(e, ev, en, date) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                "customer_gid": e,
+                "schedule_type_gid": ev,
+                "TYPE": en,
+                "Date": date
+            }
+        });
+        return response;
+    };
+    this.getProductDtl = function() {
+        var response = $http.get(Appname + "/Productjson/");
+        return response;
+    };
+    this.getfavr = function(d) {
+        var response = $http.post(Appname + "/sales_fav_product/", {
+            parms: {
+                "custid": d
+            }
+        });
+        return response;
+    }
+    this.getedit = function(e, action) {
+        var respons = $http.post(Appname + "/sales_order_get/", {
+            parms: {
+                "custid": e,
+                "action": action
+            }
+        });
+        return respons;
+    }
+    this.geteditdrt = function(action, e) {
+        var respons = $http.get(Appname + "/getEditdrct/", {
+            params: {
+                "action": action,
+                "so_header_gid": e,
+            }
+        });
+        return respons;
+    }
+    this.setscheduleSales = function(emp_gid, schedule_gid, scheduleType_gid, date, custid, followupreason_gid, sechedule_ref, resechedule_date) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                "emp_gid": emp_gid,
+                "schedule_type_gid": scheduleType_gid,
+                "TYPE": "UPDATE",
+                "schedule_gid": schedule_gid,
+                "Date": date,
+                "cust_gid": custid,
+                "followupreason_gid": followupreason_gid,
+                "sechedule_ref": sechedule_ref,
+                "resechedule_date": resechedule_date
+            }
+        });
+        return response;
+    }
+    this.setFollowup = function(schedule_gid, followupreason_gid, ls_followup_date, ls_Remarks, TYPE) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                schedule_gid,
+                followupreason_gid,
+                ls_followup_date,
+                ls_Remarks,
+                TYPE
+            }
+        });
+        return response;
+    }
+    this.setNotnow = function(schedule_gid, followupreason_gid, ls_Remarks, TYPE) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                schedule_gid,
+                followupreason_gid,
+                ls_Remarks,
+                TYPE
+            }
+        });
+        return response;
+    }
+    this.setSales = function(emp_gid, soheader_gid, custid, in_data, action) {
+        var respons = $http.post(Appname + "/sales_order_set/", {
+            parms: {
+                "emp_gid": emp_gid,
+                "soheader_gid": soheader_gid,
+                "custid": custid,
+                "data": in_data,
+                "ACTION": action
+            }
+        });
+        return respons;
+    }
+    this.getEditSchedule = function(schedule_gid) {
+        var respons = $http.get(Appname + "/getEditSchedule/", {
+            params: {
+                "schedule_gid": schedule_gid
+            }
+        });
+        return respons;
+    }
+    this.getstck = function(action, type, custid, todaydate) {
+        var response = $http.post(Appname + "/stockget/", {
+            parms: {
+                "action": action,
+                "type": type,
+                "custid": custid,
+                "todaydate": todaydate
+            }
+        });
+        return response;
+    }
+    this.getclient = function(client_gid) {
+        var response = $http.get(Appname + "/client_get/", {
+            params: {
+                "client_gid": client_gid
+            }
+        });
+        return response;
+    }
+    this.getoutstanding = function(r) {
+        var respons = $http.post(Appname + "/outstanding_fet_get/", {
+            parms: {
+                "customer_gid": r,
+                "ACTION": "outstandingcustomer"
+            }
+        });
+        return respons;
+    }
+    this.getPriceType = function(e) {
+        var respons = $http.post(Appname + "/compgn/", e);
+        return respons;
+    }
+      this.getfollew = function(data_int) {
+        var response = $http.post(Appname + "/collection_get/",
+            data_int
+        );
+        return response;
+    }
+});
+
+</script>
+{% endblock %}

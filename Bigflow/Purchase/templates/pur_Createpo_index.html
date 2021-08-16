@@ -1,0 +1,870 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}PO Creation {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div class="container container1" class="modal-body popup-body"
+         ng-app="myApp" ng-cloak ng-controller="myCtrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PO Creation</h4>
+            </div>
+        </div>
+        <div class="modal-body popup-body">
+            <div class="row">
+                <div class="text-left">
+                    <md-button class="btn btn-info custbutton"
+                               href="prfinalapproval"
+                               ng-click="pr_approved_sum()"
+                    >PR APPROVED SUMMARY
+                    </md-button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <md-autocomplete
+                            layout-fill
+                            md-clear-button="supplier_clear_button"
+                            md-floating-label="Supplier Name"
+                            md-input-maxlength=126
+                            md-item-text="item.supplier_name"
+                            md-items="item in getsupp(searchText2)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchText2"
+                            md-selected-item="chk.ddlstatus"
+                            md-selected-item-change="ccbsglno(chk)"
+                            ng-disabled="supplier_disabled">
+                        <md-item-template>
+                            <span md-highlight-text="searchText2"> {{item.supplier_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Supplier matching "{{searchText2}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Term And Condition"
+                            md-input-maxlength=126
+                            md-item-text="item.poterms_name"
+                            md-items="item in getcond(searchText3)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchText3"
+                            md-selected-item="chk.ddlstatus1"
+                            md-selected-item-change="ccbsglno(chk)"
+                            required>
+                        <md-item-template>
+                            <span md-highlight-text="searchText3"> {{item.poterms_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Term matching "{{searchText2}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>From Date</label>
+                        <md-datepicker md-hide-icons="calendar"
+                                       md-min-date="minDate"
+                                       ng-model="chk.searchquery_StartDate"
+                                       required
+                        ></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>To Date</label>
+                        <md-datepicker
+                                md-hide-icons="calendar"
+                                md-min-date="chk.searchquery_StartDate"
+                                ng-model="chk.invdate1"
+                                required>
+                        </md-datepicker>
+                    </md-input-container>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Choose Approver"
+                            md-input-maxlength=126
+                            md-item-text="item.employee_name"
+                            md-items="item in getapprover(searchText)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchText"
+                            md-selected-item="chk.lim"
+                            md-selected-item-change="ACselectchange(item)"
+                            required
+                    >
+                        <md-item-template>
+                            <td md-highlight-text="searchText" ng-value="item.employee_gid">
+                                <code>{{item.employee_code}}</code>
+                                {{item.employee_name}}
+                                <span>{{&nbsp;&nbsp;&nbsp;&nbsp;}}</span>
+                                <span ng-if="item.delmat_limit > 0">
+                                    <code>{{item.delmat_limit}}</code>
+                                </span>
+                                <span ng-if="item.delmat_limit == undefined">
+                                   {{item.delmat_limit}}
+                                </span>
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No Approver matching "{{searchText}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Branch Name"
+                            md-input-maxlength=126
+                            md-item-text="item.branch_name"
+                            md-items="item in getbranch(searchText1)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchText1"
+                            md-selected-item="chk.branch_name"
+                            md-selected-item-change="ACselectchange(item)"
+                            required
+                    >
+                        <md-item-template>
+                            <td md-highlight-text="searchText1">
+                                {{item.branch_name}}
+                            </td>
+                        </md-item-template>
+                        <md-not-found>
+                            No Branch matching "{{searchText1}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       style="width:100%">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Product Name</th>
+                        <th>Commodity Name</th>
+                        <th>Supplier Name</th>
+                        <th>Quantity</th>
+                        <th>
+                            <a class="md-raised md-warn"
+                               href=""
+                               title="Unit Price based on Supplier Name"
+                            >
+                                *Unit Price
+                            </a>
+                        </th>
+                        <th>Amount</th>
+                        <th>Tax %</th>
+                        <th>Tax Amount</th>
+                        <th>Total Amount</th>
+                        <th>Delivery</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="x in array1.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict">
+                        <td class="text-center">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                        <td class="text-center">{{x.product_name}}</td>
+                        <td class="text-center">{{x.commodity_name}}</td>
+                        <td class="text-center">{{x.supplier_name}}</td>
+                        <td class="text-center">{{x.total_quatity}}{{x.podetails_qty}}</td>
+                        <td class="text-center">{{x.supplier_unit_price}}{{x.podetails_unitprice}}</td>
+                        <td class="text-center">{{x.po_amount
+                            = x.total_quatity * x.supplier_unit_price | number}} {{x.podetails_amount}}
+                        </td>
+                        <td class="text-center">{{x.tax_amount}} {{x.podetails_taxamount}}%</td>
+
+                        <td class="text-center">{{(x.po_amount*(x.tax_amount))/100}}</td>
+
+                        <td class="text-center">
+                            {{x.podetails_totalamount = (((x.total_quatity * x.supplier_unit_price)*
+                            (x.tax_amount))/100) + (x.total_quatity * x.supplier_unit_price) | number}}
+                            {{x.podetails_amount + x.podetails_taxamount }}
+
+                        </td>
+                        <td align="center" ng-click="delivery(x)">
+                            <a align="center" >
+                                <i class="material-icons">send</i>
+                                <md-tooltip>Delivery Details</md-tooltip>
+                            </a>
+                        </td>
+
+                    </tr>
+
+                    <tr ng-show="array1.length ==  0">
+                        <td class="warning" colspan="11">
+                            No Records Found.    
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="9">
+                        </td>
+                        <td align="right">
+                           <b>Total Amount</b>
+                        </td>
+                        <td class="text-center">
+                            {{totalsum() | number}}
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+                            <td colspan="15">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-model="currentPage" total-items="array1.length"
+                                    uib-pagination></ul>
+                            </td>
+                        </div>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class=" text-left">
+            <div class="text-right">
+                <button class="btn btn-default" ng-click="closefunction()"
+                        style="margin:5px;"
+                        type="button">Close
+                    <md-tooltip>close</md-tooltip>
+                </button>
+                <button class="btn btn-success"
+                        ng-click="sub()"
+                        style="margin:5px;">Submit
+                    <md-tooltip>submit</md-tooltip>
+
+                </button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12" ng-include="'po_delievery'"></div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+
+<script>
+var app = angular.module('myApp', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+.config(function ($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+app.directive('numbersOnly', function () {
+   return {
+       require: 'ngModel',
+       link: function (scope, element, attr, ngModelCtrl) {
+           function fromUser(text) {
+               if (text) {
+                   var transformedInput = text.replace(/[^0-9]/g, '');
+                   if (transformedInput !== text) {
+                       ngModelCtrl.$setViewValue(transformedInput);
+                       ngModelCtrl.$render();
+                   }
+                   return transformedInput;
+               }
+               return undefined;
+           }
+           ngModelCtrl.$parsers.push(fromUser);
+       }
+   };
+});
+app.directive('expand', function () {
+            function link(scope, element, attrs) {
+                scope.$on('onExpandAll', function (event, args) {
+                    scope.expanded = args.expanded;
+                });
+            }
+            return {
+                link: link
+            };
+        });
+
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+app.controller('myCtrl',['poService','$window','$scope','$mdDialog','$interval','$filter', function(poService,$window,$scope, $mdDialog, $interval,$filter) {
+
+         var detail = JSON.parse(sessionStorage.getItem('today'));
+         $scope.employgid = detail.employee_gid;
+         $scope.entity_gid = detail.entity_gid;
+         $scope.currentPage = 1;
+         $scope.isOpen=true;
+         $scope.maxSize = 3;
+         $scope.itemsPerPage = 10;
+         $scope.mainsummary=[];
+         $scope.array1=[];
+         $scope.chk=[];
+         $scope.dispatch_date = new Date();
+         $scope.supplier_disabled=false;
+         $scope.supplier_clear_button=true;
+         $scope.isCollapsed = true;
+         $scope.executivename = [];
+         $scope.maintable=[];
+         $scope.join=[];
+         $scope.brncode=[];
+
+         $scope.expandAll = function(expanded) {
+ 
+        // $scope is required here, hence the injection above, even though we're using "controller as" syntax
+        $scope.$broadcast('onExpandAll', {
+          expanded: expanded
+        });
+      };
+
+
+
+
+<!--         var po_gid =sessionStorage.getItem('poheader_gid');-->
+<!--         var productname = poService.getpodetails(po_gid);-->
+<!--            productname.then(function (productname) {-->
+<!--            -->
+<!--            $scope.array1 = JSON.parse(productname.data);-->
+<!--            $scope.dropdown1=($scope.array1[0].poheader_gid);-->
+<!--            $scope.comm=($scope.array1[0].commodity_name);-->
+<!--            loaddata11();-->
+<!--            //alert(JSON.stringify($scope.dropdown));-->
+<!--                if ($scope.array1.length > 0) {-->
+<!--                    $scope.poapproval = $scope.array1;-->
+<!--                    var prodname = $scope.poapproval;-->
+<!--                    if (prodname.length > 0) {-->
+<!--                        $scope.chk.poheader_gid = prodname[0].poheader_gid;-->
+<!--                        $scope.chk.ddlstatus = prodname[0].supplier_name;-->
+<!--                        $scope.chk.supplier_gid = prodname[0].supplier_gid;-->
+<!--                        $scope.chk.invnum = prodname[0].poheader_no;-->
+<!--                        $scope.chk.teamandcond_gid = prodname[0].teamandcond_gid;-->
+<!--                        $scope.chk.ddlstatus1 = prodname[0].poterms_name;-->
+<!--                        $scope.chk.branch_name = prodname[0].branch_name;-->
+
+<!--                    }-->
+<!--                }-->
+
+<!--            });-->
+
+               function loaddata11()
+                {
+                    var data={
+                            'poheader_gid':parseInt($scope.dropdown1)
+                             }
+                     var commodityname = poService.delmat(data);
+                     commodityname.then(function (commodityname) {
+                     
+                     $scope.commodityname = JSON.parse(commodityname.data);
+                        },
+                        function (err) {
+                            alert('No data!.');
+                        }).finally();
+                }
+
+
+         $scope.getbranch = goto;
+
+         function goto(query) {
+                    var result = $filter('filter')($scope.brncode, {
+                        'branch_name': query
+                    });
+                    return result;
+                }
+
+
+         //----------------->branch name
+
+         var brancode = poService.branchresult()
+            brancode.then(function (result) {
+            
+                $scope.brncode = JSON.parse(result.data);
+
+            }, function () {
+                alert("Record Not Found")
+            });
+
+         $scope.totalsum=function()
+         {
+
+             var sum=0;
+             $scope.array1.forEach(function(v)
+             {
+                    sum=sum+(((v.total_quatity * v.supplier_unit_price)*
+                            (v.tax_amount))/100) + (v.total_quatity * v.supplier_unit_price)
+             });
+             return sum;
+         }
+
+         $scope.sub=function()
+         {
+         
+         if(
+            $scope.chk.ddlstatus1 == undefined || $scope.chk.ddlstatus1 == '' ||
+            $scope.chk.ddlstatus1 == null ||
+            $scope.chk.searchquery_StartDate == undefined || $scope.chk.searchquery_StartDate == '' ||
+            $scope.chk.searchquery_StartDate == null ||
+            $scope.chk.invdate1 == undefined ||  $scope.chk.invdate1 == '' ||
+            $scope.chk.invdate1 == null ||
+            $scope.chk.lim == undefined || $scope.chk.lim == '' ||
+            $scope.chk.lim == null ||
+            $scope.chk.branch_name == undefined || $scope.chk.branch_name == '' ||
+            $scope.chk.branch_name == null
+           )
+           {
+           alert('please fill the required fields.!!')
+           return false;
+           }
+
+           //--------->type--I;
+           var concat="pending for next level to "+$scope.chk.lim.employee_code;
+           var data={
+                    "action":"Approve",
+                    "tran_to":$scope.chk.lim.employee_gid,
+                    "tran_type":"G",
+                    "supplier_name":$scope.array1[0].supplier_name,
+                    "supplier_gid":$scope.array1[0].supplier_gid,
+                    "commodity_name":$scope.array1[0].commodity_name,
+                    "commodity_gid":$scope.array1[0].commodity_gid,
+                    "amement_gid":0,
+                    "teamandcont_gid":$scope.chk.ddlstatus1.poterms_gid,
+                    "total_amount":$scope.totalsum(),
+                    "vesion_gid":0,
+                    "prheader_mepno":"",
+                    "branch_gid":$scope.chk.branch_name.branch_gid,
+                    "status_poheader":concat,
+                    "status":"Pending for Approval",
+                    "from_date":formatStringDate($scope.chk.searchquery_StartDate, 'yyyy-mm-dd'),
+                    "to_date":formatStringDate($scope.chk.invdate1, 'yyyy-mm-dd'),
+                    "podetails":$scope.array1
+                    }
+                 	//Loading...
+				$scope.loading = function() {
+					$mdDialog.show({
+					templateUrl: 'loaderSpinner',
+					parent: angular.element(document.body),
+					clickOutsideToClose: false
+					});
+				};
+
+				$scope.endloading = function() {
+					$mdDialog.hide();
+				};
+
+				$scope.loading();
+               var pocreat=poService.getcreate(data)
+               pocreat.then(function(result)
+               {               
+                   if(result.data == 'SUCCESS')
+                   {
+                   alert("The Records is Moved to Next level Approval.!!");
+                   $window.location.href='po_maker';
+                   }
+                   else
+                   {
+                   alert(JSON.stringify(result.data));
+                   }
+               }).finally($scope.endloading);
+
+
+         }
+
+         $scope.getMinDate = function() {
+            return new Date(
+                $scope.dispatch_date.getFullYear(),
+                $scope.dispatch_date.getMonth() ,
+                $scope.dispatch_date.getDate());
+        }
+        $scope.getMaxDate = function() {
+            return new Date(
+                $scope.dispatch_date.getFullYear(),
+                $scope.dispatch_date.getMonth(),
+                $scope.dispatch_date.getDate());
+        }
+        $scope.minDate = $scope.getMinDate();
+        $scope.maxDate = $scope.getMaxDate();
+
+         $scope.getapprover = gotocust;
+
+         function gotocust(query) {
+                    var result = $filter('filter')($scope.tempaa, {
+                        'employee_name': query
+                    });
+                    return result;
+                }
+        //--------------------------------->
+        $scope.closefunction=function()
+        {
+        
+            if($scope.array1.length>=1)
+            {
+            var a=confirm('Are You Sure ?')
+                if(a == true)
+                {
+                $window.location.href='po_maker';
+                }
+            }
+            else if($scope.array1.length == 0)
+            {
+            $window.location.href='po_maker';
+            }
+        }
+
+        //-------------------------------->Delmat Details
+        loaddata();
+        function loaddata()
+        {
+        
+            var data={
+                    "Action":"get_po"
+                     }
+
+            var delmatddl = poService.delmatdata(data);
+            delmatddl.then(function (delmatddl) {
+                    
+                    $scope.maintable=delmatddl.data.DATA;
+                    $scope.delmatddlget = delmatddl.data.DATA;
+                    loademployee($scope.maintable);
+                },
+                function (err) {
+                    alert('No data!.');
+                }).finally();
+
+        }
+
+         //-------------------------------> pr approved summary
+
+         $scope.pr_approved_sum=function()
+         {
+         sessionStorage.setItem('PO_Creation','');
+         $window.location.href='prfinalapproval';
+         }
+
+
+
+         $scope.delivery=function(x)
+         {
+         
+         $scope.delivery_detailss=[];
+         $scope.delivery_detailss=x.delivery_details;
+         modalshow('mdl_present');
+         }
+
+         // Commodity--------------------------->
+
+            var commodityname = poService.commodity();
+            commodityname.then(function (commodityname) {
+                 $scope.commodityname=[];
+                 $scope.commodityname = JSON.parse(commodityname.data);
+
+                },
+                function (err) {
+                    alert('No data!.');
+                }).finally();
+
+
+         // Employee---------------------------->
+           function loademployee(x)
+           {
+
+                    var datan = {
+                        "Table_name": "gal_mst_temployee",
+                        "Column_1": "employee_gid,employee_name,employee_code",
+                        "Column_2": "",
+                        "Where_Common": "employee",
+                        "Where_Primary": "gid",
+                        "Primary_Value": "",
+                        "Order_by": "gid"
+                    }
+
+                    var trans = {
+                        Action: "",
+                        Entity_Gid: $scope.entity_gid,
+                        data: datan
+                    }
+
+                    var getemployee = poService.getprodt(trans)
+                    getemployee.then(function(result) {
+                        $scope.executivename = result.data.DATA;
+                        joinfunction(x,$scope.executivename);
+                    }, function(err) {
+                        alert('No data!.');
+                    }).finally();
+           }
+
+           $scope.tempaa=[];
+           $scope.aa=[];
+           $scope.bb=[];
+
+           function joinfunction(x,y)
+           {
+           if($scope.array1.length == 0)
+           {
+           return false;
+           }
+               x.forEach(function(c)
+               {
+                   if(c.commodity_name == $scope.array1[0].commodity_name && c.employee_name != detail.employee_name)
+                   {
+                   $scope.aa.push(c);
+                   }
+               });
+
+               y.forEach(function(c)
+               {
+                   if(c.employee_name != detail.employee_name)
+                   {
+                   $scope.bb.push(c);
+                   }
+               });
+
+               $scope.aa = $filter('orderBy')($scope.aa, '-delmat_limit');
+               $scope.aa.forEach(function(v)
+               {
+                     var data={
+                                 "employee_gid":v.employee_gid,
+                                 "employee_name":v.employee_name,
+                                 "employee_code":v.employee_code,
+                                 "delmat_limit":v.delmat_limit,
+                                 "commodity_name":v.commodity_name,
+                                 "commodity_code":v.commodity_code,
+                                 "metadata_value":v.metadata_value
+                              }
+                 $scope.tempaa.push(data);
+               });
+
+               $scope.bb.forEach(function(v1)
+               {
+                    var result=$filter('filter')($scope.aa,
+                    {
+                        "employee_gid":v1.employee_gid,
+                        "employee_name":v1.employee_name
+
+                    });
+
+                    if(result.length == 0)
+                    {
+                        var data1={
+                                 "employee_gid":v1.employee_gid,
+                                 "employee_name":v1.employee_name,
+                                 "employee_code":v1.employee_code
+                              }
+                        $scope.tempaa.push(data1);
+                    }
+               });
+<!--            $scope.tempaa = $filter('orderBy')($scope.tempaa, '-delmat_limit');-->
+           // alert(JSON.stringify($scope.tempaa));
+           }
+
+        // supplier----------------------------->
+
+         $scope.getsupp = getsupplier;
+
+         function getsupplier(query) {
+                    var result = $filter('filter')($scope.POsupplier_list, {
+                        'supplier_name': query
+                    });
+                    return result;
+                }
+
+
+        var posupplier = poService.getdropdown("supplier")
+        posupplier.then(function (posupplier) {
+        var  posupplier = JSON.parse(posupplier.data)
+        $scope.POsupplier_list = posupplier;
+
+
+        }, function () {
+              alert("Record Not Found")
+        });
+        //-------------------------------------------------->
+
+        // term and conditions-------------------->
+
+        $scope.getcond = getcondition;
+
+         function getcondition(query) {
+                    var result = $filter('filter')($scope.POTerms_Condt, {
+                        'poterms_name': query
+                    });
+                    return result;
+                }
+
+           var poterms_cond = poService.getdropdown("poterms");
+            poterms_cond.then(function (poterms_cond) {
+                var  poterms_cond = JSON.parse(poterms_cond.data)
+                $scope.POTerms_Condt = poterms_cond;
+            }, function () {
+                  alert("Record Not Found")
+            });
+
+           //-------------------------------------------------->
+
+            
+           //----------> Section header_gid data to be binded
+           var poheader_gid = sessionStorage.getItem('poheader_gid');
+           var PO_Creation1 = sessionStorage.getItem('PO_Creation');
+           if(PO_Creation1 != undefined && PO_Creation1 != null && PO_Creation1 != '')
+           {
+           $scope.array1=JSON.parse(PO_Creation1);
+           $scope.supplier_disabled=true;
+            $scope.supplier_clear_button=false;
+           $scope.chk.ddlstatus=$scope.array1[0].supplier_name;
+           //alert(JSON.stringify($scope.array1));
+           }
+
+
+
+
+
+           if(poheader_gid != '' &&  poheader_gid != undefined)
+           {
+           var data={"Params":
+                        { "FILTER":
+                            {"poheader_gid":parseInt(poheader_gid),
+                            },
+                            "CLASSIFICATION":{"entity_gid":1}
+                        }
+                 }
+
+            var data_int={
+                            "Type":"get",
+                            "data":data
+                        }
+
+           var sum_details=poService.details_sum(data_int)
+           sum_details.then(function(result)
+           {
+           
+           //alert(JSON.stringify(result));
+           $scope.mainsummary=result.data;
+           //$scope.empsmry1=$scope.maintable;
+           $scope.pageLength=$scope.mainsummary.length;
+           $scope.Totalpages=Math.ceil($scope.pageLength/$scope.itemsPerPage)
+           })
+
+           }
+
+           //------>PR APPROVED SUMMARY
+<!--           -->
+<!--           var ee=[];-->
+<!--           var ee = sessionStorage.getItem('PO_Creation');-->
+<!--           if(ee != undefined && ee != null && ee != '')-->
+<!--           {-->
+<!--               $scope.maintable=JSON.parse(ee);-->
+<!--               $scope.main=$scope.maintable-->
+<!--               for(var i=0; i<$scope.maintable.length;i++)-->
+<!--               {-->
+<!--                   $scope.temp=$scope.maintable[i].purchase;-->
+<!--                   var sum=0;-->
+<!--                   for(var j=0;j<$scope.temp.length;j++)-->
+<!--                   {-->
+<!--                   sum+=$scope.temp[j].podetails_qty;-->
+<!--                   }-->
+<!--                   $scope.mainsummary.push($scope.temp[0]);-->
+<!--                   var data={-->
+<!--                           "podetails_qty1":sum,-->
+<!--                           "delivery_details":$scope.temp-->
+<!--                            }-->
+<!--                   var a=angular.extend($scope.mainsummary[i],data);-->
+
+<!--               }-->
+
+
+<!--           }-->
+
+
+
+<!--           var prdatas = poService.setposave($scope.main.action,$scope.main.status,-->
+<!--           $scope.main.purchase,$scope.main.fromdate,$scope.main.todate,$scope.main.amt)-->
+<!--                prdatas.then(function(result) {-->
+<!--                  alert(result.data);-->
+<!--                  sessionStorage.setItem('povendor_gid', '');-->
+<!--                  $window.location.href = "po_maker";-->
+<!--                  $scope.endloading();-->
+<!--             }),function() {-->
+<!--                alert('no data');-->
+<!--            }-->
+
+
+
+
+
+        }]);
+
+        app.service('poService', function($http) {
+
+
+        this.getdropdown = function (tablename) {
+        var responsee = $http.post(Appname+"/Dropdown_details/",{params:{"tablename":tablename,"gid":0,"name":''}});
+        return responsee;
+        }
+
+         this.details_sum = function(x)
+         {
+        var response = $http.post( Appname+ "/poheader_data/",x);
+        return response;
+         }
+
+         this.branchresult = function () {
+            var response = $http.post(Appname + "/branchresult/");
+            return response;
+        }
+
+        this.getprodt = function(custid) {
+            var respons = $http.post(Appname + "/prodget/",
+                custid
+            );
+            return respons;
+        }
+
+        this.commodity = function () {
+            var response = $http.post(Appname + "/commoditydropdown/")
+            return response;
+        }
+
+        this.getcreate = function (x) {
+            var response = $http.post(Appname + "/PR_to_POheader_Set/",x);
+            return response;
+        }
+
+         this.delmatdata = function (x) {
+            var response = $http.post(Appname + "/delmatget/",x);
+            return response;
+        }
+
+<!--         this.setposave = function (action,status,podetails,fromdate,todate,amt) {-->
+<!--      var response = $http.post(Appname + "/PR_to_POheader_Set/", {params:{'action':action,'status':status,'podetails':podetails,'from_date':fromdate,'to_date':todate,  "total_amount":amt}});-->
+<!--      return response;-->
+<!--    }-->
+
+    this.getpodetails = function (po_gid) {
+       var response = $http.post(Appname+"/Approval_PODetail/", { params:{'podetails_gid': po_gid ,'product_name': ''  } })
+       return response;
+    }
+
+     this.delmat = function (data) {
+            var response = $http.post(Appname + "/approvalview/",data)
+            return response;
+     }
+
+
+        });
+
+
+
+</script>
+{%endblock%}

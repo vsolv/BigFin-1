@@ -1,0 +1,169 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} welcome{% endblock %}
+{% block content %}
+<div class="maincontent" ng-app="Appaddschedule" ng-controller="Ctrladdschedule">
+    <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false" id="viewtranhistory" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> View Transaction History Against {{Number}} </strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    <div class="container ">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-info" >
+                    <strong>{{ request.session.Emp_name }}</strong>  {% verbatim %}You are Successfully Logged on {{dbdate}} {% endverbatim %}
+                </div>
+            </div>
+        </div>
+
+        <div class="jumbotron">
+            <h1 style="color:#3f51b5 !important;">Welcome to BIGFLOW</h1>
+            <p>Keeping track of all payments and expenditures,  purchase orders, invoices, statements, etc.
+                Reconciling processed work by verifying entries and comparing system reports to balances.
+                Maintaining historical records. </p>
+            <p class="text-right" style="color:#3f51b5">Happy Day<i style="color:green" class="material-icons">
+trending_up
+</i> </p>
+        </div>
+    </div>
+</div>
+<style>
+    body{
+    background-color:white;
+    }
+</style>
+<script type="text/javascript">
+        var app = angular.module('Appaddschedule', ['ngMaterial', 'ui.bootstrap'])
+        app.controller('Ctrladdschedule', function ($scope,positionser) {
+
+            $scope.Markers = [];
+            $scope.loadmap=loaddetails;
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.dbdate = detail.date
+
+
+
+$scope.getheaderdata = function(){
+
+                var get_purchase = positionser.getsmrydata()
+                get_purchase.then(function (result) {
+                debugger;
+                 $scope.maintable = result.data['DATA'];
+                 $scope.version_num = $scope.maintable[0].version_no
+
+                }).finally($scope.endloading);
+}
+
+   $scope.getheaderdata();
+
+        $scope.clk_personal_info  =function(){
+        debugger;
+        modalshow('viewtranhistory');
+
+        }
+
+            function loaddetails(){
+                alert('Hi');
+                var data=positionser.getposition('te',13,'18/05/2018');
+                data.then(function(res){
+                    alert('hi');
+                    $scope.Markers=res.data;
+                    loadmap();
+                },function(err){
+                    alert(err);
+                })
+            }
+
+            function loadmap(){
+
+                //Setting the Map options.
+                $scope.MapOptions = {
+                    center: new google.maps.LatLng($scope.Markers[0].latlong_latitude, $scope.Markers[0].latlong_longitude),
+                    zoom: 8,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+
+                //Initializing the InfoWindow, Map and LatLngBounds objects.
+                $scope.InfoWindow = new google.maps.InfoWindow();
+                $scope.Latlngbounds = new google.maps.LatLngBounds();
+                $scope.Map = new google.maps.Map(document.getElementById("dvMap"), $scope.MapOptions);
+
+                //Looping through the Array and adding Markers.
+                for (var i = 0; i < $scope.Markers.length; i++) {
+                    var data = $scope.Markers[i];
+                    var myLatlng = new google.maps.LatLng(data.latlong_latitude, data.latlong_longitude);
+
+                    //Initializing the Marker object.
+                    var marker = new google.maps.Marker({
+                        position: myLatlng,
+                        animation: google.maps.Animation.DROP,
+                        map: $scope.Map,
+                        title: data.title
+                    });
+
+                    //Adding InfoWindow to the Marker.
+                    (function (marker, data) {
+                        google.maps.event.addListener(marker, "click", function (e) {
+                            $scope.InfoWindow.setContent("<div style = 'width:200px;min-height:40px'>" + data.description + "</div>");
+                            $scope.InfoWindow.open($scope.Map, marker);
+                        });
+                    })(marker, data);
+
+                    //Plotting the Marker on the Map.
+                    $scope.Latlngbounds.extend(marker.position);
+                }
+                //Adjusting the Map for best display.
+                $scope.Map.setCenter($scope.Latlngbounds.getCenter());
+                $scope.Map.fitBounds($scope.Latlngbounds);
+
+            }
+
+
+        });
+        app.service("positionser", function ($http) {
+          this.getposition = function (action,emp_gid,date) {
+                var response = $http.get(Appname+"/getposition/",
+                {params:{"action":action,"emp_gid":emp_gid,"date":date,}});
+                return response;
+          }
+                this.getsmrydata = function() {
+            var response = $http.get(Appname + "/version_get/");
+            return response;
+        }
+
+        });
+
+
+</script>
+{% endblock %}

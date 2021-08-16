@@ -1,0 +1,1602 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Review{% endblock %}
+{% block content %}
+{% verbatim %}
+<style>
+    .modal-lg{
+    width:1300px
+    }
+
+</style>
+<div class="maincontent" ng-app="Appreview" ng-cloak ng-controller="Ctrlreview">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong> FET Review</strong></h4>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Client Name</label>
+                        <md-select ng-change="chngclnt(sltdclient)" ng-model="sltdclient">
+                            <md-optgroup label="Client Name">
+                                <md-option ng-repeat="c in clientname" ng-value="c.client_gid"> {{c.client_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Employee Name</label>
+                    <md-select data-md-container-class="selectdemoSelectHeader"
+                               md-on-close="clearSearchTerm()" ng-model="ddlemp_gid">
+                        <md-select-header class="demo-select-header">
+                            <input class="demo-header-searchbox md-text" ng-model="searchTerm"
+                                   placeholder="Search for a Employee Name.."
+                                   type="search">
+                        </md-select-header>
+                        <md-optgroup label="Employee Name">
+                            <md-option ng-repeat="emp in empsmry |
+              filter:searchTerm"
+                                       ng-value="emp">{{emp.employee_name}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                   ng-model="from_date1"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>To Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-min-date="from_date1"
+                                   md-open-on-focus ng-model="to_date1"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Status</label>
+                    <md-select ng-init="ddlstatus = review_status[0].status" ng-model="ddlstatus">
+                        <md-optgroup label="Status">
+                            <md-option ng-repeat="st in review_status" ng-value="st.status"> {{st.status}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-button aria-label="Search" class="md-icon-button md-primary" ng-click="loaddetails()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+                <md-button aria-label="close" class="md-icon-button md-primary" data-toggle="modal"
+                           ng-click="loaddetl($event)">
+                    <md-icon>details</md-icon>
+                    <md-tooltip>Advance Search</md-tooltip>
+                </md-button>
+                <md-button class="md-raised custbutton" ng-click="Excelexport()">
+                    Report
+                </md-button>
+            </div>
+        </div>
+        <div class="row">
+            <md-chips md-on-remove="remove_search($chip)" md-removable="true" ng-model="search_chips" readonly="true">
+                <md-chip-template>
+                    <span><em>{{$chip.text }}:{{$chip.value}}</em></span>
+                </md-chip-template>
+            </md-chips>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Employee Name</th>
+                        <th>Customer Name</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Complete For</th>
+                        <th>Followup Date</th>
+                        <th>Re-Schedule Date</th>
+                        <th>Status Remark</th>
+                        <th>Comment</th>
+                        <th>Status</th>
+                        <th>TA</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sale in salesSchedule.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{sale.employee_name}}</td>
+                        <td><span>{{sale.customer_display_name}}
+                            <span class="editlink" ng-click="showComments(sale);">
+                                <span class="material-icons">insert_comment</span>
+                                <md-tooltip>Comments</md-tooltip>
+                            </span>
+                        </span>
+                        </td>
+                        <td>{{sale.schdate|date:"dd-MMM-yyyy"}}</td>
+                        <td><span class="editlink" ng-click="viewprod(sale)"
+                                  ng-hide="sale.schedule_status=='CLOSED' && sale.followupreason_name=='Sales' ? false : true">{{sale.scheduletype_name}}</span>
+                            <span ng-if="sale.schedule_status=='CLOSED' && sale.followupreason_name=='Sales'? false : true">{{sale.scheduletype_name }}</span>
+                        </td>
+                        <td>{{sale.schedule_status =="OPEND"?"OPENED":sale.schedule_status}}</td>
+                        <td>{{sale.followupreason_name }}</td>
+                        <td>{{sale.schedule_followup_date|date:"dd-MMM-yyyy"}}</td>
+                        <td>{{sale.schedule_reschedule_date|date:"dd-MMM-yyyy"}}</td>
+                        <td>{{sale.schedulereview_remarks}}</td>
+                        <td>{{sale.last_comments}}</td>
+                        <td>{{sale.schedulereview_reviewstatus}}</td>
+                        <td><span class="editlink" ng-click="viewtadetails(sale)">View</span></td>
+                        <td>
+                             <span class="editlink" ng-click="showApprove($event,sale)" ng-hide="sale.disable">
+                               <span class="material-icons">thumbs_up_down</span>
+                                <md-tooltip>Approve/Reject</md-tooltip>
+                             </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="13">
+                            <ul boundary-links="true" class="pagination-sm" items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="salesSchedule.length" uib-pagination></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row" ng-show="sheinclud">
+            <div class="col-lg-13 col-sm-13" ng-include="'comment'"></div>
+        </div>
+        <!--TA view modal-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="taview_modal" role="dialog"
+             tabindex="-1">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-lg modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel1">
+                                    <strong>View TA Details</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="col-md-6">
+                                    <div class="col-lg-12 col-sm-12 table-responsive">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                            <thead class="header">
+                                            <th>S.No</th>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>SubType</th>
+                                            <th>Amount Claimed</th>
+                                            <th>FromDate</th>
+                                            <th>ToDate</th>
+                                            <th>Status</th>
+                                            <th>Select</th>
+                                            </thead>
+                                            <tbody>
+                                            <tr ng-class="EachTA.is_checked ==true?'tablerowselect':'boxhover'"
+                                                ng-repeat="EachTA in tasummary">
+                                                <td class="text-left">{{$index + 1}}</td>
+                                                <td class="text-left">
+                                                    <span class="editlink" ng-click="viewtadetails_nameclick(EachTA)">{{EachTA.employee_name}}</span>
+                                                </td>
+                                                <td class="text-left">{{EachTA.ta_type}}</td>
+                                                <td class="text-left">{{EachTA.ta_subtype}}</td>
+                                                <td class="text-right">{{EachTA.tadetails_amountclaimed}}</td>
+                                                <td class="text-left">{{EachTA.tadetails_fromdate}}</td>
+                                                <td class="text-left">{{EachTA.tadetails_todate}}</td>
+                                                <td class="text-left">{{EachTA.tadetails_status}}</td>
+                                                <td class="text-center"><input ng-click="selectTA(EachTA)"
+                                                                               ng-model="EachTA.isChecked"
+                                                                               type="checkbox"></td>
+                                                <td><img alt="img" src="{{EachTA.tadetails_imagepath}}"
+                                                         style="height:100px;width:200px"/></td>
+                                                <td ng-hide="true">{{EachTA.employee_gid}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_gstapplicable}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_gstno}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_invoiceno}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_location}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_placefrom}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_placeto}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_remarks}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_travelmode}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_vendorname}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_vendorcode}}</td>
+                                                <td ng-hide="true">{{EachTA.tadetails_gid}}</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div enctype="multipart/form-data">
+                                        <div role="document">
+                                            <h5>
+                                                TA Image
+                                                <button aria-label="Close" class="close" data-dismiss="modal"
+                                                        type="button">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </h5>
+                                        </div>
+                                        <!--<img ng-src="{{imagelocation}}">-->
+<!--                                        <img alt="img" src="{{tadetails_imagepath}}" style="height:500px;width:600px"/>-->
+
+
+                                        <img ng-init="zoomWidth = 600;imgStyle = {width:'600px'}" ng-style="imgStyle" ng-mouse-wheel-up="zoomWidth = zoomWidth + 20; imgStyle.width = zoomWidth +'px'; " ng-mouse-wheel-down="zoomWidth = zoomWidth - 20;imgStyle.width = zoomWidth  +'px'; " style="width: 460px;" src="{{tadetails_imagepath}}">
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div ng-repeat='image in images'><img ng-src="{{image}}"/></div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <table class="table table-striped table-bordered table-condensed">
+                                        <tr>
+                                            <td><label>EmployeeName</label></td>
+                                            <td class="text-left">{{row_employee_name}}</td>
+                                            <td><label>TA Type</label></td>
+                                            <td class="text-left">{{row_ta_type}}</td>
+                                            <td><label>TA SubType</label></td>
+                                            <td class="text-left">{{row_ta_subtype}}</td>
+                                            <td><label>Amount Claimed</label></td>
+                                            <td class="text-left">{{row_tadetails_amountclaimed}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>From Date</label></td>
+                                            <td class="text-left">{{row_tadetails_fromdate}}</td>
+                                            <td><label>To Date</label></td>
+                                            <td class="text-left">{{row_tadetails_todate}}</td>
+                                            <td><label>Status</label></td>
+                                            <td class="text-left">{{row_tadetails_status}}</td>
+                                            <td><label>GST Applicable</label></td>
+                                            <td class="text-left">{{row_tadetails_gstapplicable}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>GST No</label></td>
+                                            <td class="text-left">{{row_tadetails_gstno}}</td>
+                                            <td><label>InvoiceNo</label></td>
+                                            <td class="text-left">{{row_tadetails_invoiceno}}</td>
+                                            <td><label>Location</label></td>
+                                            <td class="text-left">{{row_tadetails_location}}</td>
+                                            <td><label>Travel Mode</label></td>
+                                            <td class="text-left">{{row_tadetails_travelmode}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>Place From</label></td>
+                                            <td class="text-left">{{row_tadetails_placefrom}}</td>
+                                            <td><label>Place To</label></td>
+                                            <td class="text-left">{{row_tadetails_placeto}}</td>
+                                            <td><label>Remarks</label></td>
+                                            <td class="text-left">{{row_tadetails_remarks}}</td>
+                                            <td><label>Vendor</label></td>
+                                            <td class="text-left">{{row_tadetails_vendorname}}</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td class="text-left" ng-hide="true">{{row_tadetails_gid}}</td>
+                                            <td align="right" colspan="8">
+                                                <md-button class="md-raised custbutton"
+                                                           ng-click="SingleApprove_click()"
+                                                           ng-disabled="disableapprove_single">Approve
+                                                </md-button>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    </br>
+                                </div>
+                            </div>
+
+                            <div align="center" class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-12">
+                                        <md-button class="md-raised custbutton" ng-click="BulkApprove_click()"
+                                                   ng-disabled="disableapprove_bulk">Bulk Approve
+                                        </md-button>
+                                        <md-button class="md-raised custbutton" ng-click="Reject_click()"
+                                                   ng-disabled="disbulk">Reject
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+        </form>
+             </div>
+    </div>
+    <!--endof TA View-->
+    <!--modal for booking-->
+    <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+         data-keyboard="false"
+         id="custgrp_view" role="dialog"
+         style="height:auto;width:100%" tabindex="-1">
+        <form name="histroy" novalidate>
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>View Product Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <md-subheader class="md-primary">{{customer_name}}</md-subheader>
+                                </div>
+
+                                <div class="col-lg-12 col-sm-12 table-responsive">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                        <thead class="header">
+                                        <th>S.No</th>
+                                        <th>SO Header No</th>
+                                        <th>Product Name</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <!--<th>Tax</th>-->
+                                        <th>Total</th>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="m in produc">
+                                            <td class="text-center">{{$index + 1}}</td>
+                                            <td class="text-center">{{m.soheader_no}}</td>
+                                            <td class="align_center">{{m.product_displayname}}</td>
+                                            <td class="text-right">{{m.quantity}}</td>
+                                            <td class="text-right">{{m.booking_final_rate}}</td>
+                                            <!--<td class="text-right">-->
+                                            <!--{{m.sodetails_total-m.sodetails_amount}}-->
+                                            <!--</td>-->
+                                            <td class="text-right">{{m.booking_amount_total}}</td>
+                                            <td ng-hide="true">{{m.product_gid}}</td>
+                                            <td ng-hide="true">{{m.sodetails_gid}}</td>
+                                            <td ng-hide="true">{{m.soheader_gid}}</td>
+                                        </tr>
+                                        </tbody>
+                                        <tfoot>
+                                        <tr>
+                                            <td class="text-right" colspan="6">
+                                                Net Amount : {{getTotalAmount()}}
+                                            </td>
+                                        </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <!--Endmodal for booking-->
+    <!--advance Search-->
+    <div style="visibility: hidden">
+        <div class="md-dialog-container" id="ad_search">
+            <md-dialog layout-padding>
+                <div class="row">
+                    <div class="col-md-12">
+                        <md-subheader class="md-primary">Advance Search</md-subheader>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <md-autocomplete md-clear-button="true" md-floating-label="Employee"
+                                         md-item-text="y.employee_name"
+                                         md-items="y in querySearch(searchemp)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="searchemp"
+                                         md-selected-item="ddlemp_gid"
+                                         md-selected-item-change="ddlemp_change(y.employee_gid)"
+                                         ng-disabled="shwdrp">
+                            <md-item-template>
+                                <span md-highlight-text="searchemp"> {{y.employee_name}} </span>
+                            </md-item-template>
+                        </md-autocomplete>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-open-on-focus
+                                           ng-model="from_date2"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>To Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                           md-min-date="from_date2"
+                                           md-open-on-focus ng-model="to_date2"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Follow Up From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="fufrom_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Follow Up To Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="futo_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Reschedule From Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="rsfrom_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-6">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Reschedule To Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="rsto_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Select Customer Group"
+                                         md-item-text="t.customergroup_name"
+                                         md-items="t in grpsearch(searchgrp)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="searchgrp"
+                                         md-selected-item="ddlcusgrp_gid"
+                                         md-selected-item-change="ddlcustgrp_change(t.customergroup_gid)">
+                            <md-item-template>
+                                <span md-highlight-text="searchgrp"> {{t.customergroup_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Customer Group Matching "{{searchgrp}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-6">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Select Customer"
+                                         md-item-text="y.display_name"
+                                         md-items="y in custsearch(searchcust)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="searchcust"
+                                         md-selected-item="ddlcus_gid"
+                                         md-selected-item-change="ddlcust_change(y.customer_gid)">
+                            <md-item-template>
+                                <span md-highlight-text="searchcust"> {{y.display_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Customer Name Not Matching "{{searchcust}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Select Location"
+                                         md-item-text="y.location_name"
+                                         md-items="y in locsearch(searchloc)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="searchloc"
+                                         md-selected-item="ddlloc_gid">
+                            <md-item-template>
+                                <span md-highlight-text="searchloc"> {{y.location_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Location Name Not Matching "{{searchloc}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-7">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Type</label>
+                            <md-select md-container-class="popup_select" ng-model="ddltype">
+                                <md-optgroup label="Type">
+                                    <md-option ng-repeat="type in types" ng-value="type">{{
+                                        type.scheduletype_name }}
+                                    </md-option>
+                                </md-optgroup>
+                            </md-select>
+                        </md-input-container>
+
+                    </div>
+                    <div class="col-md-3 pull-center">
+                        <md-button aria-label="Search" class="md-icon-button md-primary"
+                                   ng-click="loaddetails('modal')">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </md-dialog>
+        </div>
+    </div>
+    <!--Approve / Reject -->
+    <div style="visibility: hidden">
+        <div class="md-dialog-container" id="dialogApprove">
+            <md-dialog layout-padding>
+                <div>
+                    <div class="col-md-12">
+                        <span class="custlabel">{{customer_name}}</span></br><em>{{employee_name}}</em>
+                        </br>
+                    </div>
+                    <div>
+                        <form name="formapprove">
+                            <div>
+                                <div class="col-md-12">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Remark</label>
+                                        <input autocomplete="off" name="txtremark" ng-model="txtremark" required
+                                               type="text"/>
+                                        <div ng-messages="formapprove.txtremark.$error">
+                                            <div ng-message="required">Please enter a value for this field.</div>
+                                        </div>
+                                    </md-input-container>
+                                </div>
+                            </div>
+                        </form>
+                        <form name="formradion">
+                            <div>
+                                <div class="col-md-12">
+                                    <md-radio-group layout="row" ng-model="rbtStatus" ng-required="true">
+                                        <md-radio-button class="md-primary" ng-disabled="formapprove.$valid"
+                                                         value="ACCEPT">Approve
+                                        </md-radio-button>
+                                        <md-radio-button ng-disabled="!formapprove.$valid" value="REJECT"> Reject
+                                        </md-radio-button>
+                                    </md-radio-group>
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div>
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised custbutton" ng-click="approve_click(is_edit,sch_details)"
+                                       ng-disabled="!formradion.$valid">
+                                Save
+                                <md-tooltip>Save</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" ng-click="closeApprove()">
+                                Cancel
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </md-dialog>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+    .md-autocomplete-suggestions-container{
+   z-index:100000 !important;
+  }
+    .md-dialog-container{
+    z-index:100000 !important;
+    }
+
+</style>
+<script type = "text/javascript">
+    var app_review = angular.module('Appreview', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+app_review.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+app_review.controller('Ctrlreview', function($scope, $rootScope, $filter, $mdDialog, Serreview, SerCommon, $element) {
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.salesSchedule = [];
+    $scope.custgrp = [];
+    $scope.from_date2 = '';
+    $scope.to_date2 = '';
+    $scope.from_date1 = '';
+    $scope.to_date1 = '';
+    $scope.fufrom_date = '';
+    $scope.futo_date = '';
+    $scope.rsfrom_date = '';
+    $scope.rsto_date = '';
+    $scope.cmd = [];
+    $scope.disableapprove_bulk = true;
+    $scope.disableapprove_single = true;
+
+    $scope.from_date1 = new Date(new Date().setDate(new Date().getDate() - 180));
+    $scope.to_date1 = new Date(new Date().setDate(new Date().getDate()));
+
+    $scope.showComments = function(data) {
+        $scope.cmd.comment = '';
+        $scope.cmd.customer_name = data.customer_display_name
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.cmd.Emp_name = detail.employee_name;
+        $scope.Emp_gids = detail.employee_gid;
+        $scope.sheinclud = true;
+        $scope.ref_no = data.schedule_customer_gid;
+        getComment($scope.ref_no);
+        modalshow('comment_view');
+    }
+
+    function getComment(refno) {
+        var JSON_data = {};
+        JSON_data = {
+            "Filters": [{
+                "Comment_For": "COMMENT_CUSTOMER",
+                "Ref_No": [refno],
+            }]
+        };
+        var cmd_detail = Serreview.getcmd('COMMENTS', 'TRANSACTION', JSON_data);
+        cmd_detail.then(function(result) {
+            $scope.cmd.comment_details = result.data;
+        }, function(err) {
+            alert("Not Approved successfully!.")
+        });
+        $scope.cmd.comment = '';
+    }
+
+    var client = Serreview.getclient('')
+    client.then(function(result) {
+            $scope.clientname = [];
+            $scope.clientname = JSON.parse(result.data);
+        },
+        function() {
+            alert('no data');
+        });
+
+    $scope.comment = function(remarks) {
+        var JSON = {};
+        JSON = {
+            "Employee_Gid": $scope.Emp_gids,
+            "Date": formatStringDate(new Date(), 'yyyy-mm-dd hh:mm'),
+            "Comment_For": "COMMENT_CUSTOMER",
+            "EACH": [{
+                "Ref_No": $scope.ref_no,
+                "Remark": remarks
+            }]
+        };
+
+        var cmd_detail = Serreview.setcmd('Insert', 'EACH', JSON);
+        cmd_detail.then(function(result) {
+            if (result.data == 'SUCCESS') {
+                getComment($scope.ref_no);
+            } else {
+                alert("Not Inserted successfully!.")
+            }
+        }, function(err) {
+            alert("Not Approved successfully!.")
+        });
+    }
+
+    $scope.viewtadetails_nameclick = function(e) {
+
+        var index = $scope.tasummary.indexOf(e)
+        $scope.tasummary[index].is_checked = !$scope.tasummary[index].is_checked;
+        $scope.loading();
+        $scope.row_employee_name = e.employee_name;
+        $scope.row_tadetails_gid = e.tadetails_gid;
+        $scope.row_ta_type = e.ta_type;
+        $scope.row_ta_subtype = e.ta_subtype;
+        $scope.row_tadetails_amountclaimed = e.tadetails_amountclaimed;
+        $scope.row_tadetails_fromdate = e.tadetails_fromdate;
+        $scope.row_tadetails_todate = e.tadetails_todate;
+        $scope.row_tadetails_status = e.tadetails_status;
+        $scope.row_tadetails_gstapplicable = e.tadetails_gstapplicable;
+        $scope.row_tadetails_gstno = e.tadetails_gstno;
+        $scope.row_tadetails_invoiceno = e.tadetails_invoiceno;
+        $scope.row_tadetails_location = e.tadetails_location;
+        $scope.row_tadetails_placefrom = e.tadetails_placefrom;
+        $scope.row_tadetails_placeto = e.tadetails_placeto;
+        $scope.row_tadetails_remarks = e.tadetails_remarks;
+        $scope.row_tadetails_travelmode = e.tadetails_travelmode;
+        $scope.row_tadetails_vendorname = e.tadetails_vendorname;
+        $scope.tadetails_imagepath = e.tadetails_imagepath;
+        $scope.row_tadetails_vendorcode = e.tadetails_vendorcode;
+        $scope.disableapprove_single = false;
+        $scope.endloading();
+    };
+
+    $scope.produc = [];
+    $scope.viewprod = function(e) {
+        $scope.loading();
+        $scope.schedule_gid = e.schedule_gid;
+        $scope.customer_name = e.customer_display_name;
+        var editordr = Serreview.getEditSchedule($scope.schedule_gid)
+        editordr.then(function(result) {
+            modalshow('custgrp_view');
+            $scope.produc = result.data;
+        }, function(err) {
+            alert("Server Error!.");
+        }).finally($scope.endloading);
+    };
+
+    $scope.tasummary = [];
+    $scope.viewtadetails = function(e) {
+
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "From_Date": $scope.from_date1,
+                    "TO_Date": $scope.to_date1,
+                    "Employee_Gid": e.schedule_employee_gid,
+                    "Claim_Status": "PENDING"
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": [1]
+                },
+                "Group": "CLAIM_INITIAL_SUMMARY",
+                "Type": "INITIAL_SUMMARY",
+                "Sub_Type": "TEMP"
+            }
+        }
+
+        var Viewta1 = Serreview.ta_getdata_service(data);
+        Viewta1.then(function(result) {
+                modalshow('taview_modal');
+                $scope.tasummary = result.data.DATA;
+                $scope.disableapprove_bulk = true;
+                $scope.disableapprove_single = true;
+                $scope.row_employee_name = '';
+                $scope.row_tadetails_gid = ''
+                $scope.row_ta_type = '';
+                $scope.row_ta_subtype = '';
+                $scope.row_tadetails_amountclaimed = '';
+                $scope.row_tadetails_fromdate = '';
+                $scope.row_tadetails_todate = '';
+                $scope.row_tadetails_status = '';
+                $scope.row_tadetails_gstapplicable = '';
+                $scope.row_tadetails_gstno = '';
+                $scope.row_tadetails_invoiceno = '';
+                $scope.row_tadetails_location = '';
+                $scope.row_tadetails_placefrom = '';
+                $scope.row_tadetails_placeto = '';
+                $scope.row_tadetails_remarks = '';
+                $scope.row_tadetails_travelmode = '';
+                $scope.row_tadetails_vendorname = '';
+                $scope.row_tadetails_imagepath = '';
+                $scope.row_tadetails_vendorcode = '';
+            },
+            function(err) {
+                alert("Server Error!.");
+            }).finally($scope.endloading);
+    };
+
+    $scope.selectTA = function(data) {
+        $scope.disableapprove_bulk = true;
+        for (var i = 0; i < $scope.tasummary.length; i++) {
+            if (($scope.tasummary[i].isChecked)) {
+                $scope.disableapprove_bulk = false;
+                return;
+            }
+        }
+    };
+
+    $scope.SingleApprove_click = function() {
+        $scope.loading();
+        $scope.disableapprove_bulk = true;
+        $scope.ClaimDetails_Gid = [];
+        var data = [];
+        data.push($scope.row_tadetails_gid);
+
+        var datain = {
+            "Params": {
+                "DETAILS": {
+                    "ClaimDetails_Gid": data
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": [1]
+                },
+                Group: 'CLAIM_APPROVE_PROCESS',
+                Action: 'UPDATE',
+                Type: 'CLAIM_APPROVE',
+                Sub_Type: 'TEMP',
+                Employee_Gid: '57',
+            }
+        }
+        setpop(datain)
+        $scope.endloading();
+    }
+
+    $scope.BulkApprove_click = function() {
+        $scope.loading();
+        $scope.disableapprove_single = true;
+        $scope.ClaimDetails_Gid = [];
+        var data = [];
+        for (var i = 0; i < $scope.tasummary.length; i++) {
+            if ($scope.tasummary[i].isChecked) {
+
+                data.push($scope.tasummary[i].tadetails_gid);
+            }
+
+        }
+        //ClaimDetails_Gid=JSON.stringify(data)
+
+        var datain = {
+            "Params": {
+                "DETAILS": {
+                    "ClaimDetails_Gid": data
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": [1]
+                },
+                Group: 'CLAIM_APPROVE_PROCESS',
+                Action: 'UPDATE',
+                Type: 'CLAIM_APPROVE',
+                Sub_Type: 'TEMP',
+                Employee_Gid: '57',
+            }
+        }
+        setpop(datain)
+        $scope.endloading();
+    }
+
+    function setpop(datain) {
+        var set_state = Serreview.get_tadetails(datain)
+        set_state.then(function(result) {
+                $scope.prodge = result.data.MESSAGE;
+                if ($scope.prodge == "SUCCESS") {
+                    alert($scope.prodge);
+                    $scope.viewtadetails();
+                    // $window.location.href = "schedulereview";
+                } else {
+                    alert($scope.prodge);
+                }
+            }, function(err) {
+                alert('No data!.');
+            })
+            .finally();
+    };
+    $scope.getTotalAmount = function() {
+        var total = 0;
+        var length = $scope.produc.length;
+        for (var i = 0; i < length; i++) {
+            total += $scope.produc[i].booking_amount_total;
+        }
+        return total;
+    }
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.testt = function(ev) {
+        ev.stopPropagation();
+    }
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.maxDate = new Date();
+    var login_emp_gid = 0;
+
+    function loadMain(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid, Cname) {
+
+        if (Cname == undefined) {
+            Cname = ''
+        } else {
+            Cname = $scope.sltdclient;
+        }
+        $scope.loading()
+        var overalldtl = Serreview.getschedulelist('noexcel', 'SCHEDULE_SUMMARY', emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp_gid, loc_gid, login_emp_gid, Cname);
+        overalldtl.then(function(res) {
+            overallSchedule = res.data;
+            $scope.salesSchedule = overallSchedule;
+            $scope.salesSchedule = $filter('filter')(overallSchedule, {
+                'schedulereview_reviewstatus': $scope.ddlstatus
+            });
+
+            angular.forEach($scope.salesSchedule, function(user) {
+                if (user.login_gid == user.schedule_employee_gid && user.admin == 'Y') {
+                    user.disable = true;
+                } else {
+                    user.disable = false;
+                }
+                if (user.admin == 'Y') {
+
+                    user.disable = true;
+                } else {
+                    user.disable = false;
+                }
+                if (user.login_gid == user.schedulereview_reviewby) {
+
+                    user.disable = false;
+                }
+            });
+            if ($scope.salesSchedule[0].admin == 'Y') {
+                login_emp_gid = $scope.salesSchedule[0].login_gid
+                var get_employ = SerCommon.getemployee(0, '', 0, 'ALL')
+                get_employ.then(function(result) {
+                    $scope.empsmry = result.data;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.empsmry, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+            } else {
+                login_emp_gid = $scope.salesSchedule[0].login_gid
+                var get_employ = SerCommon.getemployee(login_emp_gid, '', 0, 'HIERARCHY')
+                get_employ.then(function(result) {
+
+                    $scope.empsmry = result.data;
+                }, function(err) {
+                    alert('No data!.');
+                })
+                $scope.querySearch = function(query) {
+                    te = $filter('filter')($scope.empsmry, {
+                        'employee_name': query
+                    });
+                    return te;
+                };
+            }
+        }, function(err) {}).finally($scope.endloading);
+    }
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.chngclnt = gotoClientChange;
+
+    function gotoClientChange(c) {
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        loadMain(detail.employee_gid, '', '', '', '', '', '', 0, 0, 0, 0, detail.employee_gid, c);
+    }
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    loadMain(detail.employee_gid, '', '', '', '', '', '', 0, 0, 0, 0, detail.employee_gid, $scope.sltdclient);
+
+    var get_types = Serreview.getScheduleType()
+    get_types.then(function(result) {
+        $scope.types = result.data;
+    }, function(err) {
+        alert('No data!.');
+    })
+
+    loadcustomer_all()
+
+    function loadcustomer_all() {
+        var jsonData = {
+            "isactive": "Y"
+        }
+        var get_customer = SerCommon.getcustomer(jsonData)
+        get_customer.then(function(result) {
+            $scope.customers = result.data;
+
+        }, function(err) {
+            alert('No data!.');
+        });
+    }
+
+    $scope.custsearch = function(query) {
+        var te = $filter('filter')($scope.customers, {
+            'display_name': query
+        });
+        return te;
+    };
+
+    loadcustomergroup_all();
+
+    function loadcustomergroup_all() {
+        var getcustgrp = Serreview.getcustgroup()
+        getcustgrp.then(function(result) {
+            $scope.custgrp = JSON.parse(result.data);
+            $scope.grpsearch("");
+        }, function(err) {
+            alert('No data!.');
+        })
+    }
+
+    $scope.grpsearch = function(query) {
+        var te = $filter('filter')($scope.custgrp, {
+            'customergroup_name': query
+        });
+        return te;
+    };
+
+    $scope.ddlemp_change = function(emp_gid) {
+        if (emp_gid) {
+            var get_custgrp = SerCommon.getemp_customer('customergroup', emp_gid)
+            get_custgrp.then(function(result) {
+                $scope.custgrp = result.data;
+                $scope.grpsearch("");
+            }, function(err) {
+                alert('No data!.');
+            })
+        } else {
+            loadcustomergroup_all();
+        }
+    };
+    loadlocation_all();
+
+    function loadlocation_all() {
+        var getlocat = Serreview.getlocation()
+        getlocat.then(function(result) {
+            $scope.locat = JSON.parse(result.data);
+        }, function(err) {
+            alert('No data!.');
+        });
+    }
+    $scope.locsearch = function(query) {
+        var te = $filter('filter')($scope.locat, {
+            'location_name': query
+        });
+        return te;
+    };
+
+    $scope.ddlcustgrp_change = function(custgrp_gid) {
+        if (custgrp_gid) {
+            var jsoncustgrp = {
+                "custgrp_gid": custgrp_gid,
+                "isactive": "Y"
+            }
+            var get_custo = SerCommon.getcustomer(jsoncustgrp)
+            get_custo.then(function(result) {
+                $scope.customers = [];
+                $scope.customers = result.data;
+                $scope.custsearch("");
+            }, function(err) {
+                alert('No data!.');
+            })
+        } else {
+            loadcustomer_all();
+        }
+        $scope.custsearch("");
+    };
+
+    $scope.ddlcust_change = function(cust_gid) {
+        if (cust_gid) {
+            var get_loc = Serreview.customerget(cust_gid)
+            get_loc.then(function(result) {
+                $scope.locat = JSON.parse(result.data);
+                $scope.locsearch("");
+            }, function(err) {
+                alert('No data!.');
+            })
+        } else {
+            loadlocation_all();
+        }
+        $scope.locsearch("");
+    };
+
+    $scope.loaddetails = function(ref) {
+
+        pushChips();
+    };
+    $scope.loaddetl = function(ev) {
+        showmodal1(ev)
+    };
+
+    function showmodal1(ev) {
+        $mdDialog.show({
+            contentElement: '#ad_search',
+            parent: angular.element(document.body),
+            targetEvent: ev,
+            multiple: true,
+            clickOutsideToClose: true,
+            fullscreen: false
+        });
+    };
+
+    $scope.review_status = [{
+        status: null
+    }, {
+        status: "ACCEPT"
+    }, {
+        status: "REJECT"
+    }]
+
+    function pushChips() {
+
+        var data = [];
+        var emp_gid = 0;
+        var f_date = '';
+        var t_date = '';
+        var fu_f_date = '';
+        var fu_t_date = '';
+        var rs_f_date = '';
+        var rs_t_date = '';
+        var cus_gid = 0;
+        var type_gid = 0;
+        var custgrp = 0;
+        var loc = 0;
+
+        if ($scope.ddlemp_gid) {
+            data.push({
+                type: 'employee',
+                text: 'Emp Name',
+                value: $scope.ddlemp_gid.employee_name
+            });
+            emp_gid = $scope.ddlemp_gid.employee_gid
+        }
+        if ($scope.ddlcus_gid) {
+            data.push({
+                type: 'customer',
+                text: 'Cus Name',
+                value: $scope.ddlcus_gid.display_name
+            });
+            cus_gid = $scope.ddlcus_gid.customer_gid;
+        }
+        if ($scope.ddlcusgrp_gid) {
+            data.push({
+                type: 'customergroup',
+                text: 'Cust Grp Name',
+                value: $scope.ddlcusgrp_gid.customergroup_name
+            });
+            custgrp = $scope.ddlcusgrp_gid.customergroup_gid;
+        }
+        if ($scope.ddlloc_gid) {
+            data.push({
+                type: 'location',
+                text: 'Location',
+                value: $scope.ddlloc_gid.location_name
+            });
+            loc = $scope.ddlloc_gid.location_gid;
+        }
+        if ($scope.ddltype) {
+            data.push({
+                type: 'type',
+                text: 'Type',
+                value: $scope.ddltype.scheduletype_name
+            });
+            type_gid = $scope.ddltype.scheduletype_gid;
+        }
+        if ($scope.from_date1) {
+            data.push({
+                type: 'f_date',
+                text: 'F date',
+                value: $filter('date')($scope.from_date1, "dd-MMM-yyyy")
+            });
+            f_date = formatDate($scope.from_date1);
+        }
+        if ($scope.to_date1) {
+            data.push({
+                type: 't_date',
+                text: 'T Date',
+                value: $filter('date')($scope.to_date1, "dd-MMM-yyyy")
+            });
+            t_date = formatDate($scope.to_date1);
+        }
+        if ($scope.fufrom_date) {
+            data.push({
+                type: 'fu_f_date',
+                text: 'FU F date',
+                value: $filter('date')($scope.fufrom_date, "dd-MMM-yyyy")
+            });
+            fu_f_date = formatDate($scope.fufrom_date);
+        }
+        if ($scope.futo_date) {
+            data.push({
+                type: 'fu_t_date',
+                text: 'FU T Date',
+                value: $filter('date')($scope.futo_date, "dd-MMM-yyyy")
+            });
+            fu_t_date = formatDate($scope.futo_date);
+        }
+        if ($scope.rsfrom_date) {
+            data.push({
+                type: 'rs_f_date',
+                text: 'RS F date',
+                value: $filter('date')($scope.rsfrom_date, "dd-MMM-yyyy")
+            });
+            rs_f_date = formatDate($scope.rsfrom_date);
+        }
+        if ($scope.rsto_date) {
+            data.push({
+                type: 'rs_t_date',
+                text: 'RS T Date',
+                value: $filter('date')($scope.rsto_date, "dd-MMM-yyyy")
+            });
+            rs_t_date = formatDate($scope.rsto_date);
+        }
+        $scope.search_chips = data;
+        loadMain(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp, loc, detail.employee_gid);
+    };
+
+    $scope.remove_search = function(ev) {
+        switch (ev.type) {
+            case 'employee':
+                $scope.ddlemp_gid = null;
+                break;
+            case 'customer':
+                $scope.ddlcus_gid = null;
+                break;
+            case 'customergroup':
+                $scope.ddlcusgrp_gid = null;
+                break;
+            case 'location':
+                $scope.ddlloc_gid = null;
+                break;
+            case 'type':
+                $scope.ddltype = null;
+                break;
+            case 'f_date':
+                $scope.from_date = null;
+                $scope.from_date1 = null;
+                break;
+            case 't_date':
+                $scope.to_date = null;
+                $scope.to_date1 = null;
+                break;
+            case 'fu_f_date':
+                $scope.fufrom_date = null;
+                break;
+            case 'fu_t_date':
+                $scope.futo_date = null;
+                break;
+            case 'rs_f_date':
+                $scope.rsfrom_date = null;
+                break;
+            case 'rs_t_date':
+                $scope.rsto_date = null;
+                break;
+        }
+        var data = [];
+        var emp_gid = 0;
+        var f_date = '';
+        var t_date = '';
+        var fu_f_date = '';
+        var fu_t_date = '';
+        var rs_f_date = '';
+        var rs_t_date = '';
+        var cus_gid = 0;
+        var type_gid = 0;
+        var custgrp = 0;
+        var loc = 0;
+        if ($scope.ddlemp_gid) {
+            emp_gid = $scope.ddlemp_gid.employee_gid
+        };
+        if ($scope.ddlcus_gid) {
+            cus_gid = formatDate($scope.ddlcus_gid.customer_gid)
+        };
+        if ($scope.ddlcusgrp_gid) {
+            custgrp = formatDate($scope.ddlcusgrp_gid.customergroup_gid)
+        };
+        if ($scope.ddlloc_gid) {
+            loc = formatDate($scope.ddlloc_gid.location_gid)
+        };
+        if ($scope.ddltype) {
+            type_gid = formatDate($scope.ddltype.scheduletype_gid)
+        };
+        if ($scope.from_date2) {
+            f_date = formatDate($scope.from_date2)
+        };
+        if ($scope.to_date2) {
+            t_date = formatDate($scope.to_date2)
+        };
+        if ($scope.from_date1) {
+            f_date = formatDate($scope.from_date1)
+        };
+        if ($scope.to_date1) {
+            t_date = formatDate($scope.to_date1)
+        };
+        if ($scope.fufrom_date) {
+            fu_f_date = formatDate($scope.fufrom_date)
+        };
+        if ($scope.futo_date) {
+            fu_t_date = formatDate($scope.futo_date)
+        };
+        if ($scope.rsfrom_date) {
+            rs_f_date = formatDate($scope.rsfrom_date)
+        };
+        if ($scope.rsto_date) {
+            rs_t_date = formatDate($scope.rsto_date)
+        };
+        loadMain(emp_gid, f_date, t_date, fu_f_date, fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp, loc, detail.employee_gid);
+    };
+
+    $scope.showApprove = function(ev, details) {
+        $scope.sch_details = details;
+        $scope.customer_name = details.customer_name;
+        $scope.employee_name = details.employee_name;
+        if (details.schedulereview_gid) {
+            $scope.is_edit = true;
+            $scope.txtremark = details.schedulereview_remarks;
+            $scope.rbtStatus = details.schedulereview_reviewstatus;
+            showmodal(ev)
+        } else {
+            $scope.rbtStatus = '';
+            $scope.txtremark = '';
+            $scope.is_edit = false;
+            $scope.formapprove.$setPristine();
+            $scope.formapprove.$setUntouched();
+            showmodal(ev)
+        }
+    };
+
+    function showmodal(ev) {
+        $mdDialog.show({
+            contentElement: '#dialogApprove',
+            parent: angular.element(document.body),
+            targetEvent: ev,
+            clickOutsideToClose: false
+        });
+    }
+
+    $scope.closeApprove = function() {
+        $mdDialog.hide();
+    }
+
+    $scope.approve_click = function(is_edit, details) {
+        var action, data;
+        if (is_edit) {
+            action = 'Update';
+            datalist = [{
+                schedulereview_gid: details.schedulereview_gid,
+                status: $scope.rbtStatus,
+                remarks: $scope.txtremark
+            }];
+            data = {
+                schedulereview: datalist
+            }
+        } else {
+            action = 'Insert';
+            datalist = [{
+                schedule_gid: details.schedule_gid,
+                status: $scope.rbtStatus,
+                remarks: $scope.txtremark
+            }];
+            data = {
+                schedulereview: datalist
+            }
+        }
+        var set_review = Serreview.setScheduleReview(action, data);
+        set_review.then(function(res) {
+            if (res.data > 0 || res.data == 'SUCCESS') {
+                alert("Saved Succesfully!.");
+                $scope.loaddetails();
+            } else {
+                alert("Data Not Saved!.");
+            }
+        }, function(err) {
+            alert("Data Not Saved!.");
+        })
+    }
+
+    function checknull_int(input) {
+        if (input) {
+            return input;
+        } else {
+            return 0;
+        }
+    }
+
+    $scope.Excelexport = function() {
+        var emp_gid = 0;
+        var f_date = '';
+        var t_date = '';
+        var fu_f_date = '';
+        var fu_t_date = '';
+        var rs_f_date = '';
+        var rs_t_date = '';
+        var cus_gid = 0;
+        var type_gid = 0;
+        var custgrp = 0;
+        var loc_gid = 0;
+        var login_emp_gid = 0;
+        var Cname = '';
+        var local = '';
+
+
+        if ($scope.ddlemp_gid) {
+            emp_gid = $scope.ddlemp_gid.employee_gid
+        };
+
+        if ($scope.ddlcus_gid) {
+            cus_gid = $scope.ddlcus_gid.customer_gid
+        };
+        if ($scope.ddlcusgrp_gid) {
+            custgrp = $scope.ddlcusgrp_gid.customergroup_gid
+        };
+        if ($scope.ddlloc_gid) {
+            loc_gid = $scope.ddlloc_gid.location_gid
+        };
+        if ($scope.ddltype) {
+            type_gid = $scope.ddltype.scheduletype_gid
+        };
+
+        if ($scope.from_date1) {
+            f_date = formatDate($scope.from_date1)
+        };
+        if ($scope.to_date1) {
+            t_date = formatDate($scope.to_date1)
+        };
+        if ($scope.fufrom_date) {
+            fu_f_date = formatDate($scope.fufrom_date)
+        };
+        if ($scope.futo_date) {
+            fu_t_date = formatDate($scope.futo_date)
+        };
+        if ($scope.rsfrom_date) {
+            rs_f_date = formatDate($scope.rsfrom_date)
+        };
+        if ($scope.rsto_date) {
+            rs_t_date = formatDate($scope.rsto_date)
+        };
+        a = "emp_schedule_get/?action=SCHEDULE_SUMMARY&localaction=" + local + "&cus_gid=" + cus_gid + "&custgrp=" + custgrp + "&emp_gid=" + emp_gid + "&f_date=" + f_date + "&fu_f_date=" + fu_f_date + "&fu_t_date=" + fu_t_date + "&rs_f_date=" + rs_f_date + "&rs_t_date=" + rs_t_date + "&type_gid=" + type_gid + "&loc_gid=" + loc_gid + "&login_emp_gid=" + detail.employee_gid + "&Cname=" + Cname + "&t_date=" + t_date;
+        window.location.href = a;
+    }
+
+});
+
+app_review.service("Serreview", function($http) {
+    this.getschedulelist = function(localaction, action, emp_gid, f_date, t_date, fu_f_date,
+        fu_t_date, rs_f_date, rs_t_date, cus_gid, type_gid, custgrp, loc_gid, login_emp_gid, Cname) {
+        var response = $http.get(Appname + "/emp_schedule_get", {
+            params: {
+                "localaction": localaction,
+                "action": action,
+                "f_date": f_date,
+                "t_date": t_date,
+                "fu_f_date": fu_f_date,
+                "fu_t_date": fu_t_date,
+                "rs_f_date": rs_f_date,
+                "rs_t_date": rs_t_date,
+                "emp_gid": emp_gid,
+                "cus_gid": cus_gid,
+                "type_gid": type_gid,
+                "custgrp": custgrp,
+                "loc_gid": loc_gid,
+                "login_emp_gid": login_emp_gid,
+                "Cname": Cname
+            }
+        });
+        return response;
+    };
+
+    this.ta_getdata_service = function(data_int) {
+        var response = $http.post(Appname + "/taview/", data_int);
+        return response;
+    };
+    this.get_tadetails = function(datain) {
+        var respons = $http.post(Appname + "/gettadetails/", datain);
+        return respons;
+    }
+    this.getScheduleType = function() {
+        var response = $http.get(Appname + "/schedule_type");
+        return response;
+    };
+    this.getcustgroup = function() {
+        var response = $http.get(Appname + "/get_custgroup");
+        return response;
+    };
+    this.getlocation = function() {
+        var response = $http.get(Appname + "/locationddl");
+        return response;
+    };
+    this.customerget = function(cus_gid) {
+        var response = $http.get(Appname + "/customeredt_get/", {
+            params: {
+                "cust_gid": cus_gid
+            }
+        });
+        return response;
+    };
+    this.setScheduleReview = function(action, data) {
+        var response = $http.post(Appname + "/set_sch_review/", {
+            parms: {
+                "action": action,
+                "data": data
+            }
+        });
+        return response;
+    };
+    this.getEditSchedule = function(schedule_gid) {
+        var respons = $http.get(Appname + "/getEditSchedule/", {
+            params: {
+                "schedule_gid": schedule_gid
+            }
+        });
+        return respons;
+    }
+    this.getcmd = function(action, type, json) {
+        var response = $http.post(Appname + "/commentget/", {
+            params: {
+                "action": action,
+                "type": type,
+                "json": json
+            }
+        });
+        return response;
+    };
+    this.setcmd = function(action, type, json) {
+        var response = $http.post(Appname + "/commentset/", {
+            params: {
+                "action": action,
+                "type": type,
+                "json": json
+            }
+        });
+        return response;
+    };
+    this.getexcel = function(action, emp_gid, f_date, t_date, cus_gid, type_gid, custgrp_gid, loc_gid) {
+        var response = $http.get(Appname + "/fetreview_getexcel/", {
+            params: {
+                "action": action,
+                "emp_gid": emp_gid,
+                "f_date": f_date,
+                "t_date": t_date,
+                "cus_gid": cus_gid,
+                "type_gid": type_gid,
+                "custgrp_gid": custgrp_gid,
+                "loc_gid": loc_gid,
+            }
+        });
+        return response;
+    };
+    this.getclient = function(client_gid) {
+        var response = $http.get(Appname + "/client_get/", {
+            params: {
+                "client_gid": client_gid
+            }
+        });
+        return response;
+    }
+});
+</script>
+{% endblock %}

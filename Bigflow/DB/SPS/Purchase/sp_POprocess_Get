@@ -1,0 +1,394 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_POprocess_Get`(IN ls_action varchar(2364),IN ls_type varchar(2364),
+IN lj_Filters json,IN lj_Classification json, OUT Message varchar(1024))
+BEGIN
+##TAMILOLI
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(6144);
+Declare Query_Limit varchar(6144);
+Declare Query_Where varchar(6144);
+Declare cust varchar(6144);
+Declare i int;
+declare ls_count int;
+#select 11;
+		
+ 
+if ls_action='GET' and ls_type='PO_DETAILS' then
+                    
+      #select 1;              
+                     
+					Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.commodity_name'))) into @commodity_name ;
+					Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.branch_name'))) into @branch_name ;
+					Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.prheader_no'))) into @prheader_no ;
+					Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Index'))) into @Page_Index ;
+				    Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Size'))) into @Page_Size ;
+                    
+                    
+                    set Query_search='';
+                    
+                    if @commodity_name <> '' then
+						set Query_search = concat(' and commodity_name like ''','%',@commodity_name,'%',''' '); 
+                       # select Query_search;
+					end if; 
+                    
+                    if @branch_name <> '' then
+						set Query_search = concat(' and branch_name like ''','%',@branch_name,'%',''' '); 
+                       # select Query_search;
+					end if;
+                    
+                    if @prheader_no <> '' then
+						set Query_search = concat(' and prheader_no like ''','%',@prheader_no,'%',''' '); 
+                       # select Query_search;
+					end if;
+                    
+                    #select @prheader_no;
+                    
+                    set @total_size= @Page_Index*@Page_Size;    
+					  #select  @total_size,  @Page_Index,@Page_Size;
+					set Query_Limit='';
+				#select @Page_Index,@Page_Size;				
+					if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+				  
+									 set @total_size= @Page_Index*@Page_Size;
+                                     set @Page_Size=@Page_Size+1;
+									 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+					
+					else
+									#select 1;
+									set @Page_Index=2,@Page_Size=5;
+									#select @Page_Index,@Page_Size;
+									set @total_size= @Page_Index*@Page_Size;
+									#select @total_size;
+									set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+					End if;
+                    select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                    #select @Entity_Gid
+                    
+                    
+                    
+                   # select Query_Limit;
+					set Query_Select=' ';
+					set Query_Select=concat('
+												select prdetails_gid,prhead.prheader_no,product.product_name,prdel.prdetails_qty,
+												prpoqty.prpoqty_qty,
+												CASE
+													WHEN prpoqty_qty= 0 THEN prdetails_qty
+													else prdel.prdetails_qty-ifnull(sum(prpoqty_qty),0)
+												END Remaining_qty,commodity_name,concat(br.branch_name,br.branch_code) as branch_name,prheader_mepno
+                                                from gal_trn_tprheader prhead
+												inner join gal_trn_tprdetails prdel on prhead.prheader_gid=prdel.prdetails_prheader_gid and
+															 prhead.prheader_isactive=''Y'' and prhead.prheader_isremoved=''N'' and
+															 prdel.prdetails_isremoved=''N''
+												inner join gal_mst_tproduct product on product.product_gid=prdel.prdetails_product_gid  and
+												 product.product_isactive=''Y'' and product.product_isremoved=''N''
+												left join gal_trn_tprpoqty prpoqty on prpoqty.prpoqty_prdetails_gid=prdel.prdetails_gid 
+												and prpoqty.prpoqty_isactive=''Y''and prpoqty.prpoqty_isremoved=''N''
+                                                 inner join ap_mst_tcommodity as com on com.commodity_gid = prhead.prheader_commodity_gid
+												inner join gal_mst_tbranch as br on br.branch_gid = prhead.prheader_branchgid
+                                                where prhead.entity_gid in (',@Entity_Gid,') and prheader_status = ''Approved''  ',Query_search,'
+                                                group by prdetails_gid having Remaining_qty > 0 ',Query_Limit,'
+												 ');
+                                                /*
+                       #select Query_Where;                        
+					set @Query_Count = '';   
+					set @Query_Count = concat(' Select count(prdetails_gid) into @Total_Row ',Query_Where);   
+						PREPARE stmt FROM @Query_Count;
+							EXECUTE stmt; 
+						DEALLOCATE PREPARE stmt;
+                        */
+                     
+                   # select 33; 
+                   #  select Query_Select;
+					  set @p= Query_Select;
+					  #select @p;
+                      prepare stmt from @p;
+					  execute stmt;
+					  select found_rows() into ls_count;
+					 # select ls_count;
+					   if ls_count >0 then
+							 set message='FOUND';
+						else
+							set message='NOT FOUND-sp_POprocess_Get.';
+					  end if;
+ end if;
+if ls_action='GET' and ls_type='PO_DETAILS_CCBS' then
+                   
+                   
+                   select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                    #select @Entity_Gid;
+                    
+                    Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.podetails_gid'))) into @podetails_gid ;
+                   
+         
+                    
+                set Query_Select=' ';
+                set Query_Select=concat('select 0 as ccbs_qty,prccbs_prdetailsgid,a.prheader_no,product_gid,prheader_commodity_gid,
+                                            product_name,prccbs_gid,prccbs_refgid,prccbs_reftablegid,prccbs_qty,
+                                            prccbs_bs,prccbs_cc,ifnull(sum(prpoqty_qty),0) as processed,
+                                            (prccbs_qty - ifnull(sum(prpoqty_qty),0)) as prccbs_remaining_qty_Value,
+                                            case  
+                                                 when prccbs_refgid = 67 then 
+                                                   (select branch_name from gal_mst_tbranch where branch_gid = c.prccbs_reftablegid)
+                                                 else 
+                                                   (select godown_name from gal_mst_tgodown where godown_gid = c.prccbs_reftablegid)
+                                                 end location,tcc_name,tcc_description,tbs_name,tbs_description
+                                                   from gal_trn_tprheader as a
+                                                inner join gal_trn_tprdetails as  b on b.prdetails_prheader_gid=a.prheader_gid
+                                                inner join gal_trn_tprccbs as c on c.prccbs_prdetailsgid = b.prdetails_gid
+                                                 inner join ap_mst_tcc as cc on cc.tcc_gid = c.prccbs_cc
+                                                inner join ap_mst_tbs as bs on bs.tbs_gid = c.prccbs_bs
+                                                
+                                                inner join gal_mst_tproduct as d on d.product_gid=b.prdetails_product_gid
+                                                left join gal_trn_tprpoqty as e on e.prpoqty_prccbs_gid = c.prccbs_gid and prpoqty_prdetails_gid=prccbs_prdetailsgid
+                                                where prdetails_gid = ',@podetails_gid,' group by prccbs_gid   ');
+                                               
+                      set @p= Query_Select;
+                      #select Query_Select;
+                      prepare stmt from @p;
+                      execute stmt;
+                      select found_rows() into ls_count;
+                     # select ls_count;
+                       if ls_count >0 then
+                             set message='FOUND';
+                        else
+                            set message='NOT FOUND-sp_POprocess_Get.';
+                      end if;
+                      
+ end if;                     
+                      
+  if ls_action='GET' and ls_type='SUPPLIER_PRODUCT_MAPPING' then
+ # select 122;
+                  
+                  select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                  Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.product_gid'))) into @product_gid ;
+					select JSON_LENGTH(lj_Filters,'$.product_gid') into @li_json_count;
+
+                set cust='';
+				set i=0;
+				if @li_json_count is not null or @li_json_count <> '' then
+					while i<@li_json_count do
+						select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.product_gid[',i,']'))) into @product_gid;
+						if i=0 then
+							set cust=concat(@product_gid);
+						else
+							set cust=concat(cust,',',@product_gid);
+						end if;
+							set i=i+1;
+					end while;
+				end if;
+
+#select  cust;
+
+                   #select @Entity_Gid,@product_gid;  
+					set Query_Select=' ';
+					set Query_Select=concat('
+										
+											
+												select * 
+                                                from	(select group_concat(distinct product_gid) as prdt,supplier_branchname,supplier_gid,Supplier_code,supplier_name,supplierproduct_unitprice,product_gid,
+												product_name,product_unitprice,product_weight
+												from gal_mst_tsupplier as a
+												inner join  gal_map_tsupplierproduct as b on b.supplierproduct_supplier_gid=a.supplier_gid and
+														a.supplier_isactive=''Y'' and a.supplier_isremoved=''N'' and
+														b.supplierproduct_isactive=''Y'' and b.supplierproduct_isremoved=''N'' and
+														(current_date() between b.supplierproduct_validfrom and b.supplierproduct_validto) 
+												inner join gal_mst_tproduct as c on c.product_gid=b.supplierproduct_product_gid  and
+														c.product_isactive=''Y'' and c.product_isremoved=''N''
+														and  c.product_gid in (',cust,')
+												group by supplier_gid) as t1
+												where  prdt = (''',cust,''')  ');
+                                               
+					# select Query_Select;
+					  set @p= Query_Select;
+					  prepare stmt from @p;
+					  execute stmt;
+					  select found_rows() into ls_count;
+					 # select ls_count;
+					   if ls_count >0 then
+							 set message='FOUND';
+						else
+							set message='NOT FOUND-sp_POprocess_Get.';
+					  end if;
+ END IF;
+ 
+ if ls_action='GET' and ls_type='SUPPLIER_PRODUCT_DETAIL' then
+ 
+					select JSON_LENGTH(lj_Filters,'$.product_gid') into @li_json_count;
+				
+					select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.supplier_gid'))) into @supplier_gid;
+					set cust='';
+					set i=0;
+					if @li_json_count is not null or @li_json_count <> '' then
+						while i<@li_json_count do
+							select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.product_gid[',i,']'))) into @product_gid;
+							if i=0 then
+								set cust=concat(@product_gid);
+							else
+								set cust=concat(cust,',',@product_gid);
+							end if;
+								set i=i+1;
+						end while;
+					end if;
+
+					set Query_Select=' ';
+					set Query_Select=concat('select supplierproduct_unitprice,product_gid,hsn_igstrate
+											 from gal_mst_tsupplier a
+											 inner join gal_map_tsupplierproduct b on a.supplier_gid=b.supplierproduct_supplier_gid and
+											 a.supplier_isactive=''Y'' and a.supplier_isremoved=''N'' and
+											 b.supplierproduct_isactive=''Y'' and b.supplierproduct_isremoved=''N'' and
+											 (current_date() between b.supplierproduct_validfrom and b.supplierproduct_validto) 
+											 inner join gal_mst_tproduct c on b.supplierproduct_product_gid=c.product_gid and
+											 c.product_isactive=''Y'' and c.product_isremoved=''N''
+											 inner join gal_mst_thsn d on c.product_hsn_gid=d.hsn_gid and
+											 d.hsn_isactive=''Y'' and d.hsn_isremoved=''N''
+											 where a.supplier_gid=',@supplier_gid,' and c.product_gid in (',cust,')
+											 group by c.product_gid');
+                                               
+					#  select Query_Select;
+					  set @p= Query_Select;
+					  prepare stmt from @p;
+					  execute stmt;
+					  select found_rows() into ls_count;
+						 # select ls_count;
+						   if ls_count >0 then
+								 set message='FOUND';
+							else
+								set message='NOT FOUND-sp_POprocess_Get.';
+						   end if;
+			 
+ 
+ 
+ end if;
+ 
+ if ls_action='GET' and ls_type='PR' then
+     
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.employee_code'))) into @employee_code;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.prheader_status'))) into @prheader_status;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Index'))) into @Page_Index;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Size'))) into @Page_Size;
+     
+		
+     
+	    set @total_size= @Page_Index*@Page_Size;    
+		 # select  @total_size,  @Page_Index,@Page_Size;
+		set Query_Limit='';
+		#select @Page_Index,@Page_Size;				
+		if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+	 # SELECT 111;
+						 set @total_size= @Page_Index*@Page_Size;
+						 set @Page_Size=@Page_Size+1;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		
+		else
+						#select 1;
+						set @Page_Index=2,@Page_Size=5;
+						#select @Page_Index,@Page_Size;
+						set @total_size= @Page_Index*@Page_Size;
+						#select @total_size;
+						set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		End if;
+     
+     
+    # select Query_Limit,@employee_code,@Entity_Gid;
+       set  Query_Select = '';
+       set Query_Select = concat(' select prheader_gid,prheader_no,prheader_date,prheader_employee_gid,prheader_status, 
+													  prheader_branchgid,prheader_totalamount,prheader_commodity_gid,commodity_name,commodity_code,
+													 concat(supplier_name,''-'',supplier_branchname) as supplier_name,supplier_gid,employee_name
+													 from  gal_trn_tprheader as a
+													 inner join gal_trn_tprdetails as b on b.prdetails_prheader_gid=a.prheader_gid
+                                                     and b.prdetails_isremoved=''N''
+                                                     inner join gal_mst_temployee as cc on cc.employee_gid = a.prheader_employee_gid
+													 inner join ap_mst_tcommodity as c on c.commodity_gid=a.prheader_commodity_gid
+                                                     and c.commodity_isactive =''Y'' and c.commodity_isremoved=''N''
+                                                    inner join gal_map_tsupplierproduct on 
+													supplierproduct_gid = prdetails_supplierproductgid and 
+													 prdetails_product_gid= supplierproduct_product_gid and supplierproduct_isremoved = ''N'' 
+													 and  supplierproduct_isactive=''Y'' and  prdetails_isremoved=''N''
+													inner join gal_mst_tsupplier as f on supplier_gid = supplierproduct_supplier_gid
+	                                                 and
+                                                      f.supplier_isactive=''Y'' and  f.supplier_isremoved=''N''
+													where lower(trim(SPLIT_STR(a.prheader_status,''to'',2))) =''',lower(@employee_code),'''
+													and a.prheader_isactive=''Y''
+													and a.prheader_isremoved=''N''
+													and a.entity_gid=',@Entity_Gid,'
+                                                    group by prheader_gid ',Query_Limit,'  ');
+                                 
+
+						#select Query_Select; ## Remove It
+                        set @p = Query_Select;	
+						PREPARE stmt FROM @p;
+						EXECUTE stmt;  
+						Select found_rows() into ls_count;
+        
+								if ls_count > 0 then
+									set Message = 'FOUND';
+								else 
+									set Message = 'NOT_FOUND';
+								end if;
+  
+  end if;
+  
+   if ls_action='GET' and ls_type='PO' then
+   
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.poheader_status'))) into @poheader_status;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.employee_code'))) into @employee_code;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Index'))) into @Page_Index;
+		select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Page_Size'))) into @Page_Size;
+        
+        
+		set @total_size= @Page_Index*@Page_Size;    
+		 # select  @total_size,  @Page_Index,@Page_Size;
+		set Query_Limit='';
+		#select @Page_Index,@Page_Size;				
+		if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+	  
+						 set @total_size= @Page_Index*@Page_Size;
+						 set @Page_Size=@Page_Size+1;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		
+		else
+						#select 1;
+						set @Page_Index=2,@Page_Size=5;
+						#select @Page_Index,@Page_Size;
+						set @total_size= @Page_Index*@Page_Size;
+						#select @total_size;
+						set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		End if;
+  #select Query_Limit,@poheader_status,@Entity_Gid;
+	    set  Query_Select = '';
+        set Query_Select = concat(' select poheader_gid,poheader_no,poheader_date,poheader_status,employee_name, 
+													  poheader_branchgid,poheader_commodity_gid,commodity_name,commodity_code,
+													 concat(supplier_name,''-'',supplier_branchname) as supplier_name,supplier_gid,poheader_amount
+													 from  gal_trn_tpoheader as a
+													 inner join gal_trn_tpodetails as b on b.podetails_poheader_gid=a.poheader_gid
+                                                     and b.podetails_isremoved=''N''
+													 inner join ap_mst_tcommodity as c on c.commodity_gid=a.poheader_commodity_gid
+                                                     and c.commodity_isactive =''Y'' and c.commodity_isremoved=''N''
+                                                    inner join gal_mst_tsupplier as f on f.supplier_gid=a.poheader_supplier_gid
+                                                    and  f.supplier_isactive=''Y'' and  f.supplier_isremoved=''N''
+                                                    inner join gal_mst_temployee as gg on gg.employee_gid=a.create_by
+													where lower(trim(SPLIT_STR(a.poheader_status,''to'',2))) =''',lower(@employee_code),'''
+													and a.poheader_isactive=''Y''
+													and a.poheader_isremoved=''N''
+													and a.entity_gid=',@Entity_Gid,' 
+                                                    group by poheader_gid  ',Query_Limit,'  ');
+                                 
+
+			set @p = Query_Select;	
+			#select @p; ## Remove It
+			PREPARE stmt FROM @p;
+			EXECUTE stmt;  
+			Select found_rows() into ls_count;
+				
+                if ls_count > 0 then
+					set Message = 'FOUND';
+				else 
+					set Message = 'NOT_FOUND';
+				end if;
+  
+  end if;
+  
+ 
+  end

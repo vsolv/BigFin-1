@@ -1,0 +1,2025 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} eClaim Tour{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="eclaimapp" ng-controller="eclaimctrl" ng-cloak>
+        <md-subheader ng-show="user_type" class="md-accent">On BeHalf Employee - {{onbehalf_emp}}</md-subheader>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>eClaim Tour</h4>
+
+            </div>
+        </div>
+        <form name="tour_valid" role="form">
+            <div>
+                <div class="row">
+                    <md-subheader class="md-accent">Tour</md-subheader>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer" ng-show="tour.gid == 0">
+                                <input disabled maxlength="30" value="NEW"
+                                       placeholder="Tour No"
+                                       type="text"/>
+                            </md-input-container>
+                            <md-input-container class="md-block inputcontainer" ng-show="tour.gid != 0">
+                                <input disabled maxlength="30" ng-model="tour.requestno"
+                                       placeholder="Tour No"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Request Date</label>
+                            <md-datepicker formatDate md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour.requestdate"
+                                           disabled
+                                           ng-required="true">
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-3">
+
+                        </div>
+                        <div class="col-md-3">
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <md-subheader class="md-accent">Tour Details</md-subheader>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <div ng-show="reason_edit">
+                                <label>Tour Reason</label>
+                                <md-autocomplete
+                                        md-item-text="item.name"
+                                        md-items="item in reasonsearch(tour.srchreason)"
+                                        md-min-length=0
+                                        md-search-text="tour.srchreason"
+                                        md-selected-item="tour.selectedreason"
+                                        md-selected-item-change="choose_reason(item)"
+                                        ng-required="true"
+                                        ng-disabled="tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                        placeholder="Tour Reason">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.name}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Tour Reason matching "{{searchtype}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div ng-show="reason_noedit">
+                                <md-input-container>
+                                    <label>Tour Reason</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="tour.srchreason"
+                                           placeholder="Tour Reason"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour Start Date</label>
+                            <md-datepicker formatDate
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                           md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour.startdate"
+                                           md-max-date="start_max" md-min-date="start_min"
+                                           ng-change="stdate_change(0,tour.startdate)"
+                                           ng-required="true">
+                            </md-datepicker>
+
+                        </div>
+                        <div class="col-md-3">
+                            <label>Tour End Date </label>
+                            <md-datepicker formatDate
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                           md-hide-icons="calendar" md-open-on-focus
+                                           ng-model="tour.enddate"
+                                           md-max-date="end_max" md-min-date="tour.startdate"
+                                           ng-change="enddate_change(tour.enddate)"
+                                           ng-required="true">
+                            </md-datepicker>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container>
+                                <label>No Of Tour Days</label>
+                                <input maxlength="30"
+                                       disabled
+                                       ng-model="tour.durationdays"
+                                       placeholder="No Of Tour Days"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container>
+                                <label>Order No or Remarks</label>
+                                <input maxlength="30"
+                                       ng-disabled="applevel == 1 || tourstatus == 'APPROVED'
+                                       || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                       ng-model="tour.ordernoremarks"
+                                       name="ordernoremarks"
+                                       placeholder="Order No or Remarks"
+                                       ng-required="remarks_required"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <!--                        <div class="col-md-3">-->
+                        <!--                            <md-input-container>-->
+                        <!--                                <label>Eligible Mode of Travel</label>-->
+                        <!--                                <input maxlength="30"-->
+                        <!--                                       disabled-->
+                        <!--                                       ng-model="tour.eligiblemodeoftravel"-->
+                        <!--                                       placeholder="Eligible Mode"-->
+                        <!--                                       type="text"/>-->
+                        <!--                            </md-input-container>-->
+                        <!--                        </div>-->
+                        <div class="col-md-3">
+                            <div ng-show="reason_edit">
+                                <label>Permitted By</label>
+                                <md-autocomplete
+                                        md-item-text="item.employee_name"
+                                        md-items="item in emppermitsearch(tour.permitemp)"
+                                        md-min-length=0
+                                        md-no-cache="true"
+                                        ng-disabled="tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                        md-search-text="tour.permitemp"
+                                        md-selected-item="tour.selectpermitemp"
+                                        md-selected-item-change="emppermitchange(item)"
+                                        ng-required="true"
+                                        placeholder="Permitted By">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.employee_name}} {{item.employee_code}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Employee matching "{{tour.permitemp}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div ng-show="reason_noedit">
+                                <md-input-container>
+                                    <label>Permitted By</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="tour.permitemp"
+                                           placeholder="Permitted By"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="fit_enable">
+                            <md-input-container>
+                                <label>Quantum of funds </label>
+                                <input maxlength="30"
+                                       ng-disabled="applevel == 1 || tourstatus == 'APPROVED'
+                                       || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                       ng-model="tour.quantum_offunds"
+                                       ng-pattern="/^[0-9,.]/"
+                                       name="quantum_offunds"
+                                       placeholder="Quantum of funds"
+                                       ng-required="fit_enable"
+                                       type="text"/>
+                                <span class="error" style="color:red"
+                                      ng-show="tour_valid.quantum_offunds.$error.pattern">Special char Error</span>
+                                {{myForm.$error}}
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3" ng-show="fit_enable">
+                            <md-input-container>
+                                <label>Opening Balance</label>
+                                <input maxlength="30"
+                                       ng-disabled="applevel == 1 || tourstatus == 'APPROVED'
+                                       || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                       ng-model="tour.opening_balance"
+                                       name="opening_balance"
+                                       ng-pattern="/^[0-9,.]/"
+                                       placeholder="Opening Balance"
+                                       ng-required="fit_enable"
+                                       type="text"/>
+                                <span class="error" style="color:red"
+                                      ng-show="tour_valid.opening_balance.$error.pattern">Special char Error</span>
+                                {{myForm.$error}}
+                            </md-input-container>
+                        </div>
+                        <!--                        <div class="col-md-3">-->
+                        <!--                            <md-button class="md-fab md-mini md-primary custbutton"-->
+                        <!--                                       ng-click="add_taveltype(choice)"-->
+                        <!--                                       ng-disabled="applevel == 1">-->
+                        <!--                                <md-icon>add</md-icon>-->
+                        <!--                                <md-tooltip>Add Tour Details</md-tooltip>-->
+                        <!--                            </md-button>-->
+                        <!--                        </div>-->
+                    </div>
+                </div>
+                <div class="row table-responsive ">
+                    <div class="col-md-12 col-lg-12 col-sm-12">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Start Date</th>
+                            <th class="text-center" scope="col">End Date</th>
+                            <th class="text-center" scope="col">Starting Point</th>
+                            <th class="text-center" scope="col">Place of Visit</th>
+                            <th class="text-center" scope="col">Purpose of Visit</th>
+                            <th class="text-center" scope="col">Action</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="tourdtl in tour_details.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-center">
+                                    <md-datepicker formatDate
+                                                   ng-disabled="applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                                   md-max-date="tourdtl.maxend" md-min-date="tourdtl.minstart"
+                                                   md-hide-icons="calendar" md-open-on-focus
+                                                   ng-model="tourdtl.startdate"
+                                                   ng-required="true">
+                                    </md-datepicker>
+                                </td>
+                                <td class="text-center">
+                                    <md-datepicker formatDate
+                                                   ng-disabled="applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                                   md-max-date="tourdtl.maxend" md-min-date="tourdtl.startdate"
+                                                   md-hide-icons="calendar" md-open-on-focus
+                                                   ng-model="tourdtl.enddate"
+                                                   ng-change="start_datelist($index,tourdtl.enddate)"
+                                                   ng-required="true">
+                                    </md-datepicker>
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="30"
+                                           class="form-control"
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                           ng-model="tourdtl.startingpoint"
+                                           ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                           placeholder="Starting Point"
+                                           name="startingpoint{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.startingpoint{{$index}}.$error.pattern">Special char Error</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="30"
+                                           class="form-control"
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                           ng-model="tourdtl.placeofvisit"
+                                           ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                           placeholder="Place of Visit"
+                                           name="placeofvisit{{$index}}"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.placeofvisit{{$index}}.$error.pattern">Special char Error</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center">
+                                    <input maxlength="30"
+                                           class="form-control"
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED' || tourstatus == 'REJECTED' || tourstatus =='CANCEL'"
+                                           ng-model="tourdtl.purposeofvisit"
+                                           name="purposeofvisit{{$index}}"
+                                           ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                           placeholder="Purpose of Visit"
+                                           ng-required="true"
+                                           type="text"/>
+                                    <span class="error" style="color:red"
+                                          ng-show="tour_valid.purposeofvisit{{$index}}.$error.pattern">Special char Error</span>
+                                    {{myForm.$error}}
+                                </td>
+                                <td class="text-center"
+                                    ng-disabled="applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' || tourstatus =='CANCEL'">
+                                    <a ng-click="applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' ? empty() : add_taveltype($index)">
+                                        <i
+                                                class="material-icons">
+                                            add
+                                        </i></a>
+                                    <a
+                                            ng-click="tourdtl.gid != 0 || applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED' ? empty() : remove_travel($index)"><i
+                                            class="material-icons">
+                                        close
+                                    </i></a>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="7">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="tour_details.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                                <td class="text-left" colspan="1">-->
+                                <!--                                    <span>Total Count:<br/> <b class="text-centre"> {{tour_details.length}}</b></span>-->
+                                <!--                                </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" class="col-md-12">
+                    <md-subheader class="md-accent">Attachment</md-subheader>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                                <div id="file_exp">
+                                    <input minsize="500"
+                                           name="files"
+                                           multiple
+                                           ng-disabled="applevel == 1 || tourstatus == 'APPROVED'|| tourstatus == 'REJECTED'"
+                                           ng-required="file_required"
+                                           onchange="angular.element(this).scope().imageUpload(event)"
+                                           type="file"/>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <span ng-show="db_file"
+                                      class="error">File Count - {{files.length + stepsModel.length}}</span>
+                                <md-button ng-show="db_file" class="btn btn-info custbutton"
+                                           ng-click="attachment()">Attachment
+                                    <md-tooltip>Tour Attachment</md-tooltip>
+
+                                </md-button>
+                            </div>
+                            <div class="col-md-3">
+                                <span ng-show="db_file != 'false'" ng-hide="db_file" class="error">File Count - {{stepsModel.length}}</span>
+                                <md-button ng-show="db_file != 'false'" ng-hide="db_file"
+                                           class="btn btn-info custbutton"
+                                           ng-click="viewimage()">Attachment
+                                    <md-tooltip>Tour Attachment</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-show="applevel == 0" class="col-md-12">
+                    <md-subheader class="md-accent">To Approve</md-subheader>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-3">
+                            </div>
+                            <div class="col-md-3" ng-show="tourstatus != 'REJECTED'">
+                                <label>Branch</label>
+                                <md-autocomplete
+                                        md-item-text="item.branch_name"
+                                        md-items="item in brsearch(tour.searchbr)"
+                                        md-min-length=0
+                                        ng-disabled="tourstatus == 'APPROVED' || tourstatus == 'REJECTED'"
+                                        md-search-text="tour.searchbr"
+                                        md-selected-item="selectedbr"
+                                        md-selected-item-change="branchchange(item)"
+                                        ng-required="true"
+                                        placeholder="Branch">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.branch_code}} {{item.branch_name}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Branch matching "{{tour.searchbr}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div class="col-md-3" ng-show="tourstatus =='REJECTED'">
+                                <md-input-container>
+                                    <label>Branch</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="tour.searchbr"
+                                           placeholder="Branch"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3" ng-show="tourstatus != 'REJECTED'">
+                                <label>Employee</label>
+                                <md-autocomplete
+                                        md-item-text="item.employee_name"
+                                        md-items="item in empsearch(tour.searchemp)"
+                                        md-min-length=0
+                                        ng-disabled="tourstatus == 'APPROVED' || tourstatus == 'REJECTED'"
+                                        md-search-text="tour.searchemp"
+                                        md-selected-item="tour.selectedemp"
+                                        md-selected-item-change="empchange(item)"
+                                        ng-required="true"
+                                        placeholder="Employee">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.employee_name}} {{item.employee_code}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Employee matching "{{tour.searchemp}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+                            <div class="col-md-3" ng-show="tourstatus =='REJECTED'">
+                                <md-input-container>
+                                    <label>Employee</label>
+                                    <input maxlength="30"
+                                           disabled
+                                           ng-model="tour.searchemp"
+                                           placeholder="Employee"
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3" ng-show="tourtype == 'CANCEL'">
+                                <md-input-container>
+                                    <label>Cancel Reason</label>
+                                    <textarea class="textboxline"
+                                              placeholder="Comments"
+                                              ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                              style="width:200px"
+                                              maxlength="500"
+                                              ng-model="comments">
+                                    </textarea>
+                                </md-input-container>
+                            </div>
+                            <div class="col-md-3 text-center">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button ng-show="tourtype != 'CANCEL'" class="btn btn-info custbutton"
+                                       ng-click="tour_valid.$valid ? submit_data() : error_toast(tour_valid)"
+                                       ng-disabled="tour_valid.$invalid || tourstatus == 'APPROVED' || tourstatus == 'REJECTED'|| file_required">
+                                Submit
+                                <md-tooltip>Submit</md-tooltip>
+                            </md-button>
+
+                            <md-button ng-show="tourtype == 'CANCEL' && tourstatus =='CANCEL'" class="btn btn-info custbutton"
+                                       ng-click="submit_data()"
+                                       ng-disabled="comments == '' || comments == undefined">
+                                Submit
+                                <md-tooltip>Submit</md-tooltip>
+                            </md-button>
+
+                            <span class="error" style="color:red"
+                                  ng-show="file_required">Please Attach Tour File.</span>
+                            <md-button ng-show="tourtype != 'CANCEL'"
+                                       class="md-raised" ng-href="eClaim/eclaim_tour_request"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+
+                            <md-button ng-show="tourtype == 'CANCEL'"
+                                       class="md-raised" ng-href="eClaim/eclaim_cancel"
+                                       type="button"
+                                       value="Reject">Back
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div ng-show="reject_reason">
+            <div class="col-md-4">
+            </div>
+            <div class="col-md-8">
+                <form name="btn_valid" role="form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Reject Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for reject"
+                                      style="width:500px"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      maxlength="500"
+                                      ng-model="comments" required>
+                            </textarea>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-disabled="btn_valid.$invalid"
+                                       ng-click="reject_tour()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Reject</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div ng-show="approve_reason">
+            <div class="col-md-4">
+            </div>
+            <div class="col-md-8">
+                <form name="btn_valid" role="form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Approve Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for Approve"
+                                      style="width:500px"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      maxlength="500"
+                                      ng-model="comments" required>
+                            </textarea>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-disabled="btn_valid.$invalid"
+                                       ng-click="direct_approve()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Approve</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div ng-show="reforward_reason">
+            <div class="col-md-4">
+            </div>
+            <div class="col-md-8">
+                <form name="btn_valid" role="form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for Approve"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      style="width:500px"
+                                      maxlength="500"
+                                      ng-model="comments" required>
+                            </textarea>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-disabled="btn_valid.$invalid"
+                                       ng-click="direct_reforward()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Approve</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reforward()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div ng-show="return_reason">
+            <div class="col-md-4">
+            </div>
+            <div class="col-md-8">
+                <form name="btn_valid" role="form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Return Reason</label>
+                            <textarea class="textboxline"
+                                      placeholder="Comments for Return"
+                                      ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                                      style="width:500px"
+                                      maxlength="500"
+                                      ng-model="comments" required>
+                            </textarea>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-disabled="btn_valid.$invalid"
+                                       ng-click="direct_return()">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Return</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button class="md-icon-button" aria-label="Reject"
+                                       ng-click="close_reject()">
+                                <md-icon class="material-icons editlink">close</md-icon>
+                                <md-tooltip>Close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div ng-show="forward_reason">
+            <form name="forward_valid" novalidate role="form">
+                <div class="col-md-3">
+                    <label>Branch</label>
+                    <md-autocomplete
+                            md-item-text="item.branch_name"
+                            md-items="item in brsearch(searchbr)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchbr"
+                            md-selected-item="selectedbr"
+                            md-selected-item-change="branchchange(item)"
+                            ng-required="true"
+                            placeholder="Branch">
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.branch_code}} {{item.branch_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Branch matching "{{searchbr}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <label>Employee</label>
+                    <md-autocomplete
+                            md-item-text="item.employee_name"
+                            md-items="item in empsearch(searchemp)"
+                            md-min-length=0
+                            md-no-cache="true"
+                            md-search-text="searchemp"
+                            md-selected-item="selectedemp"
+                            md-selected-item-change=""
+                            ng-required="true"
+                            placeholder="Employee">
+                        <md-item-template>
+                            <span md-highlight-text="searchText"> {{item.employee_name}} {{item.employee_code}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Employee matching "{{searchemp}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+                </div>
+                <div class="col-md-3">
+                    <label>Forward Reason</label>
+                    <textarea class="textboxline"
+                              placeholder="Comments for Forward"
+                              ng-pattern="/^[^`~@#$%\^&*()_+={}|[\]\\:';<>?!/]*$/"
+                              style="width:500px"
+                              maxlength="500"
+                              ng-model="comments" required>
+                    </textarea>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-icon-button" aria-label="Reject"
+                               ng-disabled="forward_valid.$invalid"
+                               ng-click="direct_forward(selectedemp)">
+                        <md-icon class="material-icons editlink">done</md-icon>
+                        <md-tooltip>Forward</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-icon-button" aria-label="Reject"
+                               ng-click="close_reject()">
+                        <md-icon class="material-icons editlink">close</md-icon>
+                        <md-tooltip>Close</md-tooltip>
+                    </md-button>
+                </div>
+            </form>
+        </div>
+        <div class="row" ng-show="applevel == 1 || approver ">
+            <div class="col-md-12 text-center">
+                <md-button type="button" value="Return"
+                           ng-show="tourtype != 'CANCEL'"
+                           ng-click="return(em)"
+                           ng-disabled="enable_return"
+                           class="md-raised">Return
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="approve(em)"
+                           ng-disabled="enable_update">Approve
+                    <md-tooltip>Approve</md-tooltip>
+                </md-button>
+                <md-button type="button" value="Reject"
+                           ng-click="reject(em)"
+                           ng-disabled="enable_reject"
+                           class="md-raised md-warn">Reject
+                </md-button>
+                <md-button type="button" value="Forward"
+                           ng-click="forward(em)"
+                           ng-disabled="enable_forward"
+                           ng-hide="tourtype == 'CANCEL'"
+                           class="md-raised md-primary">Forward
+                </md-button>
+                <md-button ng-show="tourtype != 'CANCEL'" type="button" value="Back"
+                           ng-href="eClaim/eclaim_approval"
+                           class="md-raised">Back
+                </md-button>
+
+                <md-button ng-show="tourtype == 'CANCEL'" type="button" value="Back"
+                           ng-href="eClaim/eclaim_cancel_approval"
+                           class="md-raised">Back
+                </md-button>
+
+            </div>
+        </div>
+        <div class="row" ng-show="forward_btn">
+            <div class="col-md-12 text-center">
+                <md-button class="btn btn-info custbutton" ng-click="reforward()"
+                           ng-disabled="enable_reforward">Submit
+                    <md-tooltip>Submit</md-tooltip>
+                </md-button>
+                <md-button type="button" value="Back"
+                           ng-href="eClaim/eclaim_approval"
+                           class="md-raised">Back
+                </md-button>
+            </div>
+        </div>
+        <div ng-show="approvaldata" class="row">
+            <md-subheader class="md-accent">Approval Flow</md-subheader>
+            <div class="col-md-12">
+                <div class="row table-responsive ">
+                    <div class="col-md-8 col-lg-8 col-sm-8">
+                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                            <thead class="header">
+                            <th class="text-center" scope="col">S.No</th>
+                            <th class="text-center" scope="col">Employee</th>
+                            <th class="text-center" scope="col">Raisedby</th>
+                            <th class="text-center" scope="col">Type</th>
+                            <th class="text-center" scope="col">Date</th>
+                            <th class="text-center" scope="col">Comment</th>
+                            <th class="text-center" scope="col">Status</th>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="apprl in get_approval_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                <td class="text-center">
+                                    <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                </td>
+                                <td class="text-left">{{apprl.employee_name}} - {{apprl.employee_code}}</td>
+                                <td class="text-left" ng-show="apprl.onbehalof == '0'">{{apprl.employee_name}} -
+                                    {{apprl.employee_code}}
+                                </td>
+                                <td class="text-left" ng-show="apprl.onbehalof != '0'">{{apprl.onbehalof_employeename}}
+                                    - {{apprl.onbehalof_employeecode}}
+                                </td>
+                                <td class="text-left">{{apprl.apptype}}</td>
+                                <td class="text-left">{{apprl.approveddate}}</td>
+                                <td class="text-left">{{apprl.appcomment}}</td>
+                                <td class="text-left">
+                                    <p ng-show="apprl.status == 'REJECTED'">
+                                        Tour Request Rejected</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'TOUR'">
+                                        Tour Request Approved</p>
+                                    <p ng-show="apprl.status == 'APPROVED' && apprl.apptype == 'TOURCANCEL'">
+                                        Tour Cancel Approved</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.applevel == '1' && apprl.apptype == 'TOUR'">
+                                        Tour Request Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.applevel == '2' && apprl.apptype == 'TOUR'">
+                                        Tour Request Forwarder Pending </p>
+                                    <p ng-show="apprl.status == 'PENDING' && apprl.apptype == 'TOURCANCEL' ">
+                                        Tour Cancel Submitted To Approver</p>
+                                    <p ng-show="apprl.status == 'REQUESTED'">
+                                        Tour Request Submitted</p>
+                                    <p ng-show="apprl.status == 'CANCEL REQUEST'">
+                                        Tour Cancel Request Submitted</p>
+                                    <p ng-show="apprl.status == 'RETURN'">
+                                        Tour Request Returned From Approver</p>
+                                    <p ng-show="apprl.status == 'FORWARD'">
+                                        Tour Request Forward To Another Employee</p>
+                                </td>
+                            </tr>
+                            <tr ng-show="data_len ==  0">
+                                <td class="warning" colspan="17">
+                                    No Records Found.
+                                </td>
+                            </tr>
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="7">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage"
+                                        max-size="maxSize"
+                                        ng-model="currentPage" total-items="eClaim_tavels.length"
+                                        uib-pagination></ul>
+                                </td>
+                                <!--                        <td class="text-left" colspan="1">-->
+                                <!--                            <span>Total Count:<br/> <b class="text-centre"> {{eClaim_tavels.length}}</b></span>-->
+                                <!--                        </td>-->
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--Image start-->
+        <div aria-hidden="" aria-labelledby="exampleModalLabel"
+             class="modal fade"
+             data-backdrop="" data-keyboard="false"
+             id="attach_view">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Tour Attachment View</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12">
+                                    <div ng-repeat="file in files" class="text-center">
+                                        <!--                                        <img ng-show="file.type =='image'" src="{{ file.file_path }}"-->
+                                        <!--                                             style="width:870px;height:500px"/>-->
+                                        <!--                                        <br/>-->
+                                        <!--                                        <iframe ng-show="file.type =='pdf'" ng-src="{{file.file_path}}"-->
+                                        <!--                                                style="width:870px;height:500px"></iframe>-->
+                                        <object width="870px" height="500px"
+                                                data="{{file.file_path}}" class="internal">
+                                            <embed src="{{file.file_path}}"/>
+                                            <br/>
+                                        </object>
+                                        <br/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" ng-show="stepsModel.length != 0">
+                                <div class="col-lg-12 col-sm-12" ng-repeat="file in stepsModel">
+                                    <!--                                    <img src="{{file}}" style="width:800px;height:500px"/>-->
+                                    <object width="870px" height="500px"
+                                            data="{{file}}" class="internal">
+                                        <embed src="{{file}}"/>
+                                        <br/>
+                                    </object>
+                                    <button class="btn" ng-click="remove_image($index)">
+                                        <i class="material-icons">delete</i>
+                                    </button>
+                                    <br/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--Image start-->
+        <div aria-hidden="" aria-labelledby="exampleModalLabel"
+             class="modal fade"
+             data-backdrop="" data-keyboard="false"
+             id="imdiate_view">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel2">
+                                <strong>Tour Attachment View</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                    </div>
+                                    <div class="col-md-3">
+                                    </div>
+                                    <div class="col-md-3">
+                                    </div>
+                                    <div class="col-md-2">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button class="btn" ng-click="remove_allimage($index)">
+                                            <i class="material-icons">delete</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <br/>
+                            <div class="row">
+                                <div class="col-lg-12 col-sm-12" ng-repeat="file in stepsModel">
+                                    <!--                                    <img ng-show="file.filetype !='application/pdf'" src="{{file}}"-->
+                                    <!--                                         style="width:870px;height:500px"/>-->
+                                    <!--                                    <br/>-->
+                                    <!--                                    <iframe src="{{file}}"-->
+                                    <!--                                            style="width:870px;height:500px"></iframe>-->
+                                    <object width="870px" height="500px"
+                                            data="{{file}}" type="application/pdf" class="internal">
+                                        <embed src="{{file}}" type="application/pdf"/>
+                                        <br/>
+                                    </object>
+                                    <br/>
+                                    <!--                                    <embed src="{{file}}"-->
+                                    <!--                                           type="application/pdf" height="870px" width="500px">-->
+                                    <br/>
+                                    <button class="btn" ng-click="remove_image($index)">
+                                        <i class="material-icons">delete</i>
+                                    </button>
+                                    <br/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<style>
+ .md-select-menu-container.md-active {
+    z-index: 1060;
+    }
+
+
+
+
+
+
+
+
+
+
+
+</style>
+<script>
+   var myApp = angular.module('eclaimapp', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+        myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+    })
+myApp.controller('eclaimctrl',function($scope,$sce, eclaimService, $window,$http, $filter,$mdDialog, $rootScope,$element,SerCommon) {
+       $element.find('input').on('keydown', function(ev) {
+          ev.stopPropagation();
+      });
+    $scope.tour = [];
+    $scope.tour_details =[];
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_popup_img = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.getElementById('attach_view')),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.db_file = false;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.tour.gid = 0;
+    var min = new Date(detail.date);
+    $scope.tour.requestdate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.tour.startdate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.tour.enddate = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.minstart = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.maxend = new Date(min.getFullYear(), min.getMonth(), min.getDate());
+    $scope.start_max = new Date(min.getFullYear(), min.getMonth()+3, min.getDate());
+    $scope.start_min = new Date(min.getFullYear(), min.getMonth()-1, min.getDate());
+    $scope.end_max = new Date(min.getFullYear(), min.getMonth()+3, min.getDate());
+    $scope.approvaldata = false;
+    $scope.applevel = 0;
+    $scope.comments = "";
+    $scope.forward_btn = false;
+    $scope.tourstatus = "PENDING";
+    if(sessionStorage.getItem('eClaim_tour_aprl')){
+        var tour_data=JSON.parse(sessionStorage.getItem('eClaim_tour_aprl'));
+        console.log(tour_data);
+        $scope.tour.gid = tour_data.tour_gid;
+        $scope.emp_gid = tour_data.empgid;
+        $scope.applevel = tour_data.applevel;
+        $scope.approvalgid = tour_data.approvalgid;
+        $scope.tourstatus = tour_data.tourstatus;
+        $scope.tourtype = tour_data.type;
+            $scope.loading();
+            var data = {
+                params: {
+                    "Type": "TOUR_DETAILS",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "Tour_Gid" : $scope.tour.gid
+                            }
+                        }
+                    }
+                }
+            }
+            var get_drop = eclaimService.ecalim_drop_get(data)
+            get_drop.then(function(result) {
+                var item1 = result.data.DATA;
+                $scope.files = result.data.FILE;
+                if($scope.files.length != 0){
+                    $scope.db_file = true;
+                    $scope.file_required = false;
+                    $scope.view_image = false;
+                }
+                else{
+                    $scope.db_file = false;
+                    $scope.view_image = true;
+                }
+                    $scope.tour.requestno = item1.requestno;
+                    $scope.tour.requestdate = item1.requestdate;
+                    $scope.tour.srchreason = item1.tourreason;
+                    $scope.tour.reason = item1.reason;
+                    $scope.tour.permitemp = item1.permit_empname;
+                    $scope.tour.searchemp = item1.approval_empname;
+                    $scope.tour.permittedby = item1.permittedby;
+                    $scope.tour.approval = item1.approvedby;
+                    $scope.tour.searchbr = item1.approval_branch;
+                    $scope.tour.startdate = item1.startdate;
+                    $scope.tour.enddate = item1.enddate;
+                    $scope.tour.durationdays = item1.durationdays;
+                    $scope.tour.eligiblemodeoftravel = item1.eligiblemodeoftravel;
+                    $scope.tour.ordernoremarks = item1.ordernoremarks;
+                    $scope.tour.empgid = item1.empgid;
+                    $scope.tour.empdesignation = item1.empdesignation;
+                    $scope.tour.empdepartmentgid = item1.empdepartmentgid;
+                    $scope.tour.empgrade = item1.empgrade;
+                    $scope.tour.empbranchgid = item1.empbranchgid;
+                    $scope.tour.stategid = item1.stategid;
+                    $scope.tour.employee_code = item1.employee_code;
+                    $scope.tour.designation = item1.designation;
+                    $scope.tour.employee_name = item1.employee_name;
+
+                    if (item1.quantum_offunds == null){
+                        $scope.tour.quantum_offunds = 0
+                    }
+                    else{
+                        $scope.tour.quantum_offunds = item1.quantum_offunds;
+                    }
+
+                    if (item1.opening_balance == null){
+                        $scope.tour.opening_balance = 0
+                    }
+                    else{
+                        $scope.tour.opening_balance = item1.opening_balance;
+                    }
+
+                    $scope.onbehalf_emp = item1.employee_name;
+                    $scope.maxenddate = new Date(item1.enddate);
+                    $scope.maxend = new Date($scope.maxenddate.getFullYear(), $scope.maxenddate.getMonth(), $scope.maxenddate.getDate());
+                    $scope.detail = item1.tourdetails;
+                    if($scope.detail.length != 0){
+                        angular.forEach($scope.detail, function(item2) {
+                            $scope.tour_details.push(item2);
+                            $scope.startdate = new Date(item2.startdate);
+                            $scope.end_date = new Date(item2.enddate);
+                            item2.minstart = new Date($scope.startdate.getFullYear(), $scope.startdate.getMonth(), $scope.startdate.getDate());
+                            item2.maxend = $scope.maxend;
+                            var ends_date  = new Date($scope.end_date.getFullYear(), $scope.end_date.getMonth(), $scope.end_date.getDate());
+                            $scope.minstart = ends_date;
+                           });
+                        item1.tourdetails = [];
+                    }
+
+                    if(item1.tourreason == "Funds Transfer" ){
+                        $scope.fit_enable = true;
+                    }
+            }).finally($scope.endloading);
+
+            if($scope.tourstatus == "APPROVED" || $scope.tourstatus == "REJECTED" || $scope.tourstatus == "RETURN" || $scope.tourstatus =="FORWARD"){
+                 $scope.enable_update = true;
+                 $scope.enable_reject = true;
+                 $scope.enable_return = true;
+                 $scope.enable_forward = true;
+            }
+            if($scope.applevel == 2){
+                 $scope.forward_btn = true;
+            }
+    }
+    else{
+        loademployee();
+        $scope.tour.gid = 0;
+        $scope.applevel = 0;
+        if($scope.tour_details.length == 0){
+            data = {
+                "gid":"0",
+                "startdate":"",
+                "enddate":"",
+                "startingpoint":"",
+                "placeofvisit":"",
+                "purposeofvisit":"",
+                "minstart":$scope.minstart,
+                "maxend":$scope.maxend
+            }
+            $scope.tour_details.push(data);
+            $scope.data_len = $scope.tour_details.length;
+        }
+        inbetween();
+    }
+    $scope.reason_edit = false;
+    $scope.reason_noedit = false;
+    if($scope.applevel == 0 && $scope.tourstatus == "APPROVED" || $scope.tourstatus == "REJECTED" || $scope.tourstatus =="FORWARD" || $scope.tourstatus =="CANCEL"){
+         $scope.reason_edit = false;
+         $scope.reason_noedit = true;
+    }
+    else if ($scope.applevel == 0 && $scope.tourstatus == "RETURN" ){
+        $scope.reason_edit = true;
+        $scope.reason_noedit = false;
+    }
+    else if ($scope.applevel == 0 && $scope.tourstatus =="PENDING"){
+        $scope.reason_edit = true;
+        $scope.reason_noedit = false;
+    }
+    else if ($scope.applevel == 1){
+        $scope.reason_edit = false;
+        $scope.reason_noedit = true;
+    }
+
+
+    function loadeligble(){
+        var data = {
+            params: {
+                "Type":"ELIGIBLE",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "GRADE": $scope.tour.empgrade
+                        }
+                    }
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_drop_get(data)
+        get_eclaim.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.tour.eligiblemodeoftravel = $scope.main;
+        }).finally($scope.endloading);
+    }
+
+    session_dataget();
+    function session_dataget(){
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "type": ""
+                }
+            }
+        }
+        var get_eclaim = eclaimService.ecalim_session_get(data)
+        get_eclaim.then(function(result) {
+            $scope.session_type = result.data.type;
+            if($scope.session_type == "ONBEHALF"){
+                $scope.user_type = true;
+            }
+            else{
+                 $scope.user_type = false;
+            }
+        });
+
+    }
+
+    loadreason();
+    function loadreason(){
+        var data = {
+            params: {
+                "Type": "TOUR_REASON",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_reason_data = $scope.main;
+        });
+    }
+    $scope.stdate_change = function(d,e){
+        var v = d+1;
+        var len = $scope.tour_details.length;
+<!--        if( v != len && v < len){-->
+            for(i=0; i<len; i++){
+                if($scope.tour_details[i].startdate !=""  || $scope.tour_details[i].enddate != ""){
+                    error_toast(date_clubed,time_toast);
+                    $scope.tour_details[i].startdate ="";
+                    $scope.tour_details[i].enddate ="";
+
+                }
+                $scope.tour_details[i].minstart = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+            }
+<!--        }-->
+        $scope.minstart = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+        inbetween();
+    }
+
+    $scope.start_datelist = function(d,e){
+        $scope.minstart = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+    }
+
+    $scope.enddate_change = function(e){
+        $scope.maxend = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+        inbetween();
+        if($scope.tour_details.length != 0){
+            for(i=0; i<$scope.tour_details.length; i++){
+                if($scope.tour_details[i].startdate !="" || $scope.tour_details[i].enddate !=""){
+                    error_toast(date_clubed,time_toast);
+                    $scope.tour_details[i].startdate ="";
+                    $scope.tour_details[i].enddate ="";
+                }
+                $scope.tour_details[i].maxend = $scope.maxend;
+            }
+            var v = new Date($scope.tour.startdate);
+            $scope.minstart = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+
+        }
+    }
+
+    function inbetween(){
+        var v = new Date($scope.tour.startdate);
+        var e = new Date($scope.tour.enddate);
+        var fromdate = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+        var todate = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+        var diff = todate - fromdate;
+        $scope.tour.durationdays = diff / (1000 * 3600 * 24) +1;
+    }
+
+
+    $scope.add_taveltype = function(e) {
+        data = {
+            "gid":"0",
+            "startdate":"",
+            "enddate":"",
+            "startingpoint":"",
+            "placeofvisit":"",
+            "purposeofvisit":"",
+            "minstart":$scope.minstart,
+            "maxend":$scope.maxend
+        }
+        $scope.tour_details.push(data);
+        $scope.data_len = $scope.tour_details.length;
+    };
+
+
+
+    $scope.remove_travel = function(i,e) {
+        $scope.tour_details.splice(i, 1);
+        var t = i-1;
+        var v = new Date($scope.tour_details[t].enddate);
+        $scope.minstart = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+    }
+
+
+<!--    loadbranch();-->
+    function loadbranch(){
+        var data = {
+            params: {
+                "Type": "GET_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Limit_Start":0,
+                            "Limit_End":30,
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_branch_data = $scope.main;
+        });
+    }
+
+    function loademployee(){
+    $scope.loading();
+        var data = {
+            params: {
+                "Type": "EMPLOYEE_DATA",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.emp_data = $scope.main;
+            $scope.tour.empgid = $scope.emp_data.employee_gid;
+            $scope.tour.empdesignation = $scope.emp_data.employee_designation_gid;
+            $scope.tour.empdepartmentgid = $scope.emp_data.employee_dept_gid;
+            $scope.tour.empgrade = $scope.emp_data.grade;
+            $scope.tour.empbranchgid = $scope.emp_data.branch_gid;
+            $scope.tour.stategid = $scope.emp_data.state_gid;
+            $scope.tour.employee_code = $scope.emp_data.employee_code;
+            $scope.tour.designation = $scope.emp_data.designation_name;
+            $scope.tour.employee_name = $scope.emp_data.employee_name;
+            $scope.onbehalf_emp = $scope.emp_data.employee_name;
+            $scope.branchdata($scope.tour.empbranchgid);
+            loadeligble();
+        }).finally($scope.endloading);
+    }
+
+    $scope.branchdata = function(v){
+        var data = {
+            params: {
+                "Type": "EMP_BRANCH",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Branch_Gid":v
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_employee = $scope.main;
+        });
+    }
+    $scope.emppermitsearch = gotopermitemp;
+        function gotopermitemp(query) {
+            var result = $filter('filter')($scope.get_employee, {
+                'employee_name': query
+            });
+            return result;
+    }
+    $scope.brsearch = gotobranch;
+        function gotobranch(query) {
+<!--            var result = $filter('filter')($scope.get_branch_data, {-->
+<!--                'branch_name': query || 'branch_code': query-->
+<!--            });-->
+<!--            return result;-->
+            if(query == "undefined"){
+                query = "";
+            }
+            var datas = {
+                params: {
+                    "Type": "GET_BRANCH",
+                    "json" : {
+                        "Params": {
+                            "FILTER": {
+                                "Limit_Start":0,
+                                "Limit_End":30,
+                                "branch_name":"",
+                                "branch_code":"",
+                                "branch_detail":query
+                            }
+                        }
+                    }
+                }
+            }
+             return $http.get(Appname + '/eclaim_dropdata/' , datas).then(function(data) {
+                var final_values=data.data.DATA;
+<!--                console.log(final_values);-->
+                return final_values;
+             });
+        }
+    $scope.branchchange = function(v){
+        var data = {
+            params: {
+                "Type": "APPROVER_LIST",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "Branch_Gid":v.branch_gid,
+                            "App_Type":"TOUR"
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_employee_data = $scope.main;
+        });
+    }
+    $scope.empsearch = gotoemp;
+        function gotoemp(query) {
+            var result = $filter('filter')($scope.get_employee_data, {
+                'employee_name': query
+            });
+            return result;
+    }
+    $scope.reasonsearch = gotoreason;
+        function gotoreason(query) {
+            var result = $filter('filter')($scope.get_reason_data, {
+                'name': query
+            });
+            return result;
+    }
+    $scope.file_required = true;
+    $scope.remarks_required = true;
+    $scope.fit_enable = false;
+    $scope.choose_reason = function(e){
+        $scope.tour.reason = e.gid;
+        if(e.name == "Deputation" || e.name == "Transfer-Reporting" || e.name == "Transfer with family"
+        || e.name == "Transfer without Family" || e.name == "Funds Transfer" ){
+            $scope.file_required = true;
+            $scope.remarks_required = true;
+        }
+        else{
+            $scope.file_required = false;
+            $scope.remarks_required = false;
+        }
+        if(e.name == "Funds Transfer" ){
+            $scope.fit_enable = true;
+        }
+        else{
+            $scope.fit_enable = false;
+        }
+
+
+    }
+
+    $scope.empchange = function(e){
+        $scope.tour.approval = e.employee_gid;
+    }
+    $scope.emppermitchange = function(e){
+        $scope.tour.permittedby = e.employee_gid;
+    }
+
+    $scope.error_toast = function(e){
+        if(e.ordernoremarks.$error.required == true || e.ordernoremarks.$invalid == true){
+           error_toast(remarks,time_toast);
+        }
+    }
+
+
+    $scope.attachment = function(){
+         $scope.loading_popup_img();
+         if($scope.files.length != 0){
+            angular.forEach($scope.files, function(item1) {
+                var name = item1.file_name.split('.');
+                if(name[1] == "pdf"){
+                    complete_url ='http://docs.google.com/gview?url=' + encodeURIComponent(item1.file_path) + '&embedded=true';
+                    //Using a function of the library $sce called trustAsResourceUrl()
+                    item1.file_path = $sce.trustAsResourceUrl(complete_url);
+                    item1.type = "pdf";
+                }
+                else{
+                    item1.type = "image";
+                }
+            });
+         }
+         else{
+            alert("No Document..");
+         }
+         $scope.endloading();
+         var model = modalshow('attach_view');
+    }
+
+    $scope.stepsModel = [];
+    $scope.filenames = [];
+    $scope.files = [];
+    $scope.remove_image = function(i) {
+        $scope.stepsModel.splice(i, 1);
+        $scope.filenames.splice(i, 1);
+    }
+    $scope.remove_allimage = function(i) {
+        $scope.stepsModel = [];
+        $scope.filenames =[];
+    }
+
+    $scope.imageUpload = function(event){
+         var files_data = event.target.files; //FileList object
+         for (var i = 0; i < files_data.length; i++) {
+             var file = files_data[i];
+                 var reader = new FileReader();
+                 reader.onload = $scope.imageIsLoaded;
+                 reader.readAsDataURL(file);
+                 var name = file.name.split('.');
+                 if($scope.files.length != 0){
+                    if(file.name != $scope.files.file_name){
+                        if(name[1] == "pdf"){
+                            $scope.filenames.push(file);
+                            $scope.file_required = false;
+
+                        }
+                        else{
+                            $scope.filenames.push(file);
+                            $scope.file_required = false;
+                        }
+                    }
+                    else{
+                        alert("File Already Uploaded")
+                    }
+                 }
+                 else{
+                    $scope.filenames.push(file);
+                    $scope.file_required = false;
+                 }
+
+         }
+    }
+
+    $scope.imageIsLoaded = function(e){
+        $scope.$apply(function() {
+            $scope.stepsModel.push(e.target.result);
+        });
+    }
+    $scope.viewimage = function(e){
+        if($scope.stepsModel.length !=0){
+            var model = modalshow('imdiate_view');
+        }
+        else{
+        alert("No File");
+        }
+    }
+    $scope.clear_image = function(e){
+        event.target.files.pop(e);
+    }
+
+    $scope.submit_data = function(){
+        if($scope.tourtype == "CANCEL"){
+            $scope.loading();
+            var data = {
+                params: {
+                    "Type": "TOUR_CANCEL",
+                    "json" : {
+                        "Params": {
+                            "DETAILS": {
+                              "tourgid":$scope.tour.gid,
+                              "approvedby":$scope.tour.approval,
+                              "appcomment":$scope.comments,
+                              "applevel":1,
+                              "apptype":"TOURCANCEL"
+                            },
+                        }
+                    }
+                }
+            }
+            var eclaim_daily = eclaimService.ecalim_data(data);
+            eclaim_daily.then(function(result) {
+                $scope.set_msg = result.data.MESSAGE
+                if($scope.set_msg == 'SUCCESS' ){
+                    success_toast();
+                    if($scope.applevel == 0){
+                        $window.location.href = "eClaim/eclaim_cancel_request";
+                    }
+                    else{
+                        $window.location.href = "eClaim/eclaim_cancel";
+                    }
+                }
+                else{
+                    alert($scope.set_msg);
+                }
+            }).finally($scope.endloading);
+        }
+        else{
+            if($scope.tourstatus == "PENDING" || $scope.tourstatus == "RETURN" ){
+                if($scope.file_required == false){
+                    if($scope.tourstatus == "PENDING"){
+                        if($scope.filenames.length ==0){
+                            alert(" File is Missing ");
+                            return 0 ;
+                        }
+                    }
+                    if($scope.tourstatus == "RETURN"){
+                        if($scope.files.length ==0){
+                            alert(" File is Missing ");
+                            return 0 ;
+                        }
+                    }
+                }
+
+                $scope.loading();
+                angular.forEach($scope.tour_details, function(item1) {
+                        item1.startdate = $filter('date')(new Date(item1.startdate),'yyyy-MM-dd');
+                        item1.enddate = $filter('date')(new Date(item1.enddate),'yyyy-MM-dd');
+                   });
+                   if($scope.tour.ordernoremarks == undefined || $scope.tour.ordernoremarks == ""){
+                        $scope.tour.ordernoremarks = "  ";
+                   }
+                    var data = {
+                        params: {
+                            "Type": "TOUR_MAKER",
+                            "json" : {
+                                "Params": {
+                                    "DETAILS": {
+                                        "gid":$scope.tour.gid,
+                                        "requestdate":$filter('date')(new Date($scope.tour.requestdate),'yyyy-MM-dd HH:mm'),
+                                        "empgid":$scope.tour.empgid,
+                                        "empdesignation":$scope.tour.empdesignation,
+                                        "empdepartmentgid":$scope.tour.empdepartmentgid,
+                                        "empgrade":$scope.tour.empgrade,
+                                        "empbranchgid":$scope.tour.empbranchgid,
+                                        "stategid":$scope.tour.stategid,
+                                        "reason":$scope.tour.reason,
+                                        "permittedby":$scope.tour.permittedby,
+                                        "approval":$scope.tour.approval,
+                                        "startdate":$filter('date')(new Date($scope.tour.startdate),'yyyy-MM-dd HH:mm'),
+                                        "enddate":$filter('date')(new Date($scope.tour.enddate),'yyyy-MM-dd HH:mm'),
+                                        "durationdays":$scope.tour.durationdays,
+                                        "eligiblemodeoftravel":$scope.tour.eligiblemodeoftravel,
+                                        "ordernoremarks":$scope.tour.ordernoremarks,
+                                        "quantum_offunds":$scope.tour.quantum_offunds,
+                                        "opening_balance":$scope.tour.opening_balance,
+                                    },
+                                    "CHANGE": {
+                                        "DATA": $scope.tour_details
+                                    },
+
+                                }
+                            }
+                        }
+                    }
+
+                    var img = new FormData();
+
+                    for(i = 0; i < $scope.filenames.length; i++){
+                           var file_img = $scope.filenames[i]
+                           var filename = file_img.name
+                           var index = filename.lastIndexOf(".");
+                           $scope.strsubstring = filename.substring(index, filename.length);
+                           if($scope.strsubstring ==".jpg" || $scope.strsubstring ==".JPG" || $scope.strsubstring ==".jpeg" || $scope.strsubstring ==".png" || $scope.strsubstring ==".pdf" ){
+                                img.append('file'+i, file_img);
+                                img.append('fileext'+i, $scope.strsubstring);
+                            }
+                    };
+
+                    var tour_details = JSON.stringify(data);
+                    img.append("Tour", tour_details);
+                    img.append("tourgid", $scope.tour.gid);
+                    img.append("Type", "TOUR_MAKER");
+
+                    var eclaim_daily = eclaimService.ecalim_data_file(img);
+                    eclaim_daily.then(function(result) {
+                        $scope.set_msg = result.data.MESSAGE
+                        if($scope.set_msg == 'SUCCESS' ){
+                            success_toast();
+                            if($scope.applevel == 0){
+                                $window.location.href = "eClaim/eclaim_tour_request";
+                            }
+                        }
+                        else{
+                            alert($scope.set_msg);
+                        }
+                    }).finally($scope.endloading);
+                }
+                else{
+                    alert("Cannot Update")
+                }
+        }
+    }
+    $scope.tour_service = function(data){
+        var eclaim_daily = eclaimService.ecalim_data(data);
+        eclaim_daily.then(function(result) {
+            $scope.set_msg = result.data.MESSAGE
+            if($scope.set_msg == 'SUCCESS' ){
+                success_toast();
+                if($scope.tourtype == 'CANCEL'){
+                     if($scope.applevel == 0){
+                        $window.location.href = "eClaim/eclaim_cancel";
+                    }
+                    else{
+                        $window.location.href = "eClaim/eclaim_cancel_approval";
+                    }
+                }
+                else{
+                    if($scope.applevel == 0){
+                        $window.location.href = "eClaim/eclaim_tour_request";
+                    }
+                    else{
+                        $window.location.href = "eClaim/eclaim_approval";
+                    }
+                }
+            }
+            else{
+                alert($scope.set_msg);
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.reject = function() {
+         $scope.reject_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+		 $scope.enable_forward = true;
+    };
+    $scope.approve = function() {
+         $scope.approve_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+		 $scope.enable_forward = true;
+    };
+    $scope.reforward = function() {
+         $scope.reforward_reason = true;
+		 $scope.enable_reforward = true;
+    };
+
+    $scope.return = function() {
+         $scope.return_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+		 $scope.enable_forward = true;
+    };
+
+    $scope.forward = function() {
+         $scope.forward_reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+		 $scope.enable_return = true;
+		 $scope.enable_forward = true;
+    };
+
+    $scope.close_reject = function(){
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+		$scope.enable_forward = false;
+		$scope.comments = "";
+    }
+    $scope.close_reforward = function(){
+        $scope.reforward_reason = false;
+		$scope.enable_reforward = false;
+		$scope.comments = "";
+    }
+
+
+    $scope.direct_approve = function() {
+    $scope.loading();
+        var data = {
+                  "gid":$scope.approvalgid,
+                  "tourgid":$scope.tour.gid,
+                  "approvedby":0,
+                  "appcomment":$scope.comments,
+                  "applevel":1,
+                  "apptype":"TOUR"
+        }
+        approve_data(data)
+                $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+		$scope.enable_forward = false;
+    }
+
+    $scope.direct_forward = function(e) {
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "TOUR_FORWARD",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                          "gid":$scope.approvalgid,
+                          "tourgid":$scope.tour.gid,
+                          "approvedby":e.employee_gid,
+                          "appcomment":$scope.comments,
+                          "applevel":2,
+                          "apptype":"TOUR"
+                        },
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+		$scope.enable_forward = false;
+
+    }
+    $scope.direct_reforward = function(e) {
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "TOUR_FORWARD",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                          "gid":$scope.approvalgid,
+                          "tourgid":$scope.tour.gid,
+                          "approvedby":0,
+                          "appcomment":$scope.comments,
+                          "applevel":1,
+                          "apptype":"TOUR"
+                        },
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+        $scope.reforward_reason = false;
+		$scope.enable_reforward = false;
+
+    }
+
+    $scope.direct_return = function(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "ECLAIM_RETURN",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                          "gid":$scope.approvalgid,
+                          "tourgid":$scope.tour.gid,
+                          "appcomment":$scope.comments,
+                          "apptype":"TOUR"
+                        },
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+        $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+		$scope.enable_forward = false;
+
+    }
+
+
+    function approve_data(datas){
+        var data = {
+            params: {
+                "Type": "MOVE_APPROVE_II",
+                "json" : {
+                    "Params": {
+                        "DETAILS": datas
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+    }
+    $scope.reject_tour = function(){
+        $scope.loading();
+        var data = {
+            params: {
+                "Type": "MOVE_REJECT",
+                "json" : {
+                    "Params": {
+                        "DETAILS": {
+                          "gid":$scope.approvalgid,
+                          "tourgid":$scope.tour.gid,
+                          "appcomment":$scope.comments,
+                          "apptype":"TOUR"
+                        },
+                    }
+                }
+            }
+        }
+        $scope.tour_service(data);
+                $scope.approver = true;
+        $scope.reject_reason = false;
+        $scope.approve_reason = false;
+        $scope.return_reason = false;
+        $scope.forward_reason = false;
+        $scope.enable_update = false;
+		$scope.enable_reject = false;
+		$scope.enable_return = false;
+		$scope.enable_forward = false;s
+     }
+
+    $scope.get_approval_data = [];
+    loadapprovalflow();
+    function loadapprovalflow(){
+        if($scope.tourtype == "CANCEL"){
+            $scope.appr_flow = "TOURCANCEL";
+        }
+        else{
+            $scope.appr_flow = "TOUR";
+        }
+        var data = {
+            params: {
+                "Type": "APPROVAL_FLOW",
+                "json" : {
+                    "Params": {
+                        "FILTER": {
+                            "TourGid":$scope.tour.gid,
+                            "AppType":$scope.appr_flow
+                        }
+                    }
+                }
+            }
+        }
+        var get_drop = eclaimService.ecalim_drop_get(data)
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            if(result.data.MESSAGE != "NOT_FOUND" ){
+                $scope.get_approval_data = $scope.main;
+                $scope.approvaldata = true;
+            }
+            else {
+                $scope.approvaldata = false;
+            }
+        });
+    }
+
+
+});
+myApp.service("eclaimService", function($http) {
+    this.ecalim_expense = function(data) {
+        var response = $http.post(Appname + "/eclaim_summary/",data);
+        return response;
+    },
+    this.ecalim_expense_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    },
+    this.ecalim_drop_get = function(data) {
+        var response = $http.get(Appname + "/eclaim_dropdata/",data);
+        return response;
+    },
+    this.ecalim_data = function(data) {
+        var response = $http.post(Appname + "/eclaim_process_set/",data);
+        return response;
+    }
+    this.ecalim_data_file = function(data) {
+        var response = $http.post(Appname + "/tour_set_file/",data,{
+            transformRequest: angular.identity,
+            headers: {
+                'Content-Type': undefined
+            }
+        });
+        return response;
+    }
+
+    this.ecalim_session_get = function(data) {
+        var response = $http.post(Appname + "/session_get_expnese/",data);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+{% endblock %}

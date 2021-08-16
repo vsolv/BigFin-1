@@ -1,0 +1,271 @@
+{% verbatim %}
+<div class="row">
+    <div class="col-md-12">
+        <form name="form_select">
+            <md-input-container class="md-block inputcontainer">
+                <label>Select Customer</label>
+                <md-select ng-model="selectedmullti" md-on-close="clearSearchTerm()"
+                           data-md-container-class="selectSelectHeader" required>
+                    <md-select-header class="select-header">
+                        <input ng-model="searchTerm" type="search" placeholder="Search for a Customer.."
+                               class="header-searchbox md-text">
+                    </md-select-header>
+                    <md-option md-search-text="ctrl.searchText" ng-repeat="c in mullti | filter:searchTerm"
+                               value="{{c.customer_gid}}">{{c.customer_name}} - {{c.location_name}}
+                    </md-option>
+                </md-select>
+            </md-input-container>
+        </form>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12" style="padding-top: 15px;padding-bottom: 15px;">
+        <md-radio-group ng-model="selected" ng-change="toggled()" ng-click="type_Selected(selected)"
+                        layout="row">
+            <md-radio-button ng-repeat="d in type" ng-value="d" aria-label="{{ d.followupreason_name }}">
+                {{ d.followupreason_name }}
+            </md-radio-button>
+        </md-radio-group>
+    </div>
+</div>
+<!--cash-->
+<div class="row" ng-show="showcash">
+    <div class="col-md-6">
+        <md-input-container class="md-block inputcontainer">
+            <form name="form_amount">
+                <label>Amount</label>
+                <input name="number" placeholder="Amount" valid-number id="amount" maxlength="10"
+                       ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                       ng-model="Amount" required/>
+            </form>
+        </md-input-container>
+    </div>
+</div>
+<!--Cheque-->
+<div class="col-md-12" ng-show="showcheque">
+    <form name="form_cheque">
+        <div class="row">
+            <div class="col-md-12">
+                <md-autocomplete required
+                                 md-selected-item="selectedItem"
+                                 md-search-text="searchText"
+                                 md-no-cache="false"
+                                 md-clear-button="true"
+                                 md-floating-label="Bank Name"
+                                 md-items="item in getbankdetails(searchText)"
+                                 md-item-text="item.bank_name"
+                                 md-min-length=0
+                                 placeholder="Bank Name">
+                    <md-item-template>
+                        <span md-highlight-text="searchText"> {{item.bank_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No product matching "{{item.searchText}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Cheque No</label>
+                <input name="number" placeholder="Cheque No" numbers-only id="chqno" maxlength="6" autocomplete="off"
+                       ng-model="Chqno"
+                       required/>
+            </md-input-container>
+        </div>
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Cheque Date</label>
+                <md-datepicker md-hide-icons="calendar" ng-required="true" md-open-on-focus md-min-date="minDate"
+                               md-max-date="maxDate"
+                               ng-model="cheque_date" formatDate></md-datepicker>
+            </md-input-container>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Cheque Amount</label>
+                    <input name="number" placeholder="Cheque Amount" valid-number id="chkamt" maxlength="11"
+                           ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                           ng-model="Chqamt" required/>
+                </md-input-container>
+            </div>
+            <div class="col-xs-3 col-md-6 pull-center">
+                <md-button class="md-fab md-mini md-primary custbutton" aria-label="Search"
+                           ng-click="addCheque()">
+                    <md-icon ng-bind="is_edit?'done':'add'"></md-icon>
+                    <md-tooltip>Add</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </form>
+    <div class="row">
+        <div class="col-md-12 table-responsive">
+            <table class="table" ng-if="cheques.length>0">
+                <thead>
+                <th>S.No</th>
+                <th>Cheque No</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>B Name</th>
+                <th>Remove</th>
+                </thead>
+                <tbody>
+                <tr ng-repeat="che in cheques" ng-click="editCheque($index)">
+                    <td>{{$index +1}}</td>
+                    <td>{{che.Cheque_No}}</td>
+                    <td>{{che.disply_date | date:'dd/MMM/yyyy'}}</td>
+                    <td>{{che.Cheque_Amount}}</td>
+                    <td>{{che.Bank_Name}}</td>
+                    <td><span ng-click="removeCheque($index)" style="color:red;"><i
+                            style="font-size:16px !important;" class="material-icons">remove_circle_outline</i></span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 table-responsive">
+            <table class="table" ng-if="cheques.length>0">
+                <thead>
+                <th>S.No</th>
+                <th>Invoice Number</th>
+                <th>Net Amount</th>
+                <th>Pending Amount</th>
+                <th>Amount</th>
+                <th>Balance Amount</th>
+                <th>Action</th>
+                </thead>
+                <tbody>
+                <tr ng-repeat="os in outstanding" ng-click="editCheque($index)">
+                    <td>{{$index +1}}</td>
+                    <td>{{os.soutstanding_invoiceno}}</td>
+                    <td>{{os.soutstanding_netamount}}</td>
+                    <td>{{os.pending}}</td>
+                    <td>
+                        <form name="demoForm_form" novalidate>
+                            <input style="width:102px" name="qty" type="number" maxlength="5"
+                                   ng-model="os.qty" min="1" max="10000"
+                                   class="form-control" required>
+                            <div ng-messages="demoForm_form.qty.$error">
+                                <div ng-message="number">Should be a number</div>
+                                <div ng-message="max">your quantity order exceeds 10000</div>
+                                <div ng-message="min">your quantity should not be zero</div>
+                            </div>
+                        </form>
+                    </td>
+                    <td>{{os.pending-os.qty}}</td>
+                    <td align="center">
+                        <input type="checkbox" ng-model="os.checked"
+                               ng-change="checkproduct(details.product_gid,$index,details.edit,details.checked)"/>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!--Promised to buy-->
+<div class="row" ng-show="showpromised">
+    <form name="form_pay">
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Promised to pay </label>
+                <input name="number" placeholder="Enter Amount" valid-number id="prmspay" maxlength="11"
+                       ng-pattern="/^[123456789][.0-9]{0,10}$/" step="0.01"
+                       ng-model="promisedamt" required/>
+            </md-input-container>
+        </div>
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Promised to pay on</label>
+                <md-datepicker ng-model="payed" md-hide-icons="calendar" ng-click="date" md-open-on-focus
+                               md-min-date="minDate"
+                               md-max-date="maxDate" formatDate required></md-datepicker>
+            </md-input-container>
+        </div>
+    </form>
+</div>
+<!--Transfer-->
+<div class="row" ng-show="showresch">
+    <form name="form_transfer">
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Amount</label>
+                <input name="number" placeholder="Amount" valid-number id="tamount" maxlength="11"
+                       ng-pattern="/^[123456789][.0-9]{0,10}$/" step="0.01"
+                       ng-model="neft_amt" required/>
+            </md-input-container>
+        </div>
+        <div class="col-md-6">
+            <md-input-container class="md-block inputcontainer">
+                <label>Reference Number</label>
+                <input id="refnum" maxlength="11" name="number"
+                       ng-model="ref_num"
+                       ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                       placeholder="Enter Reference Number" required
+                       step="0.01" valid-number/>
+            </md-input-container>
+        </div>
+        <div class="col-md-6">
+            <a ng-show="showresch" ng-click="bank_details()">Bank Details</a>
+        </div>
+
+    </form>
+</div>
+<div class="row">
+    <div class="col-md-12 text-right">
+        <md-button ng-click="close()" class="md-raised">Close
+            <md-tooltip>Close</md-tooltip>
+        </md-button>
+
+        <md-button class="btn btn-info custbutton" ng-click="save()">Submit
+            <md-tooltip>Submit</md-tooltip>
+        </md-button>
+    </div>
+</div>
+<div class="modal fade" id="Bank_view" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+     aria-labelledby="exampleModal" aria-hidden="true">
+    <form name="histroy" novalidate>
+        <div class="modal-dialog modal-style" role="document">
+            <div class="modal-content">
+                <div class="header">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModal">
+                            Vsolv Account Detail
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+                <div class="modal-body" style="height:350px;overflow-y:auto">
+                    <div class="row table-responsive">
+                        <div class="col-md-12 col-lg-12 col-sm-12">
+                            <div class="modal-body" style="overflow-y: auto;height: 250px">
+                                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                       md-progress="deferred" ng-repeat="bank in bank_detail">
+                                    <tr>
+                                        <th class="header">Account Name</th>
+                                        <td class="align_center">{{bank.bankbranch_name}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="header">Account Number</th>
+                                        <td class="align_center">{{bank.bankdetails_accountno}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="header">IFSC code</th>
+                                        <td class="align_center">{{bank.bankbranch_ifsccode}}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endverbatim %}

@@ -1,0 +1,198 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} SI Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Standard Instruction Summary</h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input id="ponum" maxlength="256" ng-model="si_code"
+                               ng-change="filtersearch()" placeholder="Search By SI Code">
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-5 text-right">
+                    <a href="StandardInstructions/SI_Creations/">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="amc_add()">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>SI Create</md-tooltip>
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>SI Name</th>
+                        <th>Standard Instraction Code</th>
+                        <th>BS Name</th>
+                        <th>CC Name</th>
+                        <th>From Date</th>
+                        <th>To Date</th>
+                        <th>Recurng Period</th>
+                        <th>Recurng Date</th>
+                        <th>Amount</th>
+                        <th>SI Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="si in si_data_summary.slice(((currentPage-1)*itemsPerPage),((currentPage)*itemsPerPage)) | filter:search:strict"
+                        align="center">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{si.standardinstruction_name}}</td>
+                        <td>{{si.standardinstruction_code}}</td>
+                        <td>{{si.tbs_name}}</td>
+                        <td>{{si.tcc_name}}</td>
+                        <td>{{si.standardinstruction_fromdate | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{si.standardinstruction_todate | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{si.recuring_period }}</td>
+                        <td>{{si.standardinstruction_recurringdate }}</td>
+                        <td>{{si.standardinstruction_amount }}</td>
+                        <td>{{si.standardinstruction_status}}</td>
+
+                        <td>
+                            <span title="Edit"
+                                  ng-click="edit_data(si,'edit')"
+                                  class="editlink">
+                                    <i class="material-icons">edit</i>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr ng-show="si_data_summary.length ==  0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="10">
+                            <ul uib-pagination total-items="si_data_summary.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{si_data_summary.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window','$filter', function($scope,Service_amc,$mdDialog,$window,$filter) {
+  $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+    $scope.maintable = [];
+    $scope.amc_assets=[];
+    sessionStorage.removeItem('si');
+
+     $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+     var datas={params:{"action":'GET',"type":"STANDARD_INSTRUCTION_HEADER_DETAIL", "filter":{}
+                      }
+        };
+        $scope.loading();
+        var amc_data = Service_amc.get_si_data(datas);
+         amc_data.then(function(result) {
+        debugger;
+                var si_all_data = result.data;
+                $scope.si_data_summary = si_all_data;
+                $scope.si_data_summary1 = si_all_data;
+                console.log($scope.si_data_summary1);
+            },
+            function(err) {
+                alert("No SI Data");
+    }).finally($scope.endloading);
+
+
+    $scope.filtersearch = function() {
+            $scope.si_data_summary = $filter('filter')($scope.si_data_summary1, {
+                "standardinstruction_code": $scope.si_code,
+
+            });
+        }
+
+        $scope.edit_data = function(si,e) {
+               var si_data = {
+               standardinstruction_gid: si.standardinstruction_gid,
+               view:e
+            };
+            sessionStorage.setItem('si', JSON.stringify(si_data));
+            $window.location.href = "StandardInstructions/SI_Edit/";
+        }
+
+        $scope.approv_data = function(amc,e) {
+               var amc_data = {
+               amc_gid: amc.amcdetails_gid,
+               view:e
+            };
+            sessionStorage.setItem('amcs', JSON.stringify(amc_data));
+            $window.location.href = "ServiceManagement/SM_AMC_Approval/";
+        }
+
+
+
+   }]);
+
+ myApp.service("Service_amc", function ($http) {
+
+    this.get_si_data=function (data) {
+    debugger;
+        var response=$http.post(Appname+"/Get_SI/",data);
+        return response;
+    }
+
+
+
+ });
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+</style>
+{% endblock %}

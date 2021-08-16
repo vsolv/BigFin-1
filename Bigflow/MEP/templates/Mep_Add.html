@@ -1,0 +1,1463 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} MEP MAKER  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Roboto:400,300">
+<link rel="stylesheet" href="http://textangular.com/dist/textAngular.css" type="text/css">
+<style>
+    h1 small {
+        font-size: 60%;
+    }
+    textarea.ta-bind {
+        width: 100%;
+    }
+
+</style>
+<!--<script src='https://ajax.googleapis.com/ajax/libs/angularjs/1.3.11/angular.min.js'></script>-->
+
+<script src='http://textangular.com/dist/textAngular-rangy.min.js'></script>
+
+<script src='http://textangular.com/dist/textAngular-sanitize.min.js'></script>
+
+<script src='http://textangular.com/dist/textAngular.min.js'></script>
+
+
+<div class="maincontent">
+    <div ng-app="App_Mepadd" ng-controller="Ctrl_Mepadd" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong>MAKE MEP</strong><label style="margin-left:50px;color:green;font-size:14px"
+                                                    ng-show="hidepar_amount">Par Total Amount:<label style="color:blue">{{get_paramount.par_originalamount}}</label></label>
+                    <label style="margin-left:10px;color:green;font-size:14px" ng-show="hidepar_amount">Approved Amount:<label
+                            style="color:blue">{{get_paramount.Approved_amount}}</label></label>
+                    <label style="margin-left:10px;color:green;font-size:14px" ng-show="hidepar_amount">Pending Approval
+                        Amount:<label style="color:blue">{{get_paramount.PendingApproved_Aoumnt}}</label></label>
+                    <label style="margin-left:10px;color:green;font-size:14px" ng-show="hidepar_amount">Balance
+                        Amount:<label style="color:blue">{{get_paramount.balance}}</label></label></h4>
+            </div>
+        </div>
+              <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+            data-keyboard="false" id="viewnotepad" role="dialog" style="height:auto;width:100%">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong> Note Pad</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                      <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                                <div text-angular="text-angular" id="con"  name="htmlcontent" ng-focus="displaynamechng('content_flag')" ng-model="htmlcontent" ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Close
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form name="par_add_form">
+            <div class="row" ng-disabled="enable_all">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Mep Number</label>
+                            <input type="text" ng-model="mepadd.mepno" ng-disabled="true">
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Mep Name</label>
+                            <input type="text" autocomplete="off" no-Special-Char maxlength="128"
+                                   ng-model="mepadd.mepname" required>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Par No"
+                                         md-input-maxlength=126
+                                         md-item-text="item.par_no"
+                                         md-items="item in Load_par(mepadd.par_no)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="mepadd.par_no"
+                                         md-selected-item="item.par_no"
+                                         md-selected-item-change="Par_Number_Change(item.par_no)"
+                                         required
+                        >
+                            <md-item-template>
+                                <span md-highlight-text="parnos">{{item.par_no}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Par Number matching "{{parnos}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label> Type</label>
+                            <md-select ng-disabled="enable_all" ng-model="mepadd.mepexptype" ng-change="par_amountview(mepadd.mepexptype)">
+                                <md-option ng-repeat="a in parexp_data" ng-value="a.metadata_value" required>
+                                    {{a.metadata_value }}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </div>
+                        <div class="col-md-1" style="margin-top:20px">
+                        <span title="Add a Note" ng-click="notepad()" align="center"
+                                  class="editlink">
+                                   <i class="material-icons">description</i>
+                        </span>
+                        </div>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-12">
+                    <div class="col-md-2" ng-disabled="enable_all">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Mep Amount</label>
+                            <input type="text" numbers-only maxlength="16" autocomplete="off"
+                                   ng-model="mepadd.mepuseramount" required numbers-only>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2" ng-if="enable_all && onetimeedit">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Contigency Percentage</label>
+                            <input type="text" maxlength="16" autocomplete="off"
+                                   ng-model="mepadd.contigencypercentage"  required>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-2" ng-hide="true">
+                        <md-input-container class="md-block inputcontainer">
+                            <input type="text" maxlength="16" autocomplete="off"
+                                   ng-model="mepadd.mepamountu = (mepadd.mepuseramount*mepadd.contigencypercentage/100)" required numbers-only>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2" ng-if="enable_all && onetimeedit">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Mep Total Amount</label>
+                            <input type="text" numbers-only maxlength="16" autocomplete="off"
+                                   ng-model="mepadd.mepamount = ((+mepadd.mepamountu)+(+mepadd.mepuseramount))" required numbers-only>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2" ng-if="!onetimeedit">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Mep Total Amount</label>
+                            <input type="text" numbers-only maxlength="16" autocomplete="off"
+                                   ng-model="mepadd.mepamount = mepadd.mepuseramount" ng-disabled="enable_all" required numbers-only>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3" ng-disabled="enable_all">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Start Date</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                   ng-model="mepadd.fromdate" required></md-datepicker>
+                            </md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3" ng-disabled="update_enable">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>End Date</label>
+                                <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="mepadd.fromdate"
+                                   md-open-on-focus ng-model="mepadd.enddate" required></md-datepicker>
+                            </md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row" ng-disabled="enable_all">
+                <div class="col-md-12">
+                    <div class="col-md-2" ng-disabled="enable_all">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Final Year</label>
+                            <input type="text" numbers-only minlength="4" maxlength="4" ng-model="mepadd.finalyear"
+                                   required>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Branch Code"
+                                         md-input-maxlength=126
+                                         md-item-text="item.branch_code"
+                                         md-items="item in Load_branch(mepadd.branchcode)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="mepadd.branchcode"
+                                         md-selected-item="selectedemp"
+                                         md-selected-item-change="Branch_change(item)"
+                                         required
+                        >
+                            <md-item-template>
+                                <span md-highlight-text="searchRM2">{{item.branch_code}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Branch Code matching "{{mepadd.branchcode}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                                            <md-autocomplete md-clear-button="true"
+                                                             md-floating-label="Raisor Name"
+                                                             md-input-maxlength=126
+                                                             md-item-text="item.employee_name"
+                                                             md-items="item in Load_raisor(mepadd.raisor)"
+                                                             md-min-length=0
+                                                             md-no-cache="true"
+                                                             md-search-text="mepadd.raisor"
+                                                             md-selected-item="selected1"
+                                                             md-selected-item-change="Raisor_change(item)"
+                                                             required
+                                            >
+                                                <md-item-template>
+                                                    <span md-highlight-text="searchRM2">{{item.employee_code}}--{{item.employee_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Raisor Name matching "{{mepadd.raisor}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                    <div class="col-md-2">
+                        <br>
+                        <label>MEP Mode</label>
+                        <md-radio-group layout="row" ng-model="mepadd.mepmode" ng-disabled="enable_all"
+                                        ng-change="radioChanged(Partner.activecontractype)" required>
+                            <md-radio-button value="P" class="md-primary">PAR</md-radio-button>
+                            <md-radio-button value="N">NO PAR</md-radio-button>
+                        </md-radio-group>
+                    </div>
+
+                    <div class="col-md-2">
+                        <br><label>Is Budgeted</label>
+                        <md-radio-group layout="row" ng-model="mepadd.mepbudgeted" ng-disabled="enable_all" required>
+                            <md-radio-button value="Y" class="md-primary">Yes</md-radio-button>
+                            <md-radio-button value="N">No</md-radio-button>
+                        </md-radio-group>
+                    </div>
+                </div>
+            </div>
+            <div class="row" ng-disabled="enable_all">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Project Owner"
+                                         md-input-maxlength=126
+                                         md-item-text="item.employee_name"
+                                         md-items="item in Load_raisor(mepadd.pOwner)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="mepadd.pOwner"
+                                         md-selected-item="selected3"
+                                         md-selected-item-change="Project_OwnerChange(item)"
+                                         required
+                        >
+                            <md-item-template>
+                                <span md-highlight-text="searchRM3">{{item.employee_code}}--{{item.employee_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Project Owner matching "{{mepadd.pOwner}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Request For"
+                                         md-input-maxlength=126
+                                         md-item-text="item.dept_name"
+                                         md-items="item in Load_deptname(mepadd.dept_name)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="mepadd.dept_name"
+                                         md-selected-item="dfs"
+                                         md-selected-item-change="ACselectchan(item.dept_name)"
+                                         required
+                        >
+
+                            <md-item-template>
+
+                                <span md-highlight-text="searchRM4">{{item.dept_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Request For Name matching "{{mepadd.dept_name}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Budget Owner"
+                                         md-input-maxlength=126
+                                         md-item-text="item.employee_name"
+                                         md-items="item in Load_raisor(mepadd.bowner)"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="mepadd.bowner"
+                                         md-selected-item="selected5"
+                                         md-selected-item-change="BudgetOwner_change(item)"
+                                         required
+                        >
+                            <md-item-template>
+
+                                <span md-highlight-text="emp">{{item.employee_code}}--{{item.employee_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Budget Owner "{{mepadd.bowner}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Justification</label>
+                            <input type="text" no-Special-Char maxlength="256" ng-model="mepadd.justification" required>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="margin-left:500px;">
+                <md-button class="md-raised custbutton" value="Close" class="btn btn-secondary"
+                           ng-click="AddMep_fn(mepadd);"
+                           ng-disabled="par_add_form.$invalid" ng-show="hide_submit">
+                    ADD
+                </md-button>
+                <md-button class="md-raised custbutton" value="Close" class="btn btn-secondary"
+                           ng-click="UpdatePar_fn(mepadd);"
+                           ng-disabled="par_add_form.$invalid" ng-show="hide_show1">
+                    Update
+                </md-button>
+                <md-button ng-click="UpdatePar_fn(mepadd)" ng-show="show_frapproved"
+                                   class="md-raised md-warn">Update
+                            <md-tooltip>Update</md-tooltip>
+                        </md-button>
+            </div>
+        </form>
+        <div class="row-header col-lg-12 col-sm-12">
+            <md-subheader class="md-accent">
+                <label style="margin-left:450px;font-size:20px;">MAKE MEP DETAILS</label>
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="addrow()" style="margin-left:350px;"
+                         ng-show="add_show">
+                    <md-icon>add</md-icon>
+                    <md-tooltip>Add</md-tooltip>
+                </md-button>
+            </md-subheader>
+        </div>
+        <!--        ng-show="add_show"-->
+
+        <div class="row table-responsive">
+
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <div ng-hide="PPX_HTML">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                           ng-show="isSet(1)" ng-hide="podetail">
+                        <thead class="header">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Product Code</th>
+                            <th>Product Name</th>
+                            <th>Description</th>
+                            <th>UOM</th>
+                            <th>Quantity</th>
+                            <th>Unit Amount</th>
+                            <th>Total Amount</th>
+                            <th ng-if="!enable_all">Delete</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="dtl in invoicedetails">
+                            <td ng-model="dtl.Invoice_Sno=$index+1">
+                                <center>{{$index+1}}</center>
+                            <td>
+
+                                <md-autocomplete style="margin-top:-5px;"
+                                                 md-clear-button="!enable_all"
+                                                 ng-disabled="enable_all"
+                                                 md-input-maxlength=126
+                                                 md-item-text="item.product_code"
+                                                 md-items="item in Load_product(dtl.product_code)"
+                                                 md-min-length=0
+                                                 md-search-text="dtl.product_code"
+                                                 md-selected-item="selectedItem"
+                                                 md-selected-item-change="ACselectchange(item,$index)"
+                                                 placeholder="Product Code">
+                                    <md-item-template>
+                                        <span md-highlight-text="dtl.product_code"> {{item.product_name}} - {{item.product_code}}</span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No Product Name matching "{{dtl.product_code}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </td>
+                            <td>
+                                <input type="text" maxlength="128" ng-model="dtl.product_name" class="textboxgeneral"
+                                       ng-disabled="true">
+                            </td>
+                            <td>
+                                <input type="text" class="textboxgeneral" no-Special-Char maxlength="256" ng-disabled="enable_all"
+                                       ng-model="dtl.mepdetails_desc">
+                            </td>
+                            <td>
+                                <input type="text" class="textboxgeneral" no-Special-Char maxlength="16"
+                                       ng-disabled="true"
+                                       ng-model="dtl.uom_name">
+                            </td>
+                            <td align="right"><input class="textboxgeneral" numbers-only maxlength="16" ng-disabled="enable_all"
+                                                     ng-disabled="invoiceview"
+                                                     ng-model="dtl.mepdetails_qty"></td>
+                            <td align="right"><input class="textboxgeneral" numbers-only maxlength="8" ng-disabled="update_enable"
+                                                     ng-disabled="invoiceview"
+                                                     ng-model="dtl.mepdetails_unitprice"></td>
+                            <td align="right">
+                                {{dtl.mepdetails_totalamt = +dtl.mepdetails_qty * +dtl.mepdetails_unitprice}}
+                            </td>
+                             <td align="center" ng-if="!enable_all"><a> <i class="material-icons" style="color:red"
+                                               ng-click="delete_columns($index)" >
+                                        delete
+                                    </i></a></td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                         <tr>
+                                    <td colspan="6" align="right"><b>Total</b></td>
+                                    <td colspan="1" align="right" style="background: white;">
+                                        <span ng-if="invoicedetails.length == 0"><b>{{total}}</b></span>
+                                        <span ng-if="invoicedetails.length > 0"><b>{{loaddata()| number:2}}</b></span>
+                                    </td>
+                                    <input type="hidden" id="postId" value="34657">
+                                </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="row ">
+                    <div class="col-lg-12 col-sm-12 text-right">
+                        <md-button ng-click="Close()" href="Mep_Summary" ng-show="buttonhide_one" class="md-raised">
+                            Close
+                            <md-tooltip>Close</md-tooltip>
+                        </md-button>
+                        <md-button ng-click="save_mep_mepdetails_fn()" ng-show="hide_submit"
+                                   class="md-raised md-warn">Submit
+                            <md-tooltip>Submit</md-tooltip>
+                        </md-button>
+                        <md-button ng-click="update_par_pardetails_fn()" ng-show="hide_show1"
+                                   class="md-raised md-warn">Update
+                            <md-tooltip>Update</md-tooltip>
+                        </md-button>
+                        <md-button ng-click="update_par_pardetails_approved_fn()" ng-show="show_frapproved"
+                                   class="md-raised md-warn">Update
+                            <md-tooltip>Update</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+                <div class="row  text-left" ng-show="buttonhide">
+                    <form role="form" name="prapprovel">
+                        <div class="col-lg-3 col-sm-3 ">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Reject Remarks</label>
+                                <input id="premarks" no-Special-Char maxlength="256" ng-model="approvelreject"
+                                       ng-change="approvelremark=''" required/>
+                            </md-input-container>
+                        </div>
+                    </form>
+                    <div class="col-lg-3 col-sm-3 ">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Approval Remarks</label>
+                            <input id="prremarksapp" no-Special-Char maxlength="256" ng-model="approvelremark"
+                                   ng-change="approvelreject=''"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-lg-6 col-sm-6">
+                        <md-button type="button" value="Close" class="btn btn-secondary" ng-href="Mep_Checker">
+                            Close
+                        </md-button>
+                        <md-button type="button" value="Reject"
+                                   ng-click="approvedfor_Checker('REJECTED',approvelreject)"
+                                   class="md-raised md-warn"
+                                   ng-disabled="prapprovel.$invalid" ng-hide="hide">Reject
+                        </md-button>
+                        <md-button type="button" value="Approve"
+                                   ng-click="approvedfor_Checker('APPROVED',approvelremark)"
+                                   ng-disabled="prapprovel.$valid" class="md-raised md-primary" ng-hide="hide">Approve
+                        </md-button>
+                    </div>
+
+                </div>
+
+
+            </div>
+        </div>
+        {% endverbatim %}
+
+        <script>
+var myApp = angular.module('App_Mepadd', ['ngMaterial', 'ui.bootstrap', 'AppCommon','textAngular'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+    myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+myApp.directive('numbersOnly', function(){
+   return {
+     require: 'ngModel',
+     link: function(scope, element, attrs, modelCtrl) {
+       modelCtrl.$parsers.push(function (inputValue) {
+           // this next if is necessary for when using ng-required on your input.
+           // In such cases, when a letter is typed first, this parser will be called
+           // again, and the 2nd time, the value will be undefined
+           if (inputValue == undefined) return ''
+           var transformedInput = inputValue.replace(/^[^1-9]*|[^0-9]/g, '');
+           if (transformedInput!=inputValue) {
+              modelCtrl.$setViewValue(transformedInput);
+              modelCtrl.$render();
+           }
+
+           return transformedInput;
+       });
+     }
+   };
+});
+myApp.controller('Ctrl_Mepadd', ['$scope', 'Mepadd_Service', '$window', '$filter', '$mdDialog', '$mdDateLocale', '$timeout', '$q','$mdToast','$http',
+    function($scope, Mepadd_Service, $window, $filter, $mdDialog, $mdDateLocale, $timeout, $q,$mdToast,$http) {
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.invoicedetails = [];
+        $scope.Load_deptname = fn_deptname;
+        $scope.Load_product = fn_productname;
+
+        $scope.Load_branch = fn_branchname;
+        $scope.Load_par = fn_parname;
+        //alert($scope.Load_branch);
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.maxDate = new Date();
+
+        $scope.entity_gid = detail.entity_gid;
+        $scope.create_by = detail.employee_gid;
+        function check_othercharges(){
+
+            var other_chargechk =  []
+            for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                if ($scope.invoicedetails[i].checked == false) {
+                    other_chargechk.push(i)
+                    //$scope.invoicedetails.splice(i, 1);
+                }
+            }
+        }
+
+           $scope.delete_columns = function(index){
+             $scope.invoicedetails.splice(index, 1);
+        }
+
+        $scope.Load_raisor = function (query) {
+                var data = {
+                    'commodity_gid': 0,
+                    "employee_gid": "",
+                    "employee_name": "",
+                    "employee_detail":query,
+                    'Limit_Start': 0,
+                    'Limit_End': 50,
+                }
+                var params1 = {
+                    'params': data,
+                    'action': 'limit',
+                    'type': 'pr_Dir_limit',
+                    'amount': 0,
+
+                }
+
+
+                return $http.post(Appname + "/approvalview/", params1)
+                    .then(function (data) {
+                        $scope.limitamt_copy = JSON.parse(data.data);
+                        return $scope.limitamt_copy;
+                    });
+
+            }
+
+        $scope.notepad = function(){
+        if($scope.file_path_notepad == ' '){
+        modalshow('viewnotepad');
+        return false;
+        }
+        if($scope.file_path_notepad == undefined){
+        modalshow('viewnotepad');
+        return false;
+        }
+        if($scope.file_path_notepad){
+              var data = {
+                "Filename": $scope.file_path_notepad
+            }
+            var getdept_name = Mepadd_Service.get_file_read(data)
+            getdept_name.then(function(result) {
+            $scope.htmlcontent = result.data.file_path
+             modalshow('viewnotepad');
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+        else{
+         modalshow('viewnotepad');
+        }
+}
+
+
+$scope.loaddata = function () {
+                var sum = 0;
+                for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                    if ($scope.invoicedetails[i].mepdetails_unitprice == undefined) {
+                        var unity = 0;
+                    } else {
+                        var unity = $scope.invoicedetails[i].mepdetails_unitprice;
+                    }
+                    sum += ($scope.invoicedetails[i].mepdetails_unitprice *$scope.invoicedetails[i].mepdetails_qty)
+                }
+                $scope.totalamt = sum;
+                return sum;
+            }
+
+        $scope.deleteinvoice = function(index) {
+            $scope.invoicedetails.splice(index, 1);
+        }
+        $scope.Raisor_change=function(e){
+
+        $scope.Raisor_Gid=e.employee_gid;
+        }
+        $scope.Branch_change=function(e){
+
+        $scope.Branch_Gid=e.branch_gid;
+        }
+        $scope.BudgetOwner_change=function(e){
+
+
+        $scope.BudgetOwner=e.employee_gid;
+        }
+        $scope.Project_OwnerChange=function(e){
+
+        $scope.ProjectOwner_Gid=e.employee_gid;
+        }
+        $scope.AddMep_fn=function(mep){
+        if(mep.contigencypercentage > 25){
+        alert('Percentage value should Be less than 25%');
+        $scope.mepadd.contigencypercentage = '';
+        return false;
+        }
+      if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+         $scope.htmlcontent = "";
+        }
+
+        $scope.checkamount=mep.mepamount;
+        if($scope.get_paramount.balance<mep.mepamount){
+        error_toast(check_mep_amount,time_toast);
+         $scope.add_show=false;
+        return false;
+        }
+        success_toast(add_mep,time_toast);
+        $scope.add_show=true;
+
+             $scope.mstartdate =  formatStringDate(new Date(mep.fromdate), 'yyyy-mm-dd');
+             $scope.menddate =  formatStringDate(new Date(mep.enddate), 'yyyy-mm-dd');
+
+
+            $scope.par_data={
+            "mep_no":mep.mepno,
+            "mep_name":mep.mepname,
+            "mep_raisor":$scope.Raisor_Gid,
+            "mep_amount":mep.mepamount,
+            "mep_contigency":mep.contigencypercentage,
+            "mep_originalamount":mep.mepuseramount,
+            "mep_finyear":mep.finalyear,
+            "mep_type":mep.mepexptype,
+            "mep_startdate":$scope.mstartdate,
+            "mep_enddate":$scope.menddate,
+            "mep_branchgid":$scope.Branch_Gid,
+            "mep_mode":mep.mepmode,
+            "mep_parno":mep.par_no,
+            "mep_budgeted":mep.mepbudgeted,
+            "mep_projectowner":$scope.ProjectOwner_Gid,
+            "mep_requestfor":mep.dept_name,
+            "mep_budgetowner":$scope.BudgetOwner,
+            "mep_justification":mep.justification,
+            "mep_status":"PENDING-APPROVAL",
+            "Notepad" : $scope.htmlcontent
+            }
+            //alert(JSON.stringify($scope.par_data));
+        }
+
+        par_exptype_fn();
+        function par_exptype_fn() {
+            var data = {
+                "Table_name": "gal_mst_tmetadata",
+                "Column_1": "metadata_gid,metadata_value",
+                "Column_2": "",
+                "Where_Common": "metadata",
+                "Where_Primary": "columnname",
+                "Primary_Value": "pardetails_exptype",
+                "Order_by": "value"
+            }
+            var exp_type = {
+                Action: "",
+                Entity_Gid: $scope.entity_gid,
+                data: data
+            }
+            var getexpdata = Mepadd_Service.getexpmetadata(exp_type)
+            getexpdata.then(function(result) {
+                $scope.parexp_data = result.data.DATA;
+                //alert(JSON.stringify($scope.parexp_data))
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+        function fn_productname(query) {
+            var result = $filter('filter')($scope.pro_name, {
+                'product_name': query
+            });
+            return result;
+        }
+
+        getproduct_fn();
+        function getproduct_fn(){
+         var data = {
+           "Params": {
+                    "Filter":{},
+                    "Classification": {"Entity_Gid": $scope.entity_gid},
+                    "Group": "MEP_GET",
+                    "Action": "Product_Get",
+                    "Create_By":$scope.create_by ,
+                    "Entity_Gid":$scope.entity_gid,
+                    "Type": ""
+                }}
+            var get_data = Mepadd_Service.getpar_service(data)
+            get_data.then(function(result) {
+            $scope.pro_name=result.data.DATA;
+
+            //alert(JSON.stringify($scope.pro_name));
+            }),
+            function(err) {
+                alert('no data');
+            }
+        }
+
+        function fn_deptname(query) {
+            var result = $filter('filter')($scope.dept_names, {
+                'dept_name': query
+            });
+            return result;
+        }
+
+        getrequestfor_fn();
+        function getrequestfor_fn(){
+            var datan = {
+                "Table_name": "gal_mst_tdept",
+                "Column_1": "dept_gid,dept_code,dept_name",
+                "Column_2": "",
+                "Where_Common": "dept",
+                "Where_Primary": "dept_gid",
+                "Primary_Value": "",
+                "Order_by": "gid"
+                       }
+            var trans = {
+                Action: "",
+                Entity_Gid: $scope.entity,
+                data: datan
+                        }
+            var getdept_name = Mepadd_Service.get_deptname(trans)
+            getdept_name.then(function(result) {
+            $scope.dept_names = result.data.DATA;
+            //alert(JSON.stringify($scope.dept_name))
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+        $scope.prod_name='';
+        $scope.addrow = function() {
+        var result = 0;
+        for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                result = result + parseInt($scope.invoicedetails[i].mepdetails_totalamt);
+            }
+            if($scope.checkamount<=result){
+            error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+            check_othercharges();
+            $scope.invoicedetails.push({
+                mepdetails_productcode: "",
+                mepdetails_desc: "",
+                mepdetails_qty: "",
+                mepdetails_unitprice: "",
+                mepdetails_totalamt: "",
+                product_name: "",
+
+
+                checked: true
+
+            });
+            //alert(JSON.stringify($scope.invoicedetails));
+        }
+
+            function getuom_fn(){
+            var datan = {
+                "Table_name": "gal_mst_tuom",
+                "Column_1": "uom_gid,uom_code,uom_name",
+                "Column_2": "",
+                "Where_Common": "uom",
+                "Where_Primary": "gid",
+                "Primary_Value": $scope.uoms_gid,
+                "Order_by": "gid"
+                       }
+            var trans = {
+                Action: "",
+                Entity_Gid: $scope.entity,
+                data: datan
+                        }
+            var getuom_name = Mepadd_Service.get_uomname(trans)
+            getuom_name.then(function(result) {
+
+            $scope.uom_names = result.data.DATA;
+            //alert(JSON.stringify($scope.dtl.uom_names));
+
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+
+
+        $scope.ACselectchange=function(e,index){
+        //alert(index);
+
+                $scope.prod_gid=e.product_gid;
+                $scope.invoicedetails[index].mepdetails_productcode=e.product_code;
+                $scope.invoicedetails[index].product_name=e.product_name;
+                $scope.invoicedetails[index].uom_name=e.uom_name;
+                $scope.uoms_gid=e.product_uom_gid;
+                $scope.prod_name=e.product_name;
+                //alert($scope.prod_name);
+<!--                for(i=0;i<$scope.invoicedetails.length;i++){-->
+<!--                    if($scope.invoicedetails[i].selectedItem!=''){-->
+<!--                    $scope.invoicedetails[i].push({product_name:"12"});-->
+<!--                    }-->
+<!--                }-->
+
+
+
+        }
+        //$scope.invoicedetails.aaa="datas";
+        $scope.save_mep_mepdetails_fn=function(){
+        var result = 0;
+            if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+        $scope.htmlcontent = "";
+        }
+        for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                result = result + parseInt($scope.invoicedetails[i].mepdetails_totalamt);
+            }
+            if($scope.checkamount != result){
+            error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+
+
+            var data = {
+                "Params": {
+
+                },
+                "Classification": {
+                    "Entity_Gid": $scope.entity_gid
+
+                },
+                "par":$scope.par_data,
+
+                "par_detail":{"mepdetails_insert":$scope.invoicedetails}
+            }
+            var details = {
+                Group: 'Add_Mep',
+                Action: 'insert',
+                Create_By: $scope.create_by,
+                Type: '',
+                data: data,
+            }
+            var get_data = Mepadd_Service.paradd_service(details)
+            get_data.then(function(result) {
+            if(result.data.MESSAGE == "SUCCESS"){
+            alert("SUCCESSFULLY INSERTED");
+            sessionStorage.removeItem('mep_summary_session');
+             $window.location.href="Mep_Summary";
+            }else{
+            //alert("DATA NOT INSERTED");
+            alert(JSON.stringify(result.data));
+            }
+            }),
+            function(err) {
+                alert('no data');
+            }.finally($scope.endloading());
+        }
+
+        $scope.par_amountview=function(e){
+
+        var a=$scope.parnumer;
+        $scope.exptype=e;
+        var data = {
+                "Params": {
+                    "Filter":{"par_no":a,"exp_type":e},
+                    "Classification": {"Entity_Gid": $scope.entity_gid},
+                    "Group": "MEP_GET",
+                    "Action": "ParAmount_Get",
+                    "Create_By":$scope.create_by ,
+                    "Entity_Gid":$scope.entity_gid ,
+                    "Type": ""
+                }
+         }
+        var get_data = Mepadd_Service.getpar_service(data)
+            get_data.then(function(result) {
+            $scope.hidepar_amount=true;
+            $scope.get_paramount=result.data.DATA[0];
+            $scope.get_paramount.balance;
+            $scope.get_paramount.mep_balance_pendamt;
+<!--            $scope.usedmep=$scope.get_paramount.balance-->
+            //alert(JSON.stringify($scope.usedmep));
+            }),
+            function(err) {
+                alert('no data');
+            }
+        }
+       $scope.Par_Number_Change=function(e){
+
+        $scope.parnumer=e;
+        $scope.mepadd.mepexptype='';
+        $scope.hidepar_amount=false;
+
+       }
+
+
+
+       $scope.update_par_pardetails_approved_fn = function(){
+
+        var result = 0;
+        for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                result = result + parseInt($scope.invoicedetails[i].mepdetails_totalamt);
+            }
+            if($scope.checkamount != result){
+            error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+            if($scope.get_paramount.par_originalamount <result ){
+             error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+
+     var data = {
+                "Params": {
+                },
+                "Classification": {
+                    "Entity_Gid": $scope.entity_gid
+                },
+                "par":{"Mep_Gid":$scope.mep_Gid,
+                "Mep_Enddate":formatStringDate($scope.mepadd.enddate, 'yyyy-mm-dd'),
+                "mep_contigency": $scope.mepadd.contigencypercentage,
+                "mep_amount":$scope.mepadd.mepamount,
+                "meps_contigencyrequired": "Y",
+                "Mep_Status":"MODIFICATION-APPROVAL"},
+
+                "par_detail":{"mepdetails_insert":$scope.invoicedetails},
+
+            }
+            var details = {
+                Group: 'Add_Mep',
+                Action: 'Date_Modification',
+                Create_By: $scope.create_by,
+                update_by: $scope.create_by,
+                Type: '',
+                 data: data,
+            }
+            var get_data = Mepadd_Service.paradd_service(details)
+            get_data.then(function(result) {
+            if(result.data.MESSAGE == "SUCCESS"){
+            alert("SUCCESSFULLY UPDATED");
+            sessionStorage.removeItem('mep_summary_session');
+             $window.location.href="Mep_Summary";
+            }else{
+            alert(JSON.stringify(result.data));
+            }
+            }),
+            function(err) {
+                alert('no data');
+            }.finally($scope.endloading());
+        }
+
+
+
+        $scope.update_par_pardetails_fn=function(){
+
+            var result = 0;
+        for (var i = 0; i < $scope.invoicedetails.length; i++) {
+                result = result + parseInt($scope.invoicedetails[i].mepdetails_totalamt);
+            }
+            if($scope.checkamount != result){
+            error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+            if($scope.get_paramount.balance <result ){
+             error_toast(check_mep_amount,time_toast);
+            return false;
+            }
+            var data = {
+                "Params": {
+                },
+                "Classification": {
+                    "Entity_Gid": $scope.entity_gid
+                },
+                "par":$scope.par_datas,
+                "par_detail":{"mepdetails_insert":$scope.invoicedetails},
+            }
+            var details = {
+                Group: 'Add_Mep',
+                Action: 'UPDATE',
+                Create_By: $scope.create_by,
+                update_by: $scope.create_by,
+                Type: '',
+                 data: data,
+            }
+            var get_data = Mepadd_Service.paradd_service(details)
+            get_data.then(function(result) {
+            if(result.data.MESSAGE == "SUCCESS"){
+            alert("SUCCESSFULLY UPDATED");
+            sessionStorage.removeItem('mep_summary_session');
+             $window.location.href="Mep_Summary";
+            }else{
+            alert(JSON.stringify(result.data));
+            }
+            }),
+            function(err) {
+                alert('no data');
+            }.finally($scope.endloading());
+        }
+
+       var pr_gid=JSON.parse(sessionStorage.getItem('mep_summary_session'));
+       //alert(JSON.stringify(pr_gid));
+       $scope.view=pr_gid.view;
+       $scope.mep_Gid=pr_gid.par_data.mep_gid;
+       $scope.hide_show=false;
+       $scope.hide_submit=true;
+        $scope.buttonhide_one=true;
+        $scope.add_show=false;
+       if(pr_gid.par_data.mep_gid > 0){
+        $scope.notedit = pr_gid.par_data.meps_contigencyrequired;
+        $scope.Pstatus=pr_gid.par_data.mep_status;
+       if($scope.view=="CHECKER"){
+       $scope.buttonhide=true;
+       $scope.enable_all  = true;
+       $scope.update_enable  = true;
+       $scope.buttonhide_one=false;
+       $scope.hide_show1=false;
+       $scope.show_frapproved = false;
+       $scope.add_show=false;
+       $scope.hide_submit=false;
+
+       }
+       if($scope.view == "UPDATE"){
+       $scope.buttonhide=false;
+       $scope.buttonhide_one=true;
+       $scope.hide_show1=true;
+       $scope.show_frapproved = false;
+       $scope.hide_submit=false;
+       $scope.add_show=true;
+       }
+       if($scope.Pstatus=="MODIFICATION-APPROVAL") {
+
+          $scope.buttonhide=false;
+       $scope.enable_all  = true;
+
+       $scope.update_enable  = false;
+       $scope.buttonhide_one=true;
+       $scope.hide_show1=false;
+       $scope.show_frapproved = true;
+       $scope.hide_submit=false;
+       $scope.add_show=false;
+       }
+
+       if ($scope.Pstatus=="APPROVED"){
+          $scope.buttonhide=false;
+       $scope.enable_all  = true;
+       $scope.onetimeedit  = true;
+       $scope.update_enable  = false;
+       $scope.buttonhide_one=true;
+       $scope.hide_show1=false;
+       $scope.show_frapproved = true;
+       $scope.hide_submit=false;
+       $scope.add_show=false;
+       }
+       if ($scope.Pstatus=="APPROVED" && $scope.notedit =="Y"){
+          $scope.buttonhide=false;
+       $scope.enable_all  = true;
+       $scope.onetimeedit  = false;
+       $scope.update_enable  = false;
+       $scope.buttonhide_one=true;
+       $scope.hide_show1=false;
+       $scope.show_frapproved = true;
+       $scope.hide_submit=false;
+       $scope.add_show=false;
+       }
+
+     if($scope.view != "UPDATE") {
+      if($scope.Pstatus=="MODIFICATION-APPROVAL"){
+       $scope.buttonhide=true;
+       $scope.enable_all  = true;
+       $scope.update_enable  = true;
+       $scope.buttonhide_one=false;
+       $scope.hide_show1=false;
+       $scope.show_frapproved = false;
+       $scope.add_show=false;
+       $scope.hide_submit=false;
+       }
+       }
+
+
+
+         $scope.mepadd = [],
+        //$scope.summarychecker=[pr_gid],
+
+        //$scope.mepadd.pardate=new Date(pr_gid.par_data.par_date),
+
+        $scope.mepadd.mepno=pr_gid.par_data.mep_no,
+        $scope.mepadd.mepname=pr_gid.par_data.mep_name,
+        $scope.mepadd.selected1=pr_gid.par_data.par_amount,
+        $scope.mepadd.mepuseramount=pr_gid.par_data.mep_amount,
+        $scope.mepadd.contigencypercentage=pr_gid.par_data.mep_contigency,
+        $scope.mepadd.mepamount=pr_gid.par_data.mep_amount,
+        $scope.mepadd.finalyear=pr_gid.par_data.mep_finyear,
+        $scope.mepadd.mepexptype=pr_gid.par_data.mep_type,
+        $scope.mepadd.fromdate=new Date(pr_gid.par_data.mep_startdate),
+        $scope.mepadd.enddate=new Date(pr_gid.par_data.mep_enddate),
+        $scope.mepadd.mepmode=pr_gid.par_data.par_amount,
+        $scope.checkamount=pr_gid.par_data.mep_amount,
+        $scope.mepadd.par_no=pr_gid.par_data.mep_parno,
+        $scope.parnumer=pr_gid.par_data.mep_parno,
+        $scope.mepadd.mepbudgeted=pr_gid.par_data.mep_budgeted,
+        $scope.mepadd.bowner=pr_gid.par_data.mep_budgetowners,
+        $scope.mepadd.branchcode=pr_gid.par_data.branch_code,
+        $scope.mepadd.raisor=pr_gid.par_data.mep_raisors,
+        $scope.mepadd.pOwner=pr_gid.par_data.mep_projectowners,
+        $scope.mepadd.dept_name=pr_gid.par_data.mep_requestfor,
+        $scope.mepadd.justification=pr_gid.par_data.mep_justification,
+        $scope.file_path_notepad = pr_gid.par_data.mep_filepath,
+        $scope.mepadd.mepmode=pr_gid.par_data.mep_mode
+        //alert( pr_gid.par_data.mep_requestfor);
+        $scope.par_datas={
+            "mep_gid": $scope.mep_Gid,
+            "mep_no":pr_gid.par_data.mep_no,
+            "mep_name":pr_gid.par_data.mep_name,
+            "mep_raisor":pr_gid.par_data.mep_raisor,
+            "mep_amount":pr_gid.par_data.mep_amount,
+            "mep_finyear":pr_gid.par_data.mep_finyear,
+            "mep_type":pr_gid.par_data.mep_type,
+            "mep_startdate":formatStringDate($scope.mepadd.fromdate, 'yyyy-mm-dd'),
+            "mep_enddate":formatStringDate($scope.mepadd.enddate, 'yyyy-mm-dd'),
+            "mep_branchgid":pr_gid.par_data.mep_branchgid,
+            "mep_mode":pr_gid.par_data.mep_mode,
+            "mep_parno":pr_gid.par_data.mep_parno,
+            "mep_budgeted":pr_gid.par_data.mep_budgeted,
+            "mep_projectowner":pr_gid.par_data.mep_projectowner,
+            "mep_requestfor":pr_gid.par_data.mep_requestfor,
+            "mep_budgetowner":pr_gid.par_data.mep_budgetowner,
+            "mep_justification":pr_gid.par_data.mep_justification,
+            "mep_status":"PENDING-APPROVAL",
+            "Notepad" : ''
+            }
+        var e=$scope.mepadd.mepexptype;
+
+       $scope.par_amountview(e);
+<!--        if(pr_gid.par_data.par_isbudgeted == "YES"){-->
+<!--        $scope.paradd.isbudgeted="Yes";-->
+<!--        }else{-->
+<!--        $scope.paradd.isbudgeted="No";-->
+<!--        }-->
+       // $scope.paradd.pardesc=pr_gid.par_data.par_desc,
+        //$scope.paradd.linewisw=pr_gid.par_data.par_burstlinewise,
+        //$scope.paradd.mepwisw=pr_gid.par_data.par_burstmepwise;
+        //alert(JSON.stringify($scope.mep_Gid));
+        //alert(pr_gid.par_data.par_isbudgeted);
+
+
+        var data = {
+                "Params": {
+                    "Filter":{"Mep_Gid":pr_gid.par_data.mep_gid},
+                    "Classification": {"Entity_Gid": $scope.entity_gid},
+                    "Group": "MEP_GET",
+                    "Action": "MepDetails_Get",
+                    "Create_By":$scope.create_by ,
+                    "Entity_Gid":$scope.entity_gid ,
+                    "Type": ""
+                }
+         }
+         var get_data = Mepadd_Service.getpar_service(data)
+            get_data.then(function(result) {
+            $scope.invoicedetails=result.data.DATA;
+            //alert(JSON.stringify($scope.invoicedetails));
+            }),
+            function(err) {
+                alert('no data');
+            }
+
+        }
+        //Update Par
+           $scope.UpdatePar_fn=function(mep){
+           if(mep.contigencypercentage > 25){
+        alert('Percentage value should Be less than 25%');
+        $scope.mepadd.contigencypercentage = '';
+        return false;
+        }
+
+      if($scope.htmlcontent == undefined || $scope.htmlcontent ==""){
+                 $scope.htmlcontent = "";
+           }
+            $scope.checkamount=mep.mepamount;
+            $scope.usedmep1=parseInt(mep.mepamount)+parseInt($scope.usedmep);
+
+        if($scope.usedmep1<mep.mepamount){
+        error_toast(reach_mep_amount,time_toast);
+         $scope.add_show=false;
+        return false;
+        }
+        success_toast(update_mep,time_toast);
+             $scope.mstartdate =  formatStringDate(new Date(mep.fromdate), 'yyyy-mm-dd');
+             $scope.menddate =  formatStringDate(new Date(mep.enddate), 'yyyy-mm-dd');
+
+
+    if($scope.mepname){
+    $scope.mep_name =$scope.mepname ;
+    }
+    else{
+    $scope.mep_name =mep.mepname;
+    }
+
+            $scope.par_datas={
+            "mep_gid": $scope.mep_Gid,
+            "mep_no":mep.mepno,
+            "mep_name":$scope.mep_name,
+            "mep_raisor":$scope.Raisor_Gid,
+            "mep_amount":mep.mepamount,
+            "mep_finyear":mep.finalyear,
+            "mep_contigency":mep.contigencypercentage,
+            "mep_originalamount":mep.mepuseramount,
+            "mep_type":mep.mepexptype,
+            "mep_startdate":$scope.mstartdate,
+            "mep_enddate":$scope.menddate,
+            "mep_branchgid":$scope.Branch_Gid,
+            "mep_mode":mep.mepmode,
+            "mep_parno":mep.par_no,
+            "mep_budgeted":mep.mepbudgeted,
+            "mep_projectowner":$scope.ProjectOwner_Gid,
+            "mep_requestfor":mep.dept_name,
+            "mep_budgetowner":$scope.BudgetOwner,
+            "mep_justification":mep.justification,
+            "mep_status":"PENDING-APPROVAL",
+            "Notepad" : $scope.htmlcontent
+            }
+        }
+
+
+        $scope.approvedfor_Checker=function(e,a){
+
+        var data = {
+                "Params": {
+                "Mep_Gid":$scope.mep_Gid,
+                "Mep_status":e,
+                "tran_remark":a
+                },
+                "Classification": {
+                    "Entity_Gid": $scope.entity_gid
+                },
+                "par":{ "Mep_Gid":$scope.mep_Gid,
+                "Mep_status":e,
+                "tran_remark":a
+                },
+                "par_detail":{"mepdetails_insert":$scope.invoicedetails},
+            }
+            var details = {
+                Group: 'Add_Mep',
+                Action: 'Approvel',
+                Create_By: $scope.create_by,
+
+                Type: '',
+                 data: data,
+            }
+            var get_data = Mepadd_Service.paradd_service(details)
+             get_data.then(function(result) {
+             if(result.data.MESSAGE=="SUCCESS"){
+             alert("MEP REQUEST APPROVED");
+             sessionStorage.removeItem('mep_summary_session');
+             $window.location.href="Mep_Checker";
+             }else{
+             alert(JSON.stringify(result.data));
+             }
+             }),
+             function(err) {
+                alert('no data');
+             }.finally($scope.endloading());
+        }
+        function fn_raisorname(query) {
+            var result = $filter('filter')($scope.emp_name, {
+                'employee_name': query
+            });
+            return result;
+        }
+        getraisor_fn();
+       function getraisor_fn(){
+            var datan = {
+                "Table_name": "gal_mst_temployee",
+                "Column_1": "employee_gid,employee_code,employee_name",
+                "Column_2": "",
+                "Where_Common": "employee",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "gid"
+                       }
+            var trans = {
+                Action: "",
+                Entity_Gid: $scope.entity,
+                data: datan
+                        }
+            var getuom_name = Mepadd_Service.get_raisorname(trans)
+            getuom_name.then(function(result) {
+
+            $scope.emp_name = result.data.DATA;
+            //alert(JSON.stringify($scope.emp_name));
+
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+       }
+        function fn_branchname(query) {
+            var result = $filter('filter')($scope.branch_name, {
+                'branch_code': query
+            });
+            return result;
+        }
+       getbranch_fn();
+       function getbranch_fn(){
+            var datan = {
+                "Table_name": "gal_mst_tbranch",
+                "Column_1": "branch_gid,branch_code,branch_name",
+                "Column_2": "",
+                "Where_Common": "branch",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "gid"
+                       }
+            var trans = {
+                Action: "",
+                Entity_Gid: $scope.entity,
+                data: datan
+                        }
+            var getuom_name = Mepadd_Service.get_branchname(trans)
+            getuom_name.then(function(result) {
+
+            $scope.branch_name = result.data.DATA;
+            //alert(JSON.stringify($scope.branch_name));
+
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+       }
+       function fn_parname(query) {
+            var result = $filter('filter')($scope.par_name, {
+                'par_no': query
+            });
+            return result;
+        }
+       getpar_fn();
+       function getpar_fn(){
+            var datan = {
+                "Table_name": "gal_mst_tpar",
+                "Column_1": "par_gid,par_no,par_desc",
+                "Column_2": "",
+                "Where_Common": "par",
+                "Where_Primary": "status",
+                "Primary_Value": "APPROVED",
+                "Order_by": "gid"
+                       }
+            var trans = {
+                Action: "",
+                Entity_Gid: $scope.entity,
+                data: datan
+                        }
+            var getuom_name = Mepadd_Service.get_parname(trans)
+            getuom_name.then(function(result) {
+
+            $scope.par_name = result.data.DATA;
+            //alert(JSON.stringify($scope.par_name));
+
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+       }
+
+
+    }
+]);
+    myApp.service("Mepadd_Service", function ($http,$filter) {
+        this.getexpmetadata = function(exp_type) {
+            var respons = $http.post(Appname + "/prodget/", exp_type);
+            return respons;
+        }
+        this.get_deptname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.get_proname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.get_uomname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.get_raisorname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.get_branchname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.get_parname = function(pact) {
+        var respons = $http.post(Appname + "/prodget/", pact);
+        return respons;
+        }
+        this.paradd_service = function(data) {
+
+        var respons = $http.post(Appname + "/PAR_Add_Set/", data);
+        return respons;
+        }
+        this.getpar_service = function(get_data) {
+        var response = $http.post(Appname + "/Par_Get/", get_data);
+        return response;
+    }
+
+this.get_file_read = function (data) {
+            var response = $http.post(Appname + "/common_read_file/", data);
+            return response;
+        }
+
+
+    });
+
+
+
+        </script>
+        {% endblock %}

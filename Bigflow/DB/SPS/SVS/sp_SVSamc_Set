@@ -1,0 +1,643 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SVSamc_Set`(
+IN `Action` varchar(16),
+IN `Type` varchar(16),
+IN `lj_filters` json,
+IN `lj_classification` json,
+IN `create_by` int,
+OUT `Message` varchar(1000))
+sp_SVSamc_set :BEGIN
+##TAMILOLI 
+	declare Query_Insert text;
+	declare query_search varchar(2000);
+	declare Query_Update varchar(1000);
+	declare Query_Column varchar(1000);
+	declare Query_Value varchar(1000);
+	declare errno int;
+	declare msg varchar(1000);
+    declare max_value varchar(100);
+	declare ls_count int;
+	declare i,j int;
+
+    DECLARE done INT UNSIGNED DEFAULT 0;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+	BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+	END;
+	SET autocommit = 0;
+
+start transaction;
+    	
+  
+if Action = 'INSERT' and Type='SM_AMC_INSERT' then
+
+		select JSON_LENGTH(lj_filters,'$') into @li_filters_count;
+		select JSON_LENGTH(lj_classification,'$') into @li_classification_count;
+        
+		if  @li_filters_count <=0  then
+			 set Message = 'No filters in Json Object';
+			rollback;
+			leave sp_SVSamc_set;
+		end if;
+		if  @li_classification_count <=0  then
+			 set Message = 'No classification in Json Object';
+            rollback;
+			leave sp_SVSamc_set;
+		end if;
+		if create_by = '' or create_by is null or create_by=0  then
+			 set Message = 'No create_by in data';
+            rollback;
+			leave sp_SVSamc_set;
+		end if;
+ 
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_name'))) into @amcheader_name;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_suppliergid'))) into @amcheader_suppliergid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_periodfrom'))) into @amcheader_periodfrom;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_periodto'))) into @amcheader_periodto;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_serviceperiod'))) into @amcheader_serviceperiod;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_rmemployeegid'))) into @amcheader_rmemployeegid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_rmname'))) into @amcheader_rmname;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_amctotalamt'))) into @amcheader_amctotalamt;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_status'))) into @amcheader_status;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_filters, CONCAT('$.amcheader_type'))) into @amcheader_type;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid'))) into @entity_gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Detail_Gid'))) into @entity_detailsgid;
+            
+			if @amcheader_name = '' or @amcheader_name is null  then
+			    set Message = 'amcheader_name Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+            if @amcheader_type = '' or @amcheader_type is null  then
+			    set Message = 'amcheader_type Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_suppliergid = '' or @amcheader_suppliergid is null  then
+			    set Message = 'amcheader_suppliergid Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_periodfrom = '' or @amcheader_periodfrom is null  then
+			    set Message = 'amcheader_periodfrom Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_periodto = '' or @amcheader_periodto is null  then
+			    set Message = 'amcheader_periodto Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_rmemployeegid = '' or @amcheader_rmemployeegid is null  then
+			    set Message = 'amcheader_rmemployeegid Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_rmname = '' or @amcheader_rmname is null  then
+			    set Message = 'amcheader_rmname Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_serviceperiod = '' or @amcheader_serviceperiod is null  then
+			    set Message = 'amcheader_serviceperiod Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @amcheader_amctotalamt = '' or @amcheader_amctotalamt is null  then
+			   set Message = 'amcheader_amctotalamt Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @entity_gid = '' or @entity_gid is null  then
+			    set Message = 'entity_gid Is Not Given';
+               rollback;
+               leave sp_SVSamc_set;
+			end if;
+			if @entity_detailsgid = '' or @entity_detailsgid is null or @entity_detailsgid=0  then
+			    set Message = 'entity_detailsgid Is Not Given or incorrect type';
+               rollback;
+			   leave sp_SVSamc_set;
+			end if;
+	
+			select max(amcheader_code) into @Amcheader_Code from svs_trn_tamcheader;
+            
+			if @Amcheader_Code is null or max_value<>0 or max_value='' then
+				call sp_Generatecode_Get('WITHOUT_DATE', 'AMC', '000','000', @Message);
+				select @Message into @amcheader_code;
+			else
+				call sp_Generatecode_Get('WITHOUT_DATE', 'AMC', '000',@Amcheader_Code, @Message);
+				select @Message into @amcheader_code;
+			end if;
+           #select @amcheader_code,@amcheader_name,@amcheader_type,@amcheader_suppliergid,@amcheader_periodfrom,
+           #@amcheader_periodto,@amcheader_serviceperiod,@amcheader_rmemployeegid,@amcheader_rmname,@amcheader_amctotalamt,@amcheader_status,
+           #@entity_gid,@entity_detailsgid,@create_by;
+           
+		    set Query_Insert=' ';
+			set Query_Insert = concat('INSERT INTO svs_trn_tamcheader(amcheader_code, amcheader_name,
+																	   amcheader_type,amcheader_suppliergid,
+																	   amcheader_periodfrom,amcheader_periodto,
+																	   amcheader_serviceperiod,amcheader_rmemployeegid,
+																	   amcheader_rmname,amcheader_amctotalamt,amcheader_status,
+																	   entity_gid,entity_detailsgid,create_by)
+                                                                       VALUES
+																	   (''',@amcheader_code,''',''',@amcheader_name,''',
+																	   ''',@amcheader_type,''',''',@amcheader_suppliergid,''',
+																	   ''',@amcheader_periodfrom,''',''',@amcheader_periodto,''',
+																	   ''',@amcheader_serviceperiod,''',''',@amcheader_rmemployeegid,''',
+																	   ''',@amcheader_rmname,''',''',@amcheader_amctotalamt,''',''',@amcheader_status,''',
+																	   ',@entity_gid,',',@entity_detailsgid,',',create_by,')');
+                 	
+				#select Query_Insert;                  
+				set @Insert_query = Query_Insert;
+				PREPARE amc_set FROM @Insert_query;
+				EXECUTE amc_set;
+				set ls_count = (select ROW_COUNT());
+				DEALLOCATE PREPARE amc_set;
+                
+							if ls_count > 0 then
+								  set Message = 'SUCCESS';
+								  select LAST_INSERT_ID() into @amcheader_gid;
+                    
+								call sp_Trans_Set('Insert','SVS',@amcheader_gid,
+										 @amcheader_status,'G','SVS_CHECKER',
+                                         '',@Entity_Gid,create_by, @Message);
+								select @Message into @out_msg_tran ;
+								select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_SVSamc_Set;
+											End if;
+										
+                                      	
+                             
+							 else
+								set message='NOT SUCCESS- sp_SVSamc_set';
+							  rollback;
+							  leave sp_SVSamc_set;
+							 end if; 
+          
+			
+            
+			select json_length(lj_filters,'$.detail')into @lj_filters;
+            
+            
+            if @lj_filters='' or @lj_filters is null then
+                       set message='no data in json.';
+			   rollback;
+			   leave sp_SVSamc_set;
+             end  if;
+            #select @lj_filters;
+            #select 5;
+          
+             set i=0;
+             while i<@lj_filters do
+          
+                Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Assetdetailid')))into @Amcdetails_Assetdetailid;
+                Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Assetcatgid')))into @Amcdetails_Assetcatgid;
+                Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Remarks')))into @Amcdetails_Remarks;
+				Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Amcamt')))into @Amcdetails_Amcamt;
+				  
+                  if @Amcdetails_Assetdetailid='' or @Amcdetails_Assetdetailid is null then
+							   set message='Amcdetails_Assetdetailid is not given - sp_SVSamc_set.';
+					  rollback;
+					  leave sp_SVSamc_set;
+				   end if;
+                   
+				   if @Amcdetails_Assetcatgid='' or @Amcdetails_Assetcatgid is null then
+							   set message='Amcdetails_Assetcatgid is not given - sp_SVSamc_set.';
+					   rollback;
+					   leave sp_SVSamc_set;
+				   end if;
+           
+				   if @Amcdetails_Amcamt='' or @Amcdetails_Amcamt is null then
+						   set message='Amcdetails_Amcamt is not given - sp_SVSamc_set.';
+					 rollback;
+					 leave sp_SVSamc_set;
+			       end if;
+           #select @Amcdetails_Remarks;
+				   set Query_Column = '';
+				   set Query_Value = '';
+					if @Amcdetails_Remarks <> '' and @Amcdetails_Remarks is not null then
+								##### Query Starts.
+							set Query_Column = concat(Query_Column, ' ,Amcdetails_Remarks');
+							set Query_Value = concat(Query_Value, ',''',@Amcdetails_Remarks,'''');                                          			
+					End if;
+					#select Query_Column;
+					#select Query_Value;
+				  # select @Amcdetails_Assetdetailid,@Amcdetails_Assetcatgid,@Amcdetails_Remarks,@Amcdetails_Amcamt,
+							 # @entity_gid,@entity_detailsgid,create_by;
+                   set  Query_Insert=' ';
+                   set  Query_Insert=concat('INSERT into svs_trn_tamcdetails
+												 (amcdetails_amcheadergid,amcdetails_assetdetailid,
+												  Amcdetails_Assetcatgid,
+												  Amcdetails_Amcamt,entity_gid,entity_detailsgid,create_by ',Query_Column,')
+												  values
+												  (',@amcheader_gid,',',@amcdetails_assetdetailid,',',@Amcdetails_Assetcatgid,',
+												  ',@Amcdetails_Amcamt,',
+												   ''',@entity_gid,''',''',@entity_detailsgid,''',',create_by,' ',Query_Value,')');
+				   #select Query_Insert;
+				   set @Insert_query=Query_Insert;
+				   prepare amc_set from @Insert_query;
+				   execute amc_set;
+                   select row_count() into ls_count;
+                set i=i+1;
+			 end while;
+					 # select ls_count;
+				   if ls_count>0 then
+						set message='SUCCESS';
+						 commit;
+				   else
+						set message='FAIL';	
+						 rollback;
+						leave sp_SVSamc_set;
+				   end if;
+
+                           
+      elseif  Action='UPDATE' and Type='SM_AMC_UPDATE' then
+   
+         
+          select JSON_LENGTH(lj_filters,'$') into @lj_filters;
+		  select JSON_LENGTH(lj_classification,'$') into @lj_classification;
+        
+			if  @lj_filters <=0  then
+				set Message = 'No filters in Json Object';
+                rollback;
+				leave sp_SVSamc_set;
+			end if;
+        
+			#select 22;         
+    
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_Name')))into @AmcHeader_Name;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_SupplierGid')))into @AmcHeader_SupplierGid;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_PeriodFrom')))into @AmcHeader_PeriodFrom;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_PeriodTo')))into @AmcHeader_PeriodTo;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_ServicePeriod')))into @AmcHeader_ServicePeriod;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_rmEmployeeGid')))into @AmcHeader_rmEmployeeGid;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_rmName')))into @AmcHeader_rmName;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.AmcHeader_AmcTotalAmt')))into @AmcHeader_AmcTotalAmt;
+			Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.amcheader_gid')))into @amcheader_gid;
+		       
+              # select  @AmcHeader_Name,@AmcHeader_SupplierGid,@AmcHeader_PeriodFrom,@AmcHeader_PeriodTo,@AmcHeader_ServicePeriod,
+                     # @AmcHeader_rmEmployeeGid,@AmcHeader_rmName,@AmcHeader_AmcTotalAmt,create_by,@amcheader_gid;
+        
+		     
+        
+			   set Query_Update=' ';
+                
+               set Query_Update=concat('UPDATE svs_trn_tamcheader SET AmcHeader_Name=''',@AmcHeader_Name,''', 
+																	  AmcHeader_SupplierGid=',@AmcHeader_SupplierGid,',
+																	  AmcHeader_PeriodFrom=''',@AmcHeader_PeriodFrom,''',
+																	  AmcHeader_PeriodTo=''',@AmcHeader_PeriodTo,''',
+																	  AmcHeader_ServicePeriod=',@AmcHeader_ServicePeriod,',
+																	  AmcHeader_rmEmployeeGid=',@AmcHeader_rmEmployeeGid,',
+																	  AmcHeader_rmName=''',@AmcHeader_rmName,''',
+																	  AmcHeader_AmcTotalAmt=',@AmcHeader_AmcTotalAmt,',
+																	  Update_by=',create_by,',
+																	  Update_date= now()
+										WHERE amcheader_gid in (',@amcheader_gid,')');
+                                        
+                                                             
+				#select Query_Update;
+                set @p=Query_Update;
+				prepare stmt from @p;
+				execute stmt;
+				select row_count() into ls_count;
+                
+					if ls_count>0 then
+					   set message='SUCCESS';
+                       
+                      
+                       
+                       
+					else
+						set message='NOT SUCCESS';
+					rollback;
+					leave sp_SVSamc_set;
+					end if;   
+              
+               
+               select json_length(lj_filters,'$.detail')into @lj_filters;
+                     
+                      if @lj_filters='' or @lj_filters is null then
+                            set message='no data in json.';
+                        rollback;
+						leave sp_SVSamc_set;
+                      end  if;
+				       
+                       #select @lj_filters;
+			  set i=0;
+			  while i<@lj_filters do 
+   
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_Gid')))into @AmcDetails_Gid;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_AmcHeaderGid')))into @AmcDetails_AmcHeaderGid;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Assetdetailid')))into @Amcdetails_Assetdetailid;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_AssetCatGid')))into @AmcDetails_AssetCatGid;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_Remarks')))into @AmcDetails_Remarks;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_Amcamt')))into @AmcDetails_Amcamt;
+						   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_IsActive')))into @AmcDetails_IsActive;
+						   
+                           #select @AmcDetails_AmcHeaderGid,@Amcdetails_Assetdetailid;
+                           set @GID=0;
+                           
+                           select amcdetails_gid  into @GID   from svs_trn_tamcdetails 
+										 where amcdetails_amcheadergid= @AmcDetails_AmcHeaderGid and 
+                                         amcdetails_assetdetailid= @Amcdetails_Assetdetailid  and
+                                         amcdetails_isactive='Y' limit 1;
+                           
+                           
+                           #select @GID;
+							
+                            if @GID <>0 and @GID <>'' and @GID is not null then			##data is there
+											
+										   #select 45;
+										   #select @AmcDetails_AmcHeaderGid,@Amcdetails_Assetdetailid ;
+                                           SET Query_Search='';
+                                           
+                                           if @AmcDetails_Remarks <> '' then	
+											   set Query_Search = concat(Query_Search,' AmcDetails_Remarks  =''',@AmcDetails_Remarks,''', ');
+										   end if;
+                                           
+										   SET SQL_SAFE_UPDATES = 0;
+										   set Query_Update=' ';
+										   set Query_Update=concat('UPDATE svs_trn_tamcdetails SET ',Query_Search,'
+																								  AmcDetails_Amcamt=',@AmcDetails_Amcamt,',
+																								  Update_by=',create_by,',
+																								  Update_date= now()                                                                                                                  
+																					  WHERE amcdetails_amcheadergid in (',@AmcDetails_AmcHeaderGid,') and
+																					  amcdetails_assetdetailid in(',@Amcdetails_Assetdetailid,')');
+																					  
+										   #select Query_Update;
+										   set @p =Query_Update;
+										   prepare stmt from @p;
+										   execute stmt;
+										   select row_count() into ls_count;
+										
+											 if ls_count>0 then
+												 set message='SUCCESS';
+                                                 commit;
+											 else
+												 set message='NOT SUCCESS';
+												rollback;
+												leave sp_SVSamc_set;
+											 end if; 
+                                            
+                                             set @a=0;
+                                             
+                                             select group_concat(amcdetails_assetdetailid) into @a from svs_trn_tamcdetails
+											 where amcdetails_amcheadergid= @AmcDetails_AmcHeaderGid and  amcdetails_assetdetailid not in (@Amcdetails_Assetdetailid);
+											
+                                            #SELECT @a;
+                                            #SELECT @AmcDetails_AmcHeaderGid, @Amcdetails_Assetdetailid;
+											if @a<> 0 or @a is not null then
+													 set Query_Update='';
+													 set Query_Update=concat('UPDATE svs_trn_tamcdetails SET 
+																											  amcdetails_isactive=''N'',
+																											  Update_by=',create_by,',
+																											  Update_date= now()                                                                                                                  
+																								  WHERE amcdetails_amcheadergid in (',@AmcDetails_AmcHeaderGid,') and
+																								  amcdetails_assetdetailid in(',@a,')');
+																  
+													  #select Query_Update;
+													  set @p =Query_Update;
+													  prepare stmt from @p;
+													  execute stmt;
+													  select row_count() into ls_count;
+														 if ls_count>0 then
+															 set message='SUCCESS';
+															 commit;
+														 else
+															 set message='NOT SUCCESS';
+															rollback;
+															leave sp_SVSamc_set;
+														 end if; 
+                                            end if;
+								
+							elseif @GID =0 or @GID ='' or @GID is null then
+									  
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_AmcHeaderGid')))into @AmcDetails_AmcHeaderGid;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].Amcdetails_Assetdetailid')))into @Amcdetails_Assetdetailid;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_AssetCatGid')))into @AmcDetails_AssetCatGid;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_Remarks')))into @AmcDetails_Remarks;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.detail[',i,'].AmcDetails_Amcamt')))into @AmcDetails_Amcamt;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+										   Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Detail_Gid')))into @entity_detailsgid;
+										  #select @AmcDetails_AmcHeaderGid,@Amcdetails_Assetdetailid,@Amcdetails_Assetcatgid,@Amcdetails_Remarks,@Amcdetails_Amcamt,
+                                          #@entity_gid,@entity_detailsgid;
+                                                  
+										  set @ASSET_ID='';
+									      #select @Amcdetails_Assetdetailid;
+                                            
+                                          select amcdetails_gid  into @ASSET_ID from svs_trn_tamcdetails 
+										  where amcdetails_assetdetailid= @Amcdetails_Assetdetailid and
+										  amcdetails_isactive ='Y'limit 1;
+										  
+                                          #select @ASSET_ID;
+                                         
+                                          if @ASSET_ID <>'' and @ASSET_ID <> 0 and  @ASSET_ID is not null then ## data is there
+                                             
+												set message='ALREADY EXISTS';
+                                                #LEAVE sp_SVSamc_set;
+                                              
+                                                
+                                           
+										  elseif @ASSET_ID ='' or @ASSET_ID = 0 or @ASSET_ID is null then 
+                                           
+                                                set @Y=0;
+												select  ifnull(amcdetails_gid,0)  into @Y   from svs_trn_tamcdetails 
+												where amcdetails_amcheadergid= @AmcDetails_AmcHeaderGid and 
+												amcdetails_assetdetailid= @Amcdetails_Assetdetailid  and
+												amcdetails_isactive='N';
+												
+													#select @Y;	
+													SET Query_Search='';
+                                                
+                                                    if @AmcDetails_Remarks <> '' then	
+													   set Query_Search = concat(Query_Search,' AmcDetails_Remarks  =''',@AmcDetails_Remarks,''', ');
+												    end if;
+                                                    
+													if @Y<>0 and @Y<>'' THEN
+																		set Query_Update='';
+																		set Query_Update=concat('UPDATE svs_trn_tamcdetails SET ',Query_Search,'
+																															  AmcDetails_Amcamt=',@AmcDetails_Amcamt,',
+																															  amcdetails_isactive=''Y'',
+																															  Update_by=',create_by,',
+																															  Update_date= now()                                                                                                                  
+																												  WHERE amcdetails_amcheadergid in (',@AmcDetails_AmcHeaderGid,') and
+																												  amcdetails_assetdetailid  in(',@Amcdetails_Assetdetailid,')');
+																												  
+																		  #select Query_Update;
+																		  set @p =Query_Update;
+																		  prepare stmt from @p;
+																		  execute stmt;
+																		  select row_count() into ls_count;
+																			 if ls_count>0 then
+																				 set message='SUCCESS';
+																				 commit;
+																			 else
+																				 set message='NOT SUCCESS';
+																				rollback;
+																				leave sp_SVSamc_set;
+																			 end if; 
+                                                                             
+                                                                             
+												    elseif @Y=0 or @Y is null or @Y='' then
+                                                    
+																	 select amcdetails_amcheadergid into @AmcDetails_AmcHeaderGid from svs_trn_tamcdetails
+                                                                     where amcdetails_amcheadergid= @AmcDetails_AmcHeaderGid and amcdetails_assetdetailid=@Amcdetails_Assetdetailid and
+                                                                     amcdetails_isactiv='Y';
+                                                                    
+                                                                     
+                                                                     SET SQL_SAFE_UPDATES = 0;
+                                                                     set Query_Update='';
+																	 set Query_Update=concat('UPDATE svs_trn_tamcdetails SET amcdetails_isactive=''N'',
+																															  Update_by=',create_by,',
+																															  Update_date= now()                                                                                                                  
+																												  WHERE amcdetails_amcheadergid in (',@AmcDetails_AmcHeaderGid,')');
+																												  
+																	  #select Query_Update;
+																	  set @p =Query_Update;
+																	  prepare stmt from @p;
+																	  execute stmt;
+																	  select row_count() into ls_count;
+																		 if ls_count>0 then
+																			 set message='SUCCESS';
+																			 commit;
+																		 else
+																			 set message='NOT SUCCESS';
+																			rollback;
+																			leave sp_SVSamc_set;
+																		 end if;                                                   
+                                                    
+                                                   
+																	   set query_column=' ' ;
+																	   set query_value=' ' ;
+
+																	   if @TicketHeader_OnHold<>'' or @TicketHeader_OnHold is not null then 
+																		 set query_column=concat('amcdetails_remarks ,');
+																		 set query_value=concat('''',@AmcDetails_Remarks,''' ,');
+																	   end if;
+                                                                       
+																	   set  Query_Insert=' ';
+																	   set  Query_Insert=concat('INSERT into svs_trn_tamcdetails
+																									 (amcdetails_amcheadergid,amcdetails_assetdetailid,
+																									  Amcdetails_Assetcatgid, ',query_column,'
+																									  Amcdetails_Amcamt,entity_gid,entity_detailsgid,create_by )
+																									  values
+																									  (',@AmcDetails_AmcHeaderGid,',',@Amcdetails_Assetdetailid,',',@AmcDetails_AssetCatGid,',
+																									  ',query_value,'',@AmcDetails_Amcamt,',
+																									   ',@entity_gid,',',@entity_detailsgid,',',create_by,' )');
+																	   #select Query_Insert;
+																	   set @p=Query_Insert;
+																	   prepare stmt from @p;
+																	   execute stmt;
+																	   select row_count() into ls_count;
+																		 
+																		 # select ls_count;
+																	   if ls_count>0 then
+																			set message='SUCCESS';
+																			 commit;
+																	   else
+																			set message='NOT SUCCESS';	
+																			 rollback;
+																			leave sp_SVSamc_set;
+																	   end if;
+													 end if;
+                                           end if;       
+							end if;   
+										
+				  set i=i+1;
+			    end while;
+				   
+					   
+	   elseif  Action='UPDATE' and Type='ACTIVE_INACTIVE' then
+			  
+				  select JSON_LENGTH(lj_filters,'$') into @lj_filters;
+				  select JSON_LENGTH(lj_classification,'$') into @lj_classification;
+				
+					if  @lj_filters <=0  then
+						set Message = 'No filters in Json Object';
+						rollback;
+						leave sp_SVSamc_set;
+					end if;
+
+				   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.amcheader_gid')))into @amcheader_gid;
+				   Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.amcheader_isactive')))into @amcheader_isactive;
+				    Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+                   
+				   set Query_Update=' ';
+						
+				   set Query_Update=concat('UPDATE svs_trn_tamcheader SET   amcheader_isactive=''',@amcheader_isactive,''', 
+																		   Update_by=',create_by,',
+																		   Update_date= now()
+												WHERE amcheader_gid in (',@amcheader_gid,')and 
+												entity_gid in (',@Entity_Gid,')'); 
+												
+				   #select Query_Update;
+				   set @p =Query_Update;
+				   prepare stmt from @p;
+				   execute stmt;
+				   select row_count() into ls_count;
+						  if ls_count>0 then
+							 set message='SUCCESS';
+							 COMMIT;
+						  else
+							 set message='NOT SUCCESS- sp_SVSamc_set';
+							rollback;
+							leave sp_SVSamc_set;
+						  end if; 
+		
+        
+       elseif  Action='UPDATE' and Type='AMC_STATUS' then
+         
+				 select JSON_LENGTH(lj_filters,'$') into @lj_filters;
+				 select JSON_LENGTH(lj_classification,'$') into @lj_classification;
+                 
+                 if  @lj_filters <=0  then
+					  set Message = 'No filters in Json Object';
+					rollback;
+					leave sp_SVSamc_set;
+				 end if;
+                 
+                 Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.Amcheader_Gid')))into @Amcheader_Gid;
+				 Select JSON_UNQUOTE(JSON_EXTRACT(lj_filters,CONCAT('$.Amcheader_Status')))into @Amcheader_Status;
+                 Select JSON_UNQUOTE(JSON_EXTRACT(lj_classification,CONCAT('$.Entity_Gid')))into @Entity_Gid;
+                 
+                 set Query_Update='';
+                 set Query_Update=concat('UPDATE svs_trn_tamcheader SET   amcheader_status=''',@Amcheader_Status,''',
+																			update_by=',create_by,',
+                                                                            update_date=now()
+									  	  WHERE amcheader_gid in (',@Amcheader_Gid,') and 
+												entity_gid in (',@Entity_Gid,')');
+                 #select Query_Update;
+				 set @p =Query_Update;
+				 prepare stmt from @p;
+				 execute stmt;
+				 select row_count() into ls_count;
+					  if ls_count>0 then
+						 set message='SUCCESS';
+						 COMMIT;
+                         
+                          call sp_Trans_Set('update','SVS',@amcheader_gid,
+										 'APPROVED','C','SVS_MAKER',
+                                         '',@Entity_Gid,create_by, @Message);
+								select @Message into @out_msg_tran ;
+								select @out_msg_tran;
+											if @out_msg_tran > 0 then
+													set Message = 'SUCCESS';						
+											elseif @out_msg_tran <= 0  then
+													set Message='Fail In Tran';
+													leave sp_SVSamc_Set;
+											End if;
+					  else
+						 set message='NOT SUCCESS- sp_SVSamc_set';
+						rollback;
+						leave sp_SVSamc_set;
+					  end if;
+       end if;
+          
+          
+          end

@@ -1,0 +1,1144 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}ECF Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="makersummary" ng-controller="ctrlsummary" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>ECF Summary</h4>
+            </div>
+        </div>
+        <div class="row">
+            <form role="form" name="inwardsummary_valid">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>CR No</label>
+                                <input ng-model="invoiceheader_crno"
+                                       ng-change="ACselectchange()"/>
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Type</label>
+                                <md-select ng-model="selectedtype" multiple="" ng-change="ACselectchange()">
+                                    <md-optgroup label="Invocie Types">
+                                        <md-option ng-value="invoice.metadata_value"
+                                                   ng-repeat="invoice in Invoice_Types">
+                                            {{invoice.metadata_value}}
+                                        </md-option>
+                                    </md-optgroup>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Number</label>
+                                <input ng-model="invoice_number"
+                                       ng-change="ACselectchange()"
+                                       numbers-only/>
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-md-3">
+                            <md-autocomplete
+                                    md-clear-button="true"
+                                    md-floating-label="Choose Supplier"
+                                    md-input-maxlength=126
+                                    md-input-id="Supplier_Names"
+                                    ng-modle="suppliers"
+                                    md-item-text="itempn.supplier_name"
+                                    md-items="itempn in getSupplierName(searchSuplierName)"
+                                    md-selected-item-change="supplierNameChanged(itempn.supplier_gid)"
+                                    md-min-length=0 md-search-text="searchSuplierName"
+                                    ng-model="itempn" md-no-cache="true" size="5"
+                                    md-selected-item="selectedsupplier">
+                                <md-item-template>
+                                    <span md-highlight-text="searchSuplierName"> {{itempn.supplier_name}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Supplier Name matching were {{searchSuplierName}}found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-autocomplete
+                                    md-clear-button="true" md-floating-label="Choose ECF Status"
+                                    md-input-maxlength=126
+                                    md-item-text="item.status_name"
+                                    md-items="item in get_ecf_status_data(search_ecf_status)"
+                                    md-selected-item-change="change_ecf_values(item.status_name)"
+                                    md-min-length=0 md-search-text="search_ecf_status"
+                                    md-no-cache="true" size="5"
+                                    md-selected-item="selected_ecf_status">
+                                <md-item-template>
+                                    <span md-highlight-text="search_ecf_status"> {{item.status_name}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No ECF Status matching "{{search_ap_status}}"
+                                    were
+                                    found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-autocomplete
+                                    md-clear-button="true" md-floating-label="Choose AP Status"
+                                    md-input-maxlength=126
+                                    md-item-text="item.status_name"
+                                    md-items="item in get_ap_status_data(search_ap_status)"
+                                    md-selected-item-change="change_ap_values(item.status_name)"
+                                    md-min-length=0 md-search-text="search_ap_status"
+                                    md-no-cache="true" size="5"
+                                    md-selected-item="selected_ap_status">
+                                <md-item-template>
+                                    <span md-highlight-text="search_ap_status"> {{item.status_name}}</span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No AP Status matching "{{search_ap_status}}"
+                                    were
+                                    found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+
+                        <div class="col-md-3">
+                            <md-autocomplete md-clear-button="true"
+                                             md-floating-label="Employee"
+                                             md-item-text="item.employee_name"
+                                             md-items="item in getemployee_srch(searchemp)"
+                                             md-menu-class="md-virtual-repeat-container"
+                                             md-min-length=0
+                                             md-no-cache="true"
+                                             md-search-text="searchemp"
+                                             md-selected-item="selectedemp"
+                                             md-selected-item-change="employee_change(item.employee_gid)"
+                                             ng-disabled="Customer_disab"
+                                             ng-init="count=0">
+                                <md-item-template>
+                                    <span md-highlight-text="searchTex"> {{item.employee_name}} - {{item.employee_code}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Employee matching "{{searchTex}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>From Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="from_date"
+                                               ng-change="ACselectchange()"
+                                               formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-lg-3 col-md-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>To Date</label>
+                                <md-datepicker md-hide-icons="calendar"
+                                               ng-model="to_date"
+                                               ng-change="ACselectchange()"
+                                               formatDate></md-datepicker>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Min Amount</label>
+                                <input ng-model="min_amount"
+                                       ng-change="ACselectchange()"
+                                       numbers-only maxlength="10"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3 col-lg-3 col-sm-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Max Amount</label>
+                                <input ng-model="max_amount"
+                                       ng-change="ACselectchange()"
+                                       numbers-only maxlength="10"/>
+                            </md-input-container>
+                        </div>
+
+                        <div class="col-md-3">
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       ng-click="find_maker_summary()">
+                                <md-icon>search</md-icon>
+                                <md-tooltip>Search</md-tooltip>
+                            </md-button>
+
+                            <md-button class="md-fab md-mini md-warn"
+                                       ng-click="clear_seach()">
+                                <md-icon>search_off</md-icon>
+                                <md-tooltip>Clear Search</md-tooltip>
+                            </md-button>
+
+                            <md-button class="md-fab md-mini md-primary custbutton"
+                                       href="get_Accounting_Entry_Data?action=GET&type=ECF_HEADER_BY_BRANCH&invoiceheader_crno={{invoiceheader_crno}}&employee_gid={{employee_gid}}&invoice_type={{invoice_type}}&invoice_status={{invoice_status}}&supplier_name={{changed_supplier_gid}}&invoice_number={{invoice_number}}&min_amount={{min_amount}}&max_amount={{max_amount}}&from_date={{from_date_changed}}&to_date={{to_date_changed}}&ecf_status={{ecf_status}}&ap_status={{ap_status}}">
+                                <md-icon>get_app</md-icon>
+                                <md-tooltip>Download XL</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>CR No</th>
+                        <th>Invoice Type</th>
+                        <th>Invoice No</th>
+                        <th>Invoice Date</th>
+                        <th>Invoice Amount</th>
+                        <th>Payment Status</th>
+                        <th>Transaction Details</th>
+                        <th>ECF Status</th>
+                        <th>AP Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sum in maker_summary">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <!--                        <td ng-click="invoicehistory(sum)"><a href="">-->
+                        <td>
+                            {{sum.invoiceheader_crno}}</a>
+                        </td>
+                        <td>
+                            {{sum.invoiceheader_invoicetype}}
+                        </td>
+                        <td>{{sum.invoiceheader_invoiceno}}</td>
+                        <td>{{sum.invoiceheader_invoicedate | date:'dd-MMM-yyyy'}}</td>
+                        <td align="right">{{sum.invoiceheader_amount}}</td>
+                        <td align="center">
+                            <a href="" ng-click="view_payment(sum)"> VIEW PAYMENT </a>
+                        </td>
+                        <td align="center">
+                            <a href="" ng-click="view_tran_details(sum)"> VIEW TRANSACTION </a>
+                        </td>
+                        <td align="center">{{sum.ecf_status}}</td>
+                        <td align="center">{{sum.ap_status}}</td>
+                        <td align="center">
+                            <a href="" title="View Data" ng-click="view_header(sum)" align="center">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                            <a href=""
+                               ng-hide="sum.ecf_status =='NEW'">
+                                <i class="material-icons" ng-click="get_pdf(sum)"
+                                   style="material-icons.line-height:3px">insert_drive_file
+                                </i>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr ng-show="maker_summary.length ==  0">
+                        <td class="warning" colspan="11">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9" align="center">
+                            <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
+                                max-size="maxSize" ng-change="pageChanged()"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2" align="center">
+                            <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="view_tran_details" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:70%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            Transaction Details
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <form class="modal-body popup-body" name="supplier" novalidate>
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <div class="row table-responsive">
+                                        <div class="col-md-12 col-lg-12 col-sm-12">
+                                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                                   md-progress="deferred">
+                                                <thead class="header">
+                                                <tr>
+                                                    <th>S.No</th>
+                                                    <th>Status</th>
+                                                    <th>From Date</th>
+                                                    <th>Remarks</th>
+                                                    <th>Employee Name</th>
+                                                    <th>Approver Name</th>
+                                                    <th>Approved By</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr align="center"
+                                                    ng-repeat="ass in ecf_tran_summary.slice(((currentPages-1)*itemsPerPages),((currentPages)*itemsPerPages)) | filter:search:strict">
+                                                    <td>{{((currentPages-1)*itemsPerPages)+$index+1}}
+                                                    </td>
+                                                    <td>{{ass.tran_status}}</td>
+                                                    <td>{{ass.tran_fromdate}}</td>
+                                                    <td>{{ass.tran_remarks}}</td>
+                                                    <td>{{ass.employee_name}}<br>
+                                                        <span ng-hide="ass.employee_name==null"
+                                                              ng-click=view_emp(ass.employee_gid) style="color:green">View Details</span>
+                                                    </td>
+                                                    <td>{{ass.approvername}}
+                                                        <br>
+                                                        <span ng-hide="ass.approvername==null"
+                                                              ng-click=view_emp(ass.approver_gid) style="color:green">View Details</span>
+                                                    </td>
+                                                    <td>{{ass.approvedby}}
+                                                        <br>
+                                                        <span ng-hide="ass.approvedby==null"
+                                                              ng-click=view_emp(ass.approveby_gid) style="color:green">View Details</span>
+                                                    </td>
+
+                                                </tr>
+                                                </tbody>
+                                                <tfoot>
+                                                <tr align="center">
+                                                    <td colspan="5">
+                                                        <ul uib-pagination
+                                                            total-items="ecf_tran_summary.length"
+                                                            ng-model="currentPages"
+                                                            max-size="maxSizes"
+                                                            class="pagination-sm"
+                                                            boundary-links="true"
+                                                            items-per-page="itemsPerPages"></ul>
+                                                    </td>
+                                                    <td colspan="2">
+                                                        Total Count:{{ecf_tran_summary.length}}
+                                                    </td>
+                                                </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4">
+                                        <span class="md-title title-color">Employee Name : </span>
+                                        <span class="md-subhead">{{emp_details[0].employee_name}}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span class="md-title title-color">Branch Code : </span>
+                                        <span class="md-subhead">{{emp_details[0].branch_code}}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span class="md-title title-color">Designation: </span>
+                                        <span class="md-subhead">{{emp_details[0].designation_name}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-offset-5">
+                                    <md-button class="md-raised" value="close"
+                                               aria-label="Close" data-dismiss="modal">Cancel
+                                    </md-button>
+                                </div>
+                            </div>
+                            <hr>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="view_payment_details" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabels2">
+                            Inward and Payment Details
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <h3>Inward Details</h3>
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>Inward No,</th>
+                                                <th>Inward Date</th>
+                                                <th>Channel</th>
+                                                <th>AWB NO</th>
+                                                <th>No Packet</th>
+                                                <th>Remark</th>
+                                                <th>Invoice Date</th>
+                                                <th>Invoice No</th>
+                                                <th>Invoice Amount</th>
+                                                <th>Invoice Status</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr align="center"
+                                                ng-repeat="inw in Inward_Details.slice(((currentPage_i-1)*itemsPerPage_i),((currentPage_i)*itemsPerPage_i)) | filter:search:strict">
+                                                <td>
+                                                    <center>
+                                                        {{((currentPage_i-1)*itemsPerPage_i)+$index+1}}
+                                                    </center>
+                                                </td>
+                                                <td>{{inw.inward_No}}</td>
+                                                <td>{{inw.inward_date}}</td>
+                                                <td>{{inw.channel}}</td>
+                                                <td>{{inw.awb_no}}</td>
+                                                <td>{{inw.no_pocket}}</td>
+                                                <td>{{inw.remark}}</td>
+                                                <td>{{inw.invoice_date}}</td>
+                                                <td>{{inw.invoice_no}}</td>
+                                                <td>{{inw.invoice_amount}}</td>
+                                                <td ng-if="inw.invoiceheader_status=='PAYMENT || PAID'">
+                                                    {{inw.invoiceheader_status}}
+                                                </td>
+                                                <td ng-if="inw.invoiceheader_status!='PAYMENT'">On-Process</td>
+
+                                            </tr>
+                                            <tr ng-show="Inward_Details.length == 0">
+                                                <td class="warning" colspan="16">
+                                                    No Records Found.
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                            <tfoot>
+                                            <tr align="center">
+                                                <td colspan="10">
+                                                    <ul uib-pagination
+                                                        total-items="Inward_Details.length"
+                                                        ng-model="currentPage_i"
+                                                        max-size="maxSize_i"
+                                                        class="pagination-sm"
+                                                        boundary-links="true"
+                                                        items-per-page="itemsPerPage_i"></ul>
+                                                </td>
+                                                <td colspan="2">
+                                                    Total Count:{{Inward_Details.length}}
+                                                </td>
+                                            </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <h3>Payment Details</h3>
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>PV No</th>
+                                                <th>Pay Mode</th>
+                                                <th>Header Date</th>
+                                                <th>Cheque Number</th>
+                                                <th>Cheque Date</th>
+                                                <th>Header Amount</th>
+                                                <th>Header Details Amount</th>
+                                                <th>Ref Number</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr align="center"
+                                                ng-repeat="pay in Payment_Details.slice(((currentPage_i-1)*itemsPerPage_i),((currentPage_p)*itemsPerPage_p)) | filter:search:strict">
+                                                <td>
+                                                    <center>
+                                                        {{((currentPage_p-1)*itemsPerPage_p)+$index+1}}
+                                                    </center>
+                                                </td>
+                                                <td>{{pay.paymentheader_pvno}}</td>
+                                                <td>{{pay.paymentheader_paymode}}</td>
+                                                <td>{{pay.paymentheader_date | date:'dd-MMM-yyyy'}}</td>
+                                                <td>{{pay.paymentheader_chqno}}</td>
+                                                <td>{{pay.paymentheader_chqdate}}</td>
+                                                <td>{{pay.paymentheader_amount}}</td>
+                                                <td>{{pay.paymentdetails_amount}}</td>
+                                                <td>{{pay.paymentheader_callbackrefno}}</td>
+                                            </tr>
+                                            <tr ng-show="Payment_Details.length == 0">
+                                                <td class="warning" colspan="12">
+                                                    No Records Found.
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                            <tfoot>
+                                            <tr align="center">
+                                                <td colspan="7">
+                                                    <ul uib-pagination
+                                                        total-items="Payment_Details.length"
+                                                        ng-model="currentPage_p"
+                                                        max-size="maxSize_p"
+                                                        class="pagination-sm"
+                                                        boundary-links="true"
+                                                        items-per-page="itemsPerPage_p"></ul>
+                                                </td>
+                                                <td colspan="2">
+                                                    Total Count:{{Payment_Details.length}}
+                                                </td>
+                                            </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--        <div class="row">-->
+        <!--            <div class="col-md-offset-6">-->
+        <!--                <md-button class="md-raised custbutton"-->
+        <!--                           ng-click="approv_set('APPROVE')">APPROVE-->
+        <!--                </md-button>-->
+        <!--            </div>-->
+        <!--        </div>-->
+    </div>
+</div>
+<style>
+        .title-color{
+    color:#2159A6;
+    }
+
+
+
+
+
+
+
+
+
+</style>
+{% endverbatim %}
+<script>
+    var app=angular.module('makersummary',['ngMaterial','ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+app.controller('ctrlsummary', ['$scope', '$filter','$http', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter,$http, $mdDateLocale, servicesummary, $window, $mdDialog, $element) {
+
+        $element.find('input').on('keydown', function(ev) {
+            ev.stopPropagation();
+        });
+
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+        $scope.currentPage_i = 1;
+        $scope.maxSize_i = 3;
+        $scope.itemsPerPage_i = 10;
+
+        $scope.currentPage_p = 1;
+        $scope.maxSize_p = 3;
+        $scope.itemsPerPage_p = 10;
+
+        $scope.currentPages = 1;
+        $scope.maxSizes = 3;
+        $scope.itemsPerPages = 10;
+
+        $scope.airwayno = '';
+        $scope.courier = '';
+        $scope.Summarydate = '';
+        $scope.status = '';
+        $scope.invdate = "";
+        $scope.ls_followup_date = new Date();
+        $scope.maker_summary=[];
+        $scope.supplier_gid=" ";
+        $scope.changed_supplier_gid=" ";
+        $scope.selectedtype=[];
+
+
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        var td = detail.date;
+        var employee_gid = detail.employee_gid;
+        sessionStorage.removeItem('ECF');
+
+
+        $scope.minDate = new Date(
+            $scope.ls_followup_date.getFullYear(),
+            $scope.ls_followup_date.getMonth(),
+            $scope.ls_followup_date.getDate()
+        );
+
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.loading_transaction = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_tran_details')),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+        $scope.total_row_execute=0;
+        $scope.pageChanged = function(){
+             if($scope.maker_summary.length==0){
+                $scope.currentPage=1;
+             }
+             if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.get_total_row_maker_summary();
+              }
+             summary();
+        }
+        $scope.find_maker_summary=function(){
+            $scope.currentPage=1;
+            $scope.Total_Row=0;
+            $scope.total_row_execute=0;
+            summary();
+        }
+
+        $scope.supplierNameChanged=function(supplier_gid){
+            sessionStorage.removeItem('ecf_summary_filter_data');
+            if(supplier_gid!=undefined){
+                $scope.changed_supplier_gid = supplier_gid;
+            }
+            else {
+                $scope.changed_supplier_gid="";
+            }
+
+        };
+
+        $scope.getSupplierName = function(query) {
+            if(query==undefined){
+                $scope.clear_old_supplier_values();
+            }
+            var datas={"Params":{"Group":"GET_EMP_DATA","Type":"SUPPLIER","Sub_Type":"SUPPLIER_ALL",
+                 "FILTER":{"Supplier_name" :$scope.searchSuplierName,
+                 "Supplier_code":$scope.search_supplier_code,
+                 "Supplier_gstno":$scope.search_supplier_gstno,"Pan_Number":$scope.pan_number},"Limit": 0 + "," + 30,}};
+
+                 return $http.post(Appname + '/Get_Supplier/' , datas).then(function(data) {
+
+                    var final_values=data.data.DATA;
+                    console.log(final_values);
+                    if(query==undefined){
+                        $scope.toggled();
+                    }
+                    if(data.data.MESSAGE=="NOT_FOUND"){
+                        final_values=[{"supplier_name":"NOT FOUND...","supplier_gid":0}];
+                    }
+                    return final_values;
+                  });
+        }
+
+        $scope.employee_gid="";
+        $scope.employee_change =function(emp_gid){
+            debugger;
+            sessionStorage.removeItem('ecf_summary_filter_data');
+            if(emp_gid!=undefined){
+                $scope.employee_gid=emp_gid;
+            }
+            else{
+                $scope.employee_gid="";
+            }
+        }
+
+        $scope.getemployee_srch= function(searchText) {
+            var datas = {
+                params: {
+                    "Group": "GET_EMP_DATA",
+                    "Limit" : 0 + "," + 30,
+                    "Type": "EMPLOYEE",
+                    "Sub_Type": "EMPLOYEE_ALL",
+                    "json" : {
+                        "Params": {
+                                "FILTER": {
+                                    "Employee_name":searchText,
+                                },
+                            }
+                        }
+                    }
+                }
+            return $http.post(Appname + '/employee_mst_data/' , datas).then(function(data) {
+            console.log(data.data);
+                return data.data.DATA;
+              });
+        };
+
+        $scope.view_payment=function(header){
+        debugger;
+            var datas={params:{"action":"GET","type":"ECF_INVOICE_PAYMENT_GET",
+                "filter":{"invoiceheader_crno":header.invoiceheader_crno,
+                "Page_Index":$scope.currentPage-1,"Page_Size":10000}}};
+             $scope.loading();
+             var payment_data = servicesummary.get_approval_summary(datas);
+             payment_data.then(function(result) {
+                $scope.all_payment_file_data = result.data;
+                 modalshow('view_payment_details');
+                 $scope.Inward_Details=$scope.all_payment_file_data.Inward_Details;
+                 $scope.Payment_Details=$scope.all_payment_file_data.Payment_Details;
+
+             },
+             function(err) {
+                alert('No data!.');
+             }).finally($scope.endloading);
+        }
+
+<!--        summary();-->
+          call_summary_with_session();
+          function call_summary_with_session(){
+                var session_ecf_summary_filter_data = JSON.parse(sessionStorage.getItem('ecf_summary_filter_data'));
+                if(session_ecf_summary_filter_data){
+                    summary();
+                }
+          }
+
+
+        function summary() {
+        debugger;
+             $scope.invdate=$filter('date')($scope.invdate,"yyyy-MM-dd");
+             $scope.send_invoice_type=$scope.selectedtype.join();
+<!--             $scope.from_date=$filter('date')($scope.from_date,"yyyy-MM-dd");-->
+<!--             $scope.to_date=$filter('date')($scope.to_date,"yyyy-MM-dd");-->
+            var datas={params:{"action":"GET","type":"ECF_HEADER_BY_BRANCH",
+            "filter":{"ecf_number":$scope.invoiceheader_crno,
+            "invoiceheader_inwarddetailsgid":"",
+            "invoiceheader_invoicetype":$scope.send_invoice_type,
+            "selectedtype":$scope.selectedtype,
+            "invoiceheader_otheramount":"",
+            "employee_name":$scope.employee_gid,
+            "invoiceheader_invoiceno":$scope.invoice_number,
+            "invoiceheader_status":"",
+            "supplier_gstno":"",
+            "invoiceheader_gst":"",
+            "supplier_name":$scope.changed_supplier_gid,
+            "from_date":$scope.from_date_changed,
+            "to_date":$scope.to_date_changed,
+            "min_amount":$scope.min_amount,
+            "ecf_status":$scope.ecf_status,
+            "ap_status":$scope.ap_status,
+            "max_amount":$scope.max_amount,
+            "invoiceheader_status":$scope.invoice_status,
+            "selectedsupplier":$scope.selectedsupplier,
+            "selectedemp":$scope.selectedemp,
+            "Page_Index":$scope.currentPage-1,
+            "Page_Size":$scope.itemsPerPage}}};
+
+            var session_ecf_summary_filter_data = JSON.parse(sessionStorage.getItem('ecf_summary_filter_data'));
+            if(session_ecf_summary_filter_data){
+                datas=session_ecf_summary_filter_data;
+                var filter_data=datas.params.filter;
+                $scope.to_date=filter_data.to_date;
+                $scope.from_date=filter_data.from_date;
+
+                $scope.selectedtype=filter_data.selectedtype,
+                $scope.invoice_number=filter_data.invoiceheader_invoiceno;
+                $scope.selected_ecf_status=filter_data.ecf_status;
+                $scope.ecf_status=filter_data.ecf_status;
+                $scope.selected_ap_status=filter_data.ap_status;
+                $scope.ap_status=filter_data.ap_status;
+                $scope.max_amount=filter_data.max_amount;
+                $scope.min_amount=filter_data.min_amount;
+                $scope.invoiceheader_crno=filter_data.ecf_number;
+                $scope.selectedemp=filter_data.selectedemp;
+                $scope.selectedsupplier=filter_data.selectedsupplier;
+                datas["params"]["filter"]["Page_Index"]=$scope.currentPage-1;
+            }
+            sessionStorage.setItem('ecf_summary_filter_data',JSON.stringify(datas));
+
+            var summary = servicesummary.get_ecf_maker_summary(datas);
+            summary.then(function(result) {
+                    $scope.maker_summary = result.data;
+                    $scope.maintable = result.data;
+
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                        $scope.maker_summary=[];
+                    }
+                    if($scope.total_row_execute==0){
+                        $scope.Total_Row=($scope.maker_summary.length)+($scope.currentPage*10);
+                    }
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+        }
+        $scope.get_total_row_maker_summary=function(){
+            $scope.invdate=$filter('date')($scope.invdate,"yyyy-MM-dd");
+            $scope.send_invoice_type=$scope.selectedtype.join();
+            var datas={params:{"action":"GET","type":"ECF_HEADER_BY_BRANCH_COUNT",
+            "filter":{"ecf_number":$scope.invoiceheader_crno,
+            "invoiceheader_inwarddetailsgid":"",
+            "invoiceheader_invoicetype":$scope.send_invoice_type,
+            "selectedtype":$scope.selectedtype,
+            "invoiceheader_otheramount":"",
+            "employee_name":$scope.employee_gid,
+            "invoiceheader_invoiceno":$scope.invoice_number,
+            "invoiceheader_status":"",
+            "supplier_gstno":"",
+            "invoiceheader_gst":"",
+            "supplier_name":$scope.changed_supplier_gid,
+            "from_date":$scope.from_date_changed,
+            "to_date":$scope.to_date_changed,
+            "min_amount":$scope.min_amount,
+            "ecf_status":$scope.ecf_status,
+            "ap_status":$scope.ap_status,
+            "max_amount":$scope.max_amount,
+            "invoiceheader_status":$scope.invoice_status,
+            "selectedsupplier":$scope.selectedsupplier,
+            "selectedemp":$scope.selectedemp,
+            "Page_Index":0,
+            "Page_Size":$scope.itemsPerPage}}};
+
+            var summary = servicesummary.get_ecf_maker_summary(datas);
+            summary.then(function(result) {
+                    $scope.maker_summary_count = result.data;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                    }
+                    $scope.Total_Row=$scope.maker_summary_count[0].count;
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+        }
+
+        $scope.clear_seach=function(){
+            sessionStorage.removeItem('ecf_summary_filter_data');
+            $scope.selectedtype=[];
+            $scope.changed_supplier_gid="";
+            $scope.selectedsupplier="";
+            $scope.invoice_number="";
+            $scope.selected_ecf_status="";
+            $scope.ecf_status="";
+            $scope.selected_ap_status="";
+            $scope.ap_status="";
+
+            $scope.from_date="";
+            $scope.to_date="";
+            $scope.max_amount="";
+            $scope.min_amount="";
+            $scope.invoiceheader_crno="";
+            $scope.selected_branch="";
+            $scope.branch_gid="";
+            $scope.selectedemp="";
+            $scope.employee_gid="";
+
+         }
+
+        $scope.ACselectchange = function() {
+            debugger;
+            $scope.invoice_type=$scope.selectedtype.join();
+             sessionStorage.removeItem('ecf_summary_filter_data');
+            $scope.from_date1 = $filter('date')($scope.from_date, 'dd-MM-yyyy');
+            $scope.to_date1= $filter('date')($scope.to_date, 'dd-MM-yyyy');
+
+             $scope.from_date_changed=$filter('date')($scope.from_date,"yyyy-MM-dd");
+             $scope.to_date_changed=$filter('date')($scope.to_date,"yyyy-MM-dd");
+
+            $scope.maker_summary = $filter('filter')($scope.maintable, {
+                "invoiceheader_invoicetype": $scope.invoice_type,
+                "invoiceheader_crno":$scope.invoiceheader_crno,
+                "supplier_name":$scope.supplier_name,
+                "invoiceheader_invoiceno":$scope.invoice_number,
+                "invoiceheader_invoicedate": $scope.from_date1,
+                "invoiceheader_amount":$scope.min_amount,
+                "ecf_status":$scope.ecf_status,
+                "ap_status":$scope.ap_status,
+            }, );
+        }
+
+
+        $scope.view_header=function(detail){
+            debugger;
+            $scope.Invoice_detail = detail;
+            var ap_status=detail.ap_status;
+            var ecf_status=detail.ecf_status;
+             if(ecf_status=="APProcess" && ap_status!="NEW"){
+
+                 var datas={params:{"action":"GET","type":"ECF_TO_AP_DATA",
+                    "filter":{"ecf_cr_number":detail.invoiceheader_crno}}};
+                $scope.loading();
+                var summary = servicesummary.get_ecf_maker_summary(datas);
+                summary.then(function(result) {
+                    $scope.maker_summary = result.data;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                    }
+                        var checkerdtl = {
+                        type: detail.invoiceheader_invoicetype,
+                        invoiceheader_gid: result.data[0].invoiceheader_gid,
+                        supplier_gid: detail.supplier_gid,
+                        type_of_page:"QUERY"
+                    };
+                    sessionStorage.setItem('checkerdtl', JSON.stringify(checkerdtl));
+                    $window.location.href = "ECF_AP_Billentry_Checker";
+
+
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+
+
+             }
+             else {
+                var ECF_session = {
+                        type: $scope.Invoice_detail.invoiceheader_invoicetype,
+                        invoiceheader_gid: $scope.Invoice_detail.invoiceheader_gid,
+                        supplier_gid: $scope.Invoice_detail.supplier_gid,
+                        invoiceheader_crno: $scope.Invoice_detail.invoiceheader_crno,
+                        type:"Approval",
+                        screen:"Inventory",
+                        invoiceheader_commoditygid:$scope.Invoice_detail.invoiceheader_commoditygid,
+                        status:$scope.Invoice_detail.invoiceheader_status,
+                        main_status:0,
+                    };
+                sessionStorage.setItem('ECF', JSON.stringify(ECF_session));
+                $window.location.href = "ECF_billentry_checker";
+             }
+
+
+        }
+
+
+        $scope.ap_status_list=[{"status_name":"AP INITIATED"},{"status_name":"APPROVED"},
+                                {"status_name":"BOUNCE"},{"status_name":"CHECKER"},{"status_name":"DISPATCHED"},
+                                {"status_name":"MAKER"},{"status_name":"NEW"},{"status_name":"PAID"},
+                                {"status_name":"PAY INITIATED"},{"status_name":"PAYMENT"},
+                                {"status_name":"REAUDIT"},{"status_name":"REJECTED"}];
+
+        $scope.ecf_status_list=[{"status_name":"NEW"},{"status_name":"PENDING FOR APPROVAL"},
+                                     {"status_name":"APPROVED"},{"status_name":"REJECTED"},
+                                     {"status_name":"APProcess"}];
+
+        $scope.get_ecf_status_data = Change_Status_Name;
+            function Change_Status_Name(query) {
+                debugger;
+               var result = $filter('filter')($scope.ecf_status_list, {
+               'status_name': query
+                 });
+               return result;
+       }
+       $scope.change_ecf_values=function(ecf_status){
+            sessionStorage.removeItem('ecf_summary_filter_data');
+            if(ecf_status!=undefined){
+                $scope.ecf_status=ecf_status;
+            }
+            else{
+                $scope.ecf_status="";
+            }
+       }
+
+       $scope.get_ap_status_data = Change_AP_Status_Name;
+            function Change_AP_Status_Name(query) {
+                debugger;
+               var result = $filter('filter')($scope.ap_status_list, {
+               'status_name': query
+                 });
+               return result;
+       }
+
+       $scope.change_ap_values=function(ap_status){
+            sessionStorage.removeItem('ecf_summary_filter_data');
+            if(ap_status!=undefined){
+                $scope.ap_status=ap_status;
+            }
+            else{
+                $scope.ap_status="";
+            }
+
+       }
+
+       $scope.view_tran_details=function(header){
+           debugger;
+           var ap_status=header.ap_status;
+           var ecf_status=header.ecf_status;
+           var Header_Gid="";
+           var type="";
+             if(ecf_status=="APProcess" && ap_status!="NEW"){
+                Header_Gid=header.apinvoiceheader_gid;
+                type="AP_INVOICE"
+             }
+             else{
+                 Header_Gid=header.invoiceheader_gid;
+                 type="ECF_INVOICE"
+             }
+
+            var datas={params:{"action":"GET","type":"ECF_TRANS_GET",
+                "filter":{"Ref_Name":type,"RefTable_Gid":Header_Gid}}};
+             $scope.loading();
+
+
+             var ecf_tran_status = servicesummary.get_approval_summary(datas);
+             ecf_tran_status.then(function(result) {
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                    }
+                    $scope.ecf_tran_summary = result.data;
+                    console.log($scope.ecf_tran_summary);
+                    modalshow('view_tran_details');
+             },
+             function(err) {
+                alert('No data!.');
+             }).finally($scope.endloading);
+      }
+
+      $scope.view_emp=function(emp_gid){
+        debugger;
+        $scope.emp_details=[];
+        var datas={params:{"action":"GET","type":"EMP_DETAILS", "filter":{"employee_gid":emp_gid}}};
+            $scope.loading_transaction();
+            var summarys = servicesummary.get_approval_summary(datas);
+            summarys.then(function(result) {
+                $scope.endloading();
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                    alert(JSON.stringify(result.data.DATA));
+                }
+                $scope.emp_details= result.data;
+                console.log($scope.emp_details);
+
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+
+     }
+     $scope.get_pdf = function(e){
+            $scope.loading();
+            var datas={params:{"action":"GET","type":"BARCODE_GENERATION",
+                        "filter":{
+                        "InvoiceHeader_Gid": e.invoiceheader_gid
+                  }}};
+            var summary = servicesummary.get_ecf_maker_summary(datas);
+            summary.then(function(result) {
+                 var data = result.data;
+                 var file = new Blob([data], { type: 'application/pdf' });
+                 saveAs(file, 'Expenseclaimform.pdf');
+                }).finally($scope.endloading);
+     }
+     var channel = servicesummary.get_invoice_types('invoiceheader', 'invoicetype');
+     channel.then(function(result) {
+                    var Invoice = JSON.parse(result.data)
+                    $scope.Invoice_Types =Invoice;
+                    console.log($scope.Invoice_Types);
+                },
+                function(err) {
+                    alert('No data!.');
+     }).finally();
+
+
+
+
+
+    }
+]);
+
+app.service("servicesummary", function ($http) {
+
+    this.get_ecf_maker_summary = function (datas) {
+        var response=$http.post(Appname+"/ECF_Process_get/",datas);
+        return response;
+    }
+    this.get_approval_summary=function(data){
+        var response=$http.post(Appname+"/get_onward_data/",data);
+        return response;
+    }
+    this.get_invoice_types=function(tablename,columnname){
+            var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+            return response;
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

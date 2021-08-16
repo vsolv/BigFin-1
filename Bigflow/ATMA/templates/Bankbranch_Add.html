@@ -1,0 +1,426 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Bank Branch{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="APP_Bank_Summary" ng-controller="Bank_Sumamry_ctrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong> Bank Branch </strong></h4>
+            </div>
+        </div>
+        <form name="branchform">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>IFSC Code</label>
+                        <input type="text" ng-model="add.ifsc_code" autocomplete="off" ng-blur="checkifsc_fn(add.ifsc_code)"
+                               required>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Bank Name</label>
+                        <input type="text" ng-model="add.ifsccode_bankname" autocomplete="off" readonly
+                               required>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Branch Name</label>
+                        <input type="text" ng-model="add.ifsccode_branchname" autocomplete="off" readonly
+                               required>
+                    </md-input-container>
+                </div>
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Micro Code</label>
+                        <input type="text" ng-model="add.micricode" autocomplete="off"
+                               required>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+
+
+
+        <br>
+        <br>
+
+        <div ng-include="'empadrs'"></div>
+        <div class="row" style="margin-top:30px;margin-left:400px;">
+            <div class="col-md-12">
+
+                <md-button class="md-raised" value="Close" ng-href="Bankbranch_summary"
+                           ng-click="close_fun('client')">Close
+                </md-button>
+                <md-button class="md-raised custbutton" ng-click="addclientdetails(add)"
+                           ng-disabled="branchform.$invalid" value="Submit" ng-show="clientsubmit">
+                    Submit
+                </md-button>
+                <md-button class="md-raised custbutton" ng-click="updateclientdetails(add)" value="Submit"
+                           ng-show="clientupdate" ng-disabled="branchform.$invalid">
+                    Update
+                </md-button>
+
+            </div>
+        </div>
+        </form>
+    </div>
+</div>
+
+{% endverbatim %}
+
+
+
+<script>
+    var myApp = angular.module('APP_Bank_Summary', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+
+})
+
+        myApp.controller('Bank_Sumamry_ctrl', ['$scope', '$mdDialog','BankSummaryService', '$rootScope', '$window', '$filter','SerCommon',
+            function($scope , $mdDialog,BankSummaryService, $rootScope, $window, $filter,SerCommon,$mdSelect) {
+
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.entity_gid = detail.entity_gid;
+    $scope.create_by = detail.employee_gid;
+
+   $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    function fn_subcategory(query) {
+        var result = $filter('filter')($scope.memosubcategory, {
+            'memosubcategory_name': query
+        });
+        return result;
+    }
+
+    fn_getsubcategory();
+    function fn_getsubcategory() {
+        var dat = {
+            "Table_name": "mem_mst_tmemosubcategory",
+            "Column_1": "memosubcategory_gid,memosubcategory_code,memosubcategory_name",
+            "Column_2": "",
+            "Where_Common": "memosubcategory",
+            "Where_Primary": "",
+            "Primary_Value": "",
+            "Order_by": "gid"
+        }
+        var group = {
+            Action: "",
+            Entity_Gid: $scope.entity_gid,
+            data: dat
+        }
+        $scope.memosubcategory = [];
+        var getmemosubcategory = BankSummaryService.getsubcategory(group)
+        getmemosubcategory.then(function(result) {
+            $scope.memosubcategory = result.data.DATA;
+
+            //alert(JSON.stringify($scope.memosubcategory))
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+
+    $scope.checkifsc_fn=function(e){
+    debugger;
+        var data={
+            "Params":{
+                "Filter":{
+                    "IFSC_Code":e,
+                },
+                "Group":"IFSC_GROUP",
+            }
+        }
+        $scope.loading();
+        var check_ifscv = BankSummaryService.getifsc(data)
+        check_ifscv.then(function(result) {
+            $scope.add.ifsccode_bankname= result.data.Bank_Name;
+            $scope.add.ifsccode_branchname = result.data.Branch_Name;
+            if($scope.add.ifsccode_branchname==''){
+            alert("Invalid IFSC Code");
+            }
+
+            //alert(JSON.stringify($scope.ifsccode_bankname))
+        }).finally($scope.endloading)
+    }
+
+
+    $scope.addclientdetails=function(e){
+
+    debugger;
+        var data={
+            "Params":{
+                "Filter":{
+                    "Bank_Name":e.ifsccode_bankname,
+                    "BankBranch_Name":e.ifsccode_branchname,
+                    "BankBr_ifscCode":e.ifsc_code,
+                    "BankBr_MicroCode":e.micricode,
+                    "Address1":e.addline,
+                    "Address2":e.addline2,
+                    "Address3":e.addline3,
+                    "Address_Ref_Code":"BANKBRANCH_ADDRESS",
+                    "Address_Pincode":e.pincode1,
+                    "Address_District_Gid":e.addselecteddistrict,
+                    "Address_City_Gid":e.addselectedcity,
+                    "Address_State_Gid":e.addselectedstate
+                },
+                "Classification": {"Entity_Gid": $scope.entity_gid},
+                "Group":"BanckBranch_Set",
+                "Type":"BANK_BRANCH",
+                "SubType":"MAKING",
+                "Action":"INSERT",
+                "Create_by":$scope.create_by,
+                }
+
+        }
+        var add_branch=BankSummaryService.setbranchdata(data)
+        add_branch.then(function(result){
+            $scope.branchresult=result.data;
+            if($scope.branchresult=='SUCCESS'){
+                alert("SUCCESSFULLY INSERTED");
+                $window.location.href = 'Bankbranch_summary';
+            }else{
+
+                alert("DATA NOT INSERT");
+            }
+        })
+    }
+
+
+
+
+
+
+
+
+
+    //address;
+ $scope.add=[];
+var eaddrsttddl = BankSummaryService.getstateddl()
+    eaddrsttddl.then(function(result) {
+            $scope.stateddl = [];
+            $scope.stateddl = JSON.parse(result.data);
+        }),
+        function() {
+            alert('No data!.');
+        };
+$scope.state_clk = function(state_gid, type) {
+debugger;
+        var distddl = BankSummaryService.getdistddl(state_gid)
+        distddl.then(function(result) {
+                if (type == 'address') {
+                    $scope.adistrictddl = [];
+                    $scope.adistrictddl = JSON.parse(result.data);
+
+                } else {
+                    $scope.distritddl = [];
+                    $scope.distritddl = JSON.parse(result.data);
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+$scope.district_clk = function(district_gid, type) {
+        var ctyddl = BankSummaryService.getcityddl(district_gid)
+        ctyddl.then(function(result) {
+                if (type == 'address') {
+                    $scope.acity1 = [];
+                    $scope.acity1 = JSON.parse(result.data);
+                } else {
+                    $scope.city1 = [];
+                    $scope.city1 = JSON.parse(result.data);
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+    $scope.city_clk = function(city_gid, type) {
+        var pincd = BankSummaryService.getpincode(city_gid)
+        pincd.then(function(result) {
+                if (type == 'address') {
+                    var apincde = [];
+                    apincde = JSON.parse(result.data);
+                    $scope.add.pincode1 = apincde[0].pincode_no;
+                } else {
+                    var pincde = [];
+                    pincde = JSON.parse(result.data);
+                    $scope.pcode = pincde[0].pincode_no;
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+    $scope.pinchange = function(pincode, type) {
+        var pincd = BankSummaryService.getpincodeall(pincode)
+        pincd.then(function(result) {
+                if (type == 'address') {
+                    var apincde = [];
+                    apincde = JSON.parse(result.data);
+                    $scope.add.addselectedstate = apincde[0].city_state_gid;
+                    $scope.state_clk($scope.add.addselectedstate, 'address');
+                    $scope.add.addselecteddistrict = apincde[0].pincode_district_gid;
+                    $scope.district_clk($scope.add.addselecteddistrict, 'address');
+                    $scope.add.addselectedcity = apincde[0].pincode_City_gid;
+                    $scope.add.pincode1 = apincde[0].pincode_no;
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+
+var partner_detail = JSON.parse(sessionStorage.getItem('memo_summary_session'));
+    debugger;
+    $scope.clientsubmit=true;
+    $scope.clientupdate=false;
+    $scope.a=[partner_detail];
+    //alert(JSON.stringify($scope.a)),
+    if(partner_detail.memodata.bankbranch_gid>0){
+    $scope.clientsubmit=false;
+    $scope.clientupdate=true;
+
+    $scope.add.ifsc_code=partner_detail.memodata.bankbranch_ifsccode;
+    $scope.add.ifsccode_bankname=partner_detail.memodata.bank_name;
+    $scope.add.ifsccode_branchname=partner_detail.memodata.bankbranch_name;
+    $scope.add.micricode=partner_detail.memodata.bankbranch_microcode;
+    $scope.add.addline=partner_detail.memodata.address_1;
+    $scope.add.addline2=partner_detail.memodata.address_2;
+    $scope.add.addline3=partner_detail.memodata.address_3;
+    $scope.add.pincode1=partner_detail.memodata.address_pincode;
+    $scope.add.addselectedcity=partner_detail.memodata.city_gid;
+    $scope.add.addselecteddistrict=partner_detail.memodata.district_gid;
+    $scope.add.addselectedstate=partner_detail.memodata.state_gid;
+    }
+
+    $scope.updateclientdetails=function(e){
+    debugger;
+    var data={
+        "Params":{
+            "Filter":{
+                "BankBranch_Gid":partner_detail.memodata.bankbranch_gid,
+                "Address1":e.addline,
+                "Address2":e.addline2,
+                "Address3":e.addline3,
+                "Address_Ref_Code": "C2",
+                "Address_Pincode":e.pincode1,
+                "Address_District_Gid":e.addselecteddistrict,
+                "Address_City_Gid":e.addselectedcity,
+                "Address_State_Gid":e.addselectedstate,
+                "BankBranch_Name":e.ifsccode_branchname,
+                "Bank_Name":e.ifsccode_bankname,
+                "BankBr_ifscCode":e.ifsc_code,
+                "BankBr_MicroCode":e.micricode,
+            },
+            "Classification": {"Entity_Gid": $scope.entity_gid},
+            "Group":"updatebankbranch",
+            "Action":"UPDATE",
+            "Type":"BANK_BRANCH",
+            "SubType":"EDIT",
+            "Create_by":$scope.create_by,
+        }
+    }
+    var updatebranch=BankSummaryService.updatebankbranch(data)
+    updatebranch.then(function(result){
+    $scope.uppdate_data=result.data;
+    alert($scope.uppdate_data);
+    $window.location.href = 'Bankbranch_summary';
+
+    })
+
+    }
+
+}
+]);
+
+myApp.service("BankSummaryService", function($http) {
+
+     this.getsubcategory = function(partnergroup) {
+        var respons = $http.post(Appname + "/prodget/", partnergroup);
+        return respons;
+    }
+    this.getifsc = function(partnergroup) {
+        var respons = $http.post(Appname + "/atma_ApprovedPartner_Get/", partnergroup);
+        return respons;
+    }
+    this.setbranchdata = function(partnergroup) {
+        var respons = $http.post(Appname + "/Bankbranch_setdetails/", partnergroup);
+        return respons;
+    }
+    this.updatebankbranch = function(partnergroup) {
+        var respons = $http.post(Appname + "/Bankbranch_setdetails/", partnergroup);
+        return respons;
+    }
+     this.getdistddl = function(state_gid) {
+        var response = $http.get(Appname + "/districtddl/", {
+            params: {
+                "state_gid": state_gid
+            }
+        });
+        return response;
+    }
+    this.getstateddl = function(d) {
+        var response = $http.get(Appname + "/stateddl/");
+        return response;
+    }
+    this.getcityddl = function(district_gid) {
+        var response = $http.get(Appname + "/cityddl/", {
+            params: {
+                "district_gid": district_gid
+            }
+        });
+        return response;
+    }
+    this.getpincode = function(city_gid) {
+        var response = $http.get(Appname + "/pincode/", {
+            params: {
+                "city_gid": city_gid
+            }
+        });
+        return response;
+    }
+    this.getpincodeall = function(pincode) {
+        var response = $http.get(Appname + "/allpinget/", {
+            params: {
+                "pincode": pincode
+            }
+        });
+        return response;
+    }
+
+});
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

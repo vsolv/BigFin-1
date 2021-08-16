@@ -1,0 +1,239 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Nature Of The Problem {% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="AppProblem" ng-controller="CtrlProblem" class="container container1" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4><strong>Nature Of The Problem </strong></h4>
+            </div>
+        </div>
+        <div class="row" ng-repeat="det in finaldata">
+            <div class="col-md-6">
+                <md-subheader class="md-primary">{{det.hierarchy_layer}}</md-subheader>
+                <div style="padding-top:2px;">
+                    <md-radio-group ng-model="det.rbtncluster" class="md-primary">
+                        <md-radio-button ng-repeat="cluster in det.clustlist" ng-value="cluster.parent_name"
+                                         ng-click="rbtnChange(cluster.errorcategory_gid,det.hierarchy_gid)"
+                                         aria-label="{{ cluster.parent_name }}">
+                            {{cluster.parent_name}}
+                        </md-radio-button>
+                        <md-radio-button value="0" ng-click="add_values(det)">ADD</md-radio-button>
+                    </md-radio-group>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6" ng-hide="!show_parent">
+            <form name="formCluster">
+                <div class="col-md-6">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Add Parend</label>
+                        <input type="text" no-special-char ng-model="parent_value" name="cluster" required/>
+                    </md-input-container>
+                </div>
+                <md-button class="md-icon-button" aria-label="Share" ng-hide="formCluster.$invalid">
+                    <md-icon class="material-icons editlink" ng-click="save_child_problem(parent_value)">done
+                    </md-icon>
+                    <md-tooltip>Create Parent</md-tooltip>
+                </md-button>
+            </form>
+        </div>
+
+        <div class="col-md-6" ng-hide="!show_child">
+            <form name="formClusters">
+                <div class="col-md-6">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Add Child</label>
+                        <input type="text" no-special-char ng-model="child_value" name="cluster" required/>
+                    </md-input-container>
+                </div>
+                <md-button class="md-icon-button" aria-label="Share" ng-hide="formClusters.$invalid">
+                    <md-icon class="material-icons editlink" ng-click="save_child_problem(child_value)">done
+                    </md-icon>
+                    <md-tooltip>Create Child</md-tooltip>
+                </md-button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endverbatim %}
+<script>
+
+
+var myApp = angular.module('AppProblem', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.controller('CtrlProblem', ['$scope','problemService','$mdDialog','$window','$filter', function($scope,problemService,$mdDialog,$window,$filter) {
+    $scope.cluster_details = [];
+
+    $scope.show_parent=0;
+    $scope.add_status=0;
+    $scope.show_child=0;
+    $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+
+     $scope.finaldata = [];
+
+    var datas={params:{"type":"GET","sub_type":"ErrorCategory",
+                "filter":{"ErrorCategory_Gid":0}}};
+      $scope.loading();
+     var nature = problemService.get_problem(datas);
+        nature.then(function(result) {
+        $scope.finaldata.push({
+              "clustlist": result.data,
+              "hierarchy_gid": 0,
+              "childshow":true
+        });
+        console.log($scope.finaldata)
+         var res = result.data;
+         $scope.all_error=res;
+         $scope.copy_all_error=res;
+         console.log($scope.all_error);
+         }, function(err) {
+          alert("Data Not Found");
+        }).finally($scope.endloading);
+
+
+      $scope.rbtnChange=function(id,hir_id){
+      $scope.ErrorCategory_Gid=id;
+      console.log($scope.ErrorCategory_Gid);
+          $scope.show_parent=0;
+          $scope.show_child=1;
+          $scope.problem_value="";
+          hir_id++
+          if($scope.finaldata.length > hir_id){
+            $scope.finaldata =$scope.finaldata.slice(0, hir_id);
+          }
+          var datas={params:{"type":"GET","sub_type":"ErrorCategory",
+                "filter":{"ErrorCategory_Gid":id}}};
+            $scope.loading();
+             var child = problemService.get_problem(datas);
+                child.then(function(result) {
+                console.log(result);
+                    if(result.data.length  !== 0){
+                         $scope.finaldata.push({
+                              "clustlist": result.data,
+                              "hierarchy_gid": hir_id,
+                              "childshow":true
+                        });}
+                $scope.endloading();
+           });
+
+      }
+
+
+    $scope.add_values=function(cluster){
+        console.log(cluster);
+        $scope.show_parent=1;
+        $scope.add_status=1;
+        $scope.show_child=0;
+        $scope.problem_value="";
+        $scope.ErrorCategory_Gid=cluster.clustlist[0].errorcategory_gid;
+
+    }
+
+    $scope.save_child_problem=function(problem_value){
+        debugger;
+        console.log($scope.ErrorCategory_Gid);
+        if($scope.ErrorCategory_Gid==undefined){
+            var datas={params:{"action":"INSERT","type":"INSERT_ERROR_CATEGORY",
+            "filter":{"BASE":"Y","ErrorCategory_Name":problem_value}}};
+        }
+        else if($scope.show_parent==1){
+            var datas={params:{"action":"INSERT","type":"INSERT_ERROR_CATEGORY",
+            "filter":{"BASE":"S","ErrorCategory_Name":problem_value,"ErrorCategory_ParentGid":$scope.ErrorCategory_Gid}}};
+        }
+        else
+        {
+            var datas={params:{"action":"INSERT","type":"INSERT_ERROR_CATEGORY",
+            "filter":{"BASE":"N","ErrorCategory_Name":problem_value,"ErrorCategory_ParentGid":$scope.ErrorCategory_Gid}}};
+        }
+
+        var save_problem = problemService.set_master_problem(datas);
+            save_problem.then(function(result) {
+                var res=JSON.parse(result.data);
+
+                 if (res.MESSAGE[0]=== "SUCCESS") {
+                    alert("Succesfully Created...");
+                    $window.location.href = "ServiceManagement/SM_Nature_Of_Asset_Problem/";
+                 }
+                 else
+                 {
+                    alert(JSON.stringify(res));
+                }
+            }, function(err) {
+              alert('Data Not Inserted');
+            }).finally($scope.endloading);
+
+    }
+
+}]);
+myApp.service("problemService", function($http) {
+
+    this.get_problem = function (data) {
+        var response=$http.post(Appname+"/Get_Service_Management/",data);
+        return response;
+    }
+
+    this.set_master_problem=function(datas){
+        var response=$http.post(Appname+"/Set_Service_Management/",datas);
+        return response;
+    }
+
+
+});
+
+myApp.directive('noSpecialChar', function() {
+    return {
+      require: 'ngModel',
+      restrict: 'A',
+      link: function(scope, element, attrs, modelCtrl) {
+        modelCtrl.$parsers.push(function(inputValue) {
+          if (inputValue == undefined)
+            return ''
+          cleanInputValue = inputValue.replace(/[^\w\s]/gi, '');
+          if (cleanInputValue != inputValue) {
+            modelCtrl.$setViewValue(cleanInputValue);
+            modelCtrl.$render();
+          }
+          return cleanInputValue;
+        });
+      }
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

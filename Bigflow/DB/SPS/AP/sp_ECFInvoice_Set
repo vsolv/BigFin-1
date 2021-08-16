@@ -1,0 +1,983 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_ECFInvoice_Set`(In `Action` Varchar(64),In `Type` Varchar(64),
+In `lj_Header` json, In `lj_Details` json,In `lj_Debits` json,In `lj_Status` json,
+in `li_create_by` int,in `li_entity_gid` int,
+Out `Message` varchar(1024)
+ )
+sp_ECFInvoice_Set:BEGIN
+# Ramesh : 2018-May-12
+# Rames : Edit : Nov 2018 : EDIT.
+# Action : Insert, Update, 
+# Type : Invoice,Advance, Remove_ALL, 
+
+declare Query_Insert varchar(1000); 
+declare Query_Update varchar(1000);
+declare countRow int;
+declare Updated_Row int;
+declare errno int;
+declare msg varchar(1000);
+#declare ls_INW_code varchar(16);
+declare Query_column varchar(1000);
+declare Query_value varchar(1000);
+declare Query_Count varchar(1000);
+declare i int;
+declare j int;
+declare update_count int;
+declare dedupe_invoice varchar(128);
+declare CR_NO varchar(128);
+Declare Inwarddetails_Count  int;
+Declare Invoice_Count int;
+
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;    
+    
+#SET autocommit = 0; 
+#start transaction;    
+
+if Type = 'INVOICE_HEADER' then
+
+	select JSON_LENGTH(lj_Header,'$.HEADER') into @li_jsonHeader_count;
+			
+		if @li_jsonHeader_count = 0 or @li_jsonHeader_count is null  then
+			set Message = 'No Data In Json For Invoice Process In Header Data.';            
+			leave sp_ECFInvoice_Set;
+		End if;   
+	
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Type[0]'))) into @Invoice_Type;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Supplier_gid[0]'))) into @Supplier_gid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Sup_state_gid[0]'))) into @Sup_state_gid;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Inwarddetails_gid[0]'))) into @Inwarddetails_gid;        #
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Is_GST[0]'))) into @Is_GST;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Date[0]'))) into @Invoice_Date;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_No[0]'))) into @Invoice_No;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Tot_Amount[0]'))) into @Invoice_Tot_Amount;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Supplier_GST_No[0]'))) into @Supplier_GST_No;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Header_Status[0]'))) into @Header_Status;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Remark[0]'))) into @Remark;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Reprocessed[0]'))) into @Reprocessed;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Employee_gid[0]'))) into @Emp_gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].branch_gid[0]'))) into @Branch_gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Advance_incr[0]'))) into @Advance_incr;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Commodity_gid[0]'))) into @Commodity_gid;
+
+        
+       if Action <> 'DELETE' then
+			set @Invoice_Date = @Invoice_Date;
+			## validation Pending.
+        
+			if @Inwarddetails_gid is null or @Invoice_Type is null or  @Supplier_gid is null or @Sup_state_gid is null 
+                     or @Is_GST is null or @Invoice_Date is null or @Invoice_No is null or  @Invoice_Tot_Amount is null 
+                     or @Header_Status is null then
+				set Message = 'Some Values Is Null In Json Data.'; 
+				leave sp_ECFInvoice_Set;
+			End if;   
+        
+        if @Inwarddetails_gid = 0  or @Sup_state_gid = 0 or @Invoice_Tot_Amount = 0 then
+			set Message = 'Some Values Is Zero In Json Data.';
+            leave sp_ECFInvoice_Set;
+        End if;
+        
+        if Action = 'INSERT' then
+            
+			set Query_column = '';
+			set Query_value = '';
+			set Query_Insert = '';
+            
+         
+         /*
+         select count(*) into @invoicechk from ecf_trn_tinvoiceheader where invoiceheader_invoiceno =@Invoice_No;          
+         if @invoicechk > 0 and @Invoice_No <> 'PPX-no' then 
+				set Message = 'INVOICE ALREADY EXISTS.';
+                    rollback;
+                    leave sp_ECFInvoice_Set;
+         end if;
+         
+         */
+         
+			set dedupe_invoice =  regex_replace('DEDUBE','[^A-Za-z0-9]', '', @Invoice_No);
+         
+   
+         
+         if @Invoice_Type = 'PO' then
+			set @inv_type_code = 'PO' ;
+            set @code_no = '5000';
+             set @code_start = 'ECF';
+		elseif @Invoice_Type = 'Non PO' then
+			set @inv_type_code = 'Non PO' ;	
+            set @code_no = '0000';
+            set @code_start = 'ECF';
+		elseif @Invoice_Type = 'PPX' then
+			set @inv_type_code = 'PPX' ;	
+            set @code_no = '0000';
+            set @code_start = 'EP';
+		elseif @Invoice_Type = 'EMP Claim' then
+			set @inv_type_code = 'EMP Claim' ;	
+            set @code_no = '3000';
+            set @code_start = 'EC';
+            set @Invoice_Type = 'EMP Claim';
+		elseif @Invoice_Type = 'BRANCH EXP' then
+        
+			set @inv_type_code = 'BRANCH EXP' ;	
+            set @code_no = '5000';
+            set @code_start = 'BR';
+            set @Invoice_Type = 'BRANCH EXP';		
+		elseif @Invoice_Type = 'IMPREST' then
+			set @inv_type_code = 'IMPREST' ;	
+            set @code_no = '4000';
+            set @code_start = 'IM';
+            set @Invoice_Type = 'IMPREST';		
+		elseif @Invoice_Type = 'AMORT' then
+			set @inv_type_code = 'AMORT' ;	
+            set @code_no = '7000';
+            set @code_start = 'AM';
+            set @Invoice_Type = 'AMORT';	
+		elseif @Invoice_Type = 'SI' then
+			set @inv_type_code = 'SI' ;	
+            set @code_no = '8000';
+            set @code_start = 'SI';
+            set @Invoice_Type = 'SI';
+         End if;
+         # 
+         
+       # select @inv_type_code;
+         set @CRcode = concat('select ifnull(max(SUBSTRING(invoiceheader_crno,-4)),0)  into @code1 from ecf_trn_tinvoiceheader
+							where 	invoiceheader_isremoved = ''N''	and invoiceheader_invoicetype = ''',@inv_type_code,'''
+					' );
+			#select @CRcode;
+		
+            
+			PREPARE stmt1 FROM @CRcode;
+			EXECUTE stmt1;  
+			DEALLOCATE PREPARE stmt1;
+            select @code_start,@code_no,@code1;
+			call sp_Generatecode_Get('WITH_DATE',@code_start,@code_no,@code1,@Message);
+			select @Message into CR_NO from dual;            
+			
+         
+			if @Remark <> '' then
+				set Query_column = concat(Query_column , ' invoiceheader_remarks,');
+				set Query_value = concat(Query_value , '''',@Remark,''',');
+			else 
+				set Query_column = concat(Query_column,'');
+				set Query_value = concat(Query_value,'');
+			end if;	       
+            
+            if @Invoice_Other_Amount <> 0 then
+				set Query_column = concat(Query_column , ' invoiceheader_otheramount,');
+				set Query_value = concat(Query_value , '''',@Invoice_Other_Amount,''',');
+			else 
+				set Query_column = concat(Query_column,'');
+				set Query_value = concat(Query_value,'');
+            end if;
+            
+            if @Emp_gid <> '' then
+               set Query_column = concat(Query_column , ' invoiceheader_employeegid,');
+				set Query_value = concat(Query_value , '''',@Emp_gid,''',');
+			else 
+				set Query_column = concat(Query_column,'');
+				set Query_value = concat(Query_value,'');
+            end if;
+         select @Inwarddetails_gid,CR_NO,@Invoice_Type,@Supplier_gid
+                                ,@Sup_state_gid,@Is_GST
+                                ,@Invoice_Date,@Invoice_No,dedupe_invoice
+                                ,@Invoice_Tot_Amount,@Branch_gid,@Header_Status,@Advance_incr,li_entity_gid,li_create_by;
+         set Query_Insert = Concat('Insert into ecf_trn_tinvoiceheader(invoiceheader_ecfheadergid,invoiceheader_inwarddetailsgid,invoiceheader_crno,invoiceheader_invoicetype,
+								invoiceheader_suppliergid,invoiceheader_supplierstategid,invoiceheader_gst,
+                                invoiceheader_invoicedate,invoiceheader_invoiceno,invoiceheader_dedupeinvoiceno,
+                                ',Query_column,'invoiceheader_amount,invoiceheader_branchgid,invoiceheader_status,invoiceheader_ppx,invoiceheader_commoditygid,entity_gid,create_by)
+								values(1,',@Inwarddetails_gid,',''',CR_NO,''',''',@Invoice_Type,''',',@Supplier_gid,',
+                                ',@Sup_state_gid,',''',@Is_GST,''',
+                                ''',@Invoice_Date,''',''',@Invoice_No,''',''',dedupe_invoice,''',',Query_value,'
+                                ',@Invoice_Tot_Amount,',''',@Branch_gid,''',''',@Header_Status,''',''',@Advance_incr,''',',@Commodity_gid,',',li_entity_gid,',',li_create_by,'
+                                )'
+                                );
+                                
+                        
+                  
+				set @Insert_query = Query_Insert;				
+				#select Query_Insert;
+                PREPARE stmt FROM @Insert_query;
+				EXECUTE stmt;  
+				set countRow = (select ROW_COUNT());
+				DEALLOCATE PREPARE stmt;           
+                
+                if countRow >  0 then
+					select LAST_INSERT_ID() into @li_Header_gid_Max ;
+                    
+                    #Insert In ttran
+                    set @ls_Remarks = '';
+					 call sp_Trans_Set('Insert','ECF_INVOICE',@li_Header_gid_Max,'NEW','G','MAKER',@ls_Remarks,
+                     li_entity_gid,li_create_by,@message);
+						select @message into @tran;
+                        
+					if @tran <>0 or @tran <> '' then
+						set Message = 'SUCCESS';
+						#commit;
+					else
+						set Message = 'FAIL in tran';
+						rollback;
+					end if;	
+			                 
+                
+						set Message = CONCAT(@li_Header_gid_Max,',SUCCESS');	
+                        
+								
+				else
+					set Message = 'FAIL IN HEADER INSERT.';   ### Error On Header Insert
+					rollback;
+				end if;
+         
+           
+           
+		elseif Action = 'UPDATE' then
+				select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+                ## Validation Of Json Data
+                
+                if @Invoice_Header_Gid is null or @Invoice_Header_Gid <= 0 then
+						set Message = 'Invoice Header Gid Is Needed To Update.';
+                        leave sp_ECFInvoice_Set;
+                End if;
+                
+                select ifnull(invoiceheader_status,'') into @Inv_Header_Status from ap_trn_tinvoiceheader where invoiceheader_gid = @Invoice_Header_Gid;    
+                
+                if @Inv_Header_Status <> '' and @Inv_Header_Status <> 'REPROCESS' then
+					set Message = 'Only Reprocessed Data Can Be Edited.';
+                    leave sp_ECFInvoice_Set;
+                End if;
+                                
+                set Query_Update = '';
+                
+                set Query_Update = concat('Update ecf_trn_tinvoiceheader set update_by = ',li_create_by,', ');
+                
+                if @Invoice_Type <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_invoicetype = ''',@Invoice_Type,''', ');
+                End if;
+                
+                  if @Sup_state_gid <> 0 then
+					set Query_Update = concat(Query_Update, ' invoiceheader_supplierstategid = ',@Sup_state_gid,', ');
+                End if;
+                
+                  if @Is_GST <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_gst = ''',@Is_GST,''', ');
+                End if;
+                                 
+                  if @Invoice_Date <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_invoicedate = ''',@Invoice_Date,''', ');
+                End if;
+                
+                  if @Invoice_No <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_invoiceno = ''',@Invoice_No,''', ');
+                    
+                    set dedupe_invoice =  regex_replace('DEDUBE','[^A-Za-z0-9]', '', @Invoice_No);
+                    
+                    set Query_Update = concat(Query_Update, ' invoiceheader_dedupeinvoiceno = ''',dedupe_invoice,''', '); 
+                    
+                End if;
+					
+                  if @Invoice_Tot_Amount <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_amount = ''',@Invoice_Tot_Amount,''', ');
+                End if;    
+                
+                  if @Supplier_GST_No <> '' then
+					set Query_Update = concat(Query_Update, ' invoiceheader_gst = ''',@Is_GST,''', ');
+                End if;    
+                
+               set Query_Update = concat(Query_Update, 'Update_date = current_timestamp()  where invoiceheader_gid = ',@Invoice_Header_Gid,'  ' );
+                   
+                   
+                   
+                    set @Query_Update = '';
+					set @Query_Update = Query_Update;		                
+                   #select @Query_Update; ### Remove IT
+					PREPARE stmt FROM @Query_Update;
+					EXECUTE stmt;  
+					set countRow = (select ROW_COUNT());
+					DEALLOCATE PREPARE stmt;                         
+                    
+					if countRow <= 0 then
+						set Message = 'Error On Invoice Header Update.';
+                        rollback;
+                        leave sp_ECFInvoice_Set;
+                     elseif    countRow > 0 then
+						set Message = 'SUCCESS';
+                    End if;
+
+                
+        End if;
+		
+       # commit;
+     
+     End if; # Check is Delete Ends            
+
+
+
+elseif Type = 'INVOICE_DETAILS' then
+	
+    set i = 0 ;
+ 
+	select JSON_LENGTH(lj_Details,'$.DETAIL') into @li_jsonDetail_count;  
+    
+    if  @li_jsonDetail_count is null or @li_jsonDetail_count = 0 then
+			set Message = 'No Data In Json For Invoice Process In Details Data.';            
+			leave sp_ECFInvoice_Set;
+	End if;  
+    
+    
+		WHILE i <= @li_jsonDetail_count - 1 DO
+       
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Item_Name[0]'))) into @Item_Name;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Description[0]'))) into @Description;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].HSN_Code[0]'))) into @HSN_Code;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Unit_Price[0]'))) into @Unit_Price;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Quantity[0]'))) into @Quantity;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Amount[0]'))) into @Amount;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].IGST[0]'))) into @IGST;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].CGST[0]'))) into @CGST;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].SGST[0]'))) into @SGST;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Total_Amount[0]'))) into @Total_Amount;
+             select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Discount[0]'))) into @Discount;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].PO_Header_Gid[0]'))) into @PO_Header_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].PO_Detail_Gid[0]'))) into @PO_Detail_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].GRN_Header_Gid[0]'))) into @GRN_Header_Gid;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].GRN_Detail_Gid[0]'))) into @GRN_Detail_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Invoice_Header_gid[0]'))) into @li_Header_gid_Max;            
+            
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Invoice_Sno[0]'))) into @Invoice_Sno; 
+            
+		select @li_Header_gid_Max,@Item_Name,@Description,@HSN_Code
+                        ,@Unit_Price,@Quantity,@Discount,@Amount,@Total_Amount
+                        ,@IGST,@CGST,@SGST
+                        ,li_entity_gid,li_create_by;
+            
+             
+             
+             if Action <> 'DELETE' then
+				## validation Pending
+                ## Check for Null Value too
+                if Action = 'INSERT' then
+                   
+					set Query_column = '';
+					set Query_value = '';
+					set Query_Insert = '';
+					set Query_Insert = Concat('Insert into ecf_trn_tinvoicedetails (invoicedetails_invoiceheadergid,invoicedetails_item,
+						invoicedetails_desc,invoicedetails_hsncode,invoicedetails_unitprice,invoicedetails_qty,invoicedetails_discount,
+						invoicedetails_amount,invoicedetails_totalamt,invoicedetails_igst,invoicedetails_cgst,invoicedetails_sgst,
+                        entity_gid,create_by)
+                        Values(',@li_Header_gid_Max,',''',@Item_Name,''',''',@Description,''',''',@HSN_Code,''',
+                        ''',@Unit_Price,''',''',@Quantity,''',''',@Discount,''',''',@Amount,''',''',@Total_Amount,''',
+                        ''',@IGST,''',''',@CGST,''',''',@SGST,''',
+                        ',li_entity_gid,',',li_create_by,')'
+											);		 
+                                            
+					set @Insert_Detail_query = Query_Insert;		
+                select Query_Insert; ## remove It
+					PREPARE stmt FROM @Insert_Detail_query;
+					EXECUTE stmt;  
+					set countRow = (select ROW_COUNT());
+					DEALLOCATE PREPARE stmt;                          
+                
+                
+					if countRow >  0 then
+						select LAST_INSERT_ID() into @li_Detail_gid_Max ;                           
+                        if @PO_Header_Gid <> 0 then # It will Change
+							set Query_Insert = '';   
+							set Query_Insert = Concat('insert into ecf_map_tecfinvoicepo(ecfinvoicepo_invoiceheadergid,
+												ecfinvoicepo_invoicedetailsgid,ecfinvoicepo_poheadergid,
+												ecfinvoicepo_podetailsgid,
+												ecfinvoicepo_grninwardheadergid,ecfinvoicepo_grninwarddetailsgid,
+												ecfinvoicepo_qty,entity_gid,create_by) 
+											values(',@li_Header_gid_Max,',',@li_Detail_gid_Max,',',@PO_Header_Gid,',
+                                            ',@PO_Detail_Gid,',',@GRN_Header_Gid,',',@GRN_Detail_Gid,',''',@Quantity,''',
+                                             ',li_entity_gid,',',li_create_by,')'
+												);
+                                         #select Query_Insert; ## Remove It       
+                                set @Insert_Detail_query = Query_Insert;				
+								
+                                PREPARE stmt FROM @Insert_Detail_query;
+								EXECUTE stmt;  
+								set countRow = (select ROW_COUNT());
+								DEALLOCATE PREPARE stmt;                                    
+								
+                            #    select countRow; ## Remove It
+                                 if countRow >  0 then
+									#select LAST_INSERT_ID() into @li_Header_gid_Max ;
+									set Message = 'SUCCESS';
+								else
+									set Message = 'FAIL IN INVOICE MAP.';
+									rollback;
+								end if;
+                        elseif @PO_Header_Gid = '' or @PO_Header_Gid is null then
+                          set Message = 'Problem With Data In Checking PO or Non PO.';
+                          leave sp_ECFInvoice_Set;
+                          
+                        else
+                          set Message = 'SUCCESS';
+                        end if;## Map Insert Check
+                        
+					else
+						set Message = 'FAIL IN INVOICE DETAILS.';
+						rollback;
+					end if;              
+                    
+                    
+                    #### To Insert Debit Start.
+                    
+                     select JSON_LENGTH(lj_Debits,'$.DEBIT') into @li_json_debit_count;
+							if @li_json_debit_count is null or @li_json_debit_count = 0 then
+								set Message = 'No Data In Json - Debit.';
+								leave sp_ECFInvoice_Set;
+							end if;
+						
+                   set j = 0 ;
+                   
+                   WHILE j <= @li_json_debit_count - 1 DO
+					set lj_Debits =  JSON_SET(lj_Debits,CONCAT('$.DEBIT[',j,'].Invoice_Details_Gid[0]'),@li_Detail_gid_Max);
+                    set j = j + 1;
+                   END WHILE;
+                    
+							#select lj_Debits,@Invoice_Sno;
+                    call sp_ECFDebit_Set('Insert','',lj_Debits,'N',@Invoice_Sno,li_create_by,li_entity_gid,@Message);					
+                        
+                        select @Message into @Out_message_debits;
+                       
+                        if @Out_message_debits <> 'SUCCESS' then
+							set Message = @Out_message_debit;
+                            leave sp_ECFInvoice_Set;
+                        End if;
+						
+                    #### To Insert Debit Ends
+	
+		elseif Action = 'UPDATE' then
+                     select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].EDIT[0]'))) into @EDIT;       
+                     
+                     if @EDIT is not null and @EDIT = 'INSERT' then
+							###  Insert while Update Starts.. :: Same as Insert : Copied.
+								set Query_column = '';
+								set Query_value = '';
+								set Query_Insert = '';
+								set Query_Insert = Concat('Insert into ap_trn_tinvoicedetails (invoicedetails_headergid,invoicedetails_item,
+									invoicedetails_desc,invoicedetails_hsncode,invoicedetails_unitprice,invoicedetails_qty,
+									invoicedetails_amount,invoicedetails_totalamt,invoicedetails_igst,invoicedetails_cgst,invoicedetails_sgst,
+									entity_gid,create_by)
+									Values(',@li_Header_gid_Max,',''',@Item_Name,''',''',@Description,''',''',@HSN_Code,''',
+									''',@Unit_Price,''',''',@Quantity,''',''',@Amount,''',''',@Total_Amount,''',
+									''',@IGST,''',''',@CGST,''',''',@SGST,''',
+									',li_entity_gid,',',li_create_by,')'
+											);		 
+                                            
+                                            
+                                            select @HSN_Code;
+                                            
+									set @Insert_Detail_query = Query_Insert;		
+									  select Query_Insert; ## remove It
+									PREPARE stmt FROM @Insert_Detail_query;
+									EXECUTE stmt;  
+									set countRow = (select ROW_COUNT());
+									DEALLOCATE PREPARE stmt;                          
+                
+                
+								if countRow >  0 then
+										select LAST_INSERT_ID() into @li_Detail_gid_Max ;                           
+									if @PO_Header_Gid <> 0 then # It will Change
+											set Query_Insert = '';   
+											set Query_Insert = Concat('insert into ap_map_tinvoicepo(invoicepo_invoiceheadergid,
+											invoicepo_invoicedetailsgid,invoicepo_poheadergid,invoicepo_podetailsgid,
+                                            invoicepo_grninwardheadergid,invoicepo_grninwarddetailsgid,
+											invoicepo_qty,entity_gid,create_by)
+											values(',@li_Header_gid_Max,',',@li_Detail_gid_Max,',',@PO_Header_Gid,',
+                                            ',@PO_Detail_Gid,',',@GRN_Header_Gid,',',@GRN_Detail_Gid,',''',@Quantity,''',
+                                             ',li_entity_gid,',',li_create_by,')'
+												);
+                                         #select Query_Insert; ## Remove It       
+											set @Insert_Detail_query = Query_Insert;				
+								
+											PREPARE stmt FROM @Insert_Detail_query;
+											EXECUTE stmt;  
+											set countRow = (select ROW_COUNT());
+											DEALLOCATE PREPARE stmt;                                    
+								
+											#    select countRow; ## Remove It
+											if countRow >  0 then
+												#select LAST_INSERT_ID() into @li_Header_gid_Max ;
+												set Message = 'SUCCESS';
+											else
+												set Message = 'FAIL IN INVOICE MAP.';
+												rollback;
+											end if;
+								elseif @PO_Header_Gid = '' or @PO_Header_Gid is null then
+										set Message = 'Problem With Data In Checking PO or Non PO.';
+										leave sp_ECFInvoice_Set;
+                          
+								else
+									set Message = 'SUCCESS';
+								end if;## Map Insert Check
+                        
+						else
+							set Message = 'FAIL'; ## Fail on detail Insert
+							rollback;
+                            	leave sp_ECFInvoice_Set;
+						end if;                                 
+                    
+                    #### To Insert Debit Start.                    
+                     select JSON_LENGTH(lj_Debits,'$.DEBIT') into @li_json_debit_count;                     
+                        
+							if @li_json_debit_count is null or @li_json_debit_count = 0 then
+								set Message = 'No Data In Json - Debit.';
+								leave sp_ECFInvoice_Set;
+							end if;
+						
+                   set j = 0 ;                  
+                   
+                   WHILE j <= @li_json_debit_count - 1 DO
+					set lj_Debits =  JSON_SET(lj_Debits,CONCAT('$.DEBIT[',j,'].Invoice_Details_Gid[0]'),@li_Detail_gid_Max);
+                    set j = j + 1;
+                   END WHILE;
+                    
+                    
+                    call sp_APDebit_Set('Insert','',lj_Debits,'N',@Invoice_Sno,li_create_by,li_entity_gid,@Message);
+						Select @Message;
+                        
+                        select @Message into @Out_message_debits;
+                        
+                        if @Out_message_debits <> 'SUCCESS' then
+							#set Message = 'FAIL IN DEBITsdfdsfdsfsdfsd.'; ## Remove it ## To DO To Remove
+                            leave sp_ECFInvoice_Set;
+                        End if;
+						
+                    #### To Insert Debit Ends
+                            ### Insert while Update Ends.
+                            
+                     elseif @EDIT = 'UPDATE' then
+							select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Inv_Details_Gid[0]'))) into @Inv_Details_Gid; 
+                            select JSON_UNQUOTE(JSON_EXTRACT(lj_Details, CONCAT('$.DETAIL[',i,'].Is_Removed[0]'))) into @Is_Removed; 
+                            
+                            if @Inv_Details_Gid is null and @Inv_Details_Gid <= 0 then
+								set Message = 'Invoice Detail Gid Is Needed To Upadte.';
+                                rollback;
+                                leave sp_ECFInvoice_Set;
+                            End if;
+                            
+						if @Is_Removed is not null and @Is_Removed = 'Y' then
+								 
+									update ap_trn_tinvoicedetails set invoicedetails_isactive = 'N' , invoicedetails_isremoved = 'Y' ,
+									update_by = li_create_by,Update_date = current_timestamp()
+									where invoicedetails_gid = @Inv_Details_Gid ;
+                                    
+                                    	
+										set countRow = (select ROW_COUNT());
+										
+									if countRow = 0 then
+										set Message = 'Error On Invoice Detail Remove.';
+										rollback;
+										leave sp_ECFInvoice_Set;
+									end if;
+                                        
+                                        
+										SET SQL_SAFE_UPDATES = 0;
+										update ap_trn_tdebit set debit_isactive = 'N', debit_isremoved = 'Y' ,update_by = li_create_by,Update_date = current_timestamp()
+										where debit_invoicedetailsgid = @Inv_Details_Gid    ;
+                                    
+                                    	set countRow = (select ROW_COUNT());
+										
+									if countRow = 0 then
+										set Message = 'Error On Invoice Debit  Remove.';
+										rollback;
+										leave sp_ECFInvoice_Set;
+									end if;
+                                  
+                                 if @PO_Header_Gid <> 0 and @PO_Header_Gid > 0 and @PO_Header_Gid is not null  then
+											SET SQL_SAFE_UPDATES = 0;
+									update ap_map_tinvoicepo set invoicepo_isactive = 'N',invoicepo_isremoved = 'Y' ,update_by = li_create_by,
+									Update_date = current_timestamp() where invoicepo_invoicedetailsgid = @Inv_Details_Gid    ;
+                                 
+									set countRow = (select ROW_COUNT());
+										
+									if countRow = 0 then
+										set Message = 'Error On Invoice Map  Remove.';
+										rollback;
+										leave sp_ECFInvoice_Set;
+									end if;
+                                 End if;
+										
+									
+                                    
+						elseif  @Is_Removed is not null and @Is_Removed = 'N' then
+								
+									set Query_Update = '';
+									set Query_Update = concat('update ap_trn_tinvoicedetails set update_by = ',li_create_by,',');
+                                
+									if @Item_Name <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_item = ''',@Item_Name,''', '  );
+									End if;
+                                
+									if @Description <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_desc = ''',@Description,''', '  );
+									End if;
+                                   
+									if @HSN_Code <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_hsncode = ''',@HSN_Code,''', '  );
+									End if;
+                                   
+									if @Unit_Price <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_unitprice = ''',@Unit_Price,''', '  );
+									End if;
+                                   
+									if @Quantity <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_qty = ''',@Quantity,''', '  );
+									End if;
+                                   
+									if @Amount <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_amount = ''',@Amount,''', '  );
+									End if;
+                                   
+									if @IGST <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_igst = ''',@IGST,''', '  );
+									End if;
+                                
+									if @CGST <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_cgst = ''',@CGST,''', '  );
+									End if;
+                                
+									if @SGST <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_sgst = ''',@SGST,''', '  );
+									End if;
+                                    
+									if @Total_Amount <> '' then
+										set Query_Update = concat(Query_Update, ' invoicedetails_totalamt = ''',@Total_Amount,''', '  );
+									End if;    
+                                
+									set Query_Update = concat(Query_Update, ' Update_date = current_timestamp() where invoicedetails_gid = ',@Inv_Details_Gid,' ' );
+                                
+											set @Query_Update = '';
+											set @Query_Update = Query_Update;		 
+                                             #select Query_Update;  # Remove it
+											PREPARE stmt FROM @Query_Update;
+											EXECUTE stmt;  
+											set countRow = (select ROW_COUNT());
+											DEALLOCATE PREPARE stmt;                          
+
+									if countRow <= 0 then
+											set Message = 'Error On Invoice Details Update.';
+											rollback;
+											leave sp_ECFInvoice_Set;
+									elseif    countRow > 0 then
+											set Message = 'SUCCESS';
+									End if;
+
+                                    
+                            End if; ### Check Remove of Alter
+                            
+                     End if;
+                    
+                End if;  ### Action Ends
+                
+                
+             End if; ## Check Action delete Ends
+                       
+            
+            
+            set i = i + 1;
+        END WHILE;  
+        
+elseif Type = 'STATUS' then
+	if Action = 'UPDATE' then
+		select JSON_LENGTH(lj_Status,'$') into @li_jsonStatus_count;  
+        
+        if @li_jsonStatus_count = 0 then
+			set Message = 'Status Data Is Needed.';
+            leave sp_ECFInvoice_Set;
+        End if;
+        set @Emp_id = 0;
+        set @Individual_approval = 'N';
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Invoice_Header_Gid[0]'))) into @Header_Gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Status[0]'))) into @ls_Status;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Emp_id[0]'))) into @Emp_id;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Individual_approval[0]'))) into @Individual_approval;
+        select @ls_Status;
+        ## Validate Json Data
+        
+			Update ecf_trn_tinvoiceheader set invoiceheader_status = @ls_Status, 
+			update_by = li_create_by, Update_date = now()
+			where invoiceheader_gid = @Header_Gid ;            
+            
+            set @typee = '';
+            
+            select invoiceheader_invoicetype into @typee from ecf_trn_tinvoiceheader where invoiceheader_gid = @Header_Gid ; 
+         set Updated_Row = (select ROW_COUNT());
+         
+       # select Updated_Row;# Remove it
+         
+         if Updated_Row = 0 then
+			set Message = 'Error On Status Update.';
+            leave sp_ECFInvoice_Set;
+		 else
+         select @Emp_id;
+		   if  @Emp_id = '' or @Emp_id is null then
+                        set @Emp_id = 0;
+
+          end if;		  
+	      if  @Individual_approval = '' or @Individual_approval is null then
+                        set @Individual_approval = 'N';
+
+          end if;
+          # Tran Starts
+          set @Remarks = '';
+          select @Individual_approval;
+          if @Individual_approval = 'Y' then
+			call sp_Trans_Set('INSERT_ECF','ECF_INVOICE',@Header_Gid,@ls_Status,'I',@Emp_id,@Remarks,li_entity_gid,li_create_by,@message);
+            select @message into @tran;
+          else
+          #select @Header_Gid,@ls_Status,'I',@ls_Status,@Remarks,li_entity_gid,li_create_by,@message;
+			call sp_Trans_Set('update','ECF_INVOICE',@Header_Gid,@ls_Status,'G','MAKER',@Remarks,li_entity_gid,li_create_by,@message);
+            select @message into @tran;
+          end if;  
+            #select @tran;
+            # C Instead Of I if tat is the Last Status.
+            # APPROVE Instead Of MAKER if tat is the Last Status.
+            select @tran; # Remove IT
+            
+            if @tran > 0 or @tran = '' then## Gives Error.. Need to Check
+               # if @typee = 'AMORT' then
+				#	call sp_APAmmort_Set('ECF_APPROVAL', 'AP_AMORT', concat('{"ECF_ID":',@Header_Gid ,'}'),
+				#															concat('{"Entity_Gid":',li_entity_gid,'}'), li_create_by, @message);
+				#	select @message into @msg;
+				#	if  @msg = 'SUCCESS' then
+				#		set Message = 'SUCCESS';
+				#	end if;   
+                # else
+						set Message = 'SUCCESS';
+               # end if;
+				#commit;
+			else
+				set Message = 'FAIL IN TRAN.';
+				rollback;
+                leave sp_ECFInvoice_Set;
+			end if;
+        ## Tran Ends
+	
+           set Message = 'SUCCESS';
+         End if;
+        
+    End if;
+
+       
+elseif Type = 'STATUS_AMORT' then
+	if Action = 'UPDATE_AMORT' then
+		select JSON_LENGTH(lj_Status,'$') into @li_jsonStatus_count;  
+        
+        if @li_jsonStatus_count = 0 then
+			set Message = 'Status Data Is Needed.';
+            leave sp_ECFInvoice_Set;
+        End if;
+        
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Invoice_Header_Gid[0]'))) into @Header_Gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Status, CONCAT('$.Status[0]'))) into @ls_Status;
+        select @ls_Status;
+        ## Validate Json Data
+        
+			Update ecf_trn_tinvoiceheader set invoiceheader_status = @ls_Status, 
+			update_by = li_create_by, Update_date = now()
+			where invoiceheader_gid = @Header_Gid ;            
+            
+            set @typee = '';
+            
+            select invoiceheader_invoicetype into @typee from ecf_trn_tinvoiceheader where invoiceheader_gid = @Header_Gid ; 
+         set Updated_Row = (select ROW_COUNT());
+         
+       # select Updated_Row;# Remove it
+         
+         if Updated_Row = 0 then
+			set Message = 'Error On Status Update.';
+            leave sp_ECFInvoice_Set;
+		 else
+          # Tran Starts
+          set @Remarks = '';
+          #select @Header_Gid,@ls_Status,'I',@ls_Status,@Remarks,li_entity_gid,li_create_by,@message;
+			call sp_Trans_Set('update','ECF_INVOICE',@Header_Gid,@ls_Status,'I','MAKER',@Remarks,li_entity_gid,li_create_by,@message);
+            select @message into @tran;
+            
+            #select @tran;
+            # C Instead Of I if tat is the Last Status.
+            # APPROVE Instead Of MAKER if tat is the Last Status.
+            select @tran; # Remove IT
+            
+            if @tran > 0 or @tran = '' then## Gives Error.. Need to Check
+                if @typee = 'AMORT' then
+					call sp_APAmmort_Set('ECF_APPROVAL', 'AP_AMORT', concat('{"ECF_ID":',@Header_Gid ,'}'),
+																			concat('{"Entity_Gid":',li_entity_gid,'}'), li_create_by, @message);
+					select @message into @msg;
+					if  @msg = 'SUCCESS' then
+						set Message = 'SUCCESS';
+                    else    
+                        set Message = @msg;
+						rollback;
+						leave sp_ECFInvoice_Set;
+					end if;   
+                 else
+						set Message = 'SUCCESS';
+                end if;
+				#commit;
+			else
+				set Message = 'FAIL IN TRAN.';
+				rollback;
+                leave sp_ECFInvoice_Set;
+			end if;
+        ## Tran Ends
+	
+           set Message = 'SUCCESS';
+         End if;
+        
+    End if;
+
+	
+elseif Type = 'AMOUNT' then
+	
+		select JSON_LENGTH(lj_Header,'$.HEADER') into @li_jsonHeader_count;
+      
+			
+		if @li_jsonHeader_count = 0 or @li_jsonHeader_count is null  then
+			set Message = 'No Data In Json For Invoice Process In Header Data.';            
+			leave sp_ECFInvoice_Set;
+		End if;   
+  
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Other_Amount[0]'))) into @Invoice_Other_Amount;
+			select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+  
+		#select Action,@Invoice_Other_Amount,@Invoice_Header_Gid; ## remove It.
+  
+		if Action = 'UPDATE' then
+			if @Invoice_Other_Amount is null or @Invoice_Other_Amount = 0 or @Invoice_Header_Gid is null or @Invoice_Header_Gid = 0  then
+				set Message = 'Invoice Other Amount Is Required.';
+				leave sp_ECFInvoice_Set;
+			End if;
+    
+				update ecf_trn_tinvoiceheader set invoiceheader_otheramount = @Invoice_Other_Amount , update_by =  li_create_by , Update_date = current_timestamp()
+				where invoiceheader_gid = @Invoice_Header_Gid;
+    
+				set countRow = (select ROW_COUNT());
+                	  
+			if countRow > 0 then
+					set Message = 'SUCCESS';
+			else
+				set Message = 'FAIL IN INVOICE HEADER.';
+				leave sp_ECFInvoice_Set;
+			end if;
+    
+    End if;
+
+
+elseif Type = 'Remove_ALL' then
+
+			if Action = 'UPDATE' then
+                ### On Clicking The PO --- Delete the Invocie details, Debit and Credit..  
+							select JSON_LENGTH(lj_Header,'$.HEADER') into @li_jsonHeader_count;      
+			
+		                 if @li_jsonHeader_count = 0 or @li_jsonHeader_count is null  then
+								set Message = 'No Data In Json For Invoice Process In Header Data.';            
+								leave sp_ECFInvoice_Set;
+						End if;   
+                        
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_header, CONCAT('$.HEADER[0].Invoice_Header_Gid[0]'))) into @Invoice_Header_Gid;
+                        
+                        ### Get the Invoice Details To Remove flag
+							select ifnull(group_concat( distinct invoicedetails_gid),'EMPTY') into @Invoice_Details_gids   from ap_trn_tinvoicedetails 
+							where invoicedetails_headergid = @Invoice_Header_Gid and invoicedetails_isactive = 'Y' and invoicedetails_isremoved = 'N'; 
+                                                        
+                            if @Invoice_Details_gids = 'EMPTY' then
+								set Message = 'No Data Found To Delete.';
+                                leave sp_ECFInvoice_Set;
+                            End if;
+                            ### Update The Invoice Details.[Remove]
+                            set countRow = 0 ;                            
+                             set Query_Update = '';                
+								set Query_Update = concat('Update ap_trn_tinvoicedetails set invoicedetails_isactive = ''N'',invoicedetails_isremoved = ''Y''
+                                                 where invoicedetails_gid in (',@Invoice_Details_gids,')  ');                                	
+												set @Query_Update = '';
+												set @Query_Update = Query_Update;		                
+												PREPARE stmt FROM @Query_Update;
+												EXECUTE stmt;  
+												set countRow = (select ROW_COUNT());
+												DEALLOCATE PREPARE stmt;                          
+
+														if countRow <= 0 then
+																set Message = 'Error On Invoice Details Remove.';
+																rollback;
+																leave sp_ECFInvoice_Set;
+														elseif    countRow > 0 then
+																	set Message = 'SUCCESS';
+														End if;							
+                      
+                                ### Update the Invocie Po Map
+                                ## TO DO - Process for Non PO.
+											set countRow = 0 ;
+											SET SQL_SAFE_UPDATES = 0;
+                                            set countRow = 0 ;                            
+											set Query_Update = '';                
+											set Query_Update = concat('Update ap_map_tinvoicepo set invoicepo_isactive = ''N'',invoicepo_isremoved = ''Y''
+															where invoicepo_invoicedetailsgid in (',@Invoice_Details_gids,')  ');                                	
+																set @Query_Update = '';
+																set @Query_Update = Query_Update;		                
+																PREPARE stmt FROM @Query_Update;
+																EXECUTE stmt;  
+																set countRow = (select ROW_COUNT());
+																DEALLOCATE PREPARE stmt;                          
+
+																		if countRow <= 0 then
+																				set Message = 'Error On Invoice Map PO Details Remove.';
+																				rollback;
+																				leave sp_ECFInvoice_Set;
+																		elseif    countRow > 0 then
+																				set Message = 'SUCCESS';
+																		End if;							
+                      											
+                                #### Update The Debit Details[Remove].                                
+								
+															SET SQL_SAFE_UPDATES = 0;
+															set countRow = 0 ;                            
+															set Query_Update = '';                
+															set Query_Update = concat('Update ap_trn_tdebit set debit_isactive = ''N'',debit_isremoved = ''Y''
+																			where debit_invoicedetailsgid in (',@Invoice_Details_gids,')  ');                                	
+																				set @Query_Update = '';
+																				set @Query_Update = Query_Update;		                
+																				PREPARE stmt FROM @Query_Update;
+																				EXECUTE stmt;  
+																				set countRow = (select ROW_COUNT());
+																				DEALLOCATE PREPARE stmt;                          
+
+																		if countRow <= 0 then
+																				set Message = 'Error On Debit Details Remove.';
+																				rollback;
+																				leave sp_ECFInvoice_Set;
+																		elseif    countRow > 0 then
+																				set Message = 'SUCCESS';
+																		End if;				
+																	#### Update the Credit [Remove]
+																	set countRow = 0 ;
+																	SET SQL_SAFE_UPDATES = 0;
+																			update ap_trn_tcredit set credit_isactive = 'N' , credit_isremoved = 'Y' where credit_invoiceheadergid = @Invoice_Header_Gid;
+                                
+																			set countRow = (select ROW_COUNT());
+																				if countRow > 0 then
+																							set Message = 'SUCCESS';
+																				else
+																							set Message = 'FAIL4';
+																							rollback;
+																							leave sp_ECFInvoice_Set;
+																				end if;
+																						commit;
+				End if;## ACTION ENDS
+	  
+End if; # Type Ends
+
+END

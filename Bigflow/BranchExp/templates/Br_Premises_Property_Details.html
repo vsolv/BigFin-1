@@ -1,0 +1,1852 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Premises Lease Details  {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Premises Lease Details </h4>
+            </div>
+        </div>
+        <form name="premises_form" novalidate>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer" ng-show="pro_no == 0">
+                            <label>Landlord Property ID </label>
+                            <input disabled value="NEW"
+
+                                   type="text"/>
+                        </md-input-container>
+                        <md-input-container class="md-block inputcontainer" ng-show="pro_no != 0">
+                            <label>Landlord Property NO</label>
+                            <input disabled ng-model="pro_no"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Landlord Property Details</label>
+                            <input ng-model="pro_name"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Total Sqft</label>
+                            <input ng-model="pro_total_sqft" valid-number only-numbers
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Primary Contact</label>
+                            <input ng-model="pro_contact"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Commercial Approval"
+                                         md-item-text="item.dropdowndetails_name"
+                                         md-items="item in get_com_approval_det(search_com_approval_det)"
+                                         md-menu-class="md-virtual-repeat-container"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="search_com_approval_det"
+                                         md-selected-item="com_approval_dets"
+                                         md-selected-item-change="com_approval_changed(item.dropdowndetails_gid,item)">
+                            <md-item-template>
+                                <span md-highlight-text="search_com_approval_det"> {{item.dropdowndetails_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Data matching "{{search_com_approval_det}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Commercial Approval Date</label>
+                            <md-datepicker ng-model="com_approval_det_date"
+                                           md-hide-icons="calendar" ng-click="date"
+                                           md-min-date=""
+                                           ng-disabled="com_approval_det=='No'"
+                                           md-max-date="" formatDate>
+                            </md-datepicker>
+                        </md-input-container>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-include="'empadrs'"></div>
+                </div>
+            </div>
+            <br/>
+            <div class="row" ng-show="Premises_Property_Gid!='0'">
+                <div class="col-md-12 text-center">
+                    <md-button class="md-raised"
+                               value="submit"
+                               href="BranchExp/Br_Premises_EB_Details">
+                        EB Details
+                    </md-button>
+                    <md-button class="btn btn-info custbutton"
+                               value="submit"
+                               ng-click="add_legal()">
+                        Legal Clearence
+                    </md-button>
+                    <md-button class="md-raised md-warn"
+                               href="BranchExp/Br_Premises_Landlord">
+                        LandLord Details
+                    </md-button>
+                    <md-button class="md-raised md-primary"
+                               href="BranchExp/Br_Premises_Agreement">
+                        Agreement & Rent
+                    </md-button>
+                    <md-button class="btn btn-info custbutton"
+                               value="submit"
+                               ng-click="add_repair()">
+                        Repairs & Maintenance
+                    </md-button>
+                    <md-button class="btn btn-info custbutton"
+                               value="submit"
+                               ng-click="add_statutory()">
+                        Statutory Payments
+                    </md-button>
+                </div>
+            </div>
+            <br/>
+            <div class="row">
+                <div class="col-md-12">
+                    <md-subheader class="md-accent"> Lease Details</md-subheader>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Security Deposit Paid</label>
+                            <md-select md-container-class="popup_select"
+                                       ng-required="true"
+                                       ng-model="sec_dep_received">
+                                <md-option ng-repeat="y in yes_no" ng-value="y.id">
+                                    {{y.data}}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Rent Payment type"
+                                         md-item-text="items.dropdowndetails_name"
+                                         md-items="items in get_rent_payment_type(search_rent_payment)"
+                                         md-menu-class="md-virtual-repeat-container"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="search_rent_payment"
+                                         md-selected-item="rent_payment_type"
+                                         md-selected-item-change="rent_payment_type_changed(items.dropdowndetails_gid)">
+                            <md-item-template>
+                                <span md-highlight-text="search_rent_payment"> {{items.dropdowndetails_name}}</span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Data matching "{{search_rent_payment}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Reasons for Non Payment</label>
+                            <input ng-model="resons_non_payment"
+                                   maxlength="60"/>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <md-button ng-show="pro_no == 0" class="md-raised custbutton"
+                                   value="submit"
+                                   ng-disabled="premises_form.$invalid"
+                                   ng-click="save_premises('NEW')">
+                            Save
+                        </md-button>
+                        <md-button ng-hide="pro_no == 0 || Page_Name=='Premises_Approval_Summary'" class="md-raised "
+                                   value="submit"
+                                   ng-disabled="premises_form.$invalid"
+                                   ng-click="save_premises('UPDATE')">
+                            Update
+                        </md-button>
+                        <md-button class="md-raised" value="close"
+                                   aria-label="Close" href="BranchExp/Br_Premises_Create/">Cancel
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="modal fade" id="eb_popup" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabels2">
+                            ADD EB Advance for {{Premises_Property_Name}} Property
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click=""
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <br/>
+                        <div class="row" ng-hide="selected_dropdown_gid=='0'">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>EB Advance Amount</label>
+                                        <input ng-model="all_data.eb_advance_amount" valid-number only-numbers
+                                               maxlength="15"/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>EB Advance Date</label>
+                                        <md-datepicker ng-model="all_data.eb_advance_date"
+                                                       md-hide-icons="calendar" ng-click="date"
+                                                       md-min-date=""
+                                                       md-max-date="" formatDate>
+                                        </md-datepicker>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Remarks</label>
+                                        <input ng-model="all_data.eb_advance_remark"
+                                               maxlength="1024"/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-2">
+                                    <md-button class="md-raised custbutton" value="submit"
+                                               ng-disabled="!all_data.eb_advance_amount || !all_data.eb_advance_date || !all_data.eb_advance_remark"
+                                               ng-click="save_popup_details('EB','NEW')">
+                                        Save
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                           md-progress="deferred">
+                                        <thead class="header">
+                                        <tr>
+                                            <th>S NO</th>
+                                            <th>EB Advance Amount</th>
+                                            <th>EB Advance Date</th>
+                                            <th>EB Remarks</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="eb in eb_details"
+                                            align="center">
+                                            <td>
+                                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                            </td>
+                                            <td>{{eb.ebadvance_amount}}</td>
+                                            <td>{{eb.ebadvance_date}}</td>
+                                            <td>{{eb.ebadvance_remarks}}</td>
+                                            <td><a ng-click=""><i class="material-icons">
+                                                edit
+                                            </i></a></td>
+
+                                        </tr>
+                                        <tr ng-show="eb_details.length ==  0">
+                                            <td class="warning" colspan="12">
+                                                No Records Found.
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                        <tfoot>
+                                        <tr align="center">
+                                            <td colspan="3">
+                                                <ul uib-pagination total-items="eb_details.length"
+                                                    ng-model="currentPage"
+                                                    max-size="maxSize"
+                                                    class="pagination-sm"
+                                                    boundary-links="true"
+                                                    ng-change="pageChanged()"
+                                                    items-per-page="itemsPerPage"></ul>
+                                            </td>
+                                            <td colspan="2">
+                                                Total Count:{{eb_details.length}}
+                                            </td>
+                                        </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="legal_popup" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="legal_popup_1">
+                            Add Legal Data
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click=""
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <br/>
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4">
+                                        Under Mortgage:
+                                        <md-input-container class="md-block inputcontainer">
+                                            <md-radio-group layout="row"
+                                                            ng-change="check_mortgage(all_data.propertyunder_mortgage)"
+                                                            ng-model="all_data.propertyunder_mortgage">
+                                                <md-radio-button value="Y">YES</md-radio-button>
+                                                <md-radio-button value="N">NO</md-radio-button>
+                                                </md-radio-button>
+                                            </md-radio-group>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-4" ng-show="noc_data">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>NOC Details</label>
+                                            <input ng-model="all_data.legal_noc"
+                                                   maxlength="120"/>
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>EC Certificate Details</label>
+                                            <input ng-model="all_data.ec_certificate"
+                                                   maxlength="120"/>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-4">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>NOC Remarks</label>
+                                        <input ng-model="all_data.nocremarks"
+                                               maxlength="1024"/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-4" style="margin-top: 20px;">
+                                    <input class="ng-isolate-scope" file-model="files"
+                                           fileinput="file" id="file" multiple type="file"
+                                           onchange="angular.element(this).scope().imageUpload(event)"/>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-button class="md-raised custbutton" value="submit"
+                                               ng-hide="legal_edit!='N' || Page_Name=='Premises_Approval_Summary'"
+                                               ng-disabled="!all_data.propertyunder_mortgage || !all_data.ec_certificate || !all_data.nocremarks"
+                                               ng-click="save_popup_details('LEGAL','NEW')">
+                                        Save
+                                    </md-button>
+
+                                    <md-button class="md-raised" value="submit"
+                                               ng-hide="legal_edit!='Y' || Page_Name=='Premises_Approval_Summary'"
+                                               ng-disabled="!all_data.propertyunder_mortgage || !all_data.ec_certificate || !all_data.nocremarks"
+                                               ng-click="save_popup_details('LEGAL','UPDATE')">
+                                        Update
+                                    </md-button>
+
+                                    <md-button class="md-raised md-warn" value="close"
+                                               data-dismiss="modal"
+                                               ng-click="clear_all()"
+                                               aria-label="Close">Cancel
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                    <thead class="header">
+                                    <tr style="text-align:center">
+                                        <th>S/NO</th>
+                                        <th>NOC</th>
+                                        <th>EC Certificate Details</th>
+                                        <th>NOC Remarks</th>
+                                        <th>Under Mortage</th>
+                                        <th>Action</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="legal in legal_details.slice(((legal_currentPage-1)*legal_itemsPerPage),((legal_currentPage)*legal_itemsPerPage)) | filter:search:strict">
+                                        <td class="text-center">
+                                            {{((legal_currentPage-1)*legal_itemsPerPage)+$index+1}}
+                                        </td>
+                                        <td align="center">{{legal.legal_noc}}</td>
+                                        <td align="center">{{legal.legal_ec_certificate}}</td>
+                                        <td align="center">{{legal.legal_nocremarks}}</td>
+                                        <td align="center">{{legal.legal_propertyunder_mortgage}}</td>
+                                        <td align="center">
+                                            <a>
+                                                <i class="material-icons" ng-click="edit_legal(legal)">
+                                                    edit
+                                                </i></a>
+                                        </td>
+                                    </tr>
+                                    <tr ng-show="legal_details.length == 0">
+                                        <td class="warning" colspan="11">
+                                            No Records Found.
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                    <tfoot>
+                                    <tr>
+                                        <td colspan="5" align="center">
+                                            <ul uib-pagination total-items="legal_details.length"
+                                                ng-model="legal_currentPage"
+                                                max-size="legal_maxSize" class="pagination-sm" boundary-links="true"
+                                                items-per-page="legal_itemsPerPage"></ul>
+                                        </td>
+                                        <td colspan="2" style="padding: 34px">
+                                            <strong>Total Count:{{legal_details.length}}</strong>
+                                        </td>
+                                    </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="repair_popup" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="legal_popup_4">
+                            Add Repairs & Maintenance {{Premises_Property_Name}} Property
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click=""
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <form name="repairs_form" novalidate>
+                            <br/>
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <md-autocomplete md-clear-button="true"
+                                                             md-floating-label="Repairs Name"
+                                                             md-item-text="item8.dropdowndetails_name"
+                                                             md-items="item8 in property_repairs_name(search_repairs_name)"
+                                                             md-menu-class="md-virtual-repeat-container"
+                                                             md-min-length=0
+                                                             md-no-cache="true"
+                                                             ng-required="true"
+                                                             md-search-text="search_repairs_name"
+                                                             md-selected-item="all_data.repairs_name"
+                                                             md-selected-item-change="repairs_name_changed(item8.dropdowndetails_gid)">
+                                                <md-item-template>
+                                                    <span md-highlight-text="search_repairs_name"> {{item8.dropdowndetails_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No DATA matching "{{search_repairs_name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-autocomplete md-clear-button="true"
+                                                             md-floating-label="Repairs_by"
+                                                             md-item-text="item9.dropdowndetails_name"
+                                                             md-items="item9 in property_repairs_by(search_repairs_by)"
+                                                             md-menu-class="md-virtual-repeat-container"
+                                                             md-min-length=0
+                                                             md-no-cache="true"
+                                                             ng-required="true"
+                                                             md-search-text="search_repairs_by"
+                                                             md-selected-item="all_data.repairs_by"
+                                                             md-selected-item-change="repairs_by_changed(item9.dropdowndetails_gid)">
+                                                <md-item-template>
+                                                    <span md-highlight-text="search_repairs_by"> {{item9.dropdowndetails_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No DATA matching "{{search_repairs_by}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Repairs Date</label>
+                                                <md-datepicker md-hide-icons="calendar"
+                                                               ng-model="all_data.repairs_date"
+                                                               md-hide-icons="calendar" ng-click="date"
+                                                               md-min-date="maxDate"
+                                                               ng-required="true"
+                                                               md-max-date="minDate"></md-datepicker>
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Repairs Remark</label>
+                                                <input ng-model="all_data.repairs_remark"
+                                                       maxlength="120" required/>
+                                            </md-input-container>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-5">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-hide="repairs_edit=='Y' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-disabled="repairs_form.$invalid"
+                                                   ng-click="save_popup_details('REPAIR','NEW')">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="submit"
+                                                   ng-hide="repairs_edit=='N' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-disabled="repairs_form.$invalid"
+                                                   ng-click="save_popup_details('REPAIR','UPDATE')">
+                                            Update
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                        <thead class="header">
+                                        <tr style="text-align:center">
+                                            <th>S/NO</th>
+                                            <th>Repairs Name</th>
+                                            <th>Repairs By</th>
+                                            <th>Repairs Date</th>
+                                            <th>Repairs Remark</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="repair in repair_details.slice(((repair_currentPage-1)*repair_itemsPerPage),((repair_currentPage)*repair_itemsPerPage)) | filter:search:strict">
+                                            <td class="text-center">
+                                                {{((repair_currentPage-1)*repair_itemsPerPage)+$index+1}}
+                                            </td>
+                                            <td align="center">{{repair.repairs_name}}</td>
+                                            <td align="center">{{repair.repairs_by}}</td>
+                                            <td align="center">{{repair.repairs_date | date:'dd-MMM-yyyy'}}</td>
+                                            <td align="center">{{repair.repairs_remark}}</td>
+                                            <td align="center">
+                                                <a><i class="material-icons"
+                                                      ng-click="edit_repairs(repair)">
+                                                    edit
+                                                </i></a>
+                                            </td>
+                                        </tr>
+                                        <tr ng-show="repair_details.length == 0">
+                                            <td class="warning" colspan="11">
+                                                No Records Found.
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                        <tfoot>
+                                        <tr>
+                                            <td colspan="4" align="center">
+                                                <ul uib-pagination total-items="repair_details.length"
+                                                    ng-model="repair_currentPage"
+                                                    max-size="repair_maxSize" class="pagination-sm"
+                                                    boundary-links="true"
+                                                    items-per-page="repair_itemsPerPage"></ul>
+                                            </td>
+                                            <td colspan="2" style="padding: 34px">
+                                                <strong>Total Count:{{repair_details.length}}</strong>
+                                            </td>
+                                        </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="statutory_popup" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="legal_popup_5">
+                            Add Statutory Payments for {{Premises_Property_Name}} Property
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click=""
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <br/>
+                        <form name="statatury_form" novalidate>
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-3">
+                                            <md-autocomplete md-clear-button="true"
+                                                             md-floating-label="Statutory Tax Name"
+                                                             md-item-text="item8.dropdowndetails_name"
+                                                             md-items="item8 in property_statutorytax_name(search_statutorytax_name)"
+                                                             md-menu-class="md-virtual-repeat-container"
+                                                             md-min-length=0
+                                                             md-no-cache="true"
+                                                             ng-required="true"
+                                                             md-search-text="search_statutorytax_name"
+                                                             md-selected-item="all_data.statutorytax_name"
+                                                             md-selected-item-change="statutorytax_name_changed(item8.dropdowndetails_gid)">
+                                                <md-item-template>
+                                                    <span md-highlight-text="search_statutorytax_name"> {{item8.dropdowndetails_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No DATA matching "{{search_statutorytax_name}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-autocomplete md-clear-button="true"
+                                                             md-floating-label="Statutory Tax Paid By"
+                                                             md-item-text="item11.dropdowndetails_name"
+                                                             md-items="item11 in get_statutorytax_paidby(search_paid_by)"
+                                                             md-menu-class="md-virtual-repeat-container"
+                                                             md-min-length=0
+                                                             md-no-cache="true"
+                                                             ng-required="true"
+                                                             md-search-text="search_paid_by"
+                                                             md-selected-item="all_data.statutorytax_paidby_name"
+                                                             md-selected-item-change="paid_changed(item11.dropdowndetails_gid)">
+                                                <md-item-template>
+                                                    <span md-highlight-text="search_eb"> {{item11.dropdowndetails_name}}</span>
+                                                </md-item-template>
+                                                <md-not-found>
+                                                    No Data matching "{{search_paid_by}}" were found.
+                                                </md-not-found>
+                                            </md-autocomplete>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Frequency</label>
+                                                <input ng-model="all_data.statutorytax_frequency"
+                                                       maxlength="120" required/>
+                                            </md-input-container>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <md-input-container class="md-block inputcontainer">
+                                                <label>Statutory Tax Remark</label>
+                                                <input ng-model="all_data.statutorytax_remarks" required
+                                                       maxlength="120"/>
+                                            </md-input-container>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-5">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-button class="md-raised custbutton" value="submit"
+                                                   ng-hide="statutorytax_edit=='Y' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-disabled="statatury_form.$invalid"
+                                                   ng-click="save_popup_details('STATUTORY','NEW')">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="submit"
+                                                   ng-hide="statutorytax_edit=='N' || Page_Name=='Premises_Approval_Summary'"
+                                                   ng-disabled="statatury_form.$invalid"
+                                                   ng-click="save_popup_details('STATUTORY','UPDATE')">
+                                            Update
+                                        </md-button>
+
+                                        <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                    <thead class="header">
+                                    <tr style="text-align:center">
+                                        <th>S/NO</th>
+                                        <th>Statutory Tax name</th>
+                                        <th>Statutory Tax Paid</th>
+                                        <th>Statutory Tax Remarks</th>
+                                        <th>Statutory Tax Frequency</th>
+                                        <th>Action</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="statutory in statutory_details.slice(((legal_currentPage-1)*legal_itemsPerPage),((legal_currentPage)*legal_itemsPerPage)) | filter:search:strict">
+                                        <td class="text-center">
+                                            {{((legal_currentPage-1)*legal_itemsPerPage)+$index+1}}
+                                        </td>
+                                        <td align="center">{{statutory.statutorytax_name}}</td>
+                                        <td align="center">{{statutory.statutorytax_paidby}}</td>
+                                        <td align="center">{{statutory.statutorytax_remarks}}</td>
+                                        <td align="center">{{statutory.statutorytax_frequency}}</td>
+                                        <td align="center">
+                                            <a>
+                                                <i class="material-icons"
+                                                   ng-click="statutorytax_edits(statutory)">
+                                                    edit
+                                                </i></a>
+                                        </td>
+                                    </tr>
+                                    <tr ng-show="statutory_details.length == 0">
+                                        <td class="warning" colspan="11">
+                                            No Records Found.
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                    <tfoot>
+                                    <tr>
+                                        <td colspan="4" align="center">
+                                            <ul uib-pagination total-items="statutory_details.length"
+                                                ng-model="legal_currentPage"
+                                                max-size="legal_maxSize" class="pagination-sm" boundary-links="true"
+                                                items-per-page="legal_itemsPerPage"></ul>
+                                        </td>
+                                        <td colspan="2" style="padding: 34px">
+                                            <strong>Total Count:{{statutory_details.length}}</strong>
+                                        </td>
+                                    </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--        <pre>{{all_data | json}}</pre>-->
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','premises_service','$mdDialog','$window','$filter','$http',
+function($scope,premises_service,$mdDialog,$window,$filter,$http) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+
+    $scope.legal_currentPage=1;
+    $scope.legal_maxSize=3;
+    $scope.legal_itemsPerPage=10;
+
+    $scope.repair_currentPage=1;
+    $scope.repair_maxSize=3;
+    $scope.repair_itemsPerPage=10;
+    $scope.all_data={};
+    $scope.legal_edit="N";
+    $scope.repairs_edit="N";
+    $scope.repairs_gid=0;
+    $scope.statutorytax_edit="N";
+    $scope.statutorytax_gid=0;
+
+    $scope.Premises_Property_Gid=0;
+    $scope.pro_no=0;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_eb = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('eb_popup')),
+                clickOutsideToClose: false
+            });
+    };
+
+    $scope.loading_legal = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('legal_popup')),
+                clickOutsideToClose: false
+            });
+    };
+    $scope.loading_repair = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('repair_popup')),
+                clickOutsideToClose: false
+            });
+    };
+    $scope.loading_statutory= function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('statutory_popup')),
+                clickOutsideToClose: false
+            });
+    };
+
+    $scope.loading_landlord= function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('landlord_popup')),
+                clickOutsideToClose: false
+            });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.get_Premises_Data = function(){
+    debugger;
+        var datas = {"action":"GET","type":"BRANCH_EXPENSE_GID",
+        "filter": {"Branch_Premises_Gid":"","Premises_Property_Gid":"","Branch_Premises_Page":""}}
+
+        var setcolumndata = premises_service.get_session_expense(datas);
+            setcolumndata.then(function(result) {
+            $scope.Branch_Premises_Gid=result.data.Branch_Premises_Gid;
+            $scope.Premises_Property_Gid=result.data.Premises_Property_Gid;
+            $scope.Premises_Property_Name=result.data.Premises_Property_Name;
+            $scope.Page_Name=result.data.Branch_Premises_Page;
+            console.log(result.data);
+            if($scope.Branch_Premises_Gid!=0){
+                $scope.execute_premises=1;
+                if($scope.Premises_Property_Gid!=0){
+                    $scope.get_Property_Data();
+                }
+            }
+            else{
+                alert("No Premises");
+            }
+        },
+       function(err) {
+            alert("No Premises Gid");
+       }).finally($scope.endloading);
+    }
+    $scope.get_Premises_Data();
+
+    $scope.get_Property_Data=function(){
+            $scope.loading();
+             var datas={"group":"PREMISES","action":"GET","type":"PREMISES_PROPERTY_DTL",
+                    "filter":{"propertygid":$scope.Premises_Property_Gid}};
+            var property_data= premises_service.premises_process_get(datas);
+            property_data.then(function(result) {
+                var res=result.data[0];
+                console.log(res);
+                debugger;
+                    $scope.property_gid = res.property_gid;
+                    $scope.pro_no = res.property_no;
+                    $scope.pro_name = res.property_name;
+                    $scope.pro_contact = res.property_primarycontact,
+                    $scope.pro_total_sqft =res.property_totsqrft;
+                    $scope.com_approval_det = res.commercialapproval;
+                    $scope.search_com_approval_det = res.commercialapproval;
+                    $scope.com_approval_gid = res.property_commercialapproval;
+                    if(res.commercial_approvaldate!=""){
+                        $scope.com_approval_det_date = res.commercial_approvaldate;
+                    }
+
+
+                    $scope.add.addline=res.address_1;
+                    $scope.add.addline2=res.address_2;
+                    $scope.add.addline3=res.address_3;
+                    $scope.add.addselectedstate = res.address_state_gid;
+                    $scope.state_clk($scope.add.addselectedstate, 'address');
+                    $scope.add.addselecteddistrict = res.address_district_gid;
+                    $scope.district_clk($scope.add.addselecteddistrict, 'address');
+                    $scope.add.addselectedcity = res.address_city_gid;
+                    $scope.add.pincode1 = res.address_pincode;
+
+                    $scope.sec_dep_received = res.property_sdreceived;
+                    $scope.rent_payment_type = res.rentpaymenttype;
+                    $scope.rent_payment_type_gid = res.property_rentpaymenttype;
+                    $scope.resons_non_payment = res.property_reason_nonpayment;
+            }, function(err) {
+              alert('No Data');
+            }).finally($scope.endloading);
+     }
+
+
+    var datas={"group":"PREMISES","action":"GET","type":"PREMISES_COMMON_DROPDOWN",
+                    "filter":{"dropdown_name": "EB Circle"}};
+
+    var get_eb_circle = premises_service.premises_process_get(datas);
+    get_eb_circle.then(function(result) {
+        var res=result.data;
+        $scope.eb_circle_data=res;
+        console.log($scope.eb_circle_data);
+    }, function(err) {
+      alert('No Data');
+    }).finally($scope.endloading);
+
+    var datas={"group":"PREMISES","action":"GET","type":"PREMISES_COMMON_DROPDOWN",
+                    "filter":{"dropdown_name": "Commercial Approval"}};
+
+    var get_eb_circle = premises_service.premises_process_get(datas);
+    get_eb_circle.then(function(result) {
+        var res=result.data;
+        $scope.com_approval_data=res;
+    }, function(err) {
+      alert('No Data');
+    }).finally($scope.endloading);
+
+    $scope.get_eb_circle_data= change_eb_circle;
+        function change_eb_circle(query) {
+            var result = $filter('filter')($scope.eb_circle_data, {
+            'dropdowndetails_name':query,
+        });
+        return result;
+    }
+
+    $scope.get_com_approval_det= change_com_approval;
+        function change_com_approval(query) {
+            var result = $filter('filter')($scope.com_approval_data, {
+            'dropdowndetails_name':query,
+        });
+        return result;
+    }
+    $scope.com_approval_changed=function(approval,e){
+        if(approval!=undefined){
+            $scope.com_approval_gid=approval;
+            if(e.dropdowndetails_name=="Yes"){
+                $scope.com_approval_det="Yes"
+            }
+
+        }
+    }
+<!--    if(e.dropdowndetails_name == 'Yes'){-->
+<!--                $scope.com_approve_date = true;-->
+<!--            }-->
+<!--            else{-->
+<!--                $scope.com_approve_date = false;-->
+<!--                $scope.com_approval_det_date = '0000-00-00';-->
+<!--            }-->
+
+
+    var datas={"group":"PREMISES","action":"GET","type":"PREMISES_COMMON_DROPDOWN",
+                    "filter":{"dropdown_name": "Rent Payment Type"}};
+
+    var rent_payment = premises_service.premises_process_get(datas);
+    rent_payment.then(function(result) {
+        var res=result.data;
+        $scope.rent_payment_type_data=res;
+        console.log($scope.rent_payment_type_data);
+    }, function(err) {
+      alert('No Data');
+    }).finally($scope.endloading);
+
+    $scope.get_rent_payment_type= change_rent;
+        function change_rent(query) {
+            var result = $filter('filter')($scope.rent_payment_type_data, {
+            'dropdowndetails_name':query,
+        });
+        return result;
+    }
+    $scope.rent_payment_type_changed=function(rent_pay){
+        if(rent_pay!=undefined){
+            $scope.rent_payment_type_gid=rent_pay;
+
+        }
+    }
+
+    $scope.yes_no = [{
+        id: 'Y',
+        data: 'YES'
+    }, {
+        id: 'N',
+        data: 'NO'
+    }];
+
+    $scope.noc_data = false;
+    $scope.check_mortgage = function(e){
+        if(e == 'Y'){
+            $scope.noc_data = true;
+        }
+        else{
+            $scope.noc_data = false;
+        }
+    }
+
+    $scope.eb_advance_borneby = [{
+        id: 'Bank',
+        data: 'Bank'
+    }, {
+        id: 'Landlord',
+        data: 'Landlord'
+    },
+    {
+        id: 'Both',
+        data: 'Both'
+    }];
+
+    $scope.getemployee_srch= function(searchText) {
+            var datas = {
+                params: {
+                    "Group": "GET_EMP_DATA",
+                    "Limit" : 0 + "," + 30,
+                    "Type": "EMPLOYEE",
+                    "Sub_Type": "EMPLOYEE_ALL",
+                    "json" : {
+                        "Params": {
+                                "FILTER": {
+                                    "Employee_name":searchText,
+                                },
+                            }
+                        }
+                    }
+                }
+            return $http.post(Appname + '/employee_mst_data/' , datas).then(function(data) {
+                return data.data.DATA;
+              });
+        };
+    
+    $scope.add = [];
+    $scope.pinchange = function(pincode, type) {
+        var pincd = premises_service.getpincodeall(pincode)
+        pincd.then(function(result) {
+                if (type == 'address') {
+                    var apincde = [];
+                    apincde = JSON.parse(result.data);
+                    $scope.add.addselectedstate = apincde[0].city_state_gid;
+                    $scope.state_clk($scope.add.addselectedstate, 'address');
+                    $scope.add.addselecteddistrict = apincde[0].pincode_district_gid;
+                    $scope.district_clk($scope.add.addselecteddistrict, 'address');
+                    $scope.add.addselectedcity = apincde[0].pincode_City_gid;
+                    $scope.add.pincode1 = apincde[0].pincode_no;
+
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+    $scope.state_clk = function(state_gid, type) {
+        debugger;
+        var distddl = premises_service.getdistddl(state_gid)
+        distddl.then(function(result) {
+                if (type == 'address') {
+                    $scope.adistrictddl = [];
+                    $scope.adistrictddl = JSON.parse(result.data);
+                } else {
+                    $scope.distritddl = [];
+                    $scope.distritddl = JSON.parse(result.data);
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+    $scope.district_clk = function(district_gid, type) {
+        var ctyddl = premises_service.getcityddl(district_gid)
+        ctyddl.then(function(result) {
+                if (type == 'address') {
+                    $scope.acity1 = [];
+                    $scope.acity1 = JSON.parse(result.data);
+                } else {
+                    $scope.city1 = [];
+                    $scope.city1 = JSON.parse(result.data);
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+    $scope.city_clk = function(city_gid, type) {
+        var pincd = premises_service.getpincode(city_gid)
+        pincd.then(function(result) {
+                if (type == 'address') {
+                    var apincde = [];
+                    apincde = JSON.parse(result.data);
+                    $scope.add.pincode1 = apincde[0].pincode_no;
+                } else {
+                    var pincde = [];
+                    pincde = JSON.parse(result.data);
+                    $scope.pcode = pincde[0].pincode_no;
+                }
+            }),
+            function() {
+                alert('No data!.');
+            };
+    };
+
+    var sttddl = premises_service.getstateddl()
+    sttddl.then(function(result) {
+        $scope.stateddl = [];
+        $scope.stateddl = JSON.parse(result.data);
+        $scope.locstate = JSON.parse(result.data);
+      }),
+    function() {
+        alert('no data');
+    };
+
+    $scope.save_premises=function(type){
+        debugger;
+        $scope.com_approval_date=$filter('date')($scope.com_approval_det_date, "yyyy-MM-dd");
+        if(type=="NEW"){
+            var datas={"group":"PREMISES","action":"INSERT","type":"PREMISES_PROPERTY",
+             "filter":{"premisesgid":$scope.Branch_Premises_Gid,
+                        "property_name":$scope.pro_name,
+                        "primarycontact":$scope.pro_contact,
+                        "property_totsqrft":$scope.pro_total_sqft,
+                        "commercialapproval":$scope.com_approval_gid,
+                        "commercial_approvaldate":$scope.com_approval_date,
+                        "property_address":[{
+                        "address1":$scope.add.addline,
+                        "address2":$scope.add.addline2,
+                        "address3":$scope.add.addline3,
+                        "pincode":$scope.add.pincode1,
+                        "district_gid":$scope.add.addselecteddistrict,
+                        "city_gid":$scope.add.addselectedcity,
+                        "state_gid":$scope.add.addselectedstate}],
+                        "sdreceived":$scope.sec_dep_received,
+                        "rentpaymenttype":$scope.rent_payment_type_gid,
+                        "reason_nonpayment":$scope.resons_non_payment}};
+        }
+        else if(type=="UPDATE"){
+            var datas={"group":"PREMISES","action":"INSERT","type":"PREMISES_PROPERTY",
+             "filter":{"premisesgid":$scope.Branch_Premises_Gid,
+                        "property_gid":$scope.Premises_Property_Gid,
+                        "property_name":$scope.pro_name,
+                        "primarycontact":$scope.pro_contact,
+                        "property_totsqrft":$scope.pro_total_sqft,
+                        "commercialapproval":$scope.com_approval_gid,
+                        "commercial_approvaldate":$scope.com_approval_date,
+                        "property_address":[{
+                        "address1":$scope.add.addline,
+                        "address2":$scope.add.addline2,
+                        "address3":$scope.add.addline3,
+                        "pincode":$scope.add.pincode1,
+                        "district_gid":$scope.add.addselecteddistrict,
+                        "city_gid":$scope.add.addselectedcity,
+                        "state_gid":$scope.add.addselectedstate}],
+                        "sdreceived":$scope.sec_dep_received,
+                        "rentpaymenttype":$scope.rent_payment_type_gid,
+                        "reason_nonpayment":$scope.resons_non_payment}};
+        }
+
+        $scope.loading();
+        var premises_creation = premises_service.premises_process_set(datas);
+        premises_creation.then(function(result) {
+            var res=result.data.MESSAGE;
+             if (res=== "SUCCESS") {
+            alert("SUCCESS");
+            $window.location.href = "BranchExp/Br_Premises_Create/";
+            } else {
+          alert(JSON.stringify(result.data));
+          }
+        }, function(err) {
+          alert('Data Not Inserted');
+        }).finally($scope.endloading);
+    }
+
+    $scope.add_eb_advance=function(){
+        debugger;
+        modalshow('eb_popup');
+        $scope.loading_eb();
+        if($scope.Premises_Property_Gid!=0){
+             var datas={"group":"PREMISES","action":"GET","type":"PREMISES_EBADVANCE",
+                    "filter":{"propertygid":$scope.Premises_Property_Gid}};
+            var get_eb = premises_service.premises_process_get(datas);
+            get_eb.then(function(result) {
+                var res=result.data;
+                $scope.eb_details=res;
+                console.log($scope.eb_details);
+            }, function(err) {
+              alert('No Data');
+            }).finally($scope.endloading);
+
+       }
+       else{
+        alert("No Property Data");
+       }
+
+
+    }
+
+    $scope.add_legal=function(){
+         modalshow('legal_popup');
+        if($scope.Premises_Property_Gid!=0){
+             var datas={"group":"PREMISES","action":"GET","type":"PREMISES_LEGAL_CLEARENCE",
+                    "filter":{"propertygid":$scope.Premises_Property_Gid}};
+             $scope.loading_legal();
+            var get_eb = premises_service.premises_process_get(datas);
+            get_eb.then(function(result) {
+                var res=result.data;
+                $scope.legal_details=res;
+
+                console.log($scope.legal_details);
+            }, function(err) {
+              alert('No Data');
+            }).finally($scope.endloading);
+       }
+       else{
+        alert("No Property Data");
+       }
+    }
+
+    $scope.add_repair=function(){
+        $scope.all_data={};
+        $scope.repairs_edit="N";
+         modalshow('repair_popup');
+        if($scope.Premises_Property_Gid!=0){
+             var datas={"group":"PREMISES","action":"GET","type":"REPAIR_DETAIL",
+                    "filter":{"propertygid":$scope.Premises_Property_Gid}};
+             $scope.loading_repair();
+            var get_eb = premises_service.premises_process_get(datas);
+            get_eb.then(function(result) {
+                var res=result.data;
+                $scope.repair_details=res;
+            }, function(err) {
+              alert('No Data');
+            }).finally($scope.endloading);
+       }
+       else{
+        alert("No Property Data");
+       }
+    }
+
+    $scope.add_statutory=function(){
+        $scope.statutorytax_edit="N";
+         modalshow('statutory_popup');
+        if($scope.Premises_Property_Gid!=0){
+             var datas={"group":"PREMISES","action":"GET","type":"STATUTORY_DETAIL",
+                    "filter":{"propertygid":$scope.Premises_Property_Gid}};
+             $scope.loading_statutory();
+            var get_eb = premises_service.premises_process_get(datas);
+            get_eb.then(function(result) {
+                var res=result.data;
+                $scope.statutory_details=res;
+                console.log($scope.statutory_details);
+            }, function(err) {
+              alert('No Data');
+            }).finally($scope.endloading);
+       }
+       else{
+        alert("No Property Data");
+       }
+    }
+
+    $scope.statutorytax_edits=function(statutorytax){
+        debugger;
+        $scope.statutorytax_edit="Y";
+        $scope.statutorytax_name_gid=statutorytax.statutorytax_name_gid;
+        $scope.statutorytax_gid=statutorytax.statutorytax_gid;
+        $scope.all_data.statutorytax_name=statutorytax.statutorytax_name;
+        $scope.all_data.statutorytax_paidby_name=statutorytax.statutorytax_paidby;
+        $scope.statutorytax_paid_by_gid=statutorytax.statutorytax_name_gid;
+        $scope.all_data.statutorytax_frequency=statutorytax.statutorytax_frequency;
+        $scope.all_data.statutorytax_remarks=statutorytax.statutorytax_remarks;
+
+    }
+
+    $scope.add_landlord=function(){
+        modalshow('landlord_popup');
+    }
+
+    $scope.property_repairs_name = function(query) {
+        var unit_ownership2 = {
+            "group":"PREMISES",
+            "action":"GET",
+            "type":"PREMISES_COMMON_DROPDOWN",
+            "filter":{
+                "dropdown_name": "Repairs"
+            }
+        }
+        return $http.post(Appname + '/Get_premises/' , unit_ownership2).then(function(data) {
+                var final_values=data.data;
+                return final_values;
+              });
+    };
+    $scope.repairs_name_changed=function(repairs){
+        if(repairs!=undefined){
+            $scope.repairs_name_gid=repairs;
+        }
+
+    }
+
+    $scope.property_repairs_by = function(query) {
+        var unit_ownership2 = {
+            "group":"PREMISES",
+            "action":"GET",
+            "type":"PREMISES_COMMON_DROPDOWN",
+            "filter":{
+                "dropdown_name": "Repairs By"
+            }
+        }
+        return $http.post(Appname + '/Get_premises/' , unit_ownership2).then(function(data) {
+                var final_values=data.data;
+                return final_values;
+              });
+    };
+
+    $scope.repairs_by_changed=function(repairs_by){
+        if(repairs_by!=undefined){
+            $scope.repairs_by_gid=repairs_by;
+        }
+    }
+
+    $scope.property_statutorytax_name = function(query) {
+        var unit_ownership2 = {
+            "group":"PREMISES",
+            "action":"GET",
+            "type":"PREMISES_COMMON_DROPDOWN",
+            "filter":{
+                "dropdown_name": "Statutory Tax Name"
+            }
+        }
+        return $http.post(Appname + '/Get_premises/' , unit_ownership2).then(function(data) {
+                var final_values=data.data;
+                return final_values;
+              });
+    };
+
+    $scope.statutorytax_name_changed=function(statutorytax_name){
+        debugger;
+        if(statutorytax_name!=undefined){
+            $scope.statutorytax_name_gid=statutorytax_name;
+        }
+    }
+
+
+
+    $scope.get_statutorytax_paidby = function(query) {
+        var unit_ownerships2 = {
+            "group":"PREMISES",
+            "action":"GET",
+            "type":"PREMISES_COMMON_DROPDOWN",
+            "filter":{
+                "dropdown_name": "Statutory Tax Paidby"
+            }
+        }
+        return $http.post(Appname + '/Get_premises/' , unit_ownerships2).then(function(data) {
+                var final_values=data.data;
+                console.log(final_values);
+                return final_values;
+
+              });
+    };
+
+
+    $scope.paid_changed=function(statutorytax_paid_by){
+        debugger;
+        if(statutorytax_paid_by!=undefined){
+            $scope.statutorytax_paid_by_gid=statutorytax_paid_by;
+        }
+    }
+
+
+
+    $scope.save_popup_details=function(type,action){
+        debugger;
+        if(type=="EB" && action=="NEW"){
+            $scope.eb_advance_date=$filter('date')($scope.all_data.eb_advance_date, "yyyy-MM-dd");
+            var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_EBADVANCE",
+            "filter":{"propertygid": $scope.Premises_Property_Gid,"ebadvance_amount": $scope.all_data.eb_advance_amount,
+                   "ebadvance_date":$scope.eb_advance_date,
+                   "ebadvance_remarks": $scope.all_data.eb_advance_remark}};
+        }
+        else if(type=="LEGAL" && action=="NEW"){
+            var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_LEGAL_CLEARENCE",
+            "filter":{"propertygid": $scope.Premises_Property_Gid,"propertyunder_mortgage": $scope.all_data.propertyunder_mortgage,
+            "legal_noc": $scope.all_data.legal_noc,"nocremarks":$scope.all_data.nocremarks,
+            "ec_certificate":$scope.all_data.ec_certificate,"ecdocument": "file"}};
+        }
+
+        else if(type=="LEGAL" && action=="UPDATE"){
+            if($scope.legal_gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_LEGAL_CLEARENCE",
+                "filter":{"legal_gid":$scope.legal_gid,"propertygid": $scope.Premises_Property_Gid,"propertyunder_mortgage": $scope.all_data.propertyunder_mortgage,
+                "legal_noc": $scope.all_data.legal_noc,"nocremarks":$scope.all_data.nocremarks,
+                "ec_certificate":$scope.all_data.ec_certificate,"ecdocument": "file"}};
+            }
+            else{
+                alert("Legal Datas Missing");
+            }
+        }
+
+        else if(type=="REPAIR" && action=="NEW"){
+            var datas={"group":"PREMISES","action":"ANY","type":"REPAIRS",
+            "filter":{"repairs_propertygid": $scope.Premises_Property_Gid,
+            "repairs_name": $scope.repairs_name_gid,
+            "repairs_by": $scope.repairs_by_gid,
+            "repairs_date":$filter('date')($scope.all_data.repairs_date, "yyyy-MM-dd"),
+            "repairs_remark":$scope.all_data.repairs_remark}};
+        }
+        else if(type=="REPAIR" && action=="UPDATE"){
+            if($scope.repairs_gid!=0){
+                var datas={"group":"PREMISES","action":"ANY","type":"REPAIRS",
+                "filter":{"repairs_propertygid": $scope.Premises_Property_Gid,
+                "repairs_gid":$scope.repairs_gid,
+                "repairs_name": $scope.repairs_name_gid,
+                "repairs_by": $scope.repairs_by_gid,
+                "repairs_date":$filter('date')($scope.all_data.repairs_date, "yyyy-MM-dd"),
+                "repairs_remark":$scope.all_data.repairs_remark}};
+            }
+            else{
+                alert("No Repairs Data");
+            }
+        }
+        else if(type=="STATUTORY" && action=="NEW"){
+            var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_STATUTORY_TAX",
+            "filter":{"propertygid": $scope.Premises_Property_Gid,
+            "statutorytax_name": $scope.statutorytax_name_gid,
+            "statutorytax_paidby": $scope.statutorytax_paid_by_gid,
+            "statutorytax_frequency":$scope.all_data.statutorytax_frequency,
+            "statutorytax_remarks":$scope.all_data.statutorytax_remarks}};
+        }
+        else if(type=="STATUTORY" && action=="UPDATE"){
+            var datas={"group":"PREMISES","action":"ANY","type":"PREMISES_STATUTORY_TAX",
+            "filter":{"propertygid": $scope.Premises_Property_Gid,
+            "statutorytax_gid":$scope.statutorytax_gid,
+            "statutorytax_name": $scope.statutorytax_name_gid,
+            "statutorytax_paidby": $scope.statutorytax_paid_by_gid,
+            "statutorytax_frequency":$scope.all_data.statutorytax_frequency,
+            "statutorytax_remarks":$scope.all_data.statutorytax_remarks}};
+        }
+
+
+        if(type=="EB"){$scope.loading_eb();}
+        else if(type=="LEGAL"){$scope.loading_legal();}
+        else if(type=="REPAIR"){$scope.loading_repair();}
+        else if(type=="STATUTORY"){$scope.loading_statutory();}
+        else{$scope.loading();}
+
+        var popup_data = premises_service.premises_process_set(datas);
+        popup_data.then(function(result) {
+            var res=result.data.MESSAGE;
+             if (res=== "SUCCESS") {
+                alert("SUCCESS");
+                if(type=="EB"){
+                    $scope.add_eb_advance();
+                }
+                else if(type=="LEGAL"){
+                    $scope.all_data={};
+                    $scope.add_legal();
+                    $scope.legal_edit="N";
+                }
+                else if(type=="REPAIR"){
+                    $scope.add_repair();
+                }
+                else if(type=="STATUTORY"){
+                    $scope.add_statutory();
+                }
+            $scope.all_data={};
+            } else {
+          alert(JSON.stringify(result.data));
+          }
+        }, function(err) {
+          alert('Data Not Inserted');
+        }).finally($scope.endloading);
+
+    }
+
+    $scope.edit_legal=function(legal){
+        $scope.legal_edit="Y";
+        $scope.legal_gid=legal.legal_gid;
+        $scope.all_data.nocremarks=legal.legal_nocremarks;
+        $scope.all_data.ec_certificate=legal.legal_ec_certificate;
+        $scope.all_data.legal_noc=legal.legal_noc;
+        $scope.all_data.propertyunder_mortgage=legal.legal_propertyunder_mortgage;
+        $scope.check_mortgage(legal.legal_propertyunder_mortgage);
+    }
+
+    $scope.edit_repairs=function(repairs){
+        $scope.repairs_edit="Y";
+        $scope.repairs_gid=repairs.repairs_gid;
+        $scope.repairs_name_gid=repairs.repairs_name_gid;
+        $scope.repairs_by_gid=repairs.repairs_by_gid;
+
+
+        $scope.all_data.repairs_name=repairs.repairs_name;
+        $scope.all_data.repairs_by=repairs.repairs_by;
+        $scope.all_data.repairs_date=repairs.repairs_date;
+        $scope.all_data.repairs_remark=repairs.repairs_remark;
+
+
+
+    }
+
+    $scope.clear_all=function(){
+        $scope.all_data={};
+        $scope.legal_edit="N";
+
+    }
+
+
+
+
+}]);
+myApp.service("premises_service", function ($http) {
+    this.getpincodeall = function(pincode) {
+        var response = $http.get(Appname + "/allpinget/", {
+            params: {
+                "pincode": pincode
+            }
+        });
+        return response;
+    }
+
+    this.getdistddl = function(state_gid) {
+        var response = $http.get(Appname + "/districtddl/", {
+            params: {
+                "state_gid": state_gid
+            }
+        });
+        return response;
+    }
+
+    this.getcityddl = function(district_gid) {
+        var response = $http.get(Appname + "/cityddl/", {
+            params: {
+                "district_gid": district_gid
+            }
+        });
+        return response;
+    }
+
+    this.getpincode = function(city_gid) {
+        var response = $http.get(Appname + "/pincode/", {
+            params: {
+                "city_gid": city_gid
+            }
+        });
+        return response;
+    }
+
+    this.getstateddl = function(d) {
+        var response = $http.get(Appname + "/stateddl/");
+        return response;
+    }
+
+    this.premises_process_set=function (data) {
+        var response=$http.post(Appname+"/Set_premises/",data);
+        return response;
+    }
+
+    this.get_session_expense = function (data) {
+        var response=$http.post(Appname+"/Session_Get_Expnese_Data/",data);
+        return response;
+    }
+
+    this.premises_process_get=function (data) {
+        var response=$http.post(Appname+"/Get_premises/",data);
+        return response;
+    }
+
+
+
+
+
+
+
+ });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+.md-virtual-repeat-container.md-autocomplete-suggestions-container {
+     width:500px !important;
+}
+
+
+.C{
+ background-color: #B3FFC1 !important;
+}
+
+.D{
+ background-color: #FFBDF3 !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

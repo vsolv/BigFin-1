@@ -1,0 +1,771 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_DispatchProcess_Get`(in ls_Type varchar(32),in Sub_Type varchar(32),
+                                      in lj_Filters json,in lj_classification json,out Message varchar(1000))
+sp_DispatchProcess_Get:BEGIN
+#Prakash S 22-Jan-2019
+# Ramesh Edit Jan 2019,Feb 2019,Aug 26 AWB
+## Akshay :: Expected Courier Bill...
+## karthiga: edited LABEL PRINT SALES for quantity feb 01
+#meenakshi : edited -LABEL_PRINT_SALES-pincodes,EXCEPTED_COURIER_BILL dispatch_podawbno-feb 29
+	declare Query_Select text;
+	declare Query_srch text;
+    declare Query_srch1 text;
+	declare ls_error varchar(100);
+	declare li_count int;
+	declare i int;
+	declare entity_gid varchar(64);
+    declare AWB_Code varchar(16);
+	set ls_error = '';
+
+    set Query_Select = '';
+	set Query_srch = '';
+    set Query_srch1 = '';
+    select JSON_LENGTH(lj_classification, '$') into @li_jsonclass_count;
+		 if @li_jsonclass_count <=0 then
+			set Message = 'Entity Gid or Client Gid Not Given';
+			leave sp_DispatchProcess_Get;
+		 end if;
+
+	set i = 0 ;
+
+   select JSON_LENGTH(lj_classification, CONCAT('$.Entity_Gid')) into @entity_cnt;
+
+    if @entity_cnt <> 0 then
+		WHILE i<= @entity_cnt - 1 Do
+
+            select  JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid[',i,']')) into @Entity_Gid;
+            if @entity_cnt  <> '' then
+				 if @Entity_Gid <> 0 then
+					if Entity_Gid <> '' then
+						set Entity_Gid = concat(Entity_Gid,',',@Entity_Gid);
+					else
+                        set Entity_Gid = @Entity_Gid;
+                    end if;
+
+				end if;
+
+			end if;
+            set i = i + 1;
+
+        END WHILE;
+	end if;
+
+	if ls_Type = 'COURIER' and Sub_Type ='COURIER_EXPLORER'  then
+              select JSON_LENGTH(lj_Filters,'$') into @li_json_count;
+			  if  @li_json_count <=0  then
+					set Message = 'No Data in Json Filters';
+					leave sp_DispatchProcess_Get;
+			 end if;
+             select JSON_LENGTH(lj_classification,'$') into @li_json_count1;
+			 if  @li_json_count1 <=0  then
+					set Message = 'No Data in Json classification';
+					leave sp_DispatchProcess_Get;
+			 end if;
+
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date'))) into @Dispatch_Date;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_classification, CONCAT('$.Entity_Gid[0]'))) into @Entity_gid;
+
+              if  @Dispatch_Date is  null  or  @Dispatch_Date=''  then
+                        set @Dispatch_Date= date_format(now(),'%Y-%m-%d');
+			end if;
+
+            if @Entity_gid is null or @Entity_gid =0 then
+            set Message='Entity_gid is not given';
+            end if;
+
+            set Query_Select='';
+			set Query_Select =concat('select aa.courier_gid,aa.courier_name,ifnull(cc.Indispatch_amount,0) as Indispatch_amount ,ifnull(bb.pending_pod,0) as pending_pod_amount  from dis_mst_tcourier as aa
+
+														left join(
+														select a.courier_gid,a.courier_name,sum(ifnull(b.dispatch_totweight,0)) * sr.rate_value as pending_pod from dis_mst_tcourier a
+														left join dis_trn_tdispatch b on b.dispatch_courier_gid=a.courier_gid and  b.dispatch_pod is null
+														left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'') as sr
+														on sr.rate_reftablegid=b.dispatch_courier_gid
+														where a.courier_type=''COURIER'' group by a.courier_gid) as bb
+
+														 on bb.courier_gid=aa.courier_gid
+
+														left join(
+														select courier_gid,
+														courier_name,
+														round(ifnull(sum(invoicedetails_qty*product_weight),0)*sr.rate_value,2) as Indispatch_amount
+														 from  dis_mst_tcourier as a
+														inner join  gal_map_tcustcourier as b on b.custcourier_couriergid=a.courier_gid
+														left join (select invoiceheader_gid, invoiceheader_customer_gid ,invoiceheader_despatch_gid,invoiceheader_date, custcourier_couriergid  from gal_trn_tinvoiceheader rr
+														inner join  gal_map_tcustcourier ss on rr.invoiceheader_customer_gid=ss.custcourier_customergid
+														and invoiceheader_despatch_gid=0 and invoiceheader_date=''',@Dispatch_Date,''' group by custcourier_couriergid ) as srr
+														on srr.invoiceheader_customer_gid=b.custcourier_customergid
+														left join gal_trn_tinvoicedetails as d on d.invoicedetails_invoice_gid=srr.invoiceheader_gid
+														left join  gal_mst_tproduct as e on e.product_gid=d.invoicedetails_product_gid
+														left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'' ) as sr
+														on sr.rate_reftablegid=srr.custcourier_couriergid
+														where courier_type=''COURIER''
+														group by courier_gid ) as cc
+
+
+														on cc.courier_gid=aa.courier_gid
+
+
+														where aa.courier_type=''COURIER'' and aa.entity_gid=',@Entity_gid,'
+														order by aa.courier_gid
+													 ');
+			set @Query_Select=Query_Select;
+            PREPARE stmt FROM @Query_Select;
+            #select  @Query_Select;##### remove it
+            EXECUTE stmt;
+            select found_rows() into li_count;
+
+            if li_count>0 then
+				set Message='FOUND';
+             else
+				set Message='NOT_FOUND';
+            end if;
+
+
+
+
+
+
+    elseif ls_Type = 'EXCEPTED' and Sub_Type ='EXCEPTED_COURIER_BILL'  then
+			 #select 1;
+			 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.airwayno[0]'))) into @airwayno;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.courier_gid[0]'))) into @courier_gid;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.customer_gid[0]'))) into @customer_gid;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.metadata_value[0]'))) into @metadata_value;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.fromDate[0]'))) into @fromDate;
+             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.toDate[0]'))) into @toDate;
+             #select @airwayno,@courier_gid,@customer_gid,@metadata_value,@fromDate,@toDate;
+			 set Query_srch = '';
+
+			 if @airwayno <> 0 or @airwayno is not null then
+						set Query_srch = concat(Query_srch,' and a.dispatch_awbno = ''',@airwayno,'''');
+			else
+						set Query_srch = concat(Query_srch,'');
+			end if;
+            #select  Query_srch;
+             if @courier_gid <> 0 or @courier_gid is not null then
+						set Query_srch = concat(Query_srch,' and d.courier_gid = ''',@courier_gid,'''');
+			else
+						set Query_srch = concat(Query_srch,'');
+			end if;
+
+             if @customer_gid <> 0 or @customer_gid is not null then
+						set Query_srch = concat(Query_srch,' and c.customer_gid = ''',@customer_gid,'''');
+			else
+						set Query_srch = concat(Query_srch,'');
+			end if;
+
+             if @metadata_value <> 0 or @metadata_value is not null then
+						set Query_srch = concat(Query_srch,' and a.dispatch_mode = ''',@metadata_value,'''');
+			else
+						set Query_srch = concat(Query_srch,'');
+			end if;
+
+             if @fromDate <> 0 or @fromDate is not null then
+						set Query_srch = concat(Query_srch,' and a.dispatch_date >= ''',@fromDate,'''');
+			else
+						set Query_srch = concat(Query_srch,' and a.dispatch_date>=''',now()-interval 4 year,'''');
+			end if;
+
+             if @toDate <> 0 or @toDate is not null then
+						set Query_srch = concat(Query_srch,' and a.dispatch_date <= ''',@toDate,'''');
+			else
+						set Query_srch = concat(Query_srch,'and a.dispatch_date <=''',now(),'''');
+			end if;
+             #select  Query_srch ;
+             set Query_Select='';
+			 set Query_Select =concat('select customer_name,
+														  dispatch_awbno,dispatch_podawbno,
+														  date_format(dispatch_date,"%d-%b-%Y") as dispatch_date,
+														  dispatch_mode,
+														  courier_name,
+														  dispatch_type,
+														  ifnull(dispatch_packets,0) as dispatch_packets,
+														  ifnull(dispatch_totweight,0.00) as  dispatch_totweight ,
+														  ifnull(dispatch_podweight,0.00) as dispatch_podweight,
+														  ifnull(dispatch_podweight,0)-ifnull(dispatch_totweight,0) as Difference_weight,
+														  ifnull(dispatch_podamt,0.00)as Bill_Amount,
+                                                          ifnull(dispatch_totweight*ifnull(rate_value,0),0.00) as Dispatch_Amount,
+                                                          ifnull(dispatch_podweight*ifnull(rate_value,0),0.00) as Courier_Amount,
+                                                          ifnull(dispatch_podweight*ifnull(rate_value,0),0.00)-ifnull(dispatch_totweight*rate_value,0.00) as Sys_courier,
+                                                          ifnull(dispatch_podamt,0.00)-ifnull(dispatch_totweight*ifnull(rate_value,0),0.00) as Consignment_courier,
+                                                          location_name,
+                                                          ifnull(rate_value,0),
+
+                                                           (select sum(ifnull(dispatch_totweight*ifnull(rate_value,0),0.00))
+															  from dis_trn_tdispatch as a
+															   inner join gal_trn_tinvoiceheader as b on b.invoiceheader_despatch_gid =a.dispatch_gid
+															   inner join gal_mst_tcustomer as c on c.customer_gid=b.invoiceheader_customer_gid
+															   inner join dis_mst_tcourier as d on d.courier_gid=a.dispatch_courier_gid
+															   inner join gal_mst_tlocation as e on e.location_gid=c.customer_location_gid
+															   left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'' ) as sr
+														       on sr.rate_reftablegid=a.dispatch_courier_gid
+															   where
+															    a.entity_gid in (',@Entity_Gid,')',Query_srch,' ) as total_dispatch_amount,
+
+                                                               (select sum(ifnull(dispatch_podweight*ifnull(rate_value,0),0.00))
+															  from dis_trn_tdispatch as a
+															   inner join gal_trn_tinvoiceheader as b on b.invoiceheader_despatch_gid =a.dispatch_gid
+															   inner join gal_mst_tcustomer as c on c.customer_gid=b.invoiceheader_customer_gid
+															   inner join dis_mst_tcourier as d on d.courier_gid=a.dispatch_courier_gid
+															   inner join gal_mst_tlocation as e on e.location_gid=c.customer_location_gid
+															   left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'' ) as sr
+														       on sr.rate_reftablegid=a.dispatch_courier_gid
+															   where
+															   a.entity_gid in (',@Entity_Gid,')',Query_srch,' ) as total_courier_amount,
+
+                                                               (select sum(ifnull(dispatch_podamt,0.00))
+															  from dis_trn_tdispatch as a
+															   inner join gal_trn_tinvoiceheader as b on b.invoiceheader_despatch_gid =a.dispatch_gid
+															   inner join gal_mst_tcustomer as c on c.customer_gid=b.invoiceheader_customer_gid
+															   inner join dis_mst_tcourier as d on d.courier_gid=a.dispatch_courier_gid
+															   inner join gal_mst_tlocation as e on e.location_gid=c.customer_location_gid
+															   inner join gal_mst_trate as f on f.rate_reftablegid=a.dispatch_courier_gid
+															   inner join gal_mst_tslab as g on g.slab_gid=f.rate_slabgid
+															   where
+															   slab_fromqty <= a.dispatch_totweight AND slab_toqty >= a.dispatch_totweight
+															   and slab_name=''NON-DOC'' and a.entity_gid in (',@Entity_Gid,')',Query_srch,' ) as total_Bill_amount,
+
+                                                                (select sum(ifnull(dispatch_podweight,0)-ifnull(dispatch_totweight,0))
+															  from dis_trn_tdispatch as a
+															   inner join gal_trn_tinvoiceheader as b on b.invoiceheader_despatch_gid =a.dispatch_gid
+															   inner join gal_mst_tcustomer as c on c.customer_gid=b.invoiceheader_customer_gid
+															   inner join dis_mst_tcourier as d on d.courier_gid=a.dispatch_courier_gid
+															   inner join gal_mst_tlocation as e on e.location_gid=c.customer_location_gid
+															    left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'' ) as sr
+														  on sr.rate_reftablegid=a.dispatch_courier_gid
+															   where
+															    a.entity_gid in (',@Entity_Gid,')',Query_srch,' ) as total_difference_weight
+
+														  from dis_trn_tdispatch as a
+														   inner join gal_trn_tinvoiceheader as b on b.invoiceheader_despatch_gid =a.dispatch_gid
+														   inner join gal_mst_tcustomer as c on c.customer_gid=b.invoiceheader_customer_gid
+														   inner join dis_mst_tcourier as d on d.courier_gid=a.dispatch_courier_gid
+                                                           inner join gal_mst_tlocation as e on e.location_gid=c.customer_location_gid
+                                                            left join (select rate_slabgid,rate_reftablegid ,rate_value from gal_mst_trate r inner join  gal_mst_tslab s on r.rate_slabgid=s.slab_gid where s.slab_name=''NON-DOC'' ) as sr
+														  on sr.rate_reftablegid=a.dispatch_courier_gid
+														   where
+														   a.entity_gid in (',@Entity_Gid,')',Query_srch,' ');
+
+			#select Query_Select;
+			set @Query_Select=Query_Select;
+            PREPARE stmt FROM @Query_Select;
+            #select  @Query_Select;##### remove it
+            EXECUTE stmt;
+            select found_rows() into li_count;
+
+            if li_count>0 then
+				set Message='FOUND';
+             else
+				set Message='NOT_FOUND';
+            end if;
+
+
+
+   elseif ls_Type = 'SALES' and Sub_Type ='SPLIT_QUANTITY'  then
+						### To Show the SPLIT Qty for Move to Combined Box.
+
+                        	 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Customer_Gid[0]'))) into @Customer_Gid;
+
+                               set Query_srch = '';
+                               if @Customer_Gid <> 0 and @Customer_Gid is not null then
+											set Query_srch = concat(Query_srch,' and e.customer_gid = ''',@Customer_Gid,'''');
+								else
+											set Query_srch = concat(Query_srch,'');
+								end if;
+
+
+
+        set Query_Select =concat('select a.cartondetails_dispatchgid,a.cartondetails_refgid,a.cartondetails_reftablegid,a.cartondetails_gid,
+											concat(e.customer_name,''-'',f.location_name) as customer_display_name,
+											d.invoiceheader_no,g.product_name,a.cartondetails_qty,
+
+											(cartondetails_qty - ifnull((select ifnull(sum(z.cartondetails_qty),0)
+                                            from gal_trn_tcartondetails as z where cartondetails_qtysplitparentgid = a.cartondetails_gid and z.cartondetails_isactive = ''Y''
+                                            and z.cartondetails_isremoved = ''N'' ),0) ) as balance_quantity,
+
+                                            (select max(y.cartondetails_boxno) from gal_trn_tcartondetails as y where y.cartondetails_dispatchgid = a.cartondetails_dispatchgid
+                                            and y.cartondetails_isactive = ''Y'' and y.cartondetails_isremoved = ''N''
+                                            ) as max_box_count,
+
+                                            ref_name
+											from gal_trn_tcartondetails as a
+											inner join gal_mst_tref as b on b.ref_name = ''CARTON_INVOICE'' and b.ref_gid = a.cartondetails_refgid
+											inner join gal_trn_tinvoicedetails as c on c.invoicedetails_gid = a.cartondetails_reftablegid
+											inner join gal_trn_tinvoiceheader as d on d.invoiceheader_gid = c.invoicedetails_invoice_gid
+											inner join gal_mst_tcustomer as e on e.customer_gid = d.invoiceheader_customer_gid
+											inner join gal_mst_tlocation as f on f.location_gid = e.customer_location_gid
+											inner join gal_mst_tproduct as g on g.product_gid = c.invoicedetails_product_gid
+											where a.cartondetails_cartonheadergid = 0 and a.cartondetails_isactive = ''Y'' and a.cartondetails_isremoved = ''N''  and b.ref_isremoved = ''N''
+											and c.invoicedetails_isremoved = ''N'' and d.invoiceheader_isremoved = ''N'' and e.customer_isactive = ''Y''
+                                            and e.customer_isremoved = ''N'' and f.location_isremoved = ''N'' ',Query_srch,'
+											and g.product_isactive = ''Y'' and g.product_isremoved = ''N'' and a.entity_gid in (',Entity_Gid,')
+											');
+
+		            set @p = Query_Select;
+					PREPARE stmt FROM @p;
+                    #select @p; ### Remove it
+					EXECUTE stmt;
+					Select found_rows() into li_count;
+    	            if li_count > 0 then
+						set Message = 'FOUND';
+				    else
+						set Message = 'NOT_FOUND';
+				    end if;
+
+elseif ls_Type = 'SUMMARY' and Sub_Type ='DISPATCH_DETAILS_ALL'  then
+            ### POD is Null and is for POD Updation too
+           select JSON_LENGTH(lj_Filters,'$') into @li_json_count;
+						 if  @li_json_count <=0  then
+										set Message = 'No Data in Json Object';
+										leave sp_DispatchProcess_Get;
+						 end if;
+
+				 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Customer_Gid[0]'))) into @Customer_Gid;
+				 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date[0]'))) into @Dispatch_Date;
+				 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Mode[0]'))) into @Dispatch_Mode;
+				 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Courier_Name[0]'))) into @Courier_Name;
+
+                 #select @Customer_Gid,@Dispatch_Date,@Dispatch_Mode,@Courier_Name;#Remove
+
+                 if @Customer_Gid <> 0 then
+											set Query_srch = concat(Query_srch,' and customer_gid = ''',@Customer_Gid,'''');
+				  else
+											set Query_srch = concat(Query_srch,'');
+				  end if;
+
+                  if @Dispatch_Date <> '' then
+											set Query_srch = concat(Query_srch,' and dispatch_date = ''',@Dispatch_Date,'''');
+				  else
+											set Query_srch = concat(Query_srch,'');
+				  end if;
+
+                  if @Dispatch_Mode <> '' then
+											set Query_srch = concat(Query_srch,' and dispatch_mode = ''',@Dispatch_Mode,'''');
+				  else
+											set Query_srch = concat(Query_srch,'');
+				  end if;
+
+                  if @Courier_Name <> '' then
+											set Query_srch = concat(Query_srch,' and courier_name = ''',@Courier_Name,'''');
+				  else
+											set Query_srch = concat(Query_srch,'');
+				  end if;
+
+                 #Edit --26-02-2019 -Prakash
+                  set @REF_Name='DISPATCH_SALES';
+
+				  select fn_REFGid(@REF_Name) into @Ref_Gid;
+
+				  if @Ref_Gid ='' then
+					set Message = 'Ref Gid IS Empty';
+				  end if;
+
+               #select Query_srch;
+          set Query_Select=concat('select dispatch_gid,dispatch_awbno,ifnull(e.customer_name,'''') as to_name,
+									ifnull(concat(e.customer_name,'' - '',l.location_name),''-'') as customer_display_name,
+                                    ifnull(l.location_name,''-'') as location_name,
+                                    ifnull(f.employee_name,'''') as employee_name,
+									DATE_FORMAT(a.dispatch_date,"%d-%b-%Y")as dispatch_date ,
+									a.dispatch_mode,c.courier_name,a.dispatch_status,a.dispatch_remarks
+									from dis_trn_tdispatch as a
+									inner join dis_map_tdispref as b on b.dispref_dispatchgid = a.dispatch_gid and dispref_isactive=''Y'' and dispref_isremoved=''N''
+									inner join dis_mst_tcourier as c on c.courier_gid = a.dispatch_courier_gid and courier_isactive=''Y'' and courier_isremoved=''N''
+									left join gal_trn_tinvoiceheader as d on d.invoiceheader_no = b.dispref_refno and b.dispref_refgid = ',@Ref_Gid,'
+									and d.invoiceheader_isremoved = ''N''
+									left join gal_mst_tcustomer as e on e.customer_gid = d.invoiceheader_customer_gid and customer_isactive=''Y'' and customer_isremoved=''N''
+                                    left join gal_mst_tlocation as l on l.location_gid = e.customer_location_gid and location_isremoved = ''N''
+									left join gal_mst_temployee as f on f.employee_gid = d.invoiceheader_employee_gid and employee_isactive=''Y'' and employee_isremoved=''N''
+									where dispatch_pod is null and a.dispatch_isactive = ''Y'' and a.dispatch_isremoved = ''N'' and a.entity_gid in (',Entity_Gid,')',Query_srch,'
+									order by dispatch_gid desc');
+
+
+
+                    set @p = Query_Select;
+					PREPARE stmt FROM @p;
+                   #select @p; ##3 Remove it
+					EXECUTE stmt;
+					Select found_rows() into li_count;
+    	            if li_count > 0 then
+						set Message = 'FOUND';
+				    else
+						set Message = 'NOT_FOUND';
+				    end if;
+
+elseif ls_Type = 'SALES' and Sub_Type ='FULL_QUANTITY'  then
+						### To Show Data in Full Summary. :: Inorder to Print
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Customer_Gid[0]'))) into @Customer_Gid;
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Print_Flag'))) into @Print_Flag;
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date'))) into @Dispatch_Date;
+                   select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Courier_Gid'))) into @Dispatch_Courier_Gid;
+
+                                 set Query_srch = '';
+
+                                 if @Customer_Gid is not null and  @Customer_Gid <> '' and @Customer_Gid <> 0  then
+											set Query_srch = concat(Query_srch, ' and  e.customer_gid = ' ,@Customer_Gid, ' ');
+                                 End if;
+
+                                if @Print_Flag is not null and @Print_Flag = 'Y' then
+										set Query_srch = concat(Query_srch, ' and i.cartonheader_isprint = 1 ');
+
+                                        if @Dispatch_Date is null or @Dispatch_Date = '' then
+												set Message = 'Dispatch Date Is Needed For Reprint.';
+                                                leave sp_DispatchProcess_Get;
+                                        End if;
+
+										#if @Customer_Gid is null or @Customer_Gid = '' or @Customer_Gid = 0 then
+											#set Message = 'Customer Gid Is Needed For Reprint.';
+											#leave sp_DispatchProcess_Get;
+                                        #End if;
+
+                                 else
+                                       set Query_srch = concat(Query_srch, ' and i.cartonheader_isprint = 0 ');
+                                End if;
+
+                                if @Dispatch_Date is not null and @Dispatch_Date <> '' then
+										set Query_srch = concat(Query_srch, ' and  h.dispatch_date = ''' ,@Dispatch_Date, ''' ');
+                                End if;
+
+                                 if @Dispatch_Courier_Gid <> 0 and @Dispatch_Courier_Gid is not null and @Dispatch_Courier_Gid <> '' then
+										set Query_srch = concat(Query_srch,' and dispatch_courier_gid = ''',@Dispatch_Courier_Gid,'''')	;
+								end if;
+
+
+                  set Query_Select=concat('select cartondetails_gid,concat(e.customer_name,''-'',f.location_name)as Customer_Name,
+														   case
+                                                                                            when ifnull(h.dispatch_courier_gid,0) <> 0 and h.dispatch_mode <> ''Direct'' then
+																								( select y.courier_name from dis_trn_tdispatch as z
+																									inner join dis_mst_tcourier as y on y.courier_gid = z.dispatch_courier_gid
+																								where z.dispatch_isactive = ''Y'' and y.courier_isactive = ''Y''
+																									and y.courier_isremoved = ''N'' and z.dispatch_gid = h.dispatch_gid )
+
+                                                                                              when ifnull(h.dispatch_courier_gid,0) <> 0 and h.dispatch_mode = ''Direct'' then
+																								( select yy.employee_name from dis_trn_tdispatch as zz
+																								inner join gal_mst_temployee  as yy on yy.employee_gid = zz.dispatch_courier_gid
+																								where zz.dispatch_isactive = ''Y'' and yy.employee_isactive = ''Y''
+																								and yy.employee_isremoved = ''N'' and zz.dispatch_gid = h.dispatch_gid )
+
+
+                                                                                              else ifnull(courier_name,'''')
+																					 end as  courier_name,
+                                                        g.product_name,
+														a.cartondetails_qty,invoiceheader_no as  INV_No,
+														case
+															when a.cartondetails_qtysplitparentgid > 0 then ''SPLIT''
+															when  a.cartondetails_qtysplitparentgid = 0 then ''FULL''
+														end as Box_Size    ,
+                                                          concat(a.cartondetails_boxno,''/'',
+                                                        (
+                                                        select max(z.cartondetails_boxno) from gal_trn_tcartondetails as z where z.cartondetails_dispatchgid = a.cartondetails_dispatchgid
+                                                        and z.cartondetails_isactive = ''Y'' and z.cartondetails_isremoved = ''N''
+                                                        )
+                                                        ) as box_count
+													from gal_trn_tcartondetails as a
+													inner join gal_mst_tref as b on b.ref_name = ''CARTON_INVOICE'' and b.ref_gid = a.cartondetails_refgid
+													inner join gal_trn_tinvoicedetails as c on c.invoicedetails_gid = a.cartondetails_reftablegid
+													inner join gal_trn_tinvoiceheader as d on d.invoiceheader_gid = c.invoicedetails_invoice_gid
+													inner join gal_mst_tcustomer as e on e.customer_gid = d.invoiceheader_customer_gid
+													inner join gal_mst_tlocation as f on f.location_gid = e.customer_location_gid
+													inner join gal_mst_tproduct as g on g.product_gid = c.invoicedetails_product_gid
+													inner join dis_trn_tdispatch as h on h.dispatch_gid=a.cartondetails_dispatchgid
+                                                    inner join gal_trn_tcartonheader as i on i.cartonheader_gid = a.cartondetails_cartonheadergid and i.cartonheader_isactive = ''Y''
+                                                    and i.cartonheader_isremoved = ''N''
+                                                    left join dis_mst_tcourier as j on j.courier_gid = h.dispatch_courier_gid and j.courier_isactive = ''Y'' and j.courier_isremoved = ''N''
+													where    a.cartondetails_cartonheadergid <> 0' ,Query_srch,' and  a.cartondetails_isactive = ''Y'' and a.cartondetails_isremoved = ''N''
+													and b.ref_isremoved = ''N''
+													and c.invoicedetails_isremoved = ''N'' and d.invoiceheader_isremoved = ''N'' and e.customer_isactive = ''Y'' and
+													e.customer_isremoved = ''N'' and f.location_isremoved = ''N''
+													and g.product_isactive = ''Y'' and g.product_isremoved = ''N'' and a.entity_gid in (',Entity_Gid,')
+													group by cartondetails_dispatchgid,cartondetails_gid
+                                                      ');
+                    set @p = Query_Select;
+                    #select @p; ### Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt;
+					Select found_rows() into li_count;
+    	            if li_count > 0 then
+						set Message = 'FOUND';
+				    else
+						set Message = 'NOT_FOUND';
+				    end if;
+
+  ##karthiga edited feb 01
+
+elseif ls_Type = 'LABEL_PRINT_SALES' and Sub_Type ='SALES'  then
+							## To Print The Label
+
+							 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Customer_Gid[0]'))) into @Customer_Gid;
+							 select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_gid[0]'))) into @Dispatch_gid;
+                             select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Print_Flag'))) into @Print_Flag;
+                              select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date'))) into @Dispatch_Date;
+                              select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Courier_Gid'))) into @Courier_Gid;
+
+                                 set Query_srch = '';
+
+                                 if @Customer_Gid is not null and  @Customer_Gid <> '' and @Customer_Gid <> 0  then
+											set Query_srch = concat(Query_srch, ' and  e.customer_gid = ' ,@Customer_Gid, ' ');
+                                 End if;
+
+                                 if @Dispatch_gid is not null and  @Dispatch_gid <> '' and @Dispatch_gid <> 0  then
+											set Query_srch = concat(Query_srch, ' and  a.cartonheader_dispatchgid = ' ,@Dispatch_gid, ' ');
+                                 End if;
+
+                                 if @Print_Flag is not null and @Print_Flag = 'Y' then
+										set Query_srch = concat(Query_srch, ' and a.cartonheader_isprint = 1 ');
+
+                                         if @Dispatch_Date is null or @Dispatch_Date = '' then
+												set Message = 'Dispatch Date Is Needed For Reprint.';
+                                                leave sp_DispatchProcess_Get;
+                                        End if;
+
+                                       # if @Customer_Gid is null or @Customer_Gid = '' or @Customer_Gid = 0 then
+										#		set Message = 'Customer Gid Is Needed For Reprint.';
+                                           #     leave sp_DispatchProcess_Get;
+                                      #  End if;
+
+                                 else
+                                       set Query_srch = concat(Query_srch, ' and a.cartonheader_isprint = 0 ');
+                                End if;
+
+                                  if @Dispatch_Date is not null and @Dispatch_Date <> '' then
+										set Query_srch = concat(Query_srch, ' and  m.dispatch_date = ''' ,@Dispatch_Date, ''' ');
+                                End if;
+
+                                if @Courier_Gid is not null and @Courier_Gid <> '' then
+										set Query_srch = concat(Query_srch,' and dispatch_courier_gid = ',@Courier_Gid,'  ');
+                                End if;
+                                 #
+                                 set @Contact_Ref_Gid = 0 ;
+									select ref_gid into @Contact_Ref_Gid from gal_mst_tref where ref_name = 'CUST_CONTACT' and ref_isremoved = 'N' ;
+
+								set @CartonINV_Ref_Gid = 0 ;
+									select ref_gid into @CartonINV_Ref_Gid from gal_mst_tref where ref_name = 'CARTON_INVOICE' and ref_isremoved = 'N' ;
+
+                                    if @Contact_Ref_Gid = 0 or @CartonINV_Ref_Gid= 0  then
+											set Message = 'Error On Contact Data.';
+                                            leave sp_DispatchProcess_Get;
+                                    End if;
+								### TO DO ALL Contact As a Function's
+
+                                set Query_Select=concat('select a.cartonheader_gid,e.customer_gid,h.product_gid,e.customer_name,"CONSIGNEE" as consinee,
+											"WHOLE SALE PACKAGE" as Sale_Package,
+
+											case
+                                                 when (f.address_2 is not null and f.address_2 <> '') and (f.address_1 <> '' and f.address_1 is not null  ) then concat(f.address_1,'' - '',f.address_2 )
+                                                 when (f.address_1 <> '' and f.address_1 is not null  ) and ( f.address_2 is  null or f.address_2 =  '' ) then f.address_1
+                                                 when (f.address_1 = '' or f.address_1 is  null  ) and ( f.address_2 is not null and f.address_2 <>  '' ) then f.address_2
+										    End as  address_1,
+
+                                            f.address_3 as address_2,
+
+
+                                           case
+                                                  when ( g.Contact_mobileno is not null and g.Contact_mobileno <> ''''  ) and ( g.Contact_mobileno2 is  not null and g.Contact_mobileno2 <> ''''  )
+														then  concat(g.Contact_mobileno , '' , '' , g.Contact_mobileno2)
+                                                   when ( g.Contact_mobileno is not null and g.Contact_mobileno <> ''''  ) and ( g.Contact_mobileno2 is null  or  g.Contact_mobileno2 = ''''  )
+														then g.Contact_mobileno
+                                                    when  ( g.Contact_mobileno is  null or g.Contact_mobileno = ''''  ) and ( g.Contact_mobileno2 is not null and g.Contact_mobileno2 <> ''''  )
+														then g.Contact_mobileno2
+                                              end as Contact_mobileno,
+
+                                              case
+                                                  when (g.Contact_landline is not null and g.Contact_landline <> '''' ) and ( g.Contact_landline2 is not null and g.Contact_landline2 <> '''' )
+                                                     then concat(g.Contact_landline,'' , '',g.Contact_landline2)
+                                                   when   (g.Contact_landline is not null and g.Contact_landline <> '''' ) and ( g.Contact_landline2 is  null or g.Contact_landline2 = '''' )
+                                                      then g.Contact_landline
+                                                    when   (g.Contact_landline is  null or g.Contact_landline = '''' ) and ( g.Contact_landline2 is not null and g.Contact_landline2 <> '''' )
+                                                      then g.Contact_landline2
+                                                 end as Contact_landline,
+
+                                            concat( i.location_name ,'' - '', f.address_pincode) as location_name,o.state_name,
+                                            concat(''{"DETAILS":['',
+											group_concat(distinct json_object(''Product_Name'', h.product_name,''Product_Display_Name'',h.product_displayname,''Quantity'',b.cartondetails_qty)),'']}'')
+												as Details,
+
+											# concat(''['',group_concat( distinct json_object(''Quantity'',b.cartondetails_qty)),'']'')as Quantity,
+
+											k.entity_name as Company_Name,"No.196,1st Main Road,Nehru Nagar OMR,Kottivakkam" as Company_Add1,concat(entitydetails_add3,'' - '',"600096")
+												as Company_Add2,
+											"9841571702,9841571704" as Company_Phone_No,
+											b.cartondetails_boxno,
+											(select max(z.cartondetails_boxno) from gal_trn_tcartondetails as z where z.cartondetails_dispatchgid = b.cartondetails_dispatchgid
+											and z.cartondetails_isactive = ''Y'' and z.cartondetails_isremoved = ''N'' ) as max_box_count
+											from gal_trn_tcartonheader as a
+											inner join gal_trn_tcartondetails as b on b.cartondetails_cartonheadergid = a.cartonheader_gid
+											inner join gal_trn_tinvoicedetails as c on c.invoicedetails_gid = b.cartondetails_reftablegid and b.cartondetails_refgid = ',@CartonINV_Ref_Gid,'
+											inner join gal_trn_tinvoiceheader as d on d.invoiceheader_gid = c.invoicedetails_invoice_gid
+											inner join gal_mst_tcustomer as e on e.customer_gid = d.invoiceheader_customer_gid
+											inner join gal_mst_taddress as f on f.address_gid = e.customer_add_gid
+											#inner join gal_mst_tcontact as g on g.Contact_reftable_gid = e.customer_gid and Contact_ref_gid = ',@Contact_Ref_Gid,'
+                                            inner join gal_mst_tcontact as g on g.contact_gid = (select z.contact_gid from gal_mst_tcontact as z
+											where z.Contact_reftable_gid = e.customer_gid and Contact_ref_gid = ',@Contact_Ref_Gid,' limit 1)
+											inner join gal_mst_tproduct as h on h.product_gid = c.invoicedetails_product_gid
+											inner join gal_mst_tlocation as i on i.location_gid = e.customer_location_gid
+											#inner join gal_mst_tpincode as j on j.pincode_gid=i.location_pincode_gid
+											inner join gal_adm_tentityheader as k on k.entity_gid = a.entity_gid
+                                            inner join gal_adm_tentitydetails as l on l.entitydetails_entityheadergid = k.entity_gid
+                                            inner join dis_trn_tdispatch as m on m.dispatch_gid=b.cartondetails_dispatchgid
+
+											left join gal_mst_tdistrict as n on n.district_gid = f.address_district_gid and n.district_isremoved = ''N''
+                                            left join gal_mst_tstate as o on o.state_gid = n.district_state_gid and o.state_isremoved = ''N''
+
+											where a.cartonheader_isremoved = ''N'' and c.invoicedetails_isremoved = ''N''
+                                            and d.invoiceheader_isremoved = ''N'' and e.customer_isactive = ''Y''
+                                            and e.customer_isremoved = ''N''  ' ,Query_srch,'
+                                            and h.product_isremoved = ''N'' and h.product_isactive =''Y''
+                                            and k.entity_isactive =''Y'' and k.entity_isremoved =''N''
+                                            and l.entitydetails_isactive = ''Y'' and l.entitydetails_isremoved =''N''
+                                            and m.dispatch_isremoved = ''N'' and m.dispatch_isactive = ''Y''
+											group by a.cartonheader_gid,a.cartonheader_dispatchgid
+                                                      ');
+
+
+                    set @p = Query_Select;
+				#	select @p; ### Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt;
+					Select found_rows() into li_count;
+    	            if li_count > 0 then
+						set Message = 'FOUND';
+				    else
+						set Message = 'NOT_FOUND';
+				    end if;
+
+    elseif ls_Type = 'CONSIGNMENT_PRINT_SALES' and Sub_Type ='SALES'  then
+                      ### Not in Use
+						select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Courier_Gid[0]'))) into @Courier_Gid;
+
+                                 if @Courier_Gid is  null or  @Courier_Gid = '' or @Courier_Gid = 0  then
+											set Message = 'Courier Gid Is Needed.';
+                                            leave sp_DispatchProcess_Get;
+                                 End if;
+
+                                set Query_Select=concat('select dispatch_gid,dispatch_to,dispatch_city,courier_name,
+												dispatch_packets,dispatch_totweight,
+                                                date_format(dispatch_date,''%d-%m-%Y'') as dispatch_date
+												 from dis_trn_tdispatch as a
+												inner join dis_map_tdispref as b on b.dispref_dispatchgid = a.dispatch_gid
+												inner join dis_mst_tcourier as c on c.courier_gid = a.dispatch_courier_gid
+												where a.dispatch_courier_gid = ',@Courier_Gid,'
+                                                group by dispatch_gid
+												order by dispatch_to asc
+                                                      ');
+
+                    set @p = Query_Select;
+					#select @p; ### Remove it
+					PREPARE stmt FROM @p;
+					EXECUTE stmt;
+					Select found_rows() into li_count;
+    	            if li_count > 0 then
+						set Message = 'FOUND';
+				    else
+						set Message = 'NOT_FOUND';
+				    end if;
+elseif ls_Type = 'AWB_NO_GENERATE' and Sub_Type ='SINGLE'  then
+
+                    #set @dispatch_gid_max  = 0;
+				#	select ifnull(max(dispatch_gid),0) into @dispatch_gid_max from dis_trn_tdispatch  ;
+                       set @Max_AWB_No = 0 ;
+						select ifnull(substring(max(dispatch_awbno),10,12),0)  into @Max_AWB_No from dis_trn_tdispatch
+						where dispatch_awbno is not null and date_format(dispatch_date,'%Y-%m-%d')  = date_format(now(),'%Y-%m-%d');
+
+					call sp_Generatecode_Get('WITH_DATESMALL','AWB','00',@Max_AWB_No,@Message);
+					select @Message into AWB_Code ;
+
+                    select AWB_Code;
+
+                    if AWB_Code <> '' and length(AWB_Code) <= 12  then
+						set Message = 'FOUND' ;
+					else
+						set Message = 'NOT_FOUND';
+                    End if;
+ elseif ls_Type = 'CARTON' and Sub_Type = 'DISPATCHED_CUSTOMER' then
+	                #### May be for The Reprint Customer DDL SHowing in Search
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date[0]'))) into @Dispatch_Date;
+
+                                 if @Dispatch_Date is  null or  @Dispatch_Date = ''   then
+											set Message = 'Dispatch Date Is Needed.';
+                                            leave sp_DispatchProcess_Get;
+                                 End if;
+
+                                       set @REF_Dispatch = 0;
+                                       select fn_REFGid('DISPATCH_SALES') into @REF_Dispatch;
+
+                                        if @REF_Dispatch = 0 then
+											set Message = 'Problem In REF Gid Generate' ;
+                                            leave sp_DispatchProcess_Get;
+                                        End if;
+
+                                set Query_Select=concat('select d.customer_gid,d.customer_name,concat(customer_name,'' - '',e.location_name) as customer_display_name
+									from dis_trn_tdispatch as a
+									inner join dis_map_tdispref as b on b.dispref_dispatchgid = a.dispatch_gid
+									inner join gal_trn_tinvoiceheader as c on c.invoiceheader_no = b.dispref_refno and b.dispref_refgid = ',@REF_Dispatch,'
+									inner join gal_mst_tcustomer as d on d.customer_gid = c.invoiceheader_customer_gid
+									inner join gal_mst_tlocation as e on e.location_gid = d.customer_location_gid
+									where a.dispatch_isactive = ''Y'' and a.dispatch_isremoved = ''N'' and a.dispatch_date = ''',@Dispatch_Date,'''
+									and b.dispref_isactive = ''Y'' and b.dispref_isremoved = ''N''
+									and c.invoiceheader_isremoved = ''N'' and d.customer_isactive = ''Y'' and d.customer_isremoved = ''N''
+									and e.location_isremoved = ''N'' ');
+
+											set @p = Query_Select;
+											#select @p; ### Remove it
+											PREPARE stmt FROM @p;
+											EXECUTE stmt;
+											Select found_rows() into li_count;
+											if li_count > 0 then
+												set Message = 'FOUND';
+											else
+												set Message = 'NOT_FOUND';
+											end if;
+
+    elseif ls_Type = 'DISPATCH' and Sub_Type = 'MANUAL_WEIGHT' then
+                 ### New May 4 Manual Weight Updation : Summary
+					select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Dispatch_Date'))) into @Dispatch_Date;
+                    select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Customer_Gid'))) into @Customer_Gid;
+                    select  JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Courier_Gid'))) into @Courier_Gid;
+
+                                 set Query_srch = '';
+
+                                 if @Dispatch_Date is  not null and  @Dispatch_Date <> ''   then
+											set Query_srch = concat(Query_srch,' and a.dispatch_date = ''',@Dispatch_Date,''' ');
+                                 End if;
+
+                                 if @Customer_Gid is not null and @Customer_Gid <> 0  and @Customer_Gid <> ''  then
+										set Query_srch = concat(Query_srch,' and d.customer_gid = ',@Customer_Gid,' ');
+                                 End if;
+
+                                 if @Courier_Gid is not null and @Courier_Gid <> 0 and @Courier_Gid <> '' then
+									set Query_srch = concat(Query_srch,' and f.courier_gid = ',@Courier_Gid,' ');
+                                 End if;
+
+                                set Query_Select=concat('select a.dispatch_gid,d.customer_gid,f.courier_gid,d.customer_name,e.location_name,
+												concat(d.customer_name,'' - '',e.location_name) as customer_displayname,f.courier_name,f.courier_type,a.dispatch_mode,a.dispatch_packets,
+                                                a.dispatch_status,a.dispatch_type,
+                                                DATE_FORMAT(a.dispatch_date,''%d-%b-%Y'') as dispatch_date ,
+												 a.dispatch_totweight,ifnull(a.dispatch_pod,'''') as dispatch_pod,ifnull(a.dispatch_podweight,'''') as dispatch_podweight,c.invoiceheader_status
+												 from dis_trn_tdispatch as a
+												inner join dis_map_tdispref as b on b.dispref_dispatchgid = a.dispatch_gid
+												left join gal_trn_tinvoiceheader as c on c.invoiceheader_despatch_gid = a.dispatch_gid
+												 and c.invoiceheader_isremoved = ''N''
+												left join gal_mst_tcustomer as d on d.customer_gid = c.invoiceheader_customer_gid
+												 and d.customer_isactive = ''Y'' and d.customer_isremoved = ''N''
+												left join gal_mst_tlocation as e on e.location_gid = d.customer_location_gid
+												inner join dis_mst_tcourier as f on f.courier_gid = a.dispatch_courier_gid
+												where a.dispatch_isactive = ''Y'' and a.dispatch_isremoved = ''N''
+                                                and a.dispatch_pod is null
+												and f.courier_isactive = ''Y'' and f.courier_isremoved = ''N'' ',Query_srch,'
+                                                and a.entity_gid in (',Entity_Gid,') ');
+
+											set @p = Query_Select;
+											#select @p; ### Remove it
+											PREPARE stmt FROM @p;
+											EXECUTE stmt;
+											Select found_rows() into li_count;
+											if li_count > 0 then
+												set Message = 'FOUND';
+											else
+												set Message = 'NOT_FOUND';
+											end if;
+
+
+    end if;
+END

@@ -1,0 +1,645 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}  CWIP Checker{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1">
+        <div ng-app="myapp" ng-cloak ng-controller="myctrl">
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4> CWIP Checker Summary </h4>
+                </div>
+            </div>
+            <div class="row" class="col-md-12">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <md-radio-group layout="row" ng-change="check_radio()" ng-init="dataType = 'group'"
+                                                ng-model="dataType">
+                                    <md-radio-button checked ng-selected="true" value="group"> Group By
+                                    </md-radio-button>
+                                    <md-radio-button value="non_group">Non Group By</md-radio-button>
+                                </md-radio-group>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Category</label>
+                            <md-autocomplete
+                                    md-item-text="item.assetcat_subcatname"
+                                    md-items="item in catsearch(searchcat)"
+                                    md-min-length=0
+                                    md-no-cache="true"
+                                    md-search-text="searchcat"
+                                    md-selected-item="selectedcat"
+                                    md-selected-item-change="selectchange(item)"
+                                    placeholder="Category">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText"> {{item.assetcat_subcatname}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Category matching "{{searchText}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+                        </div>
+                        <div class="col-md-3">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>CWIP Group Name</label>
+                                <input ng-change="" ng-model="assetdetails_branch" placeholder="Branch"
+                                       type="text"/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-3">
+                            <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                                <md-icon>search</md-icon>
+                                <md-tooltip>Search</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div ng-show="groups">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col"><a
+                                ng-click="orderByField='asset_id'; reverseSort = !reverseSort"
+                                style="color:white">GroupId
+                            <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                        <th class="text-center" scope="col">CWIP Group Name</th>
+                        <th class="text-center" scope="col">CWIP date</th>
+                        <th class="text-center" scope="col">CWIP Count</th>
+                        <th class="text-center" scope="col">Action</th>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="ast in cwip_checker.slice(((currentPage_grp-1)*itemsPerPage_grp), ((currentPage_grp)*itemsPerPage_grp)) | orderBy:orderByField:reverseSort">
+                            <td class="text-center">
+                                <center>{{((currentPage_grp-1)*itemsPerPage_grp)+$index+1}}</center>
+                            </td>
+                            <td class="text-center">{{ast.cwipasset_gid}}</td>
+                            <td class="text-left">{{ast.cwipgroup_name}}</td>
+                            <td class="text-right">{{ast.cwip_date}}</td>
+                            <td class="text-right">{{ast.cwip_count}}</td>
+                            <!--                            <td class="text-left">{{ast.assetdetails_status.replace("_"," ")}}</td>-->
+                            <td class="text-center" style="width:10px;">
+                                <input
+                                        ng-change="selectEntity()"
+                                        ng-checked="isChecked"
+                                        ng-click="updateSelection($index, cwip_checker)"
+                                        ng-model="ast.isChecked"
+                                        type="checkbox"></td>
+                        </tr>
+                        <tr ng-show="warning">
+                            <td class="warning" colspan="15">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="4">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage_grp"
+                                    max-size="maxSize_grp"
+                                    ng-model="currentPage_grp" total-items="cwip_checker.length"
+                                    uib-pagination></ul>
+                            </td>
+                            <td class="text-left" colspan="2">
+                                            <span>Total Count:<br/> <b
+                                                    class="text-centre"> {{cwip_checker.length}}</b></span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div ng-show="nongroup">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                        <thead class="header">
+                        <th class="text-center" scope="col">S.No</th>
+                        <th class="text-center" scope="col"><a
+                                ng-click="orderByField='asset_id'; reverseSort = !reverseSort"
+                                style="color:white">CWIP Id
+                            <span ng-show="orderByField == 'asset_id'"><span></span></span>
+                        </a></th>
+                        <th class="text-center" scope="col">Product Name</th>
+                        <th class="text-center" scope="col">Category</th>
+                        <th class="text-center" scope="col">CWIP Group Name</th>
+                        <!--                        <th scope="col" class="text-center">CWIP date</th>-->
+                        <th class="text-center" scope="col">CWIP Value</th>
+                        <th class="text-center" scope="col">Action
+                            <input ng-change=""
+                                   ng-checked="checkall"
+                                   ng-click="selectall()" ng-model="checkall"
+                                   type="checkbox">
+                        </th>
+                        </thead>
+                        <tbody>
+                        <tr class=text-center
+                            ng-repeat="ast in cwip_checker">
+                            <td>
+                                <center>{{ast.index}}</center>
+                            </td>
+                            <td class="text-center">{{ast.cwipasset_id}}</td>
+                            <td class="text-left">{{ast.product_name}}</td>
+                            <td class="text-left">{{ast.assetcat_subcatname}}</td>
+                            <td class="text-left">{{ast.cwipgroup_name}}</td>
+                            <td class="text-right">{{ast.cwipasset_cost}}</td>
+                            <!--                            <td class="text-left">{{ast.assetdetails_status.replace("_"," ")}}</td>-->
+                            <td class="text-center" style="width:10px;">
+                                <input ng-change=""
+                                       ng-checked="isChecked"
+                                       ng-click="selectEntity()"
+                                       ng-model="ast.isChecked"
+                                       type="checkbox"></td>
+                        </tr>
+                        <tr ng-show="warning">
+                            <td class="warning" colspan="15">
+                                No Records Found.
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="5">
+                                <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                    items-per-page="itemsPerPage"
+                                    max-size="maxSize"
+                                    ng-change="load_nongrp()" ng-model="currentPage"
+                                    total-items="pageLength"
+                                    uib-pagination></ul>
+                            </td>
+                            <td class="text-left" colspan="1">
+                                <label>Page Count:</label>
+                                <select class="form-control" ng-model="itemsPerPage"
+                                        placeholder="count"
+                                        style="width:100px;"
+                                        type="text">
+                                    <option ng-value="10">10</option>
+                                    <option ng-value="20">20</option>
+                                    <option ng-value="40">40</option>
+                                    <option ng-value="60">60</option>
+                                    <option ng-value="80">80</option>
+                                    <option ng-value="100">100</option>
+                                </select>
+                            </td>
+                            <td class="text-left" colspan="1">
+                                        <span>Total Count:<br/> <b
+                                                class="text-centre"> {{pageLength}}</b></span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div ng-show="reason">
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Rejection Reason</label>
+                                <input class="textboxline" maxlength="60"
+                                       ng-model="comments"
+                                       pattern="([^\s][A-z0-9À-ž\s]+)"
+                                       placeholder="Comments for reject" required/>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-2">
+                            <md-button aria-label="Reject" class="md-icon-button"
+                                       ng-click="reject_Asset(em)">
+                                <md-icon class="material-icons editlink">done</md-icon>
+                                <md-tooltip>Reject</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <md-button class="btn btn-info custbutton" ng-click="Save()"
+                               ng-disabled="enable_update">Approve
+                        <md-tooltip>Approve</md-tooltip>
+                    </md-button>
+                    <md-button class="md-raised md-warn" ng-click="reject()"
+                               ng-disabled="enable_reject"
+                               type="button"
+                               value="Reject">Reject
+                    </md-button>
+                </div>
+            </div>
+            <!--Image start-->
+            <div aria-hidden="" aria-labelledby="exampleModalLabel"
+                 class="modal fade"
+                 data-backdrop="" data-keyboard="false"
+                 id="viewmodals">
+                <div class="modal-dialog modal-md modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel">
+                                    <strong>Asset Image</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-sm-12">
+                                        <div class="text-center">
+                                            <img src="{{ asset_img }}" style="width:500px;height:500px"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('myapp', ['ngMaterial', 'ngMessages', 'ui.bootstrap'])
+	.config(function ($httpProvider) {
+		$httpProvider.defaults.xsrfCookieName = 'csrftoken';
+		$httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+	});
+app.controller('myctrl', function ($scope, first_service, $mdDialog,$mdDateLocale, $window, $filter) {
+	$scope.orderByField = '';
+	$scope.maxSize = 3;
+	$scope.itemsPerPage = 10;
+	$scope.currentPage = 1;
+	$scope.maxSize_grp = 3;
+	$scope.itemsPerPage_grp = 10;
+	$scope.currentPage_grp = 1;
+	$scope.maxSize_popup = 3;
+	$scope.itemsPerPage_popup = 10;
+	$scope.currentPage_popup = 1;
+	$scope.cwip_checker = [];
+	$scope.asset_data = [];
+	$scope.enable_update = true;
+	$scope.enable_reject = true;
+	$scope.warning = false;
+	var detail = JSON.parse(sessionStorage.getItem('today'));
+	var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+    };
+	$scope.loading = function () {
+		$mdDialog.show({
+			templateUrl: 'loaderSpinner',
+			parent: angular.element(document.body),
+			clickOutsideToClose: false
+		});
+	};
+	$scope.loading_popup = function () {
+		$mdDialog.show({
+			templateUrl: 'loaderSpinner',
+			parent: angular.element(document.getElementById('viewmodal')),
+			clickOutsideToClose: false
+		});
+	};
+	$scope.endloading = function () {
+		$mdDialog.hide();
+	};
+	$scope.check_radio = function () {
+		if ($scope.dataType == "group") {
+			loaddata();
+			return false;
+		} else if ($scope.dataType == "non_group") {
+			$scope.load_nongrp();
+			return false;
+		}
+	};
+	$scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+            }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+            }
+    }
+    $scope.selectdate = function() {
+        $scope.assetdetails_capdate = $filter('date')(new Date($scope.assetdetails_cpdate),'yyyy-MM-dd');
+    }
+    $scope.search = function() {
+        $scope.check_radio();
+    }
+	loaddata();
+	function loaddata() {
+		var data = {
+			"Params": {
+				"FILTER": {
+					 "Invoice_No":"",
+                       "Product_Gid":"",
+                       "CWIP_Group_Gid":"",
+                       "CWIP_Group":"Y"
+				},
+			}
+		};
+
+		var get_asset = first_service.asset_detail(data)
+		$scope.cwip_checker = [];
+		get_asset.then(function (result) {
+			$scope.loading();
+			$scope.main = result.data.DATA;
+			if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.warning = true;
+            }
+			$scope.cwip_checker = $scope.main;
+			$scope.Totalpages = Math.ceil($scope.cwip_checker.length / $scope.itemsPerPage_grp);
+			$scope.groups = true;
+			$scope.nongroup = false;
+            $scope.cwip_grpchecker = "";
+		}).finally($scope.endloading);
+	}
+    loadcat();
+    function loadcat(){
+        var get_drop = first_service.drop_data()
+        get_drop.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.get_drop_data = $scope.main;
+        });
+    }
+    $scope.catsearch = gotocat;
+        function gotocat(query) {
+            var result = $filter('filter')($scope.get_drop_data, {
+                'assetcat_subcatname': query
+            });
+            return result;
+        }
+
+	$scope.load_nongrp = function() {
+	    $scope.loading();
+		var datas = {
+			"Params": {
+				"FILTER": {
+					  "Invoice_No":"",
+                       "Product_Gid":"",
+                       "CWIP_Group_Gid":$scope.cwip_grpchecker,
+                       "CWIP_Group":"N",
+                       "Page_Index":$scope.currentPage - 1,
+                       "Page_Size":$scope.itemsPerPage
+				},
+			}
+		};
+		var set_asset = first_service.asset_detail(datas)
+		set_asset.then(function (result) {
+			$scope.main = result.data.DATA;
+            if(result.data.MESSAGE == "NOT_FOUND" ){
+                $scope.data_len = 0;
+            }
+            $scope.cwip_checker = $scope.main;
+            if($scope.currentPage !=1){
+                 var count = $scope.currentPage -1;
+                 count = count * $scope.itemsPerPage;
+            }
+            else {
+                count = 0;
+            }
+            for (i=0;i < $scope.cwip_checker.length;i++){
+                var t = i+1;
+                $scope.cwip_checker[i].index = count + t;
+            };
+            $scope.pageLength = $scope.cwip_checker[0].Total_Row;
+			$scope.Totalpages = Math.ceil($scope.pageLength / $scope.itemsPerPage);
+			$scope.nongroup = true;
+			$scope.groups = false;
+		}).finally($scope.endloading);
+	}
+	    $scope.updateSelection = function(position, entities) {
+          angular.forEach(entities, function(subscription, index) {
+            if (position != index)
+              subscription.isChecked = false;
+          });
+        }
+
+        $scope.selectEntity = function() {
+            for (var i = 0; i < $scope.cwip_checker.length; i++) {
+               if ($scope.cwip_checker[i].isChecked == true) {
+                    $scope.enable_update = false;
+                    $scope.enable_reject = false;
+                    $scope.reason = false;
+                    $scope.comments = "";
+                    $scope.checkall = false;
+                    $scope.cwip_grpchecker = $scope.cwip_checker[i].cwipgroup_gid;
+                    return
+                }
+                else if ($scope.cwip_checker[i].isChecked == false){
+                    $scope.enable_update = true;
+                    $scope.enable_reject = true;
+                    $scope.reason = false;
+                }
+            }
+        };
+        $scope.selectall = function () {
+            if($scope.checkall == true){
+                for (var i = 0; i < $scope.cwip_checker.length; i++) {
+                    $scope.cwip_checker[i].isChecked = true;
+                    $scope.enable_update = false;
+                    $scope.enable_reject = false;
+                }
+            }
+            else if ($scope.checkall == false){
+                for (var i = 0; i < $scope.cwip_checker.length; i++) {
+                    $scope.cwip_checker[i].isChecked = false;
+                }
+                 $scope.enable_update = true;
+                 $scope.enable_reject = true;
+                 $scope.reason = false;
+            }
+	    };
+        $scope.imgshow = function(id){
+            modalshow('viewmodals');
+            $scope.asset_img =$scope.cwip_checker[id].assetdetails_imagepath;
+        }
+
+		$scope.Save = function () {
+            if ($scope.dataType == "group") {
+                for (i = 0; i < $scope.cwip_checker.length; i++) {
+                    if ($scope.cwip_checker[i].isChecked) {
+                        $scope.datas_asset = $scope.cwip_checker[i].cwipgroup_gid;
+                    }
+                };
+                var aprov = {
+                "Params": {
+                    "DETAILS": {
+                        "CWIP": {
+                            "CWIP_Group_Gid": $scope.datas_asset,
+                        },
+                        "Is_GroupBy":"Y"
+                    },
+                    "CHANGE": {},
+                    "STATUS": {
+                        "Status": "APPROVED"
+                    },
+                }
+                };
+                save_file(aprov);
+                return false;
+            }
+            else if ($scope.dataType == "non_group") {
+                $scope.asset = [];
+                for (i = 0; i < $scope.cwip_checker.length; i++) {
+                    if ($scope.cwip_checker[i].isChecked) {
+                        var datas_asset = ($scope.cwip_checker[i].cwipasset_gid).toString();
+                        $scope.asset.push(datas_asset);
+                    }
+                };
+                var aprov = {
+                "Params": {
+                    "DETAILS": {
+                        "CWIP": {
+                            "CWIP_Gid": $scope.asset,
+                        },
+                        "Is_GroupBy":"N"
+                    },
+                    "CHANGE": {},
+                    "STATUS": {
+                        "Status": "APPROVED"
+                    },
+                }
+                };
+                save_file(aprov);
+                return false;
+            }
+		}
+
+		function save_file(aprov,employgid) {
+            $scope.loading_popup();
+            var asset_save = first_service.assets_save(aprov,employgid);
+            asset_save.then(function (result) {
+                $scope.set_msg = result.data.MESSAGE;
+                if($scope.set_msg == "SUCCESS" ){
+                       success_toast();
+                }
+                else{
+                    alert($scope.set_msg);
+                }
+                $window.location.href = "fa_cwip_checker";
+            }).finally($scope.endloading);
+		}
+
+    $scope.reject = function() {
+         $scope.reason = true;
+         $scope.enable_update = true;
+		 $scope.enable_reject = true;
+    };
+	$scope.selectreason = "";
+	$scope.reject_Asset = function () {
+		 if ($scope.comments == undefined ){
+            error_toast(not_enter_reason,time_toast);
+            return false;
+        }
+        else{
+            if ($scope.dataType == "group") {
+                    $scope.asset = [];
+                    for (i = 0; i < $scope.cwip_checker.length; i++) {
+                        if ($scope.cwip_checker[i].isChecked) {
+                            $scope.datas_asset = $scope.cwip_checker[i].cwipgroup_gid;
+                        }
+                    };
+                    var rej = {
+				"Params": {
+					"DETAILS": {
+                            "CWIP": {
+                                "CWIP_Group_Gid": $scope.datas_asset,
+                            },
+                            "Is_GroupBy":"Y"
+					    },
+                        "CHANGE": {},
+                        "STATUS": {
+                            "Status": "REJECTED",
+                            "Remark": $scope.comments,
+                        },
+                        }
+                    };
+                    save_file(rej);
+                }
+            else if ($scope.dataType == "non_group") {
+                $scope.asset = [];
+                for (i = 0; i < $scope.cwip_checker.length; i++) {
+                    if ($scope.cwip_checker[i].isChecked) {
+                        var datas_asset = ($scope.cwip_checker[i].cwipasset_gid).toString();
+                        $scope.asset.push(datas_asset);
+                    }
+                };
+                var rej = {
+				"Params": {
+                        "DETAILS": {
+                            "CWIP": {
+                                "CWIP_Gid": $scope.asset,
+                            },
+                            "Is_GroupBy":"N"
+                        },
+                        "CHANGE": {},
+                        "STATUS": {
+                            "Status": "REJECTED",
+                            "Remark": $scope.comments,
+                        },
+				    }
+                };
+                save_file(rej);
+            }
+		}
+	};
+});
+
+app.service('first_service', function ($http) {
+	this.asset_detail = function (data) {
+		var response = $http.post(Appname + "/asset_details/", {
+			params: {
+				"Sub_Type": "CHECKER_SUMMARY",
+				"Type": "CWIP_CHECKER",
+				"Group": "FA_ASSET_TRAN_SUMMARY",
+				"json": data,
+			}
+		});
+		return response;
+	}
+	this.pop_detail = function (pop) {
+		var response = $http.post(Appname + "/asset_details/", {
+			params: {
+				"Group": "FA_ASSET_CHECKER_SUMMARY",
+				"Type": "ASSERT_CHECKER",
+				"Sub_Type": "DETAILS",
+				"json": pop,
+			}
+		});
+		return response;
+	}
+	this.assets_save = function (aprov,employgid) {
+		var response = $http.post(Appname + "/writeoff_summary/", {
+			params: {
+				"Group": "FA_ASSET_TRAN",
+				"Type": "CWIP",
+				"Sub_Type": "CHECKER",
+				"Action": "UPDATE",
+				"Employee_Gid": employgid,
+				"json": aprov,
+			}
+		});
+		return response;
+	}
+	this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+     }
+});
+
+
+
+
+</script>
+{% endblock %}

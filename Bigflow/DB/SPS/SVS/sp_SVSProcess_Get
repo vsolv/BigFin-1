@@ -1,0 +1,672 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_SVSProcess_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024))
+sp_SVSProcess_Get:BEGIN
+### SELVA nov 26 2019 - Created
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare Query_Search1 varchar(1024);
+Declare Query_Column varchar(1024);
+Declare Query_Limit varchar(1024);
+Declare a int;
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+
+
+
+# Null Selected Output
+
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    
+    BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+    END;
+
+select fn_Classification('ENTITY_ONLY',lj_Classification) into @OutMsg_Classification ;
+        select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Entity_Gid[0]')) into @Entity_Gids;        
+       if @Entity_Gids is  null or @Entity_Gids = '' then
+				select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Message')) into @Message;
+				set Message = concat('Error On Classification Data - ',@Message);
+                leave sp_SVSProcess_Get;
+        End if;
+#SELECT 11;
+if ls_Type = 'GET' and ls_Sub_Type = 'TICKET_CREATION' then
+         
+			set Query_Select = '';
+            set Query_Search = '';
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Id'))) into @Claim_Status;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Value'))) into @Asset_Value;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Cap_Date'))) into @Cap_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Code'))) into @Asset_Code;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Branch'))) into @Branch;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_cat'))) into @Asset_cat;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_gid'))) into @Supplier_gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.ISAMC'))) into @ISAMC;
+			#select @Branch;
+            if @Branch <> '' then	
+			   set Query_Search = concat(Query_Search,' and  assetdetails_branchgid  =',@Branch,' ');
+            end if;
+			if @Asset_cat <> '' then
+				set Query_Search = concat(Query_Search,' and  assetdetails_assetcatgid = ',@Asset_cat,' ');
+			End if;
+            if @ISAMC = 'Y' then            
+				if @Supplier_gid <> '' then
+					set Query_Search = concat(Query_Search,' and  supplier_gid = ',@Supplier_gid,' ');
+				End if;
+            end if; 
+            if @ISAMC = 'Y' then
+                set Query_Select = concat('
+							Select a.assetdetails_gid,a.assetdetails_id,assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+                            date_format(a.assetdetails_capdate,''%Y-%b-%d'') as assetdetails_capdate,
+                            a.assetdetails_branchgid,a.assetdetails_status,b.branch_name,a.assetdetails_vendorname,
+                            fn_Asset_Data(''ASSET_TMP'',a.assetdetails_gid,a.entity_gid,''{}'') as lj_default_details
+							from fa_trn_tassetdetails as a 
+                            inner join gal_mst_tbranch as b on b.branch_gid = a.assetdetails_branchgid
+							and b.branch_isactive = ''Y'' and b.branch_isremoved = ''N''
+                            inner join svs_trn_tamcdetails as c on c.amcdetails_assetdetailid = a.assetdetails_id  and amcdetails_isactive = ''Y''
+                            inner join svs_trn_tamcheader as d on d.amcheader_gid = c.amcdetails_amcheadergid and d.amcheader_isactive = ''Y''
+                                                              and (current_date() between d.amcheader_periodfrom and d.amcheader_periodto)
+                            inner join gal_mst_tsupplier as e on e.supplier_gid = d.amcheader_suppliergid 
+                            where assetdetails_isactive = ''Y'' and assetdetails_isremoved = ''N'' 
+                            ',Query_Search,' and a.entity_gid in (',@Entity_Gid,')	');
+                     	
+               else
+					set Query_Select = concat('
+							Select a.assetdetails_gid,a.assetdetails_id,assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+                            date_format(a.assetdetails_capdate,''%Y-%b-%d'') as assetdetails_capdate,
+                            a.assetdetails_branchgid,a.assetdetails_status,b.branch_name,a.assetdetails_vendorname,
+                            fn_Asset_Data(''ASSET_TMP'',a.assetdetails_gid,a.entity_gid,''{}'') as lj_default_details
+							from fa_trn_tassetdetails as a 
+                            inner join gal_mst_tbranch as b on b.branch_gid = a.assetdetails_branchgid
+							and b.branch_isactive = ''Y'' and b.branch_isremoved = ''N''
+                           where assetdetails_isactive = ''Y'' and assetdetails_isremoved = ''N'' 
+                            ',Query_Search,' and a.entity_gid in (',@Entity_Gid,')	');
+                    
+               end if;
+                        set @Query_Select = Query_Select;									                
+			      		#select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if;
+    
+ elseif ls_Type = 'GET' and ls_Sub_Type = 'TICKET_HEADER_GET' then     
+##TAMILOLI
+		
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Date_From'))) into @Date_From;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Date_To'))) into @Date_To;
+						
+						set @Date_From=date_format(@Date_From,'%Y-%m-%d') ;
+						set @Date_To=date_format(@Date_To,'%Y-%m-%d') ;
+					  # SELECT @Date_From;
+
+						set Query_Search=' ';
+						if @Date_From<>'' and @Date_From is not  null  	then
+							set Query_Search = concat(' where date_format(create_date,''%Y-%m-%d'')  between ''',@Date_From,'''  and  ''',@Date_To,''' ');                              
+						end if;	
+					
+						set Query_Search1=' ';
+						if @Date_From<>'' and @Date_From is not  null  	then
+							set Query_Search1 = concat('and  date_format(a.create_date,''%Y-%m-%d'')  between ''',@Date_From,'''  and  ''',@Date_To,''' ');                              
+						end if;	
+
+#select Query_Search1;
+						set Query_Select=' ';
+						set Query_Select=concat('select a.ticketheader_gid, date_format(a.ticketheader_duedate,''%Y-%m-%d'') ticketheader_duedate,
+																a.ticketheader_status,a.ticketheader_onhold,a.ticketheader_summary,
+																  c.employee_gid ,c.employee_name,
+																 d.supplier_name,e.branch_name, ticketheader_code ,f.errorcategory_name,
+																 (select concat(''['' ,group_concat( JSON_OBJECT(''ticketdetails_assetdetailid'',ticketdetails_assetdetailid,
+																 ''ticketdetails_assetbarcode'',ticketdetails_assetbarcode,''ticketdetails_assetdetailcatgid'',ticketdetails_assetdetailcatgid)),'']'')
+																 from svs_trn_tticketdetails sub_a
+																 inner join fa_trn_tassetdetails as sub_b
+																  on sub_a.ticketdetails_assetdetailid = sub_b.assetdetails_id) as Assetdetails_json,
+																  (select count(create_date) from svs_trn_tticketheader 
+																  ',Query_Search ,')as ticket_count,
+																 date_format(a.create_date,''%Y-%m-%d'') create_date 
+																 from svs_trn_tticketheader as a 
+										 inner join svs_trn_tticketdetails as b on a.ticketheader_gid = b.ticketdetails_ticketheadergid
+										 inner join gal_mst_temployee as c on a.ticketheader_assignedto= c.employee_gid
+										 inner join gal_mst_tsupplier as d on a. ticketheader_suppliergid= d.supplier_gid
+										 inner join gal_mst_tbranch as e on a.ticketheader_branchgid= e.branch_gid
+                                         inner join svs_mst_terrorcategory f on a.ticketheader_nopgid=f.errorcategory_gid
+										 where a.ticketheader_isactive = "Y" and a.ticketheader_isremoved = "N" and
+										 b.ticketdetails_isactive = "Y" and b.ticketdetails_isremoved= "N" and
+										 c. employee_isactive= "Y" and c.employee_isremoved = "N" and
+										 d.supplier_isactive="Y"and d.supplier_isremoved= "N" and
+										 e.branch_isactive="Y" and e.branch_isremoved= "N"   and
+										 a.Entity_Gid in (',@Entity_Gid,') ',Query_Search1 ,'
+										 group by a.ticketheader_gid');
+											
+                       #SELECT Query_Select;
+						set @p=Query_Select;
+                        prepare stmt from @p;
+                        execute  stmt;
+						select found_rows() into li_count;
+                         
+                         if li_count >0 then
+                            set Message='FOUND- sp_SVSProcess_Get.';
+                         else
+                            rollback;
+                            set Message='NOT FOUND- sp_SVSProcess_Get.';
+						 end if;
+                         
+elseif ls_Type = 'GET' and ls_Sub_Type = 'OVERALL_ASSET' then 
+        	
+            set Query_Select = '';
+            set Query_Search = '';
+            
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+          
+            set Query_Select = concat('
+						select a.assetdetails_id,a.assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+						date_format(a.assetdetails_capdate,''%Y-%m-%d'') as assetdetails_capdate,a.assetdetails_branchgid,
+						a.assetdetails_status,a.assetdetails_vendorname,d.branch_name,e.product_name,
+						(case
+						when  amcheader_type =''AMC'' then  ''AMC''
+						when amcheader_type=''WARRANTY'' then ''WARRANTY''
+						else  ''NOT ASSIGN''
+						end ) as asset_type,DATEDIFF(amcheader_periodto,sysdate()) as days
+						from fa_trn_tassetdetails a 
+						left join svs_trn_tamcdetails b on  b.amcdetails_assetdetailid=a.assetdetails_id 
+												and a.assetdetails_isactive=''Y'' and a.assetdetails_isremoved=''N'' and
+												b.amcdetails_isactive=''Y'' and b.amcdetails_isremoved=''N''  
+						left join svs_trn_tamcheader c on c.amcheader_gid=b.amcdetails_amcheadergid  and
+											   b.amcdetails_isactive=''Y'' and b.amcdetails_isremoved=''N''  and
+												(current_date() between c.amcheader_periodfrom and c.amcheader_periodto) 
+						left join gal_mst_tbranch d on a.assetdetails_branchgid=d.branch_gid and 
+														d.branch_isactive=''Y'' and d.branch_isremoved=''N''
+						inner join gal_mst_tproduct e on a.assetdetails_productgid=e.product_gid and
+													e.product_isactive=''Y'' and e.product_isremoved=''N''
+                        where  a.assetdetails_status=''ACTIVE'' and a.entity_gid in (',@Entity_Gid,')
+                        group by a.assetdetails_id');
+              
+              
+				
+                        set @Query_Select = Query_Select;									                
+			      		#select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if;
+                              
+ elseif ls_Type = 'GET' and ls_Sub_Type = 'TICKET_RISE_ASSETS' then    
+
+        	set Query_Select = '';
+            set Query_Search = '';
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Id'))) into @Asset_Id;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Value'))) into @Asset_Value;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Cap_Date'))) into @Cap_Date;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Code'))) into @Asset_Code;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Branch_Gid'))) into @Branch;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_cat'))) into @Asset_cat;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_gid'))) into @Supplier_gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.ISAMC'))) into @ISAMC;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.branch_name'))) into @branch_name;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Index'))) into @Page_Index;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Size'))) into @Page_Size;
+			#select @Branch;
+            if @Branch <> '' then	
+			   set Query_Search = concat(Query_Search,' and  assetdetails_branchgid  =',@Branch,' ');
+            end if;
+			if @Asset_cat <> '' then
+				set Query_Search = concat(Query_Search,' and  assetdetails_assetcatgid = ',@Asset_cat,' ');
+			End if;
+            if @ISAMC = 'Y' then            
+				if @Supplier_gid <> '' then
+					set Query_Search = concat(Query_Search,' and  supplier_gid = ',@Supplier_gid,'');
+				End if;
+            end if; 
+            
+            if @asset_id <> '' then
+				set Query_Search = concat(Query_Search,' and  a.assetdetails_gid = ',@Asset_Id,' ');
+			End if;
+            
+            if @branch_name <> '' then
+				set Query_Search = concat(Query_Search,' and  b.branch_name like ''','%',@branch_name,'%',''' ');
+			End if;
+            
+             set Query_Limit='';
+					#select @Page_Index,@Page_Size;      
+                    if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+						
+                         #select @Page_Index,@Page_Size;
+                         set @total_size= @Page_Index*@Page_Size;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+					end if;
+				
+			set Query_Column='';
+					
+                    if @Page_Index=0 and @Page_Size=10 then   
+						set Query_Column = (',@Total_Row as Total_Row');
+					end if; 
+            
+           #select Query_Limit,Query_Column,Query_Search;
+           set Query_Select = concat('
+						select a.assetdetails_gid,a.assetdetails_id,a.assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+									date_format(a.assetdetails_capdate,''%Y-%b-%d'') as assetdetails_capdate,a.assetdetails_branchgid,
+                                     a.assetdetails_status,b.branch_name,a.assetdetails_vendorname,h.supplier_gid,p.product_name  ',Query_Column,'
+									 from fa_trn_tassetdetails a
+									 left join gal_mst_tbranch b on a.assetdetails_branchgid=b.branch_gid and
+                                                                     a.assetdetails_status=''ACTIVE''
+									 left join ap_map_tpropertybranch c on b.branch_gid=c.propertybranch_branchgid and
+                                                                    c.propertybranch_isactive=''Y'' and c.propertybranch_isremoved=''N''
+									 left join ap_mst_tproperty d on c.propertybranch_propertygid=d.property_gid and
+                                                                    d.property_isactive=''Y'' and d.property_isremoved=''N''
+									 left join svs_trn_tamcdetails e on a.assetdetails_id=e.amcdetails_assetdetailid and
+																	 e.amcdetails_isactive=''Y'' and e.amcdetails_isremoved=''N''
+									 left join svs_trn_tamcheader f on e.amcdetails_amcheadergid=f.amcheader_gid and
+																	  f.amcheader_isactive=''Y'' and f.amcheader_isremoved=''N''
+                                     left join fa_mst_tassetcat g on  g.assetcat_gid=e.amcdetails_assetcatgid and
+																	  g.assetcat_isactive=''Y'' and g.assetcat_isremoved=''N''
+                                     left join  gal_mst_tsupplier h on h.supplier_gid= f.amcheader_suppliergid and
+                                                                      h.supplier_isactive=''Y'' and h.supplier_isremoved=''N''
+									  left join gal_mst_tproduct p   on a.assetdetails_productgid=p.product_gid and
+																				p.product_isactive=''Y'' and p.product_isremoved=''N''
+                                      where  assetdetails_isactive = ''Y'' 
+										',Query_Search,' and a.entity_gid in (',@Entity_Gid,')
+                                        group by a.assetdetails_id');
+				
+                if @Page_Index=0 and @Page_Size=10 then 
+						   #select 555;
+							set @Query_Count = '';
+							set @Query_Count = concat('select count(A.assetdetails_gid) into @Total_Row from (',Query_Select,') A ');
+								PREPARE stmt FROM @Query_Count;
+									EXECUTE stmt;
+								DEALLOCATE PREPARE stmt;
+                                #select @Query_Count;
+				 end if;
+                 #select @Query_Count;
+                 
+                set @Query_Select =concat(Query_Select,Query_Limit);									                
+				#select @Query_Select; ### Remove It
+				PREPARE stmt FROM @Query_Select;
+				EXECUTE stmt; 
+				Select found_rows() into li_count;
+					  if li_count > 0 then
+							set Message = 'FOUND';
+					  else 
+							set Message = 'NOT_FOUND';
+					  end if;
+elseif ls_Type = 'GET' and ls_Sub_Type = 'ASSET_DETAIL' then    
+
+                         # to create amc data
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.PropertyBranch_Gid'))) into @PropertyBranch_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.asset_id'))) into @asset_id;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.branch_gid'))) into @branch_gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_cat'))) into @Asset_cat;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_Gid'))) into @Supplier_Gid;
+
+			set Query_Search='';
+            #select @Assetdetails_Id;
+            /*
+            if @PropertyBranch_Gid <> '' then	
+			    set Query_Search = concat(Query_Search,' and  c.propertybranch_gid  =',@PropertyBranch_Gid,' ');
+            end if;
+            */
+			if @asset_id <> '' then
+				set Query_Search = concat(Query_Search,' and  a.assetdetails_id = ''',@asset_id,''' ');
+			End if;
+            if @branch_gid  <> '' then            
+				set Query_Search = concat(Query_Search,' and  b.branch_gid = ',@branch_gid,' ');
+			End if;
+            if @Asset_cat  <> '' then            
+				set Query_Search = concat(Query_Search,' and  g.assetcat_gid = ',@Asset_cat,' ');
+			End if;
+            if @Supplier_Gid  <> '' then            
+				set Query_Search = concat(Query_Search,' and  h.supplier_gid = ',@Supplier_Gid,' ');
+			End if;
+            
+           #select Query_Search;
+      #SELECT 2;      
+     #SELECT @Entity_Gid;
+      
+      set  @amcdetails_assetdetailid='';
+			
+            
+            
+		
+   # Select  @amcdetails_assetdetailid;
+      
+            set Query_Select='';
+			set Query_Select=concat('select a.assetdetails_gid,a.assetdetails_id,a.assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+									 date_format(a.assetdetails_capdate,''%Y-%b-%d'') as assetdetails_capdate,a.assetdetails_branchgid,
+                                     a.assetdetails_status,b.branch_name,a.assetdetails_vendorname,i.product_name
+									 from fa_trn_tassetdetails a 
+									 left join gal_mst_tbranch b on a.assetdetails_branchgid=b.branch_gid and
+																		b.branch_isactive=''Y'' and b.branch_isremoved=''N''
+									 left join ap_map_tpropertybranch c on b.branch_gid=c.propertybranch_branchgid  and
+																		c.propertybranch_isactive=''Y'' and c.propertybranch_isremoved=''N'' 
+									 left join ap_mst_tproperty d on c.propertybranch_propertygid=d.property_gid  and
+																		d.property_isactive=''Y'' and d.property_isremoved=''N''
+									 left join svs_trn_tamcdetails e on a.assetdetails_id=e.amcdetails_assetdetailid and
+																		e.amcdetails_isactive=''Y'' and e.amcdetails_isremoved=''N''
+									 left join svs_trn_tamcheader f on e.amcdetails_amcheadergid=f.amcheader_gid and 
+																		f.amcheader_isactive=''Y'' and f.amcheader_isremoved=''N''
+                                     left join fa_mst_tassetcat g on  g.assetcat_gid=e.amcdetails_assetcatgid and   
+																		g.assetcat_isactive=''Y'' and g.assetcat_isremoved=''N'' 
+									 left join  gal_mst_tsupplier h on h.supplier_gid= f.amcheader_suppliergid and
+                                                                      h.supplier_isactive=''Y'' and h.supplier_isremoved=''N''
+									  left join gal_mst_tproduct i on a.assetdetails_productgid=i.product_gid
+									   where     a.assetdetails_id not in(select amcdetails_assetdetailid
+																			 from svs_trn_tamcdetails sub_a
+																			 left join svs_trn_tamcheader sub_b on sub_a.amcdetails_amcheadergid=sub_b.amcheader_gid
+																			where amcdetails_isactive=''Y'' and amcdetails_isremoved=''N'' and 
+																			amcheader_isactive=''Y''  and amcheader_isremoved=''N'' and
+																			(current_date() between sub_b.amcheader_periodfrom and sub_b.amcheader_periodto)) and
+                                                                     a.assetdetails_isactive=''Y'' and a.assetdetails_isremoved=''N'' AND
+                                                                     a.assetdetails_status=''ACTIVE'' and 
+									  a.entity_gid in (',@Entity_Gid,')  ',Query_Search,'
+                                      group by a.assetdetails_id');
+             
+            #SELECT  Query_Select;     
+            set @p=Query_Select;
+            prepare stmt from @p;
+            execute stmt;
+            select found_rows() into li_count;
+               if li_count > 0 then
+                 set message='FOUND';
+               else 
+                 set message='NOT FOUND';
+               end if;  
+END IF;   
+
+if ls_Type = 'GET_l' and ls_Sub_Type = 'ErrorCategory_l' then 
+            # SELECT 6;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.ErrorCategory_Gid'))) into @ErrorCategory_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+            #SELECT 1;
+            #SELECT @ErrorCategory_Gid;
+            
+            set Query_column='';
+            set Query_search='';
+            
+            if @ErrorCategory_Gid <>'' or @ErrorCategory_Gid is not null then
+					set Query_column=concat(',c1.errorcategory_gid as child_id,
+												c1.errorcategory_name as child_name');
+					set Query_Search = concat(Query_Search,' and  p.errorcategory_gid in (',@ErrorCategory_Gid,')');                                        
+            end if; 
+            
+            set Query_Search1='';
+            if @ErrorCategory_Gid ='' or @ErrorCategory_Gid is null then
+					set Query_Search1=concat(Query_Search1,'and p.errorcategory_parent=''Y'' ');
+            end if;
+            #select Query_Search1;
+            
+            
+            set Query_Select='';
+            set Query_Select=concat('SELECT  p.errorcategory_gid as errorcategory_gid,
+										p.errorcategory_name as parent_name ',Query_column,'
+									FROM
+										svs_mst_terrorcategory p
+									LEFT JOIN svs_mst_terrorcategory c1
+										ON c1.errorcategory_parentgid = p.errorcategory_gid
+									WHERE
+                                        p.entity_gid IN (',@Entity_Gid,') ',Query_Search,' ',Query_Search1,' ');
+            # select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into li_count;
+             #SELECT li_count;
+                if li_count>0 then
+                   set message='FOUND';
+                else
+                   set message='NOT FOUND';
+                end if;
+end if;        
+if ls_Type = 'GET' and ls_Sub_Type = 'ErrorCategory' then 
+            # SELECT 6;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.ErrorCategory_Gid'))) into @ErrorCategory_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+            #SELECT 1;
+            #SELECT @ErrorCategory_Gid;
+            
+            set Query_column='';
+            set Query_search='';
+            
+            set Query_Select='';
+            set Query_Select=concat('SELECT  p.errorcategory_gid as errorcategory_gid,
+										p.errorcategory_name as parent_name FROM
+										svs_mst_terrorcategory p
+                                        WHERE
+                                        p.entity_gid IN (',@Entity_Gid,') 
+                                        and p.errorcategory_parentgid in (',@ErrorCategory_Gid,') and
+                                        p.errorcategory_isactive=''Y'' and p.errorcategory_isremoved=''N'';
+									');
+            # select Query_Select;
+             set @p=Query_Select;
+             prepare stmt from @p;
+             execute stmt;
+             select found_rows() into li_count;
+             #SELECT li_count;
+                if li_count>0 then
+                   set message='FOUND';
+                else
+                   set message='NOT FOUND';
+                end if;
+                
+  elseif ls_Type = 'GET' and ls_Sub_Type = 'SUPPLIER_DETAIL' then       
+			
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.AmcHeader_Type'))) into @AmcHeader_Type;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Branch_Gid'))) into @Branch_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+            
+            
+            set Query_Search='';
+            
+            if @AmcHeader_Type ='PAID' then
+				set Query_Search='';
+            else
+            
+					if  @AmcHeader_Type <> '' then
+						set Query_Search = concat(Query_Search,' and  b.amcheader_type = ''',@AmcHeader_Type,''' ');
+					end if;
+					if @Branch_Gid <> '' then
+						set Query_Search = concat(Query_Search,' and  e.branch_gid = ',@Branch_Gid,' ');
+					end if;
+			End if;
+            
+            
+            set Query_Select='';
+            set Query_Select=concat('select supplier_gid,supplier_name
+											from gal_mst_tsupplier a
+											left join svs_trn_tamcheader b on a.supplier_gid=b.amcheader_suppliergid and
+																			 a.supplier_isactive=''Y'' and a.supplier_isremoved=''N'' and
+                                                                             b.amcheader_isactive=''Y'' and b.amcheader_isremoved=''N''
+											left join svs_trn_tamcdetails c on b.amcheader_gid=c.amcdetails_amcheadergid and
+																		c.amcdetails_isactive=''Y'' and c.amcdetails_isremoved=''N''
+											left join fa_trn_tassetdetails d on c.amcdetails_assetdetailid=d.assetdetails_gid and
+																			d.assetdetails_isactive=''Y'' and d.assetdetails_isremoved=''N''
+											left join gal_mst_tbranch e on d.assetdetails_branchgid=e.branch_gid
+																			d.branch_isactive=''Y'' and d.branch_isremoved=''N''
+											where a.entity_gid in (',@Entity_Gid,') ',Query_Search,'
+											group by a.supplier_gid');
+            #select Query_Select;
+            set @p=Query_Select;
+            prepare stmt from @p;
+            execute stmt;
+            select found_rows() into li_count;
+             #SELECT li_count;
+                if li_count>0 then
+                   set message='FOUND';
+                else
+                   set message='NOT FOUND';
+                end if; 
+                
+ elseif ls_Type = 'GET' and ls_Sub_Type = 'TICKET_RISE_ASSETS_NEW' then 
+ 
+		    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.AmcHeader_Type'))) into @AmcHeader_Type;
+		    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Branch_Gid'))) into @Branch_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+            
+            
+            #SELECT @AmcHeader_Type;
+            
+					
+                    if @AmcHeader_Type ='PAID' then
+							
+							# SELECT Query_Search;
+							set Query_Select='';
+							set Query_Select=concat(' select a.assetdetails_id,a.assetdetails_qty,a.assetdetails_assetcatgid,a.assetdetails_status,
+														a.assetdetails_requestfor,a.assetdetails_assetowner,a.assetdetails_barcode,
+														b.branch_gid,b.branch_name,f.product_name
+                                                        from fa_trn_tassetdetails a
+														inner join gal_mst_tbranch b on a.assetdetails_branchgid=b.branch_gid and
+																					a.assetdetails_isactive=''Y'' and a.assetdetails_isremoved=''N'' and
+																					a.assetdetails_status=''ACTIVE'' and 
+																					b.branch_isactive=''Y'' and b.branch_isremoved=''N''
+                                                        inner join gal_mst_tproduct f on a.assetdetails_productgid=f.product_gid and 
+																					f.product_isactive=''Y'' and f.product_isremoved=''N''
+														where b.branch_gid in (',@Branch_Gid,')');
+						   #select Query_Select;
+							set @p=Query_Select;
+							prepare stmt from @p;
+							execute stmt;
+							select found_rows() into li_count;
+							 #SELECT li_count;
+								if li_count>0 then
+								   set message='FOUND';
+								else
+								   set message='NOT FOUND';
+								end if; 
+                
+					else
+
+							set Query_Select='';
+							set Query_Select=concat('select a.amcheader_type,c.assetdetails_id, c.assetdetails_barcode,c.assetdetails_qty,c.assetdetails_assetcatgid,c.assetdetails_status,
+														c.assetdetails_requestfor,c.assetdetails_assetowner,d.supplier_gid,d.supplier_name,e.branch_name,f.product_name
+														from svs_trn_tamcheader a 
+														inner join svs_trn_tamcdetails b on a.amcheader_gid=b.amcdetails_amcheadergid and 
+																					a.amcheader_isactive=''Y'' and a.amcheader_isremoved=''N'' and
+                                                                                    (current_date() between a.amcheader_periodfrom and a.amcheader_periodto)  and
+																					 b.amcdetails_isactive=''Y'' and b.amcdetails_isremoved=''N''
+														left join fa_trn_tassetdetails c on b.amcdetails_assetdetailid=c.assetdetails_gid and
+																					c.assetdetails_isactive=''Y'' and c.assetdetails_isremoved=''N'' 
+														left join gal_mst_tbranch e on c.assetdetails_branchgid=e.branch_gid and
+																					e.branch_isactive=''Y'' and e.branch_isremoved=''N''
+														left join gal_mst_tsupplier d on a.amcheader_suppliergid=d.supplier_gid and
+																					 d.supplier_isactive=''Y'' and d.supplier_isremoved=''N''
+														inner join gal_mst_tproduct f on c.assetdetails_productgid=f.product_gid and
+																					f.product_isactive=''Y'' and f.product_isremoved=''N''
+														where a.entity_gid  in (',@Entity_Gid,') and e.branch_gid in (',@Branch_Gid,') 
+                                                        and  a.amcheader_type = ''',@AmcHeader_Type,'''  ');
+																				
+							#select Query_Select;
+							set @p=Query_Select;
+							prepare stmt from @p;
+							execute stmt;
+							select found_rows() into li_count;
+							 #SELECT li_count;
+								if li_count>0 then
+								   set message='FOUND';
+								else
+								   set message='NOT FOUND';
+								end if;
+                        
+                  End if;
+                  
+elseif ls_Type = 'GET' and ls_Sub_Type = 'NEW' then  
+                         # to create amc data
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.PropertyBranch_Gid'))) into @PropertyBranch_Gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.asset_id'))) into @asset_id;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.branch_gid'))) into @branch_gid;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_cat'))) into @Asset_cat;
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_Gid'))) into @Supplier_Gid;
+
+			set Query_Search='';
+            #select @Assetdetails_Id;
+            /*
+            if @PropertyBranch_Gid <> '' then	
+			    set Query_Search = concat(Query_Search,' and  c.propertybranch_gid  =',@PropertyBranch_Gid,' ');
+            end if;
+            */
+			if @asset_id <> '' then
+				set Query_Search = concat(Query_Search,' and  a.assetdetails_id = ''',@asset_id,''' ');
+			End if;
+            if @branch_gid  <> '' then            
+				set Query_Search = concat(Query_Search,' and  b.branch_gid = ',@branch_gid,' ');
+			End if;
+            if @Asset_cat  <> '' then            
+				set Query_Search = concat(Query_Search,' and  g.assetcat_gid = ',@Asset_cat,' ');
+			End if;
+            if @Supplier_Gid  <> '' then            
+				set Query_Search = concat(Query_Search,' and  h.supplier_gid = ',@Supplier_Gid,' ');
+			End if;
+            
+           #select Query_Search;
+      #SELECT 2;      
+     #SELECT @Entity_Gid;
+      
+			set  @a='';
+		
+          select group_concat(amcdetails_assetdetailid) into @a
+			from svs_trn_tamcdetails sub_a
+            left join svs_trn_tamcheader sub_b on sub_a.amcdetails_amcheadergid=sub_b.amcheader_gid
+			where
+			amcdetails_isactive='Y' and amcdetails_isremoved='N' and 
+			amcheader_isactive='Y'  and amcheader_isremoved='N' and
+            (current_date() between sub_b.amcheader_periodfrom and sub_b.amcheader_periodto);   
+		   #select @ammort_invoiceheadergid;
+          set Query_Search='';
+          
+            if @a <> '' then	
+			   set Query_Search1 = concat(' a.assetdetails_id not in(',@a,') and  ');
+            end if;
+            
+           # select @a;
+            #select Query_Search1;
+           
+            
+           set Query_Select='';
+		   set Query_Select=concat('select a.assetdetails_gid,a.assetdetails_id,a.assetdetails_barcode,a.assetdetails_value,a.assetdetails_assetcatgid,
+									 date_format(a.assetdetails_capdate,''%Y-%b-%d'') as assetdetails_capdate,a.assetdetails_branchgid,
+                                     a.assetdetails_status,b.branch_name,a.assetdetails_vendorname,i.product_name
+									 from fa_trn_tassetdetails a 
+									 left join gal_mst_tbranch b on a.assetdetails_branchgid=b.branch_gid and
+																		b.branch_isactive=''Y'' and b.branch_isremoved=''N''
+									 left join ap_map_tpropertybranch c on b.branch_gid=c.propertybranch_branchgid  and
+																		c.propertybranch_isactive=''Y'' and c.propertybranch_isremoved=''N'' 
+									 left join ap_mst_tproperty d on c.propertybranch_propertygid=d.property_gid  and
+																		d.property_isactive=''Y'' and d.property_isremoved=''N''
+									 left join svs_trn_tamcdetails e on a.assetdetails_id=e.amcdetails_assetdetailid and
+																		e.amcdetails_isactive=''Y'' and e.amcdetails_isremoved=''N''
+									 left join svs_trn_tamcheader f on e.amcdetails_amcheadergid=f.amcheader_gid and
+																		f.amcheader_isactive=''Y'' and f.amcheader_isremoved=''N''
+                                     left join fa_mst_tassetcat g on  g.assetcat_gid=e.amcdetails_assetcatgid and   
+																		g.assetcat_isactive=''Y'' and g.assetcat_isremoved=''N'' 
+									 left join  gal_mst_tsupplier h on h.supplier_gid= f.amcheader_suppliergid and
+                                                                      h.supplier_isactive=''Y'' and h.supplier_isremoved=''N''
+									  left join gal_mst_tproduct i on a.assetdetails_productgid=i.product_gid
+									   where ',Query_Search1,'
+                                       a.assetdetails_isactive=''Y'' and a.assetdetails_isremoved=''N'' 
+                                       AND a.assetdetails_status=''ACTIVE'' and 
+									  a.entity_gid in (',@Entity_Gid,')  ',Query_Search,'
+                                      group by a.assetdetails_id');
+            SELECT  Query_Select;     
+            set @p=Query_Select;
+            prepare stmt from @p;
+            execute stmt;
+            select found_rows() into li_count;
+               if li_count > 0 then
+                 set message='FOUND';
+               else 
+                 set message='NOT FOUND';
+               end if;        
+end if;                
+END

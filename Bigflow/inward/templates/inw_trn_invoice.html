@@ -1,0 +1,431 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Invoice Maker {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="appinvoice" ng-controller="ctrlinvoice" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Invoice Maker</h4>
+            </div>
+        </div>
+
+        <div class="row" ng-show="!showform">
+            <form role="form" name="inwardsummary_valid">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Supplier Name</label>
+                                <md-select ng-model="from_supplier" required>
+                                    <md-option ng-repeat="sup in supplier" ng-value="sup.supplier_name">
+                                        {{sup.supplier_name}}
+                                    </md-option>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>Invoice Date</label>
+                                <md-datepicker md-hide-icons="calendar" ng-model="invoice"
+                                               ng-required="true"
+                                               md-min-date="minDate" md-max-date="maxDate" ng-click="date"
+                                               formatDate required></md-datepicker>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label> Invoice No</label>
+                                <input type="text" ng-model="airwayno" maxlength="12" required>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer" ng-hide="hide">
+                                <label> Invoice Amount</label>
+                                <input type="text" ng-model="airwayno" maxlength="12" required>
+                            </md-input-container>
+                        </div>
+                        <div class="col-md-4 col-lg-4 col-sm-4">
+                            <md-input-container class="md-block inputcontainer">
+                                <label>PO No</label>
+                                <input type="text" ng-model="noofpacking" maxlength="3" required>
+                            </md-input-container>
+                        </div>
+                         <div class="col-md-1">
+                                <md-button class="md-raised custbutton"  value="submit" ng-click="inwardsave(header_gid)">View PO
+                                </md-button>
+                            </div>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>Product Category</th>
+                        <th>Product Type</th>
+                        <th>Product Desc</th>
+                        <th>UOM</th>
+                        <th>Unit Price</th>
+                        <th>Qty Ordered</th>
+                        <th>Balance Qty</th>
+                        <th>Select</th>
+                        <th>Current Qty Received</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="header in inward_header.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | filter :name">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <td>
+                            {{header.inwardheader_date}}
+                        </td>
+                        <td>
+                            {{header.courier_name}}
+                        </td>
+                        <td>
+                            {{header.inwardheader_awbno}}
+                        </td>
+                        <td>
+                            {{header.employee_name}}
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td align="center"><label><input type="checkbox" ng-model="d" ng-value="m.product_name"
+                                                         class="checkAll" ng-change="selectAll(m)"
+                                                         ></label></td>
+                        <td align="center"><input type="number" class="textboxgeneral" maxlength="5" min="0" max="99999"
+                                           ng-model="qty.all_qty" ng-blur="changeqty($index)" /></td>
+
+
+                        <td class="text-center">
+
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="11">
+                            <ul uib-pagination total-items="inward_header.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endverbatim %}
+
+<script>
+    var app=angular.module('appinvoice',['ngMaterial','ui.bootstrap']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+      };
+});
+
+
+app.controller('ctrlinvoice',['$scope','$filter','$mdDateLocale','serviceinwentry','$window','$mdDialog',function($scope,$filter,$mdDateLocale,serviceinwentry,$window,$mdDialog){
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+
+         $scope.channel_click=function(channel){
+            if(channel=="Hand Delivery"){
+                $scope.hide=true;
+                $scope.courier="1";
+                $scope.airwayno="nothing";
+            }
+        else{
+            $scope.hide=false;
+            }
+        }
+
+        $scope.createNew = function() {
+                //$scope.inwarddate=;
+                $scope.channel=0;
+                $scope.courier=0;
+                $scope.airwayno="";
+                $scope.noofpacking="";
+                $scope.from_supplier="";
+                $scope.inwardsummary_valid.$setPristine();
+                $scope.inwardsummary_valid.$setUntouched();
+                $scope.receivedby="";
+                $scope.remarks="";
+                $scope.header_gid="";
+                $scope.showform = true;
+        }
+
+        var channel=serviceinwentry.ddl('inw_trn_tinwardheader','inwardheader_channel');
+            channel.then(function(result) {
+                var  channel_data = JSON.parse(result.data)
+                 $scope.channelddl = channel_data;
+        },
+        function(err) {
+            alert('No data!.');
+        }).finally();
+
+
+         var filter_trn={};
+         var filter_final = {
+             FILTER: filter_trn
+         };
+
+        summary();
+        function summary(){
+        var header_set=serviceinwentry.getinwardservice('HEADER_OFFICE','ALL',filter_final);
+            header_set.then(function(result){
+            $scope.inward_header=result.data;
+        },
+        function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        }
+
+
+         var header_set=serviceinwentry.getinwardservice('ALL','ALL',filter_final);
+            header_set.then(function(result){
+            $scope.alldetails=result.data;
+         },
+        function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        $scope.edit_click=function(header_gid){
+                $scope.showform = true;
+                var filterinwhed=[];
+        filterinwhed= $filter('filter')($scope.inward_header, {inwardheader_gid:header_gid},true)[0];
+            $scope.inwarddate=filterinwhed.inwardheader_date;
+            $scope.channel=filterinwhed.inwardheader_channel;
+        if($scope.channel=="Hand Delivery"){
+            $scope.hide=true;
+                $scope.courier="1";
+                $scope.airwayno="nothing";
+        }
+        else{
+            $scope.hide=false;
+            $scope.courier=filterinwhed.courier_gid;
+            $scope.airwayno=filterinwhed.inwardheader_awbno;
+        }
+
+            $scope.noofpacking=filterinwhed.inwardheader_noofpockets;
+            $scope.from_supplier=filterinwhed.inwardheader_from;
+            $scope.receivedby=filterinwhed.inwardheader_receivedby;
+            $scope.remarks=filterinwhed.inwardheader_remarks;
+            $scope.header_gid=header_gid;
+        }
+
+        $scope.delete_data=function(header_gid){
+         var exefinal = [];
+           var inward_header= $filter('filter')($scope.alldetails,{inwardheader_gid:header_gid},true)[0];
+           if(inward_header.inwarddetails_doctype == "0"){
+              var answer = confirm("Do U Want To Delete it");
+            if (answer) {
+                var action='UPDATE'
+                var remove="N"
+                exefinal.push({
+                  "Header_gid":header_gid,
+                  "Remove_flag":"Y"
+              })
+               var type='HEADER_OFFICE'
+               var header_final = {
+                    HEADER: exefinal
+                };
+            var details_final={};
+            var saveheader = serviceinwentry.setinwardservice(action,type,header_final,details_final);
+                saveheader.then(function (result) {
+                if(result.data=="SUCCESS"){
+                    alert("Delete Successfully !.");
+                    summary();
+                }else{
+                    alert("Not Deleted Successfully !.");
+                }
+
+            }, function () {
+                alert("Record Not Found")
+            });
+          }
+          else {
+                //some code
+            }
+
+           }
+           else{
+            alert("You Cant Detele This Record");
+           }
+        }
+
+
+         var courier=serviceinwentry.getcourier();
+            courier.then(function(result) {
+            $scope.courierddl = result.data;
+        },
+        function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        var employee=serviceinwentry.getemployee();
+            employee.then(function(result) {
+            var  employee_data = JSON.parse(result.data)
+            $scope.employee = employee_data;
+        },
+        function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+
+        $scope.inwarddetails=function(inward_header_gid){
+            sessionStorage.setItem('inwardsdetails',inward_header_gid);
+        }
+
+        var supplier = serviceinwentry.getdropdown("supplier");
+            supplier.then(function (supplier) {
+        var supplier_data= JSON.parse(supplier.data)
+            $scope.supplier = supplier_data;
+        }, function () {
+          alert("Record Not Found")
+        });
+
+        function formatDatemap(date) {
+             var d = date, month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+            return [year,month ,day  ].join('-');
+        }
+
+    $scope.inwardsave=function(header_gid){
+    debugger;
+      var exefinal = [];
+     if(header_gid=="" || header_gid == undefined){
+        var action='INSERT'
+        if($scope.channel=="Hand Delivery"){
+            $scope.courier=0;
+            $scope.airwayno=0;
+        }
+        exefinal.push({
+                  "In_date": formatDatemap($scope.inwarddate),
+                  "Channel": $scope.channel,
+                  "Courier_gid": $scope.courier,
+                  "AWB_no":$scope.airwayno,
+                  "No_Of_Packets":$scope.noofpacking,
+                  "Inward_From":$scope.from_supplier,
+                  "Received_by":$scope.receivedby,
+                  "Remark":$scope.remarks,
+                  "Header_gid":0,
+         })
+        }else{
+        var action='UPDATE'
+         if($scope.channel=="Hand Delivery"){
+            $scope.courier=0;
+            $scope.airwayno=0;
+        }
+        var remove="N"
+            exefinal.push({
+                  "In_date":formatDatemap(new Date($scope.inwarddate)),
+                  "Channel": $scope.channel,
+                  "Courier_gid": $scope.courier,
+                  "AWB_no":$scope.airwayno,
+                  "No_Of_Packets":$scope.noofpacking,
+                  "Inward_From":$scope.from_supplier,
+                  "Received_by":$scope.receivedby,
+                  "Remark":$scope.remarks,
+                  "Header_gid":header_gid,
+                  <!--"Remove_flag":remove-->
+              })
+        }
+        var type='HEADER_OFFICE'
+          var header_final = {
+                HEADER: exefinal
+            };
+        var details_final={};
+         var saveheader = serviceinwentry.setinwardservice(action,type,header_final,details_final);
+            saveheader.then(function (result) {
+            if(result.data=="SUCCESS"){
+                alert("Saved Successfully !.");
+                 $scope.showform = false;
+                 summary();
+            }else{
+             alert("Not Updated Successfully !.");
+                $scope.showform=true;
+            }
+
+    }                                                                                                                                                                                                       , function () {
+          alert("Record Not Found")
+    });
+
+    };
+}]);
+app.service("serviceinwentry", function ($http) {
+
+   this.ddl=function(tablename,columnname){
+        var response=$http.get(Appname+"/get_custdata/",{params:{"tablename":tablename,"columnname":columnname}});
+        return response;
+    }
+
+      this.getcourier = function () {
+        var response = $http.post(Appname+"/Courier_dtl/", { params:{'courier_gid': 0,'courier_name':''} });
+        return response;
+    }
+     this.getemployee=function(){
+        var response=$http.get(Appname+"/empddl/");
+        return response;
+     }
+
+      this.getdropdown = function (tablename) {
+        var responsee = $http.post(Appname+"/Dropdown_details/",{params:{"tablename":tablename,"gid":0,"name":''}});
+        return responsee;
+    }
+
+      this.setinwardservice = function (action,type,header,details) {
+        var responsee = $http.post(Appname+"/setinwardentry/",{params:{"Action":action,"Type":type,"lj_header":header,"lj_details":details}});
+        return responsee;
+    }
+
+    this.getinwardservice = function (action,type,li_filter) {
+        var responsee = $http.post(Appname+"/get_inwardsummary/",{params:{"Action":action,"Type":type,"lj_filters":li_filter}});
+        return responsee;
+    }
+});
+
+
+
+
+
+
+</script>
+{% endblock %}

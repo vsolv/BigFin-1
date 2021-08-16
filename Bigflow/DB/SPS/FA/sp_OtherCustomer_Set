@@ -1,0 +1,178 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `galley`.`sp_OtherCustomer_Set`(IN `ls_Action`varchar(32),IN `ls_Type`varchar(32),IN `ls_SubType` varchar(32),
+IN `lj_Details` json,IN `lj_Classification` json,IN `ls_Createby` varchar(32),OUT `Message` varchar(1024)
+)
+sp_OtherCustomer_Set:BEGIN
+### Ramesh Nov 30 2019
+#### GiT Test
+##### Again Check
+
+#### ramesh Vsolv SVN Check
+### Mar 18 
+declare Query_Insert varchar(9000);
+Declare errno int;
+Declare msg varchar(1000);
+declare countRow int;
+
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+
+     GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+     set Message = concat(errno , msg);
+     ROLLBACK;
+     END;
+
+     select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification, CONCAT('$.Entity_Gid[0]'))) into @Entity_Gid;
+
+             if @Entity_Gid is  null or @Entity_Gid = 0 or @Entity_Gid = '' then
+					set Message = 'Entity Gid Is Needed.';
+                    leave sp_OtherCustomer_Set;
+             End if;
+
+    if  ls_Type = 'FA_CUSTOMER' and ls_SubType = 'ADHOC' then
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_Name'))) into @Customer_Name;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_GST_No'))) into @Customer_GST_No; ### No Col to Save Now
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_Contact_No'))) into @Customer_Contact_No;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_Address'))) into @Customer_Address;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_Type'))) into @Customer_Type;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_Code'))) into @Customer_Code;
+        select JSON_UNQUOTE(JSON_EXTRACT(lj_Details,CONCAT('$.Customer_State'))) into @Customer_State;
+
+        ### Validations
+        if @Customer_Name is null or @Customer_Name = '' then
+			set Message = 'Customer Name Is Needed.';
+            leave sp_OtherCustomer_Set;
+        End if;
+
+        if @Customer_Type is null or @Customer_Type = '' then
+			set Message = 'Customer Type Is Needed.';
+            leave sp_OtherCustomer_Set;
+        End if;
+
+        if @Customer_Code is null or @Customer_Code = '' then
+			set Message = 'Customer Code Is Needed.';
+            leave sp_OtherCustomer_Set;
+        End if;
+
+        ### Validation Duplicate.
+        select ifnull(count(customergroup_gid),0) into  @CustG_GidDB from gal_mst_tcustomergroup
+		where customergroup_code = @Customer_Code and entity_gid = @Entity_Gid ;
+
+        if @CustG_GidDB > 0 then
+				set Message = 'Customer Code Already Exist.';
+                leave sp_OtherCustomer_Set;
+        End if;
+
+        ### Name
+        select ifnull(count(customergroup_gid),0) into  @CustG_GidDB from gal_mst_tcustomergroup
+		where customergroup_name = @Customer_Name and entity_gid = @Entity_Gid ;
+
+        if @CustG_GidDB > 0 then
+				set Message = 'Customer Name Already Exist.';
+                leave sp_OtherCustomer_Set;
+        End if;
+
+        set Query_Insert = '';
+        set Query_Insert = concat('Insert into gal_mst_tcustomergroup (customergroup_clientgid,customergroup_code,customergroup_name,customergroup_add_gid,
+			entity_gid,create_by)
+			values (0,''',@Customer_Code,''',''',@Customer_Name,''',0,''',@Entity_Gid,''',''',ls_Createby,''')');
+
+											set @Insert_query = Query_Insert;
+												#SELECT @Insert_query;
+												PREPARE stmt FROM @Insert_query;
+												EXECUTE stmt;
+												set countRow = (select ROW_COUNT());
+												DEALLOCATE PREPARE stmt;
+
+											  if countRow > 0 then
+													select LAST_INSERT_ID() into @LastCustG_Gid;
+                                                    set Message = 'SUCCESS';
+											   else
+													set Message = 'FAIL';
+                                                    leave sp_OtherCustomer_Set;
+											  End if;
+											set @Ref_code = (select ref_code from gal_mst_tref  where ref_name = 'CUST_ADDRESS') ;
+                                   set Query_Insert = '';
+                                   set Query_Insert = concat('insert into gal_mst_taddress(address_ref_code,address_1,address_pincode,address_district_gid,
+                                   address_city_gid,address_state_gid,
+								   entity_gid,create_by)values (''',@Ref_code,''',''',@Customer_Address,''',0,0,0,''',@Customer_State,''',
+                                                        ''',@Entity_Gid,''',''',ls_Createby,''')
+															');
+
+												set @Insert_query = Query_Insert;
+												#SELECT @Insert_query;
+												PREPARE stmt FROM @Insert_query;
+												EXECUTE stmt;
+												set countRow = (select ROW_COUNT());
+												DEALLOCATE PREPARE stmt;
+
+
+
+											  if countRow > 0 then
+													select LAST_INSERT_ID() into @Last_Address_Gid;
+
+												    if @Last_Address_Gid is null or @Last_Address_Gid = 0 THEN
+												        set Message = 'Error On Customer Address Insert.';
+												        ROLLBACK;
+												        leave sp_OtherCustomer_Set;
+												    End if;
+
+                                                    set Message = 'SUCCESS';
+											   else
+													set Message = 'FAIL';
+                                                    leave sp_OtherCustomer_Set;
+											  End if;
+
+											 #select @Last_Address_Gid,countRow;
+
+																	   set Query_Insert = '';
+																	   set Query_Insert = concat('insert into gal_mst_tcustomer(customer_clientgid,customer_code,customer_name,customer_type,customer_subtype,
+																								customer_custgroup_gid,customer_category_gid,customer_location_gid,customer_add_gid,customer_constitution,customer_salemode,
+																								customer_size,entity_gid,create_by)
+																							values (0,''',@Customer_Code,''',''',@Customer_Name,''',''',@Customer_Type,''',''T'',''',@LastCustG_Gid,''',0,0,''',@Last_Address_Gid,''',0,0,0,
+																							''',@Entity_Gid,''',''',ls_Createby,''')
+																								');
+
+																					set @Insert_query = Query_Insert;
+																					#SELECT @Insert_query;
+																					PREPARE stmt FROM @Insert_query;
+																					EXECUTE stmt;
+																					set countRow = (select ROW_COUNT());
+																					DEALLOCATE PREPARE stmt;
+
+																				  if countRow > 0 then
+																						set Message = 'SUCCESS';
+																				   else
+																						set Message = 'FAIL';
+																						leave sp_OtherCustomer_Set;
+																				  End if;
+
+																			  select fn_REFGid('CUST_GST') into @REF_Gid;
+																				if @REF_Gid = 0 then
+																					set Message = 'Problem In REF Gid Generate' ;
+																					leave sp_OtherCustomer_Set;
+																				End if;
+
+																											set Query_Insert = '';
+																											set Query_Insert = concat('insert into gal_mst_ttaxdetails(taxdetails_tax_gid,taxdetails_subtax_gid,
+                                                                                                            taxdetails_ref_gid,taxdetails_type,
+																											taxdetails_ismsme,taxdetails_reftablecode,taxdetails_taxno,entity_gid,create_by)
+                                                                                                            values(0,0,''',@REF_Gid,''',''C'',''Y'',''',@Customer_Code,''',''',@Customer_GST_No,''',''',@Entity_Gid,''',''',ls_Createby,''')');
+
+																														set @Insert_query = Query_Insert;
+																														#SELECT @Insert_query;
+																														PREPARE stmt FROM @Insert_query;
+																														EXECUTE stmt;
+																														set countRow = (select ROW_COUNT());
+																														DEALLOCATE PREPARE stmt;
+
+																													  if countRow > 0 then
+																															set Message = 'SUCCESS';
+																													   else
+																															set Message = 'FAIL';
+																															leave sp_OtherCustomer_Set;
+																													  End if;
+
+    End if;
+
+END

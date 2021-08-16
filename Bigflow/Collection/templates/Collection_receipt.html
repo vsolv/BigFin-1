@@ -1,0 +1,721 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Collection Receipt{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="Appreceipt" ng-controller="Ctrlreceipt">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong>Receipt Details</strong></h4>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Cheque From Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                       ng-model="from_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Cheque To Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDatee" md-min-date="from_date"
+                                       md-open-on-focus ng-model="to_date"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Cheque Number</label>
+                        <input ng-model="chqnm" placeholder="Cheque Number"
+                               type="number"
+                        />
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Select Customer</label>
+                        <md-select data-md-container-class="selectSelectHeader"
+                                   ng-model="ddlcustomer">
+                            <md-select-header class="select-header">
+                                <input class="header-searchbox md-text"
+                                       ng-model="searchTerm"
+                                       placeholder="Search customer name.."
+                                       type="search">
+                            </md-select-header>
+                            <md-option md-search-text="searchTerm" ng-repeat="c in mullti | filter:searchTerm"
+                                       value="{{c.customergroup_gid}}">{{c.customergroup_name}}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Status</label>
+                        <md-select  ng-init="ddlstatus == receipt_status[0].status" ng-model="ddlstatus">
+                            <md-optgroup label="Status">
+                                <md-option ng-repeat="rs in receipt_status" ng-value="rs.status"> {{rs.status}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <form name="form_amount">
+                            <label>Amount</label>
+                            <input id="amount" maxlength="11" ng-model="cashAmount"
+                                   ng-pattern="/^[123456789][.0-9]{0,10}$/"
+                                   ng-required="true"
+                                   placeholder="Enter Amount" valid-number/>
+                        </form>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Receipt Type</label>
+                        <md-select ng-model="ddlstatus">
+                            <md-optgroup label="Status">
+                                <md-option ng-repeat="rt in receipt_type" ng-value="rt.status"> {{rt.status}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-2">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Receipt Date</label>
+                        <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-open-on-focus
+                                       ng-model="receiptdate"></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchload()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-href="createDiscount">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create Discount</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                >
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Group Name</th>
+                        <th>Receipt Date</th>
+                        <th>Mode</th>
+                        <th>Remarks</th>
+                        <th>Cheque Date</th>
+                        <th>Amount</th>
+                        <th>Balance Amount</th>
+                        <th>Type</th>
+                        <th>Select</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="entity in hosmry.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPag-1)*itemsPerPag)+$index+1}}</center>
+                        </td>
+                        <td class="text-left">{{entity.customergroup_name}}</td>
+                        <td class="text-center">{{entity.receipt_date}}</td>
+                        <td class="text-center">{{entity.fetcollectionheader_mode}}</td>
+                        <td class="text-left">{{entity.receipt_remarks}}</td>
+                        <td class="text-center">{{entity.cheque_date}}</td>
+                        <td class="text-right">{{entity.receipt_amount | number:2}}</td>
+                        <b>
+                            <td class="text-right" style="color:black;background-color:#BDC3C7">
+                                {{entity.receipt_balanceamount | number:2}}
+                            </td>
+                        </b>
+                        <td class="text-center">{{entity.receipt_vouchertype}}</td>
+                        <td class="text-center"><span class="editlink" ng-click="viewdet(entity)">Inv Mapping</span>
+                        </td>
+                    </tr>
+                    <tr ng-show="hosmry.length == 0 || undefined">
+                        <td class="warning" colspan="10">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination" items-per-page="itemsPerPag"
+                                max-size="maxSiz"
+                                ng-model="currentPag" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="3">
+                            Total Count:{{hosmry.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <form name="histroy" novalidate>
+                <div class="modal-dialog modal-lg modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="header">
+                            <div class="modal-header popup-header">
+                                <h5 class="modal-title" id="exampleModalLabel">
+                                    <strong>Invoice Mapping for {{grpname}}</strong>
+                                    <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block left" md-no-float="">
+                                        <input ng-change="filtersearch()" ng-model="searchquery"
+                                               placeholder="Search by Invoice Number..."
+                                               type="text"/>
+                                    </md-input-container>
+                                </div>
+                                <form name="myform">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Invoice Date</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                           md-open-on-focus ng-change="filtersearch()"
+                                                           ng-model="fromdate"></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </form>
+                                <div class="col-md-1">
+                                    <md-button ng-click="search_click()">
+                                        <md-icon>clear</md-icon>
+                                        <md-tooltip>Click to clear Search</md-tooltip>
+                                    </md-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-3">
+                                    <b>Receipt Amount : {{recptamnt |number:2}}</b>
+                                </div>
+                                <div class="col-md-3" >
+                                    <b>Balance Amount : <span style="color:{{bal_colr}}">{{balanceamnt | number:2}}</span></b>
+                                </div>
+                                <div class="col-md-3">
+                                    <b>Adjusted Amount : <span style="color:{{colors}}">{{sum}}</span></b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="body">
+                            <div class="modal-body popup-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="col-md-12 col-lg-12 col-sm-12">
+                                            <form name="demoForm">
+                                                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                                       md-progress="deferred">
+                                                    <thead class="header">
+                                                    <th>S.No</th>
+                                                    <th>Invoice Date</th>
+                                                    <th>Invoice Number</th>
+                                                    <th>Invoice Amount</th>
+                                                    <th>Amount Adjusted</th>
+                                                    <th>Outstanding Amount</th>
+                                                    <th>Amount To Be Adjusted</th>
+                                                    <th>Select</th>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr ng-class="{selected: entity.isChecked}"
+                                                        ng-repeat="entity in outstngdata.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                                                        <td class="text-center">
+                                                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                                                        </td>
+                                                        <td>{{entity.invoice_date}}</td>
+                                                        <td>{{entity.fetsoutstanding_invoiceno}}</td>
+                                                        <td class="text-right">{{entity.net_amount|number}}</td>
+                                                        <td class="text-right">{{entity.adjusted_amount| number}}</td>
+                                                        <td class="text-right">{{entity.actual_balance_amount|
+                                                            number}}
+                                                        </td>
+                                                        <form name="form_amount">
+                                                            <td class="text-right">
+                                                                <input class="form-control" max={{entity.actual_balance_amount}}
+                                                                       min="0"
+                                                                       name="amount{{$index}}" ng-change="chninput(entity)"
+                                                                       ng-model="entity.amount_tobe_adjusted"
+                                                                       required type="number">
+                                                                <div ng-messages="demoForm['amount'+$index].$error">
+                                                                    <div ng-message="number">Should be a number</div>
+                                                                    <div ng-message="max">Amount exceeds
+                                                                        {{entity.actual_balance_amount}}
+                                                                    </div>
+                                                                    <div ng-message="min">Amount should be greater than
+                                                                        zero
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </form>
+                                                        <td class="text-center"><input
+                                                                ng-change="selectcheck()" ng-click="selectEntity()"
+                                                                ng-model="entity.isChecked"
+                                                                type="checkbox"
+                                                        ></td>
+                                                    </tr>
+                                                    </tbody>
+                                                    <tfoot>
+                                                    <tr>
+                                                        <td colspan="6">
+                                                            <ul boundary-links="true"
+                                                                class="pagination-sm cust_pagination"
+                                                                items-per-page="itemsPerPage"
+                                                                max-size="maxSize"
+                                                                ng-model="currentPage" total-items="pageLengt"
+                                                                uib-pagination></ul>
+                                                        </td>
+                                                        <td colspan="3">
+                                                            Total Count:{{outstngdata.length}}
+                                                        </td>
+                                                    </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </form>
+                                            <span>Receipt Date : <b>{{receipt_date}}</b></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12 text-center">
+                                            <md-button class="btn btn-info custbutton" ng-click="Save(entity)"
+                                                       ng-disabled="enable_update">Update
+                                                <md-tooltip>Save</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-raised" data-dismiss="modal">Back
+                                                <md-tooltip>close</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script type = "text/javascript">
+    var app = angular.module('Appreceipt', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+app.controller('Ctrlreceipt', function($scope, $rootScope, $filter, $mdDialog, $mdDateLocale, Serreceipt, SerCommon, $element, $window, $mdToast, $timeout,$interval) {
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.dbdate = convertdate(detail.date);
+    $scope.entity_gid = detail.entity_gid;
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 20;
+    $scope.currentPag = 1;
+    $scope.maxSiz = 3;
+    $scope.enable_update = true;
+    $scope.itemsPerPag = 10;
+    $scope.maxDate = new Date();
+    $scope.colors = 'red';
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.testt = function(ev) {
+        ev.stopPropagation();
+    }
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.filtersearch = function() {
+        $scope.outstngdata = $filter('filter')($scope.main, {
+            "fetsoutstanding_invoiceno": $scope.searchquery,
+            "invoice_date": $filter('date')($scope.fromdate, 'dd-MMM-yyyy'),
+        });
+        $scope.outstngdata = $filter('orderBy')($scope.outstngdata, 'isChecked');
+        $scope.selectEntity();
+    }
+
+
+    $scope.selectEntity = function() {
+        $scope.sum = 0;
+        for (var i = 0; i < $scope.outstngdata.length; i++) {
+            amount = $scope.outstngdata[i].amount_tobe_adjusted
+            if (amount > 0) {
+                $scope.sum += parseFloat($scope.outstngdata[i].amount_tobe_adjusted);
+            }
+            if ($scope.sum == $scope.recptamnt) {
+                $scope.colors = 'green';
+            }
+            if ($scope.sum > $scope.recptamnt) {
+                $scope.colors = 'red';
+            }
+            $scope.balanceamnt = $scope.recptamnt - $scope.sum;
+            if ($scope.balanceamnt < 0) {
+                $scope.bal_colr = 'red';
+            } else {
+                $scope.bal_colr = 'black';
+            }
+
+        }
+        for (var i = 0; i < $scope.outstngdata.length; i++) {
+            if ($scope.outstngdata[i].isChecked) {
+                $scope.enable_update = false;
+                return
+            }
+            if (($scope.sum < $scope.recptamnt) || ($scope.sum == 0)) {
+                $scope.colors = 'brown';
+            }
+        }
+    };
+
+    $scope.selectcheck = function() {
+        for (var i = 0; i < $scope.outstngdata.length; i++) {
+            if (($scope.outstngdata[i].isChecked == true) && (($scope.outstngdata[i].amount_tobe_adjusted == 0) || ($scope.outstngdata[i].amount_tobe_adjusted == undefined))) {
+                $scope.outstngdata[i].amount_tobe_adjusted = $scope.outstngdata[i].actual_balance_amount
+            } else if ($scope.outstngdata[i].isChecked == false) {
+                $scope.outstngdata[i].amount_tobe_adjusted = 0;
+                $scope.enable_update = true;
+            }
+        }
+    }
+
+    $scope.search_click = function() {
+        $scope.fromdate = "";
+        $scope.searchquery = "";
+        $scope.filtersearch();
+    }
+
+    $scope.outstngdata = [];
+    var data = {
+        Group: 'CUST_GROUP_GET',
+        Entity_Gid: $scope.entity_gid,
+        Cust_Group_Gid: 0,
+        Cust_Group_Code: 0,
+        Cust_Group_Name: '',
+        Query_Limit: ' '
+    }
+
+    var custgrpddl = Serreceipt.getcustgrp(data)
+    custgrpddl.then(function(result) {
+            $scope.mullti = [];
+            $scope.mullti = result.data.DATA;
+        }),
+        function() {
+            alert('no data');
+        };
+
+    $scope.searchload = function() {
+        $scope.loading();
+        if ($scope.receiptdate == undefined) {
+            $scope.receiptdate = '';
+        } else {
+            $scope.receiptdate = $filter('date')($scope.receiptdate, "yyyy-MM-dd")
+        }
+        if ($scope.from_date == undefined) {
+            $scope.from_date = '';
+        } else {
+            $scope.from_date = $filter('date')($scope.from_date, "yyyy-MM-dd")
+        }
+        if ($scope.to_date == undefined) {
+            $scope.to_date = '';
+        } else {
+            $scope.to_date = $filter('date')($scope.to_date, "yyyy-MM-dd")
+        }
+
+        var data = {
+            'params': {
+                'FILTERS': {
+                    'Cheque_From_Date': $scope.from_date,
+                    'Cheque_To_Date': $scope.to_date,
+                    'Cheque_No': $scope.chqnm,
+                    'Collection_Status': $scope.ddlstatus,
+                    'CustomerGroup_Gid': $scope.ddlcustomer,
+                    'Receipt_Date': $scope.receiptdate,
+                    'Collection_Amount': $scope.cashAmount,
+                },
+                'CLASSIFICATION': {
+                    "entity_gid": $scope.entity_gid
+                }
+            }
+        }
+
+        var data_int = {
+            Group: 'AR_RECEIPT_COLLECTION',
+            Type: 'INV_RECEIPT_MAPPING',
+            Sub_Type: 'COLLECTION',
+            data: data
+        };
+        loadserch(data_int);
+        loadserch(data_int);
+        $scope.endloading();
+    }
+
+    function loadserch(data_int) {
+        var overalldtl = Serreceipt.getrecipt(data_int);
+        overalldtl.then(function(res) {
+                $scope.maintable = res.data.DATA;
+                $scope.hosmry = $scope.maintable;
+                $scope.pageLength = $scope.hosmry.length;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    var data = {
+        'params': {
+            'FILTERS': {
+                'Cheque_From_Date': "",
+                'Cheque_To_Date': "",
+                'Cheque_No': "",
+                'Collection_Status': "",
+                'CustomerGroup_Gid': "",
+                'Receipt_Date': "",
+                'Collection_Amount': ""
+            },
+            'CLASSIFICATION': {
+                "entity_gid": $scope.entity_gid
+            }
+        }
+    }
+
+    var data_int = {
+        Group: 'AR_RECEIPT_COLLECTION',
+        Type: 'INV_RECEIPT_MAPPING',
+        Sub_Type: 'COLLECTION',
+        data: data
+    };
+
+    loadhodetail(data_int);
+
+    function loadhodetail(data_int) {
+        var overalldtl = Serreceipt.getrecipt(data_int);
+        overalldtl.then(function(res) {
+                $scope.maintable = res.data.DATA;
+                $scope.hosmry = $scope.maintable;
+                $scope.pageLength = $scope.hosmry.length;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    $scope.viewdet = function(e) {
+        $scope.sum = 0;
+        $scope.receipt_date = e.receipt_date;
+        $scope.grpname = e.customergroup_name;
+        $scope.recptamnt =parseFloat(e.receipt_balanceamount).toFixed(2);
+        $scope.reciptgid = e.receipt_gid;
+        $scope.refgid = e.ref_gid
+        $scope.reftabid = e.receipt_reftable_gid;
+        var dta = {
+            'parms': {
+                'filter': {
+                    'Customer_Group_Gid': e.customer_group_gid,
+                    'Customer_Gid': "0",
+                    'Ref_Table_Gid': e.receipt_reftable_gid,
+                    'REF_Gid': e.ref_gid,
+                    'Invoice_No': "",
+                    'Receipt_Gid':e.receipt_gid
+                },
+                'classification': {
+                    'Entity_Gid': $scope.entity_gid
+                }
+            }
+        }
+
+        var datainit = {
+            'type': 'OUTSTANDING_AR_RECEIPTMAKING',
+            'sub_type': 'INV_MAPPING_RECEIPTMAKING',
+            data: dta
+        }
+
+        modalshow('viewmodal');
+        $scope.loading();
+        var custgrpddl = Serreceipt.getoutstndng(datainit)
+        custgrpddl.then(function(result) {
+                $scope.outstngdata = $filter('orderBy')(result.data.DATA, '-invoice_date')
+                $scope.main = $scope.outstngdata;
+                $scope.pageLengt = $scope.outstngdata.length;
+            })
+            .finally($scope.endloading);
+    };
+
+    $scope.chninput = function(e) {
+        $scope.sum = 0;
+        if (e.amount_tobe_adjusted > 0) {
+            var index = $scope.outstngdata.indexOf(e);
+            $scope.outstngdata[index]["touched"] = true;
+        }
+        for (var i = 0; i < $scope.outstngdata.length; i++) {
+            amount = parseFloat($scope.outstngdata[i].amount_tobe_adjusted).toFixed(2)
+            if (amount > 0) {
+                $scope.sum += parseFloat($scope.outstngdata[i].amount_tobe_adjusted).toFixed(2);
+            }
+            if ($scope.sum == $scope.recptamnt) {
+                $scope.colors = 'green';
+            }
+            if ($scope.sum < $scope.recptamnt) {
+                $scope.colors = 'brown';
+            }
+            if ($scope.sum > $scope.recptamnt) {
+                $scope.colors = 'red';
+            }
+            $scope.balanceamnt = $scope.recptamnt - $scope.sum;
+            if ($scope.balanceamnt < 0) {
+                $scope.bal_colr = 'red';
+            } else {
+                $scope.bal_colr = 'black';
+            }
+        }
+
+    }
+
+    $scope.Save = function(entity) {
+      $scope.enable_update = true;
+        if ($scope.sum <= $scope.recptamnt) {
+            $scope.array1 = [];
+            for (i = 0; i < $scope.outstngdata.length; i++) {
+                if ($scope.outstngdata[i].isChecked) {
+                        dd = {
+                            "Outstanding_Gid": $scope.outstngdata[i].fetsoutstanding_gid,
+                            "Invoice_Gid": $scope.outstngdata[i].invoiceheader_gid,
+                            "Invoice_Balance_Amount": parseFloat($scope.outstngdata[i].actual_balance_amount).toFixed(2),
+                            "Adjusted_Amount": parseFloat($scope.outstngdata[i].amount_tobe_adjusted).toFixed(2),
+                            "INV_Map_Gid": $scope.outstngdata[i].inv_map_gid,
+                            "Is_Update": 'Y'
+                        }
+                        $scope.array1.push(dd);
+                    }
+            }
+            var data = {
+                'params': {
+                    'DATA': {
+                        'RECEIPT': {
+                            'Receipt_Gid': $scope.reciptgid,
+                            'Receipt_REFTable_Gid': $scope.reftabid,
+                            'REF_Gid': $scope.refgid,
+                            'Receipt_Amount': parseFloat($scope.recptamnt).toFixed(2)
+                        },
+                        'INV_DETAILS': $scope.array1
+                    },
+                    'CLASSIFICATION': {
+                        'Entity_Gid': $scope.entity_gid
+                    }
+                }
+            }
+            var datainit = {
+                Action: 'UPDATE',
+                Type: 'INV_MAPPING_RECEIPT',
+                Commit: 'Y',
+                Create_by: $scope.employgid,
+                Group: 'AR_INV_MAPPING_RECEIPT_SET',
+                data: data
+            }
+            modlupdte(datainit);
+            $scope.endloading();
+        } else {
+            alert("You Have Entered More than Receipt Amount");
+        }
+    }
+
+    function modlupdte(datainit) {
+        var overalldtl = Serreceipt.getrecipt(datainit);
+        overalldtl.then(function(res) {
+                $scope.setmanl = res.data.MESSAGE;
+                if ($scope.setmanl == "SUCCESS") {
+                        $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                        $interval(callAtInterval, 3000);
+                } else {
+                    $scope.setmanl = res.data.DATA;
+                    alert($scope.setmanl);
+                }
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    function callAtInterval() {
+    $window.location.href = "Receipt_Making";
+    }
+
+    $scope.receipt_type = [{
+        status: "RPI"
+    }, {
+        status: "credit Note"
+    }, {
+        status: "Debit Note"
+    }, {
+        status: "Receipt"
+    }]
+
+    $scope.receipt_status = [{
+        status: "CLEARED"
+    }]
+
+});
+
+app.service("Serreceipt", function($http) {
+    this.getcustgrp = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.getrecipt = function(data) {
+        var response = $http.post(Appname + "/reciptget/", data);
+        return response;
+    }
+    this.getoutstndng = function(data) {
+        var response = $http.post(Appname + "/getotsng/", data);
+        return response;
+    }
+});
+</script>
+{% endblock %}

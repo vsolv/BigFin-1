@@ -1,0 +1,336 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Sale Details {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="Appdrctsale" ng-controller="Ctrldrctsale" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>{{title}}</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <label>Customer Name</label>
+                <md-autocomplete md-no-cache="true"
+                                 md-selected-item="ddlcus_gid"
+                                 md-search-text="searchcust"
+                                 md-selected-item-change="ddlcust_change(y.customer_gid)"
+                                 md-items="y in custsearch(searchcust)"
+                                 md-item-text="y.display_name"
+                                 md-min-length=0
+                                 md-clear-button="!Customer_disable"
+                                 placeholder="Select Customer">
+                    <md-item-template>
+                        <span md-highlight-text="searchcust"> {{y.display_name}} </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Customer Name Not Matching "{{searchcust}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+            <div class="col-md-4">
+                <label>Employee Name</label>
+                <md-autocomplete
+                        md-no-cache="true"
+                        md-selected-item="selectedIt"
+                        md-search-text="searchT"
+                        md-selected-item-change="customerChange(item.employee_gid)"
+                        md-items="item in getcustomer(searchT)"
+                        md-item-text="item.employee_name"
+                        md-min-length=0
+                        placeholder="Select Employee">
+                    <md-item-template>
+                        <span md-highlight-text="searchT"> {{item.employee_name}}  </span>
+                    </md-item-template>
+                    <md-not-found>
+                        No Employee Name matching "{{searchT}}" were found.
+                    </md-not-found>
+                </md-autocomplete>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <md-input-container class="md-block inputcontainer">
+                    <label>From Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-open-on-focus md-max-date="maxDate"
+                                   ng-model="from_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-4">
+                <md-input-container class="md-block inputcontainer">
+                    <label>To Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-open-on-focus md-min-date="from_date"
+                                   md-max-date="maxDate" ng-model="to_date"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Location</label>
+                    <md-select ng-model="selectedlctn">
+                        <md-option><em>--Select--</em></md-option>
+                        <md-option ng-repeat="x in location" ng-value="x.value">{{ x.text }}</md-option>
+                    </md-select>
+                </md-input-container>
+            </div>
+            <div class="col-md-1">
+                <md-button class="md-icon-button md-primary" aria-label="Search" ng-click="clck()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row table-responsive" ng-if="details_show">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Customer Name</th>
+                        <th>Employee Name</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Complete For</th>
+                        <th>State Name</th>
+                        <th>Total Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody ng-init="totall = 0">
+                    <tr ng-repeat="sale in salesSchedule.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | filter:search:strict"
+                        ng-class="sale.scheduled=='Y'?'danger':''">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{sale.display_name}}</td>
+                        <td>{{sale.employee_name}}</td>
+                        <td>{{sale.schedule_date}}</td>
+                        <td>{{sale.scheduletype_name}}</td>
+                        <td>{{sale.followupreason_name}}</td>
+                        <td class="text-center">{{sale.state_name}}</td>
+                        <td class="text-right">{{sale.sale_netamount | number}}</td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="6">
+                            <ul uib-pagination total-items="salesSchedule.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="1">
+                            Total Count:{{salesSchedule.length}}
+                        </td>
+                        <td class="text-right" ng-bind="totalbilling(salesSchedule)| number"></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-lg-12 col-sm-12">
+            <ng-view></ng-view>
+        </div>
+    </div>
+    <!--spinner-->
+    <div style="visibility: hidden">
+        <div class="md-dialog-container" id="myDialog">
+            <md-dialog style="height:20% !important;overflow: hidden;">
+                <h3 style="text-align:center">Loading..</h3>
+                <div layout="row" layout-sm="column" layout-align="space-around">
+                    <md-progress-circular md-diameter="40" md-mode="indeterminate"
+                    ></md-progress-circular>
+                </div>
+            </md-dialog>
+        </div>
+    </div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Appdrctsale', ['ngMaterial', 'ui.bootstrap', 'ngMessages', 'ngRoute', 'AppCommon']);
+    myApp.config(function($httpProvider, $routeProvider, $locationProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    myApp.run(function($mdDateLocale, $filter) {
+        $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MM-yyyy");
+        };
+    })
+    myApp.controller('Ctrldrctsale', ['$scope', 'Servicedrctsale', '$filter', '$location', '$rootScope', '$mdDialog', '$http', '$timeout', 'SerCommon',
+        function($scope, Servicedrctsale, $filter, $location, $rootScope, $mdDialog, $http, $timeout, SerCommon) {
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.salesSchedule = [];
+            $scope.details_show = true;
+            $scope.title = 'All Sale Details';
+            $scope.maxDate = new Date();
+
+            $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+            $scope.endloading = function() {
+                $mdDialog.hide();
+            };
+
+            $scope.location = [{
+                text: "TamilNadu",
+                value: "Tamil Nadu"
+            }, {
+                text: "Kerala",
+                value: "Kerala"
+            }];
+
+            $scope.filtersearch = function() {
+                $scope.salesSchedule = $filter('filter')($scope.overallSchedule, {
+                    "display_name": $scope.customername,
+                    "soheader_date": $scope.cust,
+                });
+                $scope.userTotalItems = $scope.salesSchedule.length;
+                $scope.Totalpages = Math.ceil($scope.salesSchedule.length / $scope.itemsPerPage);
+                $scope.pageLength = $scope.salesSchedule.length;
+            }
+
+            loadcustomer_all()
+            function loadcustomer_all() {
+                var jsonData = {
+                    "isactive": "Y"
+                }
+                var get_customer = SerCommon.getcustomer(jsonData)
+                get_customer.then(function(result) {
+                    $scope.customers = result.data;
+
+                }, function(err) {
+                    alert('No data!.');
+                });
+            }
+
+            loademp()
+            function loademp() {
+                var get_cust = Servicedrctsale.getMappedemp()
+                get_cust.then(function(result) {
+                    $scope.employe = JSON.parse(result.data);
+                }, function(err) {
+
+                });
+            }
+
+            $scope.totalbilling = function(data){
+            var totall = 0;
+            if(data.length==0){
+                return totall;
+            }
+            else{
+                for(var i=0;i<data.length;i++){
+                totall=totall+data[i].sale_netamount;
+            }
+            return totall;
+             }}
+
+            $scope.custsearch = function(query) {
+                var te = $filter('filter')($scope.customers, {
+                    'display_name': query
+                });
+                return te;
+            };
+
+            $scope.getcustomer = function(query) {
+                var cus = $filter('filter')($scope.employe, {
+                    'employee_name': query
+                });
+                return cus;
+            };
+
+            format = function date2str(x, y) {
+                var z = {
+                    M: x.getMonth() + 1,
+                    d: x.getDate(),
+                    h: x.getHours(),
+                    m: x.getMinutes(),
+                    s: x.getSeconds()
+                };
+                y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+                    return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-2)
+                });
+
+                return y.replace(/(y+)/g, function(v) {
+                    return x.getFullYear().toString().slice(-v.length)
+                });
+            }
+
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            var td = detail.date
+            $scope.dbdate = convertdate(td);
+
+            loadMain(formatDate(convertdate(td)), {}, '');
+
+            $scope.clck = function() {
+                var jsonData = {};
+                if ($scope.from_date) {
+                    jsonData['from_date'] = format(($scope.from_date), 'yyyy-MM-dd')
+                }
+                if ($scope.to_date) {
+                    jsonData['to_date'] = format(($scope.to_date), 'yyyy-MM-dd')
+                }
+                if ($scope.ddlcus_gid) {
+                    jsonData['customer_gid'] = $scope.ddlcus_gid.customer_gid
+                }
+                if ($scope.selectedlctn) {
+                    jsonData['location_name'] = $scope.selectedlctn
+                }
+                if ($scope.selectedIt) {
+                    jsonData['employee_gid'] = $scope.selectedIt.employee_gid
+                }
+                loadMain(formatDate(convertdate(td)), jsonData);
+            }
+
+            function loadMain(date_input, jsondata) {
+                $scope.loading()
+                var overalldtl = Servicedrctsale.getedit(date_input, jsondata);
+                overalldtl.then(function(res) {
+                        var overallSchedule = [];
+                        $scope.overallSchedule = res.data;
+                        $scope.salesSchedule = $scope.overallSchedule;
+                        var myObject = $scope.salesSchedule;
+                        $scope.pageLength = $scope.salesSchedule.length;
+                    }, function(err) {})
+                    .finally($scope.endloading);
+            }
+            loadMain(($scope.dbdate));
+        }
+    ]);
+
+
+    myApp.service("Servicedrctsale", function($http) {
+        this.getedit = function(date, jsondata, empgid) {
+            var response = $http.post(Appname + "/pre_schedule_get/", {
+                parms: {
+                    "action": "reportview",
+                    "f_date": date,
+                    "jsondata": jsondata,
+                    "empgid": empgid
+                }
+            });
+            return response;
+        };
+        this.getMappedemp = function() {
+            var response = $http.get(Appname + "/ddlempexec/");
+            return response;
+        };
+    });
+
+
+
+</script>
+{% endblock %}

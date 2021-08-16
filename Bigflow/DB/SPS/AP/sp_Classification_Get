@@ -1,0 +1,132 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_Classification_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024))
+sp_Classification_Get:BEGIN
+### SELVA March 25 2019
+#### WIP
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare i int;
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+    
+    select fn_Classification('ENTITY_ONLY',lj_Classification) into @OutMsg_Classification ;
+        select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Entity_Gid[0]')) into @Entity_Gids;        
+        if @Entity_Gids is  null or @Entity_Gids = '' then
+				select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Message')) into @Message;
+				set Message = concat('Error On Classification Data - ',@Message);
+                leave sp_Classification_Get;
+        End if;
+
+if ls_Type = 'Mode' and ls_Sub_Type = 'Summary' then
+		  	set Query_Select = '';
+            
+            set Query_Select = concat('select branch_name,branch_stdcode,branch_gid,concat(''['',group_concat( JSON_OBJECT(''metadata_value'',metadata_value,''branch_metadatavalue'',branch_metadatavalue)),'']'' ) as branchdetail from 
+          gal_mst_tbranch as a inner join 
+           gal_adm_tentitydetails as b on a.branch_entitydetailsgid = b.entitydetails_gid
+          inner join gal_adm_tentityheader as c on b.entitydetails_entityheadergid = c.entity_gid 
+          left join gal_mst_tbranchinfo as d on d.branchinfo_branchgid = a.branch_gid
+          left join gal_mst_tmetadata as e on e.metadata_gid = d.branchinfo_metadatagid
+          where entity_isactive = ''Y'' 
+          and entity_isremoved = ''N'' and entitydetails_isactive = ''Y'' and entitydetails_isremoved =''N'' 
+        
+          and c.entity_gid  in (',@Entity_Gids,') group by branchinfo_branchgid
+							');
+                     	set @Query_Select = Query_Select;									                
+										#select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if;
+  elseif  ls_Type = 'BILLING' and ls_Sub_Type = 'SALES' then
+                ### used to Show the POP Up
+						Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Employee_Gid'))) into @Employee_Gid ;  
+                        
+                        if @Employee_Gid is null or @Employee_Gid = 0 or @Employee_Gid = '' then
+								set Message = 'Employee Gid Needed.';
+                                leave sp_Classification_Get;
+                        End if;
+			
+								set  Query_Select = '';
+								set Query_Select = concat('select a.branch_gid,a.branch_name,ifnull(b.employee_name,'''') as employee_name,c.address_state_gid as billing_state_gid, 
+														(select concat(''['', group_concat(JSON_OBJECT(''Godown_Name'',z.godown_name,''Godown_Gid'',z.godown_gid															   
+															   )) ,'']''  )  
+                                                        from gal_mst_tgodown as z 
+														inner join gal_mst_taddress as y on y.address_gid = z.godown_address_gid
+														where y.address_state_gid = c.address_state_gid
+														and z.godown_isactive = ''Y'' and z.godown_isremoved = ''N''
+														) as lj_godown_data
+														from gal_mst_tbranch as a
+														left join gal_mst_temployee as b on b.branch_gid = a.branch_gid and b.employee_gid = ',@Employee_Gid,'
+														inner join gal_mst_taddress as c on c.address_gid = a.branch_addressgid
+														where a.entity_gid in (',@Entity_Gids,') and a.branch_isactive = ''Y'' and a.branch_isremoved = ''N''
+															');
+                                                            
+                                                            set @Query_Select = Query_Select;	
+                                                            #select @Query_Select;
+															PREPARE stmt FROM @Query_Select;
+															EXECUTE stmt; 
+															Select found_rows() into li_count;
+											
+														  if li_count > 0 then
+																set Message = 'FOUND';
+														  else 
+																set Message = 'NOT_FOUND';
+														  end if;
+                                                       
+elseif  ls_Type = 'PROP_BRANCH' and ls_Sub_Type = 'Summary' then
+                ### used to Show the POP Up
+						Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Property_Gid'))) into @Property_Gid ;  
+                        
+                        if @Property_Gid is null or @Property_Gid = 0 or @Property_Gid = '' then
+								set Message = 'property Gid Needed.';
+                                leave sp_Classification_Get;
+                        End if;
+			
+								set  Query_Select = '';
+								set Query_Select = concat('select branch_name,branch_stdcode,branch_gid,concat(''['',group_concat( JSON_OBJECT(''metadata_value'',metadata_value,''branch_metadatavalue'',branch_metadatavalue)),'']'' ) as branchdetail from 
+															  gal_mst_tbranch as a 
+															  inner join 
+															   gal_adm_tentitydetails as b on a.branch_entitydetailsgid = b.entitydetails_gid and branch_isactive = ''Y''
+															  inner join gal_adm_tentityheader as c on b.entitydetails_entityheadergid = c.entity_gid 
+															  inner join ap_map_tpropertybranch as dd on dd.propertybranch_branchgid = a.branch_gid and propertybranch_isactive = ''Y''
+															  left join gal_mst_tbranchinfo as d on d.branchinfo_branchgid = a.branch_gid 
+															  left join gal_mst_tmetadata as e on e.metadata_gid = d.branchinfo_metadatagid
+															  where a.entity_gid in (',@Entity_Gids,') and entity_isactive = ''Y'' and propertybranch_propertygid =',@Property_Gid,'
+															  and entity_isremoved = ''N'' and entitydetails_isactive = ''Y'' and entitydetails_isremoved =''N'' 
+															  group by branchinfo_branchgid,branch_gid;
+															');
+                                                            
+                                                            set @Query_Select = Query_Select;	
+                                                            #select @Query_Select;
+															PREPARE stmt FROM @Query_Select;
+															EXECUTE stmt; 
+															Select found_rows() into li_count;
+											
+														  if li_count > 0 then
+																set Message = 'FOUND';
+														  else 
+																set Message = 'NOT_FOUND';
+														  end if;                                                       
+            
+End if;
+
+
+END

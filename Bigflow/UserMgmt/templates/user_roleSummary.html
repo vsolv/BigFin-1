@@ -1,0 +1,659 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Role Summary{% endblock %}
+{% block content %}
+{% verbatim %}
+
+<div class="maincontent" ng-app="AppRoleSummary" ng-controller="CtrlRoleSummary">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>{{title}}</h4>
+            </div>
+        </div>
+
+        <div ng-show="!edit_view" ng-init="edit_view=false">
+            <div class="row">
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Role Code</label>
+                        <input type="text" ng-model="txtRoleCode" maxlength="16"
+                               maxlength="8" ng-change="searchlist(txtRoleCode,txtRoleNmae)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Role Name</label>
+                        <input type="text" id="txtRoleNmae"
+                               maxlength="64" ng-model="txtRoleNmae" ng-change="searchlist(txtRoleCode,txtRoleNmae)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Role Group</label>
+                        <md-select ng-model="ddlRoleGroup" ng-change="searchrolegroup(ddlRoleGroup)">
+                            <md-option value="0">----All----</md-option>
+                            <md-option ng-repeat="group in groups" ng-value="{{group.rolegroup_gid}}">
+                                {{group.rolegroup_name}}
+                            </md-option>
+                        </md-select>
+                        <md-icon>search</md-icon>
+                    </md-input-container>
+                </div>
+
+                <div class="col-lg-3 col-sm-3">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="createRole()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+
+                </div>
+            </div>
+
+            <div class="row  table-responsive">
+                <div class="col-lg-12 col-sm-12" id="roleDetails">
+                    <table class="table  table-striped table-bordered table-condensed table-hover" id="gd_pssummary">
+                        <thead class="header">
+                        <tr>
+                            <td>
+                                S.No
+                            </td>
+                            <td>
+                                Role Code
+                            </td>
+                            <td>
+                                Role Name
+                            </td>
+                            <td>
+                                Role Group
+                            </td>
+                            <td>
+                                Action
+                            </td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="role in roles.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td class="text-center">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                            <td class="text-center">
+                                {{role.role_code}}
+                            </td>
+                            <td class="text-center">
+                                {{role.role_name | uppercase }}
+                            </td>
+                            <td class="text-center">
+                                {{role.rolegroup_name | uppercase}}
+                            </td>
+                            <td align="center">
+                                <span title="Edit" ng-click="Editrole(role.role_gid,role)" align="center"
+                                      class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="4">
+                                <ul uib-pagination total-items="userTotalItems" ng-model="currentPage"
+                                    max-size="maxSize" class="pagination-sm cust_pagination" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="1">
+                                Total Count:{{roles.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+        <div ng-show="edit_view" ng-form="createrole">
+
+            <div class="row row-search" ng-init="error_code=''">
+                <form role="form" name="rolesummary">
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Role Group</label>
+                            <md-select ng-model="ddlRoleGroupCreate" ng-disabled="isedit"
+                                       ng-required="true" required>
+                                <md-option ng-repeat="group in groups" ng-value="{{group.rolegroup_gid}}"
+                                           ng-selected="ddlRoleGroupCreate == group.rolegroup_gid">
+                                    {{group.rolegroup_name}}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </div>
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Role Code</label>
+                            <input type="text" ng-required="true" ng-disabled="isedit" ng-model="txtrolecode_creat"
+                                   maxlength="8"
+                                   ng-blur="checkdublicate(txtrolecode_creat,txtRoleNmaeCreat,ddlRoleGroupCreate)"/>
+                        </md-input-container>
+                        <span ng-if="error_code">{{error_code}}</span>
+                    </div>
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Role Name</label>
+                            <input type="text" ng-required="true" ng-disabled="isedit" ng-model="txtRoleNmaeCreat"
+                                   maxlength="64"
+                                   ng-blur="checkdublicate_name(txtrolecode_creat,txtRoleNmaeCreat,ddlRoleGroupCreate)"/>
+                        </md-input-container>
+
+                        <span ng-if="error_name">{{error_name}}</span>
+                    </div>
+
+                </form>
+            </div>
+            <div class="row">
+                <div class="col-lg-6 col-sm-6">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            Assign Menu
+                        </div>
+                        <div class="panel-body" style="height: 200px;overflow: auto;" id="treeview">
+                            <ul>
+                                <li ng-repeat="menu in menus| filter:menu_search">
+                                    <!--<span ng-if="menu.ismobile == 'Y' && mobilebind == 'false'">-->
+                                    <!--<div ng-init="mobilefunction()"></div>-->
+                                    <!--{{mobilebind}}-->
+                                    <!--</span>-->
+                                    <label ng-right-click="clk(menu)">
+                                        {{menu.menu_name}}
+                                    </label>
+                                    <ul ng-show="menu.main_children.length>0">
+                                        <li ng-repeat="mainchild in menu.main_children| filter:menu_search">
+                                            <input type="checkbox" ng-model="mainchild.rVSMenu_isAssign"
+                                                   ng-checked="mainchild.rVSMenu_isAssign"
+                                                   ng-change="menuChange('','',$parent.$index,$index)"/>
+                                            <label ng-right-click="clk(mainchild)">{{mainchild.menu_name}}</label>
+                                            <ul ng-show="mainchild.menu_children.length>0">
+                                                <li ng-repeat="child in mainchild.menu_children| filter:menu_search">
+                                                    <label ng-right-click="clk(child)">
+                                                        <input type="checkbox" ng-model="child.rVSMenu_isAssign"
+                                                               ng-checked="child.rVSMenu_isAssign"
+                                                               ng-change="menuChange('',$parent.$parent.$index,$parent.$index,$index)"/>
+                                                        {{child.menu_name}}
+                                                    </label>
+                                                    <ul ng-show="child.subchild.length>0">
+                                                        <li ng-repeat="subchild in child.subchild | filter:menu_search">
+                                                            <label ng-right-click="clk(subchild)">
+                                                                <input type="checkbox"
+                                                                       ng-model="subchild.rVSMenu_isAssign"
+                                                                       ng-checked="subchild.rVSMenu_isAssign"
+                                                                       ng-style="{color:'blue'}"
+                                                                       ng-change="menuChange($parent.$parent.$parent.$index,$parent.$parent.$index,$parent.$index,$index)"/>
+                                                                {{subchild.menu_name}}
+                                                            </label>
+                                                        </li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-sm-6">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">Assign User
+                            <div class="pull-right" style="color:black;">
+                                <input type="text" ng-model="user_search" class="textboxgeneral"
+                                       placeholder="Search User" style="width: 150px;height: 25px;"/>
+                            </div>
+                        </div>
+                        <div class="panel-body" style="height: 200px;overflow: auto;">
+                            <div>
+                                <ul>
+                                    <li ng-repeat="user in users|filter:user_search">
+                                        <label>
+                                            <input type="checkbox" ng-model="user.STATUS"
+                                                   ng-checked="user.STATUS"/>
+                                            {{user.employee_name}}
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12 col-sm-12" style="text-align:right; ">
+                    <md-button class="md-raised" value="Close" ng-click="showHideEdit()">Close</md-button>
+                    <md-button class="md-raised custbutton"
+                               ng-click="createrole.$valid && saveORUpdate(isedit,param_rolegid);"
+                               ng-disabled="createrole.$invalid" value="{{isedit  ? 'Update' : 'Submit'}}"
+                    >Submit
+                    </md-button>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+         data-keyboard="false"
+         id="mdlmenu_add"
+         role="dialog" tabindex="-1">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header popup-header">
+                    <h5 class="modal-title" id="exampleModalLabel">
+                        Add Menu
+                        <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </h5>
+                </div>
+                <div class="modal-body popup-body">
+                    <div class="row">
+                        <!--Leave details-->
+                        <form name="myForm">
+                            <div class="col-xs-12">
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Menu Name</label>
+                                        <input maxlength="60"
+                                               ng-model="menu_name"
+                                               required/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-6">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Menu Link</label>
+                                        <input maxlength="60"
+                                               ng-model="menu_link"
+                                               required/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-6" class="align-center">
+                                    <md-button type="submit" class="md-raised md-warn"
+                                               ng-click="submit()">
+                                        SUBMIT
+                                    </md-button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div align="center" class="row">
+                    <div class="col-md-12">
+                        <md-button class="md-raised custbutton md-warn" ng-click="sbmitdet(add)" ng-show="showfr1">
+                            Submit
+                        </md-button>
+                        <md-button class="md-raised custbutton md-warn" ng-click="aprvclk(add)" ng-show="showfr">Approve
+                        </md-button>
+                        <md-button class="md-raised custbutton md-warn" ng-click="hide_data()" ng-show="showfr">Reject
+                        </md-button>
+                        <md-button class="md-raised custbutton md-warn" ng-click="rejctpop(add)" ng-show="rejctclk">
+                            Reject
+                        </md-button>
+                        <md-button class="md-raised" data-dismiss="modal" ng-click="closepop()">Close
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var AppRoleSummary = angular.module("AppRoleSummary", ['ngMaterial', 'ui.bootstrap']);
+AppRoleSummary=AppRoleSummary.config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    AppRoleSummary.directive('ngRightClick', function($parse) {
+    return function(scope, element, attrs) {
+        var fn = $parse(attrs.ngRightClick);
+        element.bind('contextmenu', function(event) {
+            scope.$apply(function() {
+                event.preventDefault();
+                fn(scope, {$event:event});
+            });
+        });
+    };
+});
+AppRoleSummary = AppRoleSummary.controller('CtrlRoleSummary', ['$scope', '$http', '$window', '$filter', 'roleSummarySer',
+    function ($scope, $http, $window, $filter, roleSummarySer) {
+        $scope.maxSize = 5;
+        $scope.currentPage = 1;
+        $scope.title="Role Summary"
+        $scope.viewby = 10;
+        $scope.maintable = [];
+        $scope.roles = [];
+        $scope.users = [];
+        $scope.itemsPerPage = $scope.viewby;
+
+
+        <!--//ddlgroup_change-->
+        $scope.searchrolegroup = function (group_gid) {
+            var roledtl = roleSummarySer.getrolelist('','',group_gid);
+            roledtl.then(function (roledtls) {
+                $scope.maintable = roledtls.data;
+                $scope.roles = $scope.maintable;
+                $scope.userTotalItems = $scope.roles.length;
+            }, function () {
+                alert('Records not found')
+            });
+        }
+
+        $scope.searchrolegroup('0');
+        <!--//ddlgroup-->
+        var rolegrouplist = roleSummarySer.getrolegroup();
+        rolegrouplist.then(function (rolegroup) {
+            $scope.groups = rolegroup.data;
+        }, function () {
+            alert('Records not found')
+        });
+
+
+        $scope.clk= function(e){
+            debugger;
+            $scope.menu_gid = e.menu_gid;
+            $scope.ismobile = e.ismobile;
+            modalshow('mdlmenu_add');
+        }
+
+            menu_gid: 1
+            menu_name: "Maintenance"
+            role_gid: 1
+            menu_displayorder: 1
+            rVSMenu_isAssign: true
+            ismobile: "N"
+
+        $scope.submit = function(){
+            debugger;
+            var data={
+            "Parent_gid":$scope.menu_gid,
+            "Menu_name":$scope.menu_name,
+            "Menu_link":$scope.menu_link,
+            "is_Mobile":$scope.ismobile
+            }
+            var dta={
+            "Group":"MENU_SET",
+            "Type":"Insert",
+            "data":data
+            }
+                    var setdetails = roleSummarySer.setmenu(dta);
+            setdetails.then(function (result) {
+                if (result.data === "true") {
+                   }
+                else {
+                    alert("Not Saved Sucessfully");
+                }
+            }, function () {
+                alert('Not Saved Sucessfully');
+            });
+        }
+
+        <!--//search box-->
+        $scope.searchlist = function (role_code, role_name) {
+            $scope.roles = $filter('filter')($scope.maintable, { role_code: role_code, role_name: role_name })
+            $scope.userTotalItems = $scope.roles.length;
+        };
+        <!--//create click-->
+        $scope.createRole = function () {
+            $scope.isedit = false;
+            $scope.param_rolegid=0;
+            $scope.error_code = null;
+            $scope.error_name = null;
+            $scope.ddlRoleGroupCreate = "";
+            $scope.txtrolecode_creat = null;
+            $scope.txtRoleNmaeCreat = null;
+            $scope.getUserlist();
+            $scope.getRoleMenuList('','');
+            $scope.rolesummary.$setPristine();
+            $scope.rolesummary.$setUntouched();
+            $scope.showHideEdit();
+        };
+        <!--//Edit click-->
+        $scope.Editrole = function (role_gid,role) {
+            $scope.user_search="";
+            index=$scope.maintable.indexOf(role);
+            $scope.isedit = true;
+            var maintable = $scope.maintable;
+            $scope.param_rolegid = role_gid;
+            $scope.ddlRoleGroupCreate = maintable[index].role_rolegroup_gid;
+            $scope.txtrolecode_creat = maintable[index].role_code;
+            $scope.txtRoleNmaeCreat = maintable[index].role_name;
+            $scope.getUserlist(role_gid);
+            $scope.getRoleMenuList(role_gid,'');
+            $scope.showHideEdit();
+        };
+        <!--//menucheck change-->
+        $scope.menuChange = function (pppindex,ppindex,pindex,index) {
+        debugger;
+            var menu = $scope.menus;
+            if (pppindex === "" && ppindex === "" && pindex >= 0 && index >=0 ) {
+                var ppmenu = menu[pindex].main_children[index].rVSMenu_isAssign;
+                angular.forEach(menu[pindex].main_children[index].menu_children, function (item) {
+                    item.rVSMenu_isAssign = ppmenu;
+                    angular.forEach(item.subchild, function (sitem) {
+                        sitem.rVSMenu_isAssign = ppmenu;
+                    })
+                });
+            }
+            else if (pppindex === "" && ppindex >= 0 && pindex >= 0 && index >=0  ) {
+                var ppmenu = menu[ppindex].main_children[pindex].menu_children[index].rVSMenu_isAssign;
+                if (ppmenu) {
+                       menu[ppindex].main_children[pindex].rVSMenu_isAssign = ppmenu;
+                 }
+                else {
+                    if (!check(ppindex,pindex)) {
+                        menu[ppindex].main_children[pindex].rVSMenu_isAssign = ppmenu;
+                    }
+                }
+                angular.forEach(menu[ppindex].main_children[pindex].menu_children[index].subchild, function (sitem) {
+                        sitem.rVSMenu_isAssign = ppmenu;
+                })
+            }
+            else if (pppindex >= 0 && ppindex >= 0 && pindex >= 0 && index >=0  ) {
+                var ppmenu = menu[pppindex].main_children[ppindex].menu_children[pindex].subchild[index].rVSMenu_isAssign;
+                if (ppmenu) {
+                    menu[pppindex].rVSMenu_isAssign = ppmenu;
+                    menu[pppindex].main_children[ppindex].menu_children[pindex].rVSMenu_isAssign = ppmenu;
+                }
+                else {
+                        var sub_menu = !check_submenu(pppindex, ppindex,pindex)
+                    if (sub_menu) {
+                        menu[pppindex].main_children[ppindex].menu_children[pindex].rVSMenu_isAssign = ppmenu;
+                    }
+                    var childmenu = !check(pppindex,ppindex)
+                    if (childmenu) {
+                        menu[pppindex].rVSMenu_isAssign = ppmenu;
+                    }
+
+                }
+
+            }
+
+        }
+        function check(pindex,index) {
+        debugger;
+            var menu = $scope.menus;
+            var temp = false;
+            angular.forEach(menu[pindex].main_children[index].menu_children, function (item) {
+                if (item.rVSMenu_isAssign) { temp= true;}
+            })
+            return temp;
+        }
+        function check_submenu(ppindex,pindex,index) {
+        debugger;
+            var menu = $scope.menus;
+            var temp = false;
+            angular.forEach(menu[ppindex].main_children[pindex].menu_children[index].subchild, function (item) {
+                if (item.rVSMenu_isAssign) { temp = true; }
+            })
+            return temp;
+        }
+        function check_all() {
+        debugger;
+            var menu = $scope.menus;
+            var temp = false;
+            angular.forEach(menu, function (item) {
+                if (item.rVSMenu_isAssign) { temp = true; }
+            })
+            return temp;
+        }
+        <!--//rolecode change-->
+        $scope.checkdublicate = function (rolecode, rolename, group_gid) {
+            $scope.error_code = null
+            if (group_gid == "") {
+                $scope.error_code="Please Select Group";
+                return false;
+            }
+            var value = [];
+            if (rolecode==null ){return false;}
+            var roledtl = roleSummarySer.getrolelist(rolecode, '', '0');
+            roledtl.then(function (roledtls) {
+                value = roledtls.data;
+                if (value.length > 0) {
+                    $scope.error_code="Role Code Already Exited";
+                }
+                else { $scope.error_code =null}
+
+            }, function () {
+                alert('Records not found')
+            });
+        }
+        $scope.checkdublicate_name = function (rolecode, rolename, group_gid) {
+            $scope.error_name = null
+            if (group_gid == "") {
+                $scope.error_name = "Please Select Group";
+                return false;
+            }
+            var value = [];
+            if (rolename==null ){return false;}
+            var roledtl = roleSummarySer.getrolelist('', rolename, '0');
+            roledtl.then(function (roledtls) {
+                value = roledtls.data;
+                if (value.length > 0) {
+                    $scope.error_name = "Role Name Already Exited";
+                }
+                else { $scope.error_name = null }
+
+            }, function () {
+                alert('Records not found')
+            });
+        }
+        <!--//submit click-->
+        $scope.saveORUpdate = function (isedit,role_gid) {
+        debugger;
+            var sentdata = [];
+            var rolegroup_gid = $scope.ddlRoleGroupCreate;
+            var role_code = $scope.txtrolecode_creat;
+            var role_name = $scope.txtRoleNmaeCreat;
+            var users = $scope.users;
+            var menus=$scope.menus;
+            sentdata = {
+                group_gid: rolegroup_gid,
+                role_gid: role_gid,
+                role_code: role_code,
+                role_name: role_name,
+                user_roles: users,
+                role_menu:menus
+
+            };
+            if (!check_all()) {
+                alert("Please Check Anyone Menu!.")
+                return false;
+            }
+            if (!isedit) {
+                if ($scope.error_name != null || $scope.error_code != null) {
+                    alert("Please Check Role Code or Role Name!.")
+                    return false;
+                }
+            }
+
+            var getdetails = roleSummarySer.setvalues(sentdata);
+            getdetails.then(function (result) {
+                if (result.data === "true") {
+                    alert("Saved Sucessfully");
+                    $scope.users.length = 0;
+                    $scope.menus.length = 0;
+                    $scope.searchrolegroup('0');
+                    $scope.showHideEdit();
+                }
+                else {
+                    alert("Not Saved Sucessfully");
+                }
+            }, function () {
+                alert('Records not found');
+            });
+
+        };
+        $scope.getRoleMenuList = function (role_gid,ismobile) {
+            if(!role_gid){role_gid=0};
+            var getdetails = roleSummarySer.getmenus(role_gid,ismobile);
+            getdetails.then(function (getmenu) {
+            debugger;
+                $scope.menus =JSON.parse( getmenu.data);
+                $scope.mobilebind='false';
+            }, function () {
+                alert('Records not found');
+            });
+        };
+        $scope.getUserlist = function (role_gid) {
+            if(!role_gid){role_gid=0};
+            var getdetails = roleSummarySer.getusers(role_gid);
+            getdetails.then(function (getuser) {
+                $scope.users = getuser.data;
+
+            }, function () {
+                alert('Records not found');
+            });
+        };
+
+        $scope.showHideEdit = function () {
+        $scope.edit_view = !$scope.edit_view;
+        if(!$scope.edit_view){
+                $scope.title = "Role Summary"}
+                else if($scope.isedit)
+                {$scope.title = "Role Edit"
+                }
+                else{
+                $scope.title = "Role Creation"
+                }
+        }
+
+        <!--$scope.mobilefunction=function(){-->
+            <!--$scope.mobilebind='true';-->
+            <!--$scope.mobilename='Andriod';-->
+        <!--}-->
+    }]);
+AppRoleSummary.service('roleSummarySer', function ($http) {
+    this.getrolelist = function (role_code, role_name, rGroup_gid) {
+        var response = $http.get( Appname +"/roleList/", { params: { "role_code": role_code, "role_name": role_name, "rGroup_gid": rGroup_gid } });
+        return response;
+    };
+    this.getrolegroup = function () {
+        var response = $http.get( Appname +"/roleGroup/");
+        return response;
+    }
+    this.getusers = function (role_gid) {
+        var response = $http.get( Appname + "/userList/", { params: { "role_gid": role_gid, "user_gid": '0', "gettype": 'ALL_EMPLOYEE' } });
+        return response;
+    }
+    this.setvalues = function (ev) {
+        var response = $http.post( Appname +"/setRollDetails/",{parms:ev});
+        return response;
+    }
+      this.setdetails = function(get_data) {
+        var response = $http.post(Appname + "/menuset/", get_data);
+        return response;
+    }
+    this.getmenus = function (role_gid,ismobile) {
+        var response = $http.get(Appname + "/menuList/", { params: { "role_gid": role_gid,"ismobile":ismobile } });
+        return response;
+    }
+});
+
+</script>
+{% endblock %}

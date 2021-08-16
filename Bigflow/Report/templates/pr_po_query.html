@@ -1,0 +1,868 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PR PO Query {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>PR PO Query </h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-2">
+                        <md-input-container class="md-block inputcontainer">
+                            <md-radio-group layout="row" ng-change="check_radio()" ng-model="dataType"
+                                            ng-init="dataType = 'Pr'">
+                                <md-radio-button value="Pr" checked>PR
+                                </md-radio-button>
+                                <md-radio-button value="Po">PO</md-radio-button>
+                            </md-radio-group>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3" style="width:240px;">
+                        <label>Supplier Group</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedsup_grp"
+                                md-search-text="searchsup_grp"
+                                md-selected-item-change="changesup_grp(item)"
+                                md-items="item in supgrpsearch(searchsup_grp)"
+                                md-item-text="item.suppliergroup_name"
+                                md-min-length=0
+                                placeholder="Supplier Group">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.suppliergroup_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Supplier Group matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-3" style="width:240px;">
+                        <label>Supplier Name</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedsup"
+                                md-search-text="searchsup"
+                                md-selected-item-change="changesup(item)"
+                                md-items="item in sup_search(searchsup)"
+                                md-item-text="item.supplier_name"
+                                md-min-length=0
+                                placeholder="Supplier Name">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.supplier_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Supplier Name matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-2" style="width:240px;">
+                        <label>Raiser Name</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedemp"
+                                md-search-text="searchemp"
+                                md-selected-item-change="changeemp(item)"
+                                md-items="item in emp_search(searchemp)"
+                                md-item-text="item.employee_name"
+                                md-min-length=0
+                                placeholder="Raiser Name">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.employee_name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Raiser Name matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-2" style="width:240px;">
+                        <label>Status</label>
+                        <md-autocomplete
+                                md-no-cache="true"
+                                md-selected-item="selectedstatus"
+                                md-search-text="searchstatus"
+                                md-selected-item-change="changestatus(item)"
+                                md-items="item in status_search(searchstatus)"
+                                md-item-text="item.title"
+                                md-min-length=0
+                                placeholder="Status">
+                            <md-item-template>
+                                <span md-highlight-text="searchText"> {{item.title}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No Status matching "{{searchText}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                </div>
+            </div>
+            <br/>
+        </div>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-md-3" style="margin-top:12px">
+                    <md-button class="  " ng-click="advance_search()">
+                        Filter
+                        <md-icon>tune</md-icon>
+                        <md-tooltip>Filter</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-3"></div>
+                <div class="col-md-3"></div>
+                <div class="col-md-3">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="advanced_srch">
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="col-lg-12 col-sm-12">
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Amount</label>
+                                        <input maxlength="30" ng-model="amount" numbers-only
+                                               placeholder="Amount"
+                                               type="text"/>
+                                    </md-input-container>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Commodity</label>
+                                    <md-autocomplete
+                                            md-no-cache="true"
+                                            md-selected-item="selectedcommodity"
+                                            md-search-text="searchcommodity"
+                                            md-selected-item-change="changecommodity(item)"
+                                            md-items="item in commodity_search(searchcommodity)"
+                                            md-item-text="item.commodity_name"
+                                            md-min-length=0
+                                            placeholder="Commodity">
+                                        <md-item-template>
+                                            <span md-highlight-text="searchText"> {{item.commodity_name}} </span>
+                                        </md-item-template>
+                                        <md-not-found>
+                                            No Commodity matching "{{searchText}}" were found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Product</label>
+                                    <md-autocomplete
+                                            md-no-cache="true"
+                                            md-selected-item="selectedproduct"
+                                            md-search-text="searchproduct"
+                                            md-selected-item-change="changeproduct(item)"
+                                            md-items="item in product_search(searchproduct)"
+                                            md-item-text="item.product_displayname"
+                                            md-min-length=0
+                                            placeholder="Product">
+                                        <md-item-template>
+                                            <span md-highlight-text="searchText"> {{item.product_displayname}} </span>
+                                        </md-item-template>
+                                        <md-not-found>
+                                            No Product matching "{{searchText}}" were found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div ng-show="Pr_search">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>PR Date From</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                           md-open-on-focus
+                                                           ng-change="change_from()"
+                                                           ng-model="from_date"></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div ng-show="Po_search">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Po Date From</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                           ng-change="change_from()"
+                                                           md-open-on-focus
+                                                           ng-model="from_date"></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div ng-show="Pr_search">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>PR Date TO</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                           md-open-on-focus
+                                                           ng-change="change_to()"
+                                                           ng-model="to_date"></md-datepicker>
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                                <div ng-show="Po_search">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Po Date TO</label>
+                                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate"
+                                                           md-open-on-focus
+                                                           ng-change="change_to()"
+                                                           ng-model="to_date"></md-datepicker>
+                                        </md-input-container>
+
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Branch</label>
+                                    <md-autocomplete
+                                            md-no-cache="true"
+                                            md-selected-item="selectedbranch"
+                                            md-search-text="searchbranch"
+                                            md-selected-item-change="changebranch(item)"
+                                            md-items="item in branch_search(searchbranch)"
+                                            md-item-text="item.branch_name"
+                                            md-min-length=0
+                                            placeholder="Branch">
+                                        <md-item-template>
+                                            <span md-highlight-text="searchText"> {{item.branch_name}} </span>
+                                        </md-item-template>
+                                        <md-not-found>
+                                            No Branch matching "{{searchText}}" were found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div class="col-md-3">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>MEP No</label>
+                                        <input maxlength="30" ng-model="mep_no" numbers-only
+                                               placeholder="MEP No"
+                                               type="text"/>
+                                    </md-input-container>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <div class="row table-responsive" ng-show="pr_data" >
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th scope="col" class="text-center">PR No</th>
+                    <th scope="col" class="text-center">Supplier Name</th>
+                    <th scope="col" class="text-center">Branch Name</th>
+                    <th scope="col" class="text-center">Product Displayname</th>
+                    <th scope="col" class="text-center">PRdetails Qty</th>
+                    <th scope="col" class="text-center">Employee Name</th>
+                    <th scope="col" class="text-center">Commodity Name</th>
+                    <th scope="col" class="text-center">PR Totalamount</th>
+                    <th scope="col" class="text-center">PR Status</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="data in asset.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center" ng-click="imgshow($index)">{{data.prheader_no}}</td>
+                        <td class="text-left">{{data.supplier_name}}</td>
+                        <td class="text-left">{{data.branch_name}}</td>
+                        <td class="text-center">{{data.product_displayname}}</td>
+                        <td class="text-right">{{data.prdetails_qty}}</td>
+                        <td class="text-left">{{data.employee_name}}</td>
+                        <td class="text-left">{{data.commodity_name}}</td>
+                        <td class="text-left">{{data.prheader_totalamount | number : fractionSize}}</td>
+                        <td class="text-left">{{data.prheader_status}}</td>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{asset.length}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row table-responsive" ng-show="po_data">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th scope="col" class="text-center">PO No</th>
+                    <th scope="col" class="text-center">Supplier Name</th>
+                    <th scope="col" class="text-center">Branch Name</th>
+                    <th scope="col" class="text-center">Product Displayname</th>
+                    <th scope="col" class="text-center">POdetails Qty</th>
+                    <th scope="col" class="text-center">Delivered Qty</th>
+                    <th scope="col" class="text-center">PO Date</th>
+                    <th scope="col" class="text-center">Raiser Name</th>
+                    <th scope="col" class="text-center">Commodity Name</th>
+                    <th scope="col" class="text-center">PO Status</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="data in asset.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-center" ng-click="imgshow($index)">{{data.poheader_no}}</td>
+                        <td class="text-left">{{data.supplier_name}}</td>
+                        <td class="text-left">{{data.branch_name}}</td>
+                        <td class="text-center">{{data.product_displayname}}</td>
+                        <td class="text-right">{{data.podetails_qty}}</td>
+                        <td class="text-right">{{data.delivered_qty}}</td>
+                        <td class="text-right">{{data.poheader_date}}</td>
+                        <td class="text-left">{{data.raiser_name}}</td>
+                        <td class="text-left">{{data.commodity_name}}</td>
+                        <td class="text-left">{{data.poheader_status}}</td>
+                    </tr>
+                    <tr ng-show="data_len ==  0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{asset.length}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="text-center" ng-show="reasons">
+            <md-dailog>
+                <md-content>
+                    <h4>
+                        Reason : {{write_off_reason}}
+                    </h4>
+                </md-content>
+            </md-dailog>
+        </div>
+        <!--popup page start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Asset Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                            <thead class="header">
+                                            </thead>
+                                            <tbody ng-repeat="view in asset_data">
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset ID</label></td>
+                                                <td class="text-center" style="width:100px">{{view.asset_id}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Product Name</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.product_name}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Catagory</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.catogry}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Capitalization
+                                                    Date</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.cap_date}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Asset Value</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.asset_value}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Branch</label>
+                                                </td>
+                                                <td class="text-center" style="width:100px">{{view.branch}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Location</label></td>
+                                                <td class="text-center" style="width:100px">{{view.location}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Reason</label></td>
+                                                <td class="text-center" style="width:100px">{{view.reason}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center" style="width:100px"><label>Status</label></td>
+                                                <td class="text-center" style="width:100px">{{view.status}}</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--popup page End-->
+        <!--        popup image start-->
+        <div aria-hidden="true" aria-labelledby="exampleLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="imagemodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleLabel">
+                                <strong>Asset Image</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="body">
+                    <div class="modal-body popup-body">
+                        <div class="row">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="text-center">
+                                    <img src="{{asset_img}}" style="width:400px;height:400px"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--        popup image end-->
+    </div>
+</div>
+</div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.reasons = false;
+    $scope.data_len = 0;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.cap_date = convertdate(td);
+        $scope.advanced_srch = false;
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    $scope.selectchange = function() {
+        if($scope.selectedcat == undefined ){
+           $scope.catagry = "";
+        }
+        else{
+            $scope.catagry = $scope.selectedcat.assetcat_subcatname;
+        }
+    }
+    $scope.change_from = function() {
+        $scope.anyfrom_date = $filter('date')(new Date($scope.from_date),'yyyy-MM-dd');
+    }
+    $scope.change_to = function() {
+        $scope.anyto_date = $filter('date')(new Date($scope.to_date),'yyyy-MM-dd');
+    }
+    $scope.changesup_grp = function(item) {
+       $scope.sup_grp = item.suppliergroup_gid;
+    }
+    $scope.changesup = function(item) {
+        $scope.suplier = item.supplier_gid;
+    }
+    $scope.changeemp = function(item) {
+       $scope.employee = item.employee_gid;
+    }
+    $scope.changecommodity = function(item) {
+       $scope.commodity = item.commodity_gid;
+    }
+    $scope.changeproduct = function(item) {
+       $scope.product = item.product_gid;
+    }
+    $scope.changebranch = function(item) {
+       $scope.branch = item.branch_gid;
+    }
+    $scope.changestatus = function(item) {
+       $scope.status = item.value;
+    }
+
+    $scope.search = function() {
+        loaddata();
+    }
+    $scope.dataType = "Pr";
+    loaddata();
+    function loaddata() {
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Supplier_Group_Gid":$scope.sup_grp,
+                    "Supplier_Gid":$scope.suplier,
+                    "Raiser_Gid":$scope.employee,
+                    "Status":$scope.status,
+                    "Amount":$scope.amount,
+                    "Commodity_Gid":$scope.commodity,
+                    "Product_Gid":$scope.product,
+                    "MEP_No":$scope.mep_no,
+                    "From_Date":$scope.anyfrom_date,
+                    "To_Date":$scope.anyto_date,
+                    "Branch_Gid":$scope.branch,
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": $scope.entity_gid,
+                }
+            }
+        };
+        debugger;
+        if ($scope.dataType == "Pr") {
+            var get_asset = newservice.pr_query(data)
+            get_asset.then(function(result) {
+                $scope.loading();
+                $scope.main = result.data.DATA;
+                if(result.data.MESSAGE == "NOT_FOUND" ){
+                    $scope.data_len = 0;
+                }
+                $scope.asset = $scope.main;
+                $scope.po_data = false;
+                $scope.pr_data = true;
+                $scope.data_len = $scope.asset.length;
+                $scope.pageLength = $scope.asset.length;
+                $scope.Totalpages = Math.ceil($scope.asset.length / $scope.itemsPerPage);
+                $scope.pageLength = $scope.asset.length;
+            }).finally($scope.endloading);
+		} else if ($scope.dataType == "Po") {
+		    var get_asset = newservice.po_query(data)
+            get_asset.then(function(result) {
+                $scope.loading();
+                $scope.main = result.data.DATA;
+                if(result.data.MESSAGE == "NOT_FOUND" ){
+                    $scope.data_len = 0;
+                }
+                $scope.asset = $scope.main;
+                $scope.po_data = true;
+                $scope.pr_data = false;
+                $scope.data_len = $scope.asset.length;
+                $scope.pageLength = $scope.asset.length;
+                $scope.Totalpages = Math.ceil($scope.asset.length / $scope.itemsPerPage);
+                $scope.pageLength = $scope.asset.length;
+            }).finally($scope.endloading);
+		}
+    }
+    $scope.imgshow = function(id){
+        if($scope.asset[id].assetdetails_imagepath != null){
+             modalshow('imagemodal');
+             $scope.asset_img =$scope.asset[id].assetdetails_imagepath;
+         }
+    }
+    loadcat();
+    function loadcat(){
+        var get_drop = newservice.drop_data()
+        get_drop.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_drop_data = $scope.main;
+
+        });
+       var lj_data = {
+            "Params": {
+                "Details": {},
+                "Classification": {
+                    "Entity_Gid": $scope.entity_gid,
+                    "Entity_Detail_Gid": 1
+
+                }
+
+            }
+        }
+       var gdata = {
+            Group: "Supplier_Get",
+            Type: "DDL",
+            SubType: "SUPPLIER_GROUP",
+            data: lj_data
+       }
+       var sdata = {
+            Group: "Supplier_Get",
+            Type: "DDL",
+            SubType: "SUPPLIER",
+            data: lj_data
+       }
+       var edata = {
+            Action: "emp",
+            Entity_Gid: $scope.entity_gid,
+       }
+       var cdata = {
+            Action: "commodity",
+            Entity_Gid: $scope.entity_gid,
+       }
+       var pdata = {
+            Action: "product",
+            Entity_Gid: $scope.entity_gid,
+       }
+       var bdata = {
+            Action: "branch",
+            Entity_Gid: $scope.entity_gid,
+       }
+        var get_sup_grp = newservice.suplier_data(gdata)
+        get_sup_grp.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_supliergrp_data = $scope.main;
+
+        });
+        var get_sup = newservice.suplier_data(sdata)
+        get_sup.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_suplier_data = $scope.main;
+
+        });
+        var getemp = newservice.getemp_data(edata)
+        getemp.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_employee = $scope.main;
+
+        });
+        var getcommodity = newservice.getemp_data(cdata)
+        getcommodity.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_commodity = $scope.main;
+
+        });
+        var getproduct = newservice.getemp_data(pdata)
+        getproduct.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_product = $scope.main;
+
+        });
+        var getbranch = newservice.getemp_data(bdata)
+        getbranch.then(function(result) {
+            $scope.main = result.data.DATA;
+            $scope.get_branch = $scope.main;
+
+        });
+    }
+    $scope.catsearch = gotocat;
+    function gotocat(query) {
+        var result = $filter('filter')($scope.get_drop_data, {
+            'assetcat_subcatname': query
+        });
+        return result;
+    }
+    $scope.supgrpsearch = gotosup_grp;
+    function gotosup_grp(query) {
+        var result = $filter('filter')($scope.get_supliergrp_data, {
+            'suppliergroup_name': query
+        });
+        return result;
+    }
+    $scope.sup_search = gotosuplier;
+    function gotosuplier(query) {
+        var result = $filter('filter')($scope.get_suplier_data, {
+            'supplier_name': query
+        });
+        return result;
+    }
+    $scope.emp_search = gotoemploye;
+    function gotoemploye(query) {
+        var result = $filter('filter')($scope.get_employee, {
+            'employee_name': query
+        });
+        return result;
+    }
+    $scope.commodity_search = gotocommodity;
+    function gotocommodity(query) {
+        var result = $filter('filter')($scope.get_commodity, {
+            'commodity_name': query
+        });
+        return result;
+    }
+    $scope.product_search = gotoproduct;
+    function gotoproduct(query) {
+        var result = $filter('filter')($scope.get_product, {
+            'product_displayname': query
+        });
+        return result;
+    }
+    $scope.branch_search = gotobranch;
+    function gotobranch(query) {
+        var result = $filter('filter')($scope.get_branch, {
+            'branch_name': query
+        });
+        return result;
+    }
+    $scope.status_search = gotostatus;
+    function gotostatus(query) {
+        var result = $filter('filter')($scope.search_opt, {
+            'title': query
+        });
+        return result;
+    }
+    $scope.search_opt =[{'title':"Approved",'value':"Approved"},
+    {'title':"Pending",'value':"pending"}];
+
+    $scope.Pr_search = false;
+    $scope.Po_search = false;
+    $scope.check_radio = function () {
+		if ($scope.dataType == "Pr") {
+			$scope.Pr_search = true;
+			$scope.Po_search = false;
+		} else if ($scope.dataType == "Po") {
+		    $scope.Pr_search = false;
+			$scope.Po_search = true;
+		}
+	};
+        $scope.advance_search = function(   ){
+        if($scope.advanced_srch != true){
+            $scope.advanced_srch = true;
+            $scope.check_radio();
+        }
+        else{
+            $scope.advanced_srch = false;
+        }
+    }
+
+    $scope.viewdet = function(e) {
+    }
+    $scope.reason = function(id){
+            $scope.write_off_reason = $scope.asset[id].writeoff_reason ;
+            $scope.reasons = true;
+    }
+});
+
+app.service('newservice', function($http) {
+    this.pr_query = function(data) {
+        var response = $http.post(Appname + "/Pr_Po_data/", {
+            params: {
+                "Sub_Type": "QUERY_SUMMARY",
+                "Type": "PR",
+                "Group": "PRPO_QUERY_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+    this.po_query = function(data) {
+        var response = $http.post(Appname + "/Pr_Po_data/", {
+            params: {
+                "Sub_Type": "QUERY_SUMMARY",
+                "Type": "PO",
+                "Group": "PRPO_QUERY_SUMMARY",
+                "json": data,
+            }
+        });
+        return response;
+    }
+    this.suplier_data = function (data) {
+            var response = $http.post(Appname + "/Supplier_Master/", data);
+            return response;
+        }
+    this.drop_data = function() {
+        var response = $http.post(Appname + "/drop_data/", {});
+        return response;
+    }
+    this.getemp_data = function (trans) {
+        var response = $http.post(Appname + "/get_alltable/", trans);
+        return response;
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

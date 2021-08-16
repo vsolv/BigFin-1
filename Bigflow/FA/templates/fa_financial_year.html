@@ -1,0 +1,436 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Financial Year {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Financial Year Maker Summary </h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Id</label>
+                            <input maxlength="3" ng-model="asset_id" ng-change="myfun()" numbers-only
+                                   placeholder="Asset id"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset Value</label>
+                            <input ng-model="asset_value" ng-change="myfun()" placeholder="Asset Value"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Cap Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" ng-change="myfun()"
+                                           md-open-on-focus
+                                           ng-model="cap_date"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Asset code</label>
+                            <input maxlength="3" ng-model="asset_code" ng-change="myfun()" numbers-only
+                                   placeholder="Asset code"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Branch</label>
+                            <input ng-model="asset_branch" ng-change="myfun()" placeholder="Branch"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-5">
+
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="search()">
+                            <md-icon>search</md-icon>
+                            <md-tooltip>Search</md-tooltip>
+                        </md-button>
+                    </div>
+                    <div class="col-md-2">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-href="fa_financial_year_plus">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Create Fin Year</md-tooltip>
+                        </md-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <th scope="col" class="text-center">S.No</th>
+                    <th scope="col" class="text-center">Financial Year Code</th>
+                    <th scope="col" class="text-center">Financial Year Name</th>
+                    <th scope="col" class="text-center">Financial Year Status</th>
+                    <th scope="col" class="text-center">Financial Year Approval Status</th>
+                    <th scope="col" class="text-center">Action</th>
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="ast in asset.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center">
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td class="text-right">{{ast.fiscalyear_code}}</td>
+                        <td class="text-left">{{ast.fiscalyear_name}}</td>
+                        <td class="text-left">{{ast.fiscalyear_status}}</td>
+                        <td class="text-left">{{ast.fiscalyear_approvalstatus}}</td>
+                        <td class="text-center">
+                            <a title="View" ng-click="viewdet(ast)" align="center" class="editlink">
+                                <i class="material-icons">edit</i>
+                            </a>
+                    </tr>
+                    <tr ng-show="asset.length ==  0">
+                        <td class="warning">
+                            No Records Found.
+                        </td>
+                    </tr>
+
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                items-per-page="itemsPerPage"
+                                max-size="maxSize"
+                                ng-model="currentPage" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="1" class="text-left">
+                            <span>Total Count:<br/> <b class="text-centre"> {{asset.length}}</b></span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="text-center" ng-show="reasons">
+            <md-dailog>
+                <md-content>
+                    <h4>
+                        Reason : {{write_off_reason}}
+                    </h4>
+                </md-content>
+            </md-dailog>
+        </div>
+        <!--popup page start-->
+        <div aria-hidden="true" aria-labelledby="exampleModalLabel" class="modal fade" data-backdrop="static"
+             data-keyboard="false"
+             id="viewmodal" role="dialog"
+             style="height:auto;width:100%" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-style" role="document">
+                <div class="modal-content">
+                    <div class="header">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                <strong>Asset Details</strong>
+                                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="modal-body popup-body">
+                            <div class="row table-responsive">
+                                <div class="col-md-12 col-lg-12 col-sm-12">
+                                    <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                        <thead class="header">
+                                        <th scope="col" class="text-center">S.No</th>
+                                        <th scope="col" class="text-center">Financial Year Code</th>
+                                        <th scope="col" class="text-center">Financial Year Name</th>
+                                        <th scope="col" class="text-center">Financial Year Status</th>
+                                        <th scope="col" class="text-center">Financial Year Approval Status</th>
+                                        </thead>
+
+                                        <tbody>
+                                        <tr ng-repeat="ast in asset_data.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                                            <td class="text-center">
+                                                <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                                            </td>
+                                            <td class="text-right">{{ast.fiscalyear_code}}</td>
+                                            <td class="text-left">{{ast.fiscalyear_name}}</td>
+                                            <td class="text-left">
+                                                <md-autocomplete
+                                                        md-no-cache="true"
+                                                        md-selected-item="selectedItem"
+                                                        md-search-text="ast.fiscalyear_status"
+                                                        md-selected-item-change="ACselectchange(item)"
+                                                        md-items="item in querySearch(ast.fiscalyear_status)"
+                                                        md-item-text="item.data"
+                                                        md-min-length=0>
+                                                    <md-item-template>
+                                                        <span md-highlight-text="searchText"> {{item.data}} </span>
+                                                    </md-item-template>
+                                                    <md-not-found>
+                                                        No product matching "{{searchText}}" were found.
+                                                    </md-not-found>
+                                                </md-autocomplete>
+                                            </td>
+                                            <td class="text-left">{{ast.fiscalyear_approvalstatus}}</td>
+                                        </tr>
+                                        <tr ng-show="asset.length ==  0">
+                                            <td class="warning">
+                                                No Records Found.
+                                            </td>
+                                        </tr>
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <md-button class="btn btn-info custbutton" ng-click="update(ast)"
+                                       ng-disabled="enable_update">Submit
+                                <md-tooltip>Submit</md-tooltip>
+                            </md-button>
+                            <md-button class="md-raised" data-dismiss="modal">Back
+                                <md-tooltip>close</md-tooltip>
+                            </md-button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--popup page End-->
+</div>
+</div>
+{% endverbatim %}
+<script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+
+
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    $scope.reasons = false;
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.cap_date = convertdate(td);
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+  $scope.ACselectchange = function(value) {
+     $scope.id = value.id
+
+  }
+
+    loaddata();
+
+    function loaddata() {
+        var data = {
+        "Params": {
+                "FILTER": {},
+            }
+        };
+        var get_asset = newservice.asset_detail(data)
+        get_asset.then(function(result) {
+            $scope.loading();
+            $scope.main = result.data.DATA;
+            $scope.asset = $scope.main;
+            $scope.pageLength = $scope.asset.length;
+            $scope.Totalpages = Math.ceil($scope.asset.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.asset.length;
+
+        }).finally($scope.endloading);
+    }
+    $scope.viewdet = function(e) {
+        $scope.fiscalyear_code = e.fiscalyear_code;
+        $scope.fiscalyear_gid = e.fiscalyear_gid;
+        $scope.fiscalyear_name = e.fiscalyear_name;
+        $scope.fiscalyear_status = e.fiscalyear_status;
+        $scope.fiscalyear_approvalstatus = e.fiscalyear_approvalstatus;
+        $scope.searchTe = $scope.fiscalyear_status;
+        modalshow('viewmodal');
+        $scope.asset_data = [{
+            "fiscalyear_gid" :$scope.fiscalyear_gid,
+            "fiscalyear_code": $scope.fiscalyear_code,
+            "fiscalyear_name": $scope.fiscalyear_name,
+            "fiscalyear_status": $scope.fiscalyear_status,
+            "fiscalyear_approvalstatus": $scope.fiscalyear_approvalstatus,
+        }];
+    }
+         $scope.year_status = [
+     {
+        "id": 'O',
+        "data": 'OPENED'
+    },
+     {
+        "id": 'C',
+        "data": 'CLOSED'
+        },
+     {
+        "id": 'R',
+        "data": 'REOPENED'
+        }];
+    $scope.querySearch = gotoexe;
+        function gotoexe(query) {
+            var result = $filter('filter')($scope.year_status, {
+                'data': query
+            });
+            return result;
+        }
+    $scope.myfun = function() {
+        $scope.asset = $filter('filter')($scope.main, {
+            "assetdetails_id": $scope.asset_id,
+        });
+    };
+    $scope.search = function() {
+        var d = new Date($scope.cap_date);
+        var capdate = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+
+        var filter = {
+            "asset_id": $scope.asset_id,
+            "asset_value": $scope.asset_value,
+            "asset_capdate": capdate,
+            "asset_code": $scope.asset_code,
+            "asset_branch": $scope.asset_branch,
+        };
+
+        var save_deptdetail = newservice.asset_filter(filter);
+        save_deptdetail.then(function(result) {
+
+            $scope.main = result.data.DATA;
+            $scope.asset_data = $scope.main;
+            $scope.pageLength = $scope.asset_data.length;
+            $scope.Totalpages = Math.ceil($scope.asset_data.length / $scope.itemsPerPage);
+            $scope.pageLength = $scope.asset_data.length;
+        });
+
+    }
+ $scope.update = function(value) {
+     if($scope.fiscalyear_approvalstatus != "Pending Approval"){
+            var save_data = {
+            "Params": {
+                "DETAILS": {
+                     "Fin_calYear_Gid":$scope.fiscalyear_gid,
+                     "Status": $scope.id,
+                },
+            }
+        };
+        save_file(save_data);
+     }
+     else{
+            alert("Not Allow to Change Status");
+            return false;
+     }
+    }
+    function save_file(save_data) {
+        var fin_year = newservice.fin_year(save_data,employgid);
+        $scope.loading();
+        fin_year.then(function(res) {
+            alert(res.data.MESSAGE);
+            $scope.pagemove = "Y";
+        if($scope.pagemove == "N")
+        {
+            $window.location.href = "fa_financial_year";
+        }
+        else{
+            $window.location.href = "fa_financial_year";
+            $scope.search();
+        }
+        }).finally($scope.endloading);
+   }
+
+
+
+});
+
+app.service('newservice', function($http) {
+    this.asset_detail = function(data) {
+        var response = $http.post(Appname + "/fin_year/", {
+            params: {
+                "Sub_Type": "SUMMARY",
+                "Type": "FINANCE",
+                "Group": "FIN_YEAR_GET",
+                "json": data,
+            }
+        });
+        return response;
+    }
+
+    this.asset_filter = function(filter) {
+        var response = $http.post("", {
+            params: {
+
+                "json": filter,
+
+            }
+        });
+
+        return response;
+    }
+    this.fin_year = function(save_data,employgid) {
+        var response = $http.post(Appname + "/fin_year/", {
+            params: {
+                "Sub_Type": "STATUS",
+                "Type": "FINANCIAL",
+                "Group": "FIN_YEAR_SET",
+                "Action": "UPDATE ",
+                "json": save_data,
+            }
+        });
+        return response;
+    }
+});
+
+
+
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,556 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APProcess_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024))
+sp_APProcess_Get:BEGIN
+### SELVA jan 13 2020 - Created
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare Query_Search1 varchar(1024);
+Declare Query_Group varchar(1024);
+Declare Query_Column varchar(1024);
+Declare Query_Limit varchar(1024);
+Declare ls_invoiceheader_status varchar(1024);
+declare errno int;
+declare i int;
+declare msg varchar(1000);
+declare li_count int;
+
+
+
+# Null Selected Output
+
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    
+    BEGIN
+		GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+		set Message = concat(errno , msg);
+		ROLLBACK;
+    END;
+
+select fn_Classification('ENTITY_ONLY',lj_Classification) into @OutMsg_Classification ;
+        select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Entity_Gid[0]')) into @Entity_Gids;        
+       if @Entity_Gids is  null or @Entity_Gids = '' then
+				select  JSON_UNQUOTE(JSON_EXTRACT(@OutMsg_Classification, '$.Message')) into @Message;
+				set Message = concat('Error On Classification Data - ',@Message);
+                leave sp_APProcess_Get;
+        End if;
+
+
+if ls_Type = 'GET' and ls_Sub_Type = 'ONWARD_SALES' then
+         	set Query_Select = '';
+            set Query_Search = '';
+            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Asset_Id'))) into @Claim_Status;
+
+			#select @Branch;
+            if @Branch <> '' then	
+			   set Query_Search = concat(Query_Search,' and  assetdetails_branchgid  =',@Branch,' ');
+            end if;
+			if @Asset_cat <> '' then
+				set Query_Search = concat(Query_Search,' and  assetdetails_assetcatgid = ',@Asset_cat,' ');
+			End if;
+        
+			set Query_Select = concat('
+							select soheader_gid,soheader_customer_gid,soheader_no,
+                            date_format(soheader_date,''%Y-%m-%d'') as soheader_date,soheader_employee_gid,
+                            Soheader_channel,soheader_remarks,soheader_refgid,soheader_reftablegid,
+                            soheader_status,soheader_amount,soheader_discount,soheader_taxamount,
+                            soheader_total,soheader_pono,soheader_isremoved,entity_gid,create_by,
+                            date_format(create_date,''%Y-%m-%d'') as create_date,update_by,
+                            date_format(Update_date,''%Y-%m-%d'') as Update_date,insert_flag,update_flag,Cancel_flag
+                            from gal_trn_tsoheader
+                            ',Query_Search,' where entity_gid in (',@Entity_Gid,')	
+                            ');
+                            
+				  set @Query_Select = Query_Select;									                
+			      		#select @Query_Select; ### Remove It
+					PREPARE stmt FROM @Query_Select;
+					EXECUTE stmt; 
+					Select found_rows() into li_count;
+                    
+				  if li_count > 0 then
+						set Message = 'FOUND';
+				  else 
+						set Message = 'NOT_FOUND';
+				  end if;      
+                     	
+end if; 
+
+
+if ls_Type = 'GET' and ls_Sub_Type = 'INVOICE_MAKER_SUMMARY' then
+      
+
+
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Status'))) into ls_invoiceheader_status;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Gid'))) into @InvoiceHeader_Gid;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceType'))) into @InvoiceHeader_InvoiceType;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceDate'))) into @InvoiceHeader_InvoiceDate;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_CRNo'))) into @InvoiceHeader_CRNo;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceNo'))) into @InvoiceHeader_InvoiceNo;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Amount'))) into @InvoiceHeader_Amount;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_Name'))) into @Supplier_Name;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Index'))) into @Page_Index;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Size'))) into @Page_Size;
+		#select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Address_State_Gid'))) into @Address_State_Gid;
+	#select @InvoiceHeader_InvoiceDate,1;
+        set Query_Select = '';
+        set Query_Search = '';
+    
+		 if  @InvoiceHeader_InvoiceDate <> '' and @InvoiceHeader_InvoiceDate <> 'null' then 
+				set @InvoiceHeader_InvoiceDate=date_format(@InvoiceHeader_InvoiceDate,'%Y-%m-%d');
+		end if;
+            
+      /*      
+            select JSON_LENGTH(lj_filters,'$.detail') into @li_filters_count;
+                   
+					#select @li_filters_count;
+					
+                    set @ls_invoiceheader_status_Final = '';
+						
+                        if @li_filters_count<>0 and  @li_filters_count is not null then
+						
+										set i=0;
+										while i<@li_filters_count do
+										#select 111;						
+											
+                                            select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.detail[',i,'].invoiceheader_status'))) into @invoiceheader_status;				  
+                                   
+											SET @ls_invoiceheader_status_Final=CONCAT(@ls_invoiceheader_status_Final,''',''',@invoiceheader_status);
+										
+                                        set i=i+1;									
+										END WHILE;
+										
+										set Query_Search = concat(' and  invoiceheader_status in ( ''',@ls_invoiceheader_status_Final,''') ');
+                                        #select Query_Search;
+						End if;
+            
+            */
+   
+	     if ls_invoiceheader_status <> '' then
+        # select ls_invoiceheader_status;
+					set @ls_invoiceheader_status_Final = '';
+				   WHILE ls_invoiceheader_status != '' DO  ### Loop a String of Comma or array
+										SET @ls_invoiceheader_status = SUBSTRING_INDEX(ls_invoiceheader_status, ',', 1);      
+										set @ls_invoiceheader_status = concat('',@ls_invoiceheader_status,'');
+							IF LOCATE(',', ls_invoiceheader_status) > 0 THEN
+												SET ls_invoiceheader_status = SUBSTRING(ls_invoiceheader_status, LOCATE(',', ls_invoiceheader_status) + 1);
+							ELSE
+												SET ls_invoiceheader_status = '';
+							END IF;
+                            
+                            if @ls_invoiceheader_status_Final = '' then
+								set @ls_invoiceheader_status_Final = @ls_invoiceheader_status;
+							else
+									  set @ls_invoiceheader_status_Final = concat(@ls_invoiceheader_status_Final,''',''',@ls_invoiceheader_status);
+                            End if;
+                            
+                          
+                                        
+					END WHILE;
+       
+       
+			set Query_Search = concat(' and  invoiceheader_status in ( ''',@ls_invoiceheader_status_Final,''') ');
+           # select Query_Search;
+		End if;
+       
+      
+      # select @ls_invoiceheader_status_Final;
+       /*
+       if @InvoiceHeader_Status<> '' then
+			set Query_Search = concat(Query_Search,' and  a.invoiceheader_status in (''',@ls_invoiceheader_status_Final,''') ');
+		End if;
+*/
+		if @InvoiceHeader_Gid <> 0 or @InvoiceHeader_Gid<> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_gid = ',@InvoiceHeader_Gid,' ');
+		End if;
+        
+        if @InvoiceHeader_InvoiceType <> 0 or @InvoiceHeader_InvoiceType<> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_invoicetype =''',@InvoiceHeader_InvoiceType,''' ');
+		End if;
+       # select @InvoiceHeader_InvoiceDate;
+        if @InvoiceHeader_InvoiceDate <> 0 or @InvoiceHeader_InvoiceDate<> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_invoicedate =''',@InvoiceHeader_InvoiceDate,''' ');
+		End if;
+        
+        if @InvoiceHeader_CRNo <> 0 or @InvoiceHeader_CRNo<> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_crno like ''','%',@InvoiceHeader_CRNo,'%',''' ');
+		End if;
+        
+        if @InvoiceHeader_InvoiceNo <> 0 or @InvoiceHeader_InvoiceNo <> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_invoiceno like ''','%',@InvoiceHeader_InvoiceNo,'%',''' ');
+		End if;
+        
+        if @InvoiceHeader_Amount <> 0 or @InvoiceHeader_Amount <> '' then
+			set Query_Search = concat(Query_Search,' and a.invoiceheader_amount like ''','%',@InvoiceHeader_Amount,'%',''' ');
+		End if;
+        
+        if @Supplier_Name <> 0 or @Supplier_Name <> '' then
+			set Query_Search = concat(Query_Search,' and b.supplier_name like ''','%',@Supplier_Name,'%',''' ');
+		End if;
+        
+        set @total_size= @Page_Index*@Page_Size;    
+		 # select  @total_size,  @Page_Index,@Page_Size;
+		set Query_Limit='';
+		#select @Page_Index,@Page_Size;				
+		if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+	  
+						 set @total_size= @Page_Index*@Page_Size;
+						 set @Page_Size=@Page_Size;
+						 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		
+		else
+						#select 1;
+						set @Page_Index=2,@Page_Size=5;
+						#select @Page_Index,@Page_Size;
+						set @total_size= @Page_Index*@Page_Size;
+						#select @total_size;
+						set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+		End if;
+	
+    #select Query_Search,Query_Limit;
+    
+    
+		set Query_Column='';
+                     
+			if @Page_Index=0 and @Page_Size=10 then   
+				set Query_Column = (',@Total_Row as Total_Row');
+			else
+				set Query_Column='';
+			end if;  
+	
+    set Query_Select='';
+    set Query_Select = Concat('select a.invoiceheader_barcode,a.invoiceheader_ppx,a.invoiceheader_imagepath,a.invoiceheader_employeegid,a.invoiceheader_gid,a.create_date as create_date,invoiceheader_inwarddetailsgid,b.supplier_gid,a.invoiceheader_crno,
+								a.invoiceheader_invoicetype,b.supplier_name,a.invoiceheader_invoiceno,a.invoiceheader_invoicedate as invoiceheader_invoicedate_full,
+								date_format(a.invoiceheader_invoicedate,''%d-%m-%Y'') as invoiceheader_invoicedate ,a.invoiceheader_otheramount,
+								a.invoiceheader_amount,a.invoiceheader_status,a.invoiceheader_dueadjustment,b.supplier_gstno as gst_no,emp.employee_name,emp.employee_gid,emp.employee_code,
+								 a.invoiceheader_gst as IS_GST,
+								a.invoiceheader_remarks ',Query_Column,'
+								from ap_trn_tinvoiceheader as a
+								left join gal_mst_tsupplier as b on b.supplier_gid = a.invoiceheader_suppliergid
+								left join gal_mst_temployee as emp on emp.employee_gid = a.invoiceheader_employeegid
+								
+								where a.entity_gid = ',@Entity_Gid,'
+								',Query_Search,'  
+                                order by a.invoiceheader_gid desc 
+                                 ');
+                    
+      
+                                #,limit_li,',20');           
+                    
+                    ## 23 is Supplier_GST from REF table
+                    
+		if @Page_Index=0 and @Page_Size=10 then 
+	       #select 555;
+			set @Query_Count = '';
+			set @Query_Count = concat('select count(A.invoiceheader_barcode) into @Total_Row from (',Query_Select,') A ');
+				PREPARE stmt FROM @Query_Count;
+					EXECUTE stmt;
+				DEALLOCATE PREPARE stmt;	
+	  
+	  end if;                   
+                          
+                    
+     
+		set @p = concat(Query_Select,Query_Limit);
+		#select @p; ## Remove it
+		PREPARE stmt FROM @p;
+		EXECUTE stmt; 
+		Select found_rows() into li_count;
+        #select li_count;
+		DEALLOCATE PREPARE stmt;
+
+			 if li_count > 0 then
+            # select li_count;
+						set Message = 'FOUND';
+				  else 
+						set Message = 'NOT_FOUND';
+			end if; 
+            #select Message;
+end if;
+
+
+
+	if ls_Type = 'GET' and ls_Sub_Type = 'INVOICE_PAYMENT' then
+					
+                        
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceType'))) into @InvoiceHeader_InvoiceType;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceNo'))) into @InvoiceHeader_InvoiceNo;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_InvoiceDate'))) into @InvoiceHeader_InvoiceDate;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Amount'))) into @InvoiceHeader_Amount;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Status'))) into @InvoiceHeader_Status;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Supplier_Name'))) into @Supplier_Name;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.PoHeader_No'))) into @PoHeader_No;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Employee_Name'))) into @Employee_Name;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Min_Amt'))) into @Min_Amt;
+					    select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters, CONCAT('$.Max_Amt'))) into @Max_Amt;
+                        select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Index'))) into @Page_Index;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Page_Size'))) into @Page_Size;
+						select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                        
+                        set Query_Search ='';
+                        
+                        if  @InvoiceHeader_InvoiceType <> '' then
+							set Query_Search = concat(Query_Search,' and a.invoiceheader_invoicetype = ''',@InvoiceHeader_InvoiceType,'''  ');
+						End if;
+                       
+                        if  @InvoiceHeader_InvoiceNo <> '' then
+                       # select 56;
+							set Query_Search = concat(Query_Search,' and a.invoiceheader_invoiceno like ''','%',@InvoiceHeader_InvoiceNo,'%',''' ');
+						End if;
+						
+                       #select @InvoiceHeader_InvoiceDate;  
+                        if @InvoiceHeader_InvoiceDate <> '' then
+                        #select 57;
+							set Query_Search = concat(Query_Search,' and a.invoiceheader_invoicedate = ''',@InvoiceHeader_InvoiceDate,''' ');
+						End if;
+						
+                        if @InvoiceHeader_Amount <> '' then
+							set Query_Search = concat(Query_Search,' and a.invoiceheader_amount like ''','%',@InvoiceHeader_Amount,'%',''' ');
+						End if;
+						
+						if  @Supplier_Name <> '' then
+							set Query_Search = concat(Query_Search,' and b.supplier_name like ''','%',@Supplier_Name,'%',''' ');
+						End if;
+                        
+						if  @PoHeader_No <> '' then
+							set Query_Search = concat(Query_Search,' and f.poheader_no like ''','%',@PoHeader_No,'%',''' ');
+						End if;
+                        
+                        if  @InvoiceHeader_Status <> '' then
+							set Query_Search = concat(Query_Search,' and a.invoiceheader_status like ''','%',@InvoiceHeader_Status,'%',''' ');
+						End if;
+                        
+                        if  @Employee_Name <> '' then
+							set Query_Search = concat(Query_Search,' and emp.employee_name like ''','%',@Employee_Name,'%',''' ');
+						End if;
+                        
+                        if @Min_Amt <> '' and @Max_Amt <> '' then
+							set Query_Search = concat(Query_search , ' and invoiceheader_amount between ',@Min_Amt,' and ',@Max_Amt,' ' );
+						end if;
+
+                        
+                        set @total_size= @Page_Index*@Page_Size;    
+						  #select  @total_size,  @Page_Index,@Page_Size;
+						set Query_Limit='';
+							#select @Page_Index,@Page_Size;				
+						if @Page_Index <> '' and @Page_Index is not null and @Page_Size <> '' and @Page_Size is not null  then 
+					  
+										 set @total_size= @Page_Index*@Page_Size;
+										 set @Page_Size=@Page_Size;
+										 set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+						
+						else
+										#select 1;
+										set @Page_Index=2,@Page_Size=5;
+										#select @Page_Index,@Page_Size;
+										set @total_size= @Page_Index*@Page_Size;
+										#select @total_size;
+										set Query_Limit = concat(Query_Limit,' LIMIT ',@Page_Size,' OFFSET ',@total_size,'  ');
+						End if;
+							#select Query_Search;
+                          #  select Query_Limit;
+                          
+					   set Query_Column='';
+                     #select @Page_Index,@Page_Size;
+							if @Page_Index=0 and @Page_Size=10 then  
+                            #select 1;
+								set Query_Column = (',@Total_Row as Total_Row');
+							end if;
+                            
+                            #select Query_Column;
+					   set Query_Select = Concat('select a.invoiceheader_ppx,a.invoiceheader_imagepath,a.invoiceheader_gid,b.supplier_gid,emp.employee_gid,emp.employee_name,a.invoiceheader_crno,
+															b.supplier_name,a.invoiceheader_invoiceno,
+															
+                                                            date_format(a.invoiceheader_invoicedate,''%Y-%m-%d'') as invoiceheader_invoicedate,
+															a.invoiceheader_amount,(select JSON_OBJECT(''credit_gid'',credit_gid,''credit_amount'',sum(credit_amount),''Paymode_name'',Paymode_name) from ap_trn_tcredit as a 
+																left join gal_mst_tpaymode as  b on a.credit_paymodegid = b.paymode_gid 
+																  where credit_invoiceheadergid = a.invoiceheader_gid and credit_isactive = ''Y'' and 
+																   credit_isremoved = ''N'' and a.entity_gid = ',@Entity_Gid,' and b.Paymode_name in (''NEFT'',''CHEQUE'')
+															) as credit_details,a.invoiceheader_status,a.invoiceheader_invoicetype,
+															ifnull((select sum(paymentdetails_amount) as paydetail_amt 
+                                                            from ap_trn_tpaymentheader as a
+																  inner join ap_trn_tpaymentdetails as b 
+																  on a.paymentheader_gid = b.paymentdetails_paymentheadergid 
+																  where paymentheader_isactive = ''Y'' and paymentheader_isremoved = ''N'' and 
+																	  paymentdetails_isactive = ''Y'' and paymentdetails_isremoved = ''N''
+																	  and paymentdetails_invoiceheadergid = a.invoiceheader_gid ),0) as paydetail_amt ,
+															ifnull(group_concat(f.poheader_no),0) as poheader_no,
+																	(
+													   CASE
+														  WHEN a.invoiceheader_invoicetype = ''PO'' or a.invoiceheader_invoicetype = ''Non PO'' or (a.invoiceheader_ppx = ''S'' and a.invoiceheader_invoicetype =''PPX'')  THEN 
+														  (SELECT  concat(''['',group_concat( JSON_OBJECT(''bankdetails_gid'',bankdetails_gid,
+														  ''bankdetails_beneficiaryname'',bankdetails_beneficiaryname,''bankdetails_acno'',bankdetails_acno,
+														  ''bankbranch_name'',bankbranch_name,''bankbranch_ifsccode'',bankbranch_ifsccode)),'']'' ) FROM gal_trn_tbankdetails as bk 
+														  left join gal_mst_tbankbranch as br on br.bankbranch_gid = bk.bankdetails_bankbranch_gid
+														  WHERE  bk.bankdetails_reftable_code = b.Supplier_code)
+														  ELSE (SELECT  concat(''['',group_concat( JSON_OBJECT(''bankdetails_gid'',bankdetails_gid,
+														  ''bankdetails_beneficiaryname'',bankdetails_beneficiaryname,''bankdetails_acno'',bankdetails_acno
+														  ,''bankbranch_name'',bankbranch_name,''bankbranch_ifsccode'',bankbranch_ifsccode)),'']'' ) FROM gal_trn_tbankdetails as bk 
+														  left join gal_mst_tbankbranch as br on br.bankbranch_gid = bk.bankdetails_bankbranch_gid WHERE  bk.bankdetails_reftable_code = emp.employee_code)
+													   END
+													) AS bankdetails, false as Is_Selected ',Query_Column,'
+															from ap_trn_tinvoiceheader as a
+															left join gal_mst_tsupplier as b on b.supplier_gid = a.invoiceheader_suppliergid
+															left join gal_mst_temployee as emp on emp.employee_gid = a.invoiceheader_employeegid
+															left join ap_map_tinvoicepo as e on e.invoicepo_invoiceheadergid = a.invoiceheader_gid
+															and e.invoicepo_isactive = ''Y'' and e.invoicepo_isremoved = ''N''
+															left join gal_trn_tpoheader as f on f.poheader_gid = e.invoicepo_poheadergid
+															and f.poheader_isactive = ''Y'' and f.poheader_isremoved = ''N''
+															where a.invoiceheader_status in( ''Approved'',''PARTIALLY PAID'',''PAYMENT'') 
+															and a.invoiceheader_isactive = ''Y'' and a.invoiceheader_isremoved = ''N''
+															and a.entity_gid in (',@Entity_Gid,')  ',Query_Search,'
+																   group by a.invoiceheader_gid
+																   having (JSON_UNQUOTE(JSON_EXTRACT(credit_Details, CONCAT(''$.credit_amount''))) - paydetail_amt)  > 0
+                                                                    order by a.invoiceheader_gid desc 
+                                                                      ');
+					 
+						if @Page_Index=0 and @Page_Size=10 then 
+						   #select 555;
+							set @Query_Count = '';
+							set @Query_Count = concat('select count(A.invoiceheader_ppx) into @Total_Row from (',Query_Select,') A ');
+								PREPARE stmt FROM @Query_Count;
+									EXECUTE stmt;
+								DEALLOCATE PREPARE stmt;	
+					  
+					   end if;                 
+                      # select  @Total_Row;
+
+                     
+                     
+						set @p = concat(Query_Select,Query_Limit);
+                        #select @p;
+						#select Query_Select; ### Remove It.
+						PREPARE stmt FROM @p;
+						EXECUTE stmt; 
+						Select found_rows() into li_count;
+						DEALLOCATE PREPARE stmt;
+
+							if li_count = 0 then
+								set Message = 'NOT_FOUND';
+							else
+								set Message = 'FOUND';
+							end if;     
+
+END IF;
+
+
+if ls_Type = 'GET' and ls_Sub_Type = 'INVOICE_DETAILS_EDIT' then
+#select 1;
+		select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.InvoiceHeader_Gid'))) into @InvoiceHeader_Gid;
+        #select JSON_UNQUOTE(JSON_EXTRACT(lj_Classification,CONCAT('$.Entity_Gid'))) into @Entity_Gid;
+                        
+        if @InvoiceHeader_Gid = '' then
+			set Message = 'Invoice Header Gid Is Needed.';
+            leave sp_APProcess_Get;
+        end if;
+        
+        set Query_Select ='';
+        set Query_Select = Concat('select a.invoiceheader_gid ,b.invoicedetails_gid,
+									b.invoicedetails_item,b.invoicedetails_desc,b.invoicedetails_hsncode,
+									b.invoicedetails_unitprice,b.invoicedetails_qty,b.invoicedetails_sgst,
+                                    b.invoicedetails_cgst,b.invoicedetails_igst,b.invoicedetails_amount,
+                                    b.invoicedetails_discount,b.invoicedetails_totalamt
+									from ap_trn_tinvoiceheader as a
+									inner join ap_trn_tinvoicedetails as b on b.invoicedetails_headergid = a.invoiceheader_gid and
+																			  a.invoiceheader_isactive = ''Y'' and a.invoiceheader_isremoved = ''N'' and
+																			  b.invoicedetails_isactive = ''Y''  and b.invoicedetails_isremoved = ''N''
+                                    where a.invoiceheader_gid =',@InvoiceHeader_Gid,'  and a.entity_gid in (',@Entity_Gid,') 
+                                    group by b.invoicedetails_gid');
+        set @p = Query_Select;
+		#select Query_Select; ### Remove It.
+		PREPARE stmt FROM @p;
+		EXECUTE stmt; 
+		Select found_rows() into li_count;
+		DEALLOCATE PREPARE stmt; 
+        
+
+			if li_count > 0 then
+				set Message = 'FOUND';
+			else
+				set Message = 'NOT_FOUND';
+			end if;
+            
+            
+		set Query_Select ='';
+        set Query_Select = Concat('
+									select a.invoiceheader_gid ,c.debit_categorygid,c.debit_glno,c.debit_amount,ccb.ccbsdtl_percent,
+                                    ccb.ccbsdtl_glno,ccb.ccbsdtl_amount,d.tcc_name,d.tcc_description,e.tbs_name,cat.category_code,
+                                    cat.category_name,cat.category_no,sub.subcategory_code,sub.subcategory_no,sub.subcategory_name,
+                                    sub.subcategory_glno
+									from ap_trn_tinvoiceheader as a
+									inner join ap_trn_tinvoicedetails as b on b.invoicedetails_headergid = a.invoiceheader_gid and
+																		 a.invoiceheader_isactive = ''Y'' and a.invoiceheader_isremoved = ''N'' and
+																		 b.invoicedetails_isactive = ''Y''  and b.invoicedetails_isremoved = ''N''
+									inner join ap_trn_tdebit as c on c.debit_invoiceheadergid = a.invoiceheader_gid and
+																		c.debit_isactive = ''Y'' and c.debit_isremoved = ''N''
+									inner join ap_trn_tccbsdtl as ccb on ccb.ccbsdtl_debitgid = c.debit_gid  and
+																		ccb.ccbsdtl_isactive=''Y'' and ccb.ccbsdtl_isremoved=''N''
+									inner join ap_mst_tcc as d on ccb.ccbsdtl_cc=d.tcc_gid and
+																		d.tcc_isactive=''Y'' and d.tcc_isremoved=''N''
+									inner join ap_mst_tbs as e on ccb.ccbsdtl_bs=e.tbs_gid and
+																		e.tbs_isactive=''Y'' and e.tbs_isremoved=''N''
+									inner join ap_mst_tcategory as cat on c.debit_categorygid=cat.category_gid and
+																		cat.category_isactive=''Y'' and cat.category_isremoved=''N''
+									inner join ap_mst_tsubcategory sub on c.debit_subcategorygid=sub.subcategory_gid and
+																		sub.subcategory_isactive=''Y'' and sub.subcategory_isremoved=''N''
+									where a.invoiceheader_gid = ',@InvoiceHeader_Gid,'  and a.entity_gid in (',@Entity_Gid,') 
+                                    group by c.debit_gid');
+          set @p = Query_Select;
+		  #select Query_Select; ### Remove It.
+		  PREPARE stmt FROM @p;
+		  EXECUTE stmt; 
+		  Select found_rows() into li_count;
+		  DEALLOCATE PREPARE stmt; 
+          
+				if li_count > 0 then
+					set Message = 'FOUND';
+				else
+					set Message = 'NOT_FOUND';
+				end if;
+            
+          
+          
+          set Query_Select ='';
+		  set Query_Select = Concat('
+									select a.invoiceheader_gid ,d.credit_glno,d.credit_suppliertaxtrate,d.credit_tdsexcempted,d.credit_amount,
+                                    ppx.ppxdetails_amount,ppx.ppxdetails_balance,e.bankbranch_code,e.bankbranch_name,e.bankbranch_ifsccode,
+                                    e.bankbranch_microcode,e.bankbranch_address_gid,z.ref_code,z.ref_name,f.bankdetails_reftable_code,
+                                    f.bankdetails_acno,f.bankdetails_beneficiaryname,g.Paymode_name
+									from ap_trn_tinvoiceheader as a
+									inner join ap_trn_tcredit as d on d.credit_invoiceheadergid = a.invoiceheader_gid and
+														a.invoiceheader_isactive = ''Y'' and a.invoiceheader_isremoved = ''N'' and
+                                                        d.credit_isactive=''Y'' and d.credit_isremoved=''N''
+									left join ap_trn_tppxdetails as ppx on ppx.ppxdetails_creditgid = d.credit_gid and
+														ppx.ppxdetails_isactive = ''Y'' and ppx.ppxdetails_isremoved=''N''
+									left join gal_mst_tbankbranch as e on e.bankbranch_gid = d.credit_bankgid and
+														e.bankbranch_isactive=''Y'' and e.bankbranch_isremoved=''N''
+									inner join gal_mst_tref as z on z.ref_name = ''SUPPLIER_PAYMENT'' and
+														z.ref_active=''Y'' and z.ref_isremoved=''N''
+									left join gal_trn_tbankdetails as f on f.bankdetails_reftable_gid = a.invoiceheader_suppliergid and
+														f.bankdetails_isactive=''Y'' and f.bankdetails_isremoved=''N''
+									 left join gal_mst_tpaymode as g on g.paymode_gid = d.credit_paymodegid 
+												and g.paymode_isactive = ''Y'' and g.paymode_isremoved = ''N''
+									where a.invoiceheader_gid = ',@InvoiceHeader_Gid,'
+                                    group by d.credit_gid');
+          set @p = Query_Select;
+		 # select Query_Select; ### Remove It.
+		  PREPARE stmt FROM @p;
+		  EXECUTE stmt; 
+		  Select found_rows() into li_count;
+		  DEALLOCATE PREPARE stmt; 
+          
+				if li_count > 0 then
+					set Message = 'FOUND';
+				else
+					set Message = 'NOT_FOUND';
+				end if;
+
+                                    
+
+end if;
+					
+
+
+               
+END

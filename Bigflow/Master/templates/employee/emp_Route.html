@@ -1,0 +1,711 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Route Summary{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent" ng-app="AppRouteSummary" ng-controller="CtrlRouteSummary">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>{{title}}</h4>
+            </div>
+        </div>
+        <div ng-show="!edit_view" ng-init="edit_view=false">
+            <div class="row">
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Route Code</label>
+                        <input type="text" ng-model="txtRouteCode" maxlength="16"
+                               ng-change="searchlist(txtRouteCode,txtRouteNmae)"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Route Name</label>
+                        <input type="text" id="txtRouteNmae"
+                               ng-model="txtRouteNmae" ng-change="searchlist(txtRouteCode,txtRouteNmae)"/>
+                        <md-icon>search</md-icon>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="createRole()">
+                        <md-icon>add</md-icon>
+                        <md-tooltip>Create New</md-tooltip>
+                    </md-button>
+
+                </div>
+            </div>
+            <div class="row  table-responsive">
+                <div class="col-lg-12 col-sm-12" id="roleDetails">
+                    <table class="table  table-striped table-bordered table-condensed table-hover" id="gd_pssummary">
+                        <thead class="header">
+                        <tr>
+                            <td>S.No</td>
+                            <td>
+                                Route Code
+                            </td>
+                            <td>
+                                Route Name
+                            </td>
+                            <td>Remark</td>
+                            <td>
+                                Action
+                            </td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr align="center"
+                            ng-repeat="route in Routes.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td>{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                            <td>
+                                {{route.routeheader_code}}
+                            </td>
+                            <td>
+                                {{route.routeheader_name | uppercase }}
+                            </td>
+                            <td>{{route.routeheader_remarks}}</td>
+
+                            <td align="center">
+                                <span title="Edit" ng-click="Editrole(route.routeheader_gid,route)" align="center"
+                                      class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+                                <span title="Mapping Employee" ng-click="emp_mapping(route.routeheader_gid,route)"
+                                      align="center"
+                                      class="editlink">
+                                    <i class="material-icons">group</i>
+                                </span>
+
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="4">
+                                <ul uib-pagination total-items="userTotalItems" ng-model="currentPage"
+                                    max-size="maxSize" class="pagination-sm cust_pagination" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="1">
+                                Total Count:{{Routes.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+        <!--modal for emp Mapping-->
+        <div class="modal fade" id="create_view" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exModal" aria-hidden="true">
+
+            <form name="User" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                {{routeheader_name}}
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row scrollbar" style="height:400px;">
+                                <ul class="list-group">
+                                    <li ng-repeat="emp in employees" class="list-group-item">
+                                        <label>
+                                            <input type="checkbox" ng-model="emp.status"
+                                                   ng-checked="emp.status"/>
+                                            {{emp.employee_name}}
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer text-right">
+                            <md-button class="md-raised" value="close" data-dismiss="modal">Cancel</md-button>
+                                            <md-button class="md-raised custbutton" value="Submit" ng-click="saveEmpDetail(param_head_gid)"
+                          >Save
+                </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div ng-show="edit_view" ng-form="createrole">
+            <div class="row row-search" ng-init="error_code=''">
+                <form role="form" name="routesummary">
+
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Route Name</label>
+                            <input type="text" ng-required="true" ng-model="txtRoutename_Creat"
+                                   ng-blur="checkdublicate_name(txtroutecode_creat,txtRoutename_Creat,lctnremarks,ddlRoleGroupCreate)"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Remarks</label>
+                            <input type="text" ng-model="txtRouteremark_create"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-lg-4 col-sm-4">
+                        <md-input-container ng-hide="isedit" class="md-block inputcontainer">
+                            <label>Route Code</label>
+                            <input type="text" ng-required="true" ng-model="txtroutecode_creat"
+                                   maxlength="16"
+                                   ng-blur="checkdublicate(txtroutecode_creat,txtRoutename_Creat,ddlRoleGroupCreate)"/>
+                        </md-input-container>
+                        <span ng-if="error_code">{{error_code}}</span>
+                    </div>
+                </form>
+            </div>
+            <div class="row" layout="column">
+                <div class="col-lg-12 col-sm-12">
+                    <div class="col-lg-6 col-sm-6">
+                        <div class="panel panel-primary">
+                            <div class="panel-heading">Assign Location
+                                <div class="pull-right" style="color:black;">
+                                    <input type="text" ng-model="town_search" class="textboxgeneral"
+                                           placeholder="Search Location" style="width: 150px;height: 25px;"/>
+                                </div>
+                            </div>
+                            <div class="panel-body" style="height: 200px;overflow: auto;">
+                                <div>
+                                    <treecontrol class="tree-boot" tree-model="clusterTree"
+                                                 expanded-nodes="expandedNodes"
+                                                 options="treeOptions"
+                                                 filter-expression="town_search" filter-comparator="false"
+                                                 selected-nodes="selectedNodes"
+                                                 on-selection="showSelected(node,selected);showcode(node,selected)">
+                                        {{node.menu_name}}
+                                    </treecontrol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-sm-6">
+                        <div class="panel panel-primary">
+                            <div class="panel-heading">Assign Location
+                                <div class="pull-right" style="color:black;">
+                                    <input type="text" ng-model="location_search" class="textboxgeneral"
+                                           placeholder="Search Location" style="width: 150px;height: 25px;"/>
+                                </div>
+                            </div>
+                            <div class="panel-body" style="height: 200px;overflow: auto;">
+                                <div>
+                                    <ul class="list-group" ng-show="editshow">
+                                        <li class="list-group-item" ng-click="loc.status=!loc.status"
+                                            ng-repeat="loc in locationddl | filter:location_search">
+                                            <label>
+                                                <input type="checkbox" ng-model="loc.status"
+                                                       ng-checked="loc.status=='1'"/>
+                                                {{loc.location_name}} -{{loc.cluster_name}}
+                                            </label>
+
+                                        </li>
+                                    </ul>
+                                    <ul class="list-group" ng-show="createshow">
+                                        <li class="list-group-item" ng-click="loc.status=!loc.status"
+                                            ng-repeat="loc in locationddl | filter:location_search">
+                                            <label>
+                                                <input type="checkbox" ng-model="loc.status"
+                                                />
+                                                {{loc.cluster_name}} - {{loc.location_name}}
+                                            </label>
+
+                                        </li>
+                                    </ul>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12 col-sm-12" style="text-align:right; ">
+                    <md-button class="md-raised" value="close" ng-click="showHideEdit();">Cancel</md-button>
+                    <input type="button" class="btn btn-success" value="{{isedit  ? 'Update' : 'Submit'}}"
+                           ng-disabled="!routesummary.$valid"
+                           ng-click="saveRouteDtl(param_routegid,isedit)"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var AppRouteSummary = angular.module("AppRouteSummary", ['ngMaterial', 'ui.bootstrap', 'treeControl']);
+    AppRouteSummary = AppRouteSummary.config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+    AppRouteSummary = AppRouteSummary.controller('CtrlRouteSummary', ['$scope', '$http', '$window', '$filter',
+        'routeSummarySer', '$mdDialog',
+        function($scope, $http, $window, $filter, routeSummarySer, $mdDialog) {
+            $scope.maxSize = 5;
+            $scope.currentPage = 1;
+            $scope.title = "Route Summary";
+            $scope.viewby = 10;
+            $scope.maintable = [];
+            $scope.getroutecode = [];
+            $scope.locationddl = [];
+            $scope.Routes = [];
+            $scope.cluster = [];
+            $scope.selectedNodes = [];
+
+            $scope.loading = function() {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+
+            $scope.endloading = function() {
+                $mdDialog.hide();
+            };
+
+            $scope.itemsPerPage = $scope.viewby;
+            $scope.treeOptions = {
+                nodeChildren: "child_list",
+                isSelectable: function(node) {
+                    return node.cluster_hierarchygid == 7;
+                },
+                multiSelection: true
+            }
+
+            $scope.getclustertree = function() {
+
+                var clustTree = routeSummarySer.getclustertree();
+                clustTree.then(function(res) {
+                        $scope.clusterTree = res.data;
+
+                        angular.forEach($scope.clusterTree, function(item){
+                            if (($scope.locationddl[0].cluster_parent_gid ==  item.menu_id))
+                            { ExpandedNodes();
+                            }
+                            item.child_list.forEach(function(itemsub) {
+                                if (($scope.locationddl[0].cluster_parent_gid ==  itemsub.menu_id))
+                                {
+                                    ExpandedNodes();
+                                }
+                                itemsub.child_list.forEach(function(itemsu) {
+                                if (($scope.locationddl[0].cluster_parent_gid ==  itemsu.menu_id))
+                                {
+                                    ExpandedNodes();
+                                }
+                                itemsu.child_list.forEach(function(items) {
+                                if (($scope.locationddl[0].cluster_parent_gid ==  items.menu_id))
+                                {
+                                    ExpandedNodes();
+                                }
+                                items.child_list.forEach(function(ite) {
+                                if (($scope.locationddl[0].cluster_parent_gid ==  ite.menu_id))
+                                {
+                                    ExpandedNodes();
+                                }
+                                ite.child_list.forEach(function(it) {
+                                if (($scope.locationddl[0].cluster_parent_gid ==  it.menu_id))
+                                {
+                                    ExpandedNodes();
+                                }
+                                else if(($scope.locationddl[0].cluster_parent_gid ==  it.menu_id))
+                                {
+                                    Expanded();
+                                }
+                                else if(($scope.locationddl[0].cluster_parent_gid ==  it.menu_id))
+                                {
+                                    ExpandedNode();
+                                }
+                                else if(($scope.locationddl[0].cluster_parent_gid ==  it.menu_id))
+                                {
+                                    ExpandedNod();
+                                }
+                                else{
+                                return false;
+                                }
+
+                            });
+                            });
+                            });
+                            });
+                            });
+                        });
+
+                        })
+            };
+
+            function ExpandedNodes() {
+                $scope.expandedNodes = [$scope.clusterTree[0],
+                    $scope.clusterTree[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[0].child_list[0]
+                ];
+            }
+
+            function ExpandedNode() {
+                $scope.expandedNodes = [$scope.clusterTree[0],
+                    $scope.clusterTree[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[1].child_list[0]
+                ];
+            }
+
+            function ExpandedNod() {
+                $scope.expandedNodes = [$scope.clusterTree[0],
+                    $scope.clusterTree[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[1].child_list[1]
+                ];
+            }
+
+            function Expanded() {
+                $scope.expandedNodes = [$scope.clusterTree[0],
+                    $scope.clusterTree[0].child_list[1],
+                    $scope.clusterTree[0].child_list[1].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[0],
+                    $scope.clusterTree[0].child_list[1].child_list[0].child_list[0].child_list[1]
+                ];
+            }
+            $scope.showSelected = function(sel, isSelect) {
+
+                if (isSelect) {
+                    $scope.cluster.push(sel.menu_id);
+                } else {
+                    var index = $scope.cluster.indexOf(sel.menu_id);
+                    $scope.cluster.splice(index, 1);
+                }
+                if ($scope.cluster.length > 0) {
+                    loadlocation($scope.cluster);
+                } else {
+                    $scope.locationddl.length = 0;
+                }
+            };
+
+            $scope.showcode = function(sel, isSelect) {
+                $scope.txtroutecode_creat = sel.menu_name.slice(0, 3);
+                var routeDtl = routeSummarySer.getdynmcslice('ROUTE_CODE', $scope.txtroutecode_creat)
+                routeDtl.then(function(res) {
+                        $scope.getroutecode = res.data;
+                        $scope.txtroutecode_creat = $scope.getroutecode.slice(16, 23);
+                        $scope.userTotalItems = $scope.Routes.length;
+                    }, function() {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            };
+
+            function loaddata(emp_gid) {
+                $scope.loading();
+                var routeDtl = routeSummarySer.getRouteDtll('HEADER_DETAILS', 0, '', '', JSON.stringify(emp_gid), [])
+                routeDtl.then(function(res) {
+                        $scope.maintable = res.data;
+                        $scope.Routes = $scope.maintable;
+                        $scope.userTotalItems = $scope.Routes.length;
+                    }, function() {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            };
+
+            loaddata([])
+
+            <!--//search box-->
+            $scope.searchlist = function(route_code, route_name) {
+                $scope.Routes = $filter('filter')($scope.maintable, {
+                    routeheader_code: route_code,
+                    routeheader_name: route_name
+                })
+                $scope.userTotalItems = $scope.Routes.length;
+            };
+
+            <!--//create click-->
+            $scope.createRole = function() {
+                $scope.isedit = false;
+                $scope.param_routegid = 0;
+                $scope.locationddl.length = 0;
+                $scope.selectedNodes = [];
+                $scope.error_code = null;
+                $scope.txtroutecode_creat = null;
+                $scope.txtRoutename_Creat = null;
+                $scope.txtRouteremark_create = null;
+                $scope.routesummary.$setPristine();
+                $scope.routesummary.$setUntouched();
+                $scope.showHideEdit();
+                $scope.createshow = true;
+                $scope.getclustertree();
+            };
+
+            <!--//Edit click-->
+            $scope.Editrole = function(routeHead_gid, route) {
+
+                index = $scope.maintable.indexOf(route);
+                $scope.error_code = null;
+                $scope.selectedNodes = [];
+                $scope.isedit = true;
+                var maintable = $scope.maintable;
+                $scope.param_routegid = routeHead_gid;
+                $scope.txtroutecode_creat = maintable[index].routeheader_code;
+                $scope.txtRoutename_Creat = maintable[index].routeheader_name;
+                $scope.txtRouteremark_create = maintable[index].routeheader_remarks;
+                $scope.locationddl.length = 0;
+                loadlocation1(routeHead_gid);
+                $scope.getclustertree();
+                $scope.showHideEdit();
+                $scope.editshow = true;
+            };
+
+            function loadlocation1(routeHead_gid) {
+                $scope.loading();
+                var cluster_gid = {
+                    routeHead_gid: routeHead_gid
+                };
+                var routeDtl = routeSummarySer.gettown('ROUTE_LOCATION', routeHead_gid)
+                routeDtl.then(function(res) {
+
+                        $scope.locationddl = res.data;
+                    }, function() {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            };
+
+            function loadlocation(cluster_gid) {
+                $scope.loading();
+                var cluster_gid = {
+                    location_cluster_gid: cluster_gid
+                };
+                var routeDtl = routeSummarySer.getroute('ROUTE_LOCATION', cluster_gid)
+                routeDtl.then(function(res) {
+
+                        $scope.locationddl = res.data;
+                    }, function() {
+                        alert('No data!.');
+                    })
+                    .finally($scope.endloading);
+            };
+
+            <!--//routecode change-->
+            $scope.checkdublicate = function(rolecode) {
+                if ($scope.isedit) {
+                    return false;
+                }
+                $scope.error_code = null
+                var value = [];
+                if (rolecode == null) {
+                    return false;
+                }
+                var routeDtl = routeSummarySer.getRouteDtll('HEADER_DETAILS', 0, rolecode, '', JSON.stringify([]), [])
+                routeDtl.then(function(roledtls) {
+                    value = roledtls.data;
+                    if (value.length > 0) {
+                        $scope.error_code = "Role Code Already Exited";
+                    } else {
+                        $scope.error_code = null
+                    }
+                }, function() {
+                    alert('Records not found')
+                });
+            }
+
+            $scope.emp_mapping = function(route_gid, details) {
+                $scope.loading();
+                $scope.routeheader_name = details.routeheader_name;
+                $scope.param_head_gid = details.routeheader_gid;
+                var getdetails = routeSummarySer.getRouteDtll('ROUTE_EMPLOYEE', route_gid, '', '', JSON.stringify([]), [])
+                getdetails.then(function(res) {
+                        $scope.employees = res.data;
+                    }, function() {
+                        alert('Records not found');
+                    })
+                    .finally($scope.endloading);
+                modalshow('create_view');
+            }
+
+            $scope.saveRouteDtl = function(routeHead_gid, isEdit) {
+                var data = [];
+                var check = [];
+                if ($scope.error_code) {
+                    alert('Role Code already Exited!.');
+                    return false;
+                }
+                check = $scope.locationddl.filter(function(item) {
+                    return item.status == true
+                });
+                data = $scope.locationddl.filter(function(item) {
+                    return (item.status == true && item.routedetails_gid == null) || (item.routedetails_gid != null &&
+                        item.status == false)
+                });
+                if (check.length == 0) {
+                    alert('Please select any one location!.');
+                    return false;
+                }
+                if (isEdit) {
+                    $scope.loading();
+                    var dataformat = {
+                        route: data
+                    };
+                    var saveRoute = routeSummarySer.setroutedtl('UPDATE', $scope.ddlEmployee_Create, routeHead_gid, $scope.txtroutecode_creat,
+                        $scope.txtRoutename_Creat, $scope.txtRouteremark_create, dataformat);
+                    saveRoute.then(function(res) {
+                            if (res.data == 'SUCCESS') {
+                                loaddata([])
+                                alert('Updated Successfully!.');
+                                $scope.showHideEdit();
+                            } else {
+                                alert('Not Updated Successfully!.');
+                            }
+                        }, function(err) {
+                            alert('No Data!.')
+                        })
+                        .finally($scope.endloading());
+                } else {
+                    $scope.loading();
+                    var dataformat = {
+                        route: check
+                    };
+                    var saveRoute = routeSummarySer.setroutedtl('INSERT', JSON.stringify([]), 0, $scope.txtroutecode_creat,
+                        $scope.txtRoutename_Creat, $scope.txtRouteremark_create, dataformat);
+                    saveRoute.then(function(res) {
+                            if (res.data == 'SUCCESS') {
+                                loaddata([]);
+                                alert('Saved Successfully!.');
+                                $scope.showHideEdit();
+                            } else {
+                                alert('Not Saved Successfully!.');
+                            }
+                        }, function(err) {
+                            alert('No Data!.')
+                        })
+                        .finally($scope.endloading());
+                }
+            };
+
+            $scope.saveEmpDetail = function(header_gid) {
+                $scope.loading();
+                var dataformat = {
+                    route: []
+                }
+                var data = $scope.employees.filter(function(item) {
+                    return (item.status == true && item.routeemp_routeheadergid == 0) || (item.routeemp_routeheadergid != 0 &&
+                        item.status == false)
+                });
+                var employeelist = {
+                    routeemp_routeheadergid: header_gid,
+                    emp_det: data
+                }
+                var saveRoute = routeSummarySer.setroutedtl('mapINSERT', employeelist, 0, '',
+                    '', '', dataformat);
+                saveRoute.then(function(res) {
+                        if (res.data == 'SUCCESS') {
+                            alert('Saved successfully!.');
+                            modalhide('create_view')
+                        } else {
+                            alert('Not saved successfully!.');
+                        }
+                    }, function(err) {
+                        alert('Not saved successfully!.');
+                    })
+                    .finally($scope.endloading());
+            };
+
+            $scope.showHideEdit = function() {
+                $scope.edit_view = !$scope.edit_view;
+ if(!$scope.edit_view){
+                $scope.title = "Route Summary"}
+                else if($scope.isedit)
+                {$scope.title = "Route Edit"
+                }
+                else{
+                $scope.title = "Route Creation"
+                }
+
+            }
+        }
+    ]);
+
+    AppRouteSummary.service('routeSummarySer', function($http) {
+        this.getRouteDtll = function(action, route_gid, route_code, route_name, emp_gid, cluster_gid) {
+            var response = $http.get(Appname + "/getRouteDtl/", {
+                params: {
+                    'action': action,
+                    'routeHead_gid': route_gid,
+                    'route_code': route_code,
+                    'route_name': route_name,
+                    'emp_gid': emp_gid,
+                    'cluster_gid': cluster_gid
+                }
+            });
+            return response;
+        }
+        this.gettown = function(action, routeHead_gid) {
+            var response = $http.get(Appname + "/gettown/", {
+                params: {
+                    'action': action,
+                    'routeHead_gid': routeHead_gid
+                }
+            });
+            return response;
+        }
+        this.getroute = function(action, cluster_gid) {
+            var response = $http.get(Appname + "/getrout/", {
+                params: {
+                    'action': action,
+                    'cluster_gid': cluster_gid
+                }
+            });
+            return response;
+        }
+        this.getdynmcslice = function(action, slice) {
+            var response = $http.get(Appname + "/getroute/", {
+                params: {
+                    'action': action,
+                    'slice': slice
+                }
+            });
+            return response;
+        }
+
+        this.getclustertree = function(emp_gid) {
+            var response = $http.get(Appname + "/getclustertree/", {
+                params: {
+                    'emp_gid': emp_gid
+                }
+            });
+            return response;
+        }
+
+        this.getloctddl = function(emp_gid) {
+            var response = $http.get(Appname + "/getMappedLocation/", {
+                params: {
+                    'emp_gid': emp_gid
+                }
+            });
+            return response;
+        }
+
+        this.setroutedtl = function(action, emp_gid, routeHead_gid, route_code, route_name, remark, data) {
+            var response = $http.post(Appname + "/setRouteDtl/", {
+                parms: {
+                    "action": action,
+                    'emp_gid': emp_gid,
+                    'routeHead_gid': routeHead_gid,
+                    "route_code": route_code,
+                    "route_name": route_name,
+                    'remark': remark,
+                    'location_dtl': data
+                }
+            });
+            return response;
+        }
+    });
+</script>
+{% endblock %}

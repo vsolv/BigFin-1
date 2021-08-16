@@ -1,0 +1,304 @@
+CREATE DEFINER=`developer`@`%` PROCEDURE `sp_APExpense_Get`(IN `ls_Type` varchar(64),IN `ls_Sub_Type` varchar(64),
+IN `lj_Filters` json,IN `lj_Classification` json, OUT `Message` varchar(1024)
+)
+sp_APExpense_Get:BEGIN
+### Selva sep 19 2019
+## Type EXPENSE   
+### SUb Type  =  COLUMN
+##
+Declare Query_Select varchar(6144);
+Declare Query_Search varchar(1024);
+Declare i int;
+declare errno int;
+declare msg varchar(1000);
+declare li_count int;
+declare Entity_Gid int;
+# Null Selected Output
+DECLARE done INT DEFAULT 0;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#...
+
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION,sqlwarning
+    BEGIN
+    
+    GET CURRENT DIAGNOSTICS CONDITION 1 errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+    set Message = concat(errno , msg);
+    ROLLBACK;
+    END;
+SET session group_concat_max_len=50000000;
+
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'SUMMARY' then
+#SET session group_concat_max_len=150000;
+
+		SET @sql = NULL;
+			SELECT
+			  GROUP_CONCAT(DISTINCT
+				CONCAT(
+				  'GROUP_CONCAT((CASE expensecolumn_id when ',
+				  expensecolumn_id,
+				  ' then expensecolumn_value else NULL END)) AS ',
+				  expensecolumn_name
+				)
+			  ) INTO @sql
+			FROM ap_trn_texpnsetran;
+
+
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.Propertygid'))) into @Propertygid ;  
+		set Query_Search = '';
+        if @Propertygid is not null and  @Propertygid <> 0 and @Propertygid <> '' then
+				set Query_Search = concat(Query_Search,' where branchexpense_propertygid = ',@Propertygid,'  ');
+        End if;
+
+
+		
+        
+        
+        	SET @sql = CONCAT('SELECT branchexpense_gid,b.branchexpense_type,b.branchexpense_supplierid,c.supplier_name
+            ,b.branchexpense_propertygid,date_format(b.branchexpense_fromdate,''%d-%b-%y'') as branchexpense_fromdate,CASE WHEN b.branchexpense_recurring = ''Y'' 
+									   THEN 1
+									   ELSE 0
+			            END AS recurring,b.branchexpense_recurringdate,
+          date_format(b.branchexpense_todate,''%d-%b-%y'')  as branchexpense_todate,b.branchexpense_recurring,b.branchexpense_amount,b.branchexpense_recurringperiod,b.branchexpense_status,b.branchexpense_Isgst,
+            expense_no,expensetype,expenseproperty_gid, ', @sql, ' ,concat(''['',group_concat(JSON_OBJECT(''id'',expensetran_gid,''value_name'',expensecolumn_name,''value'',expensecolumn_value)),'']'') as jsondata,
+            (select concat(''['',group_concat(JSON_OBJECT(''branchexpensedetails_ondate'',branchexpensedetails_ondate,
+                                                          ''branchexpensedetails_gid'',branchexpensedetails_gid,
+                                                           ''branchexpense_gid'',branchexpense_gid,
+                                                          ''branchexpensedetails_status'',branchexpensedetails_status,
+                                                          ''branchexpensedetails_amount'',branchexpensedetails_amount,
+                                                          ''branchexpensedetails_remark'',branchexpensedetails_remark,
+                                                          ''branchexpensedetails_ishold'',CASE WHEN branchexpensedetails_ishold = ''Y'' THEN 1 ELSE 0
+																								END)),'']'') as branchdetails 
+                                                                                                from ap_trn_tbranchexpensedetails as d  where
+                                                                                                d.branchexpensedetails_branchexpensegid = b.branchexpense_gid group by branchexpensedetails_branchexpensegid ) as branchdetails
+					  FROM ap_trn_tbranchexpense as b  
+						left join ap_trn_texpnsetran as a on a.expense_no = b.branchexpense_expensecolumnid
+                        inner join gal_mst_tsupplier as c on c.supplier_gid = b.branchexpense_supplierid 
+                      ',Query_Search,' 
+					  GROUP BY branchexpense_gid ');
+		  PREPARE stmt FROM @sql;
+		  EXECUTE stmt ;
+       
+		  Select found_rows() into li_count;
+		  DEALLOCATE PREPARE stmt;
+
+			  if li_count > 0 then
+					set Message = 'FOUND';
+			  else 
+					set Message = 'NOT_FOUND';
+			  end if; 
+
+End if;
+
+
+
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'COLUMN' then
+		select JSON_LENGTH(lj_Filters,'$') into @li_json_INVProcess_count;
+        
+           if @li_json_INVProcess_count is null or @li_json_INVProcess_count = 0 then
+			set Message = 'No Data In Json - Filter.';
+            rollback;
+			leave sp_APExpense_Get;
+        end if;
+        
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.ExpenseType'))) into @ExpenseType ;  
+
+       # if @ExpenseType = 0 then
+		##		set Message = ' Header Gid Is Needed.';
+       #         leave sp_SOInvoiceProcess_Get;
+       # End if;
+        
+        
+        
+        set Query_Search = '';
+        if @ExpenseType is not null and  @ExpenseType <> 0 and @ExpenseType <> '' then
+				set Query_Search = concat(Query_Search,' and ExpenseType = ',@ExpenseType,' ');
+        End if;
+        
+        set Query_Select = '';
+        
+        set Query_Select = concat( 'select * from (select expensecolumn_type,expensecolumninput_type as inputtype,
+          (select concat(''['',group_concat( JSON_OBJECT(''ColumnName'',expensecolumn_name,''displayname'',expensecolumn_displayname)),'']'')) as columnsdata 
+				  from ap_trn_texpnsecolumn group by 
+                  expensecolumninput_type,expensecolumn_type) as 
+                  T1 '	);
+                            
+							set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if; 
+
+End if;
+	
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'COLUMN_FIELD' then
+		#select JSON_LENGTH(lj_Filters,'$') into @li_json_INVProcess_count;
+        
+       #    if @li_json_INVProcess_count is null or @li_json_INVProcess_count = 0 then
+		#	set Message = 'No Data In Json - Filter.';
+       #     rollback;
+		#	leave sp_APExpense_Get;
+       # end if;
+        
+       # Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  
+
+       # if @ExpenseType = 0 then
+		##		set Message = ' Header Gid Is Needed.';
+       #         leave sp_SOInvoiceProcess_Get;
+       # End if;
+        
+        
+        
+        set Query_Select = '';
+        
+        set Query_Select = concat( 'SELECT *,expensecolumninput_checked as checked FROM ap_trn_texpnsecolumn'	);
+                            
+							set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if; 
+
+End if;
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'TYPE' then
+		#select JSON_LENGTH(lj_Filters,'$') into @li_json_INVProcess_count;
+        
+       #    if @li_json_INVProcess_count is null or @li_json_INVProcess_count = 0 then
+		#	set Message = 'No Data In Json - Filter.';
+       #     rollback;
+		#	leave sp_APExpense_Get;
+       # end if;
+        
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  
+
+       # if @ExpenseType = 0 then
+		##		set Message = ' Header Gid Is Needed.';
+       #         leave sp_SOInvoiceProcess_Get;
+       # End if;
+        
+        
+        
+        set Query_Select = '';
+        
+        set Query_Select = concat( 'SELECT exptype_gid,exptype_code,exptype_name,
+                        CASE WHEN propertyexp_gid IS NOT NULL 
+									   THEN 1
+									   ELSE 0
+			            END AS Checked
+             FROM ap_mst_texptype as a 
+                  left join ap_map_tpropertyexp as b on a.exptype_gid = b.propertyexp_expensegid and 
+													 propertyexp_isactive = ''Y'' and propertyexp_isremoved = ''N''
+                                                     and propertyexp_propertygid =',@property_gid,'
+                  where exptype_isactive = ''Y'' and exptype_isremoved = ''N'' 
+                   
+                  group by exptype_name'	);
+                            
+							set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if; 
+
+End if;	    
+
+
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'TYPE_COLUMN' then
+		#select JSON_LENGTH(lj_Filters,'$') into @li_json_INVProcess_count;
+        
+       #    if @li_json_INVProcess_count is null or @li_json_INVProcess_count = 0 then
+		#	set Message = 'No Data In Json - Filter.';
+       #     rollback;
+		#	leave sp_APExpense_Get;
+       # end if;
+        
+     #   Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  
+
+       # if @ExpenseType = 0 then
+		##		set Message = ' Header Gid Is Needed.';
+       #         leave sp_SOInvoiceProcess_Get;
+       # End if;
+        
+        
+       # SET GLOBAL group_concat_max_len = 10000000;
+
+        set Query_Select = '';
+        
+        set Query_Select = concat( 'select exptype_gid,exptype_code,exptype_name,category_code,subcategory_code,
+                             concat(''['',group_concat( JSON_OBJECT(''expensecolumn_gid'',expensecolumn_gid,''expensecolumn_type'',expensecolumn_type,
+                         ''expensecolumn_name'',expensecolumn_name,''expensecolumninput_type'',expensecolumninput_type,
+                         ''expensecolumninput_checked'',expensecolumninput_checked,''expensecolumn_displayname'',expensecolumn_displayname,''Isedit'',''Y'',''IsDelete'',''N'',''IsInsert'',''N'')),'']'') as expensecolumn
+						
+                        FROM ap_mst_texptype as a left  join 
+                         ap_trn_texpnsecolumn as b on a.exptype_name = b.expensecolumn_type and 
+                                                            a.exptype_isactive = ''Y'' and a.exptype_isremoved = ''N''
+                         left join ap_mst_tcategory as c on c.category_gid = a.exptype_categorygid
+                         left join ap_mst_tsubcategory as d on d.subcategory_gid = a.exptype_subcategorygid
+                         
+                         group by exptype_name'	);
+                            
+							set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt;
+								DEALLOCATE PREPARE stmt;
+
+                                				
+								Select found_rows() into li_count;
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if; 
+
+End if;	
+
+
+if ls_Type = 'EXPENSE' and ls_Sub_Type = 'EXPENSE_GID' then
+
+        Select JSON_UNQUOTE(JSON_EXTRACT(lj_Filters,CONCAT('$.property_gid'))) into @property_gid ;  
+        
+        
+        set Query_Select = '';
+        
+        set Query_Select = concat( 'select branchexpensedetails_gid  from
+				ap_trn_tbranchexpensedetails
+                inner join ap_trn_tbranchexpense 
+                 on branchexpensedetails_branchexpensegid = branchexpense_gid
+                where branchexpensedetails_ondate = CURDATE()  and branchexpensedetails_status = ''pending'' and 
+                branchexpensedetails_ishold = ''N''   and branchexpense_isactive = ''Y'' and branchexpense_isremoved = ''N'' 
+                                           and branchexpensedetails_isactive = ''Y'' and branchexpensedetails_isremoved = ''N''
+                and branchexpense_status = ''APPROVED'' '	);
+                            
+							set @Query_Select = Query_Select;									                
+									#	select @Query_Select; ### Remove It
+								PREPARE stmt FROM @Query_Select;
+								EXECUTE stmt; 
+								Select found_rows() into li_count;
+				
+							  if li_count > 0 then
+									set Message = 'FOUND';
+							  else 
+									set Message = 'NOT_FOUND';
+							  end if; 
+
+End if;	    
+
+
+END

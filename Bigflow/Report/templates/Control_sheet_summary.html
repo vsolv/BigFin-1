@@ -1,0 +1,519 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}Control Sheet Summary{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Control_sheet" ng-controller="Control_sheet_cl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4> Control Sheet Summary </h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Choose Excel Format</label>
+                    <md-select ng-model="choose">
+                        <md-optgroup label="Choose Excel Format">
+                            <md-option ng-click="clkformat(st)" ng-repeat="st in review_status" ng-value="st.value">
+                                {{st.status}}
+                            </md-option>
+                        </md-optgroup>
+                    </md-select>
+                </md-input-container>
+            </div>
+                <form name="myform">
+                    <div class="col-md-3" style="margin-top: 35px;">
+                        <input accept=".csv,.xls,.xlsx" class="ng-isolate-scope" file-model="files" fileinput="file"
+                               id="file"
+                               multiple
+                               type="file"/>
+                    </div>
+                    <div ng-show="shwstck" class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Date</label>
+                            <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-min-date="from_date"
+                                           md-open-on-focus ng-model="datefrstck"></md-datepicker>
+                        </md-input-container>
+                    </div>
+                    <div ng-show="shwstck" class="col-md-2">
+                        <md-autocomplete md-clear-button="true"
+                                         md-floating-label="Godown Name"
+                                         md-input-maxlength=126
+                                         md-input-name="myName1"
+                                         md-item-text="item.Godown_Name"
+                                         md-items="item in branchlist"
+                                         md-min-length=0
+                                         md-no-cache="true"
+                                         md-search-text="searchTex"
+                                         md-selected-item="selectedItm"
+                                         md-selected-item-change="ACselectchange(item)"
+                                         required
+                        >
+                            <md-item-template>
+                                <span md-highlight-text="searchTex"> {{item.Godown_Name}} </span>
+                            </md-item-template>
+                            <md-not-found>
+                                No GoDown matching "{{searchTex}}" were found.
+                            </md-not-found>
+                        </md-autocomplete>
+                    </div>
+                    <div class="col-md-1">
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="uploadFile()"
+                                   style="margin-top: 25px;">
+                            <md-icon>cloud_upload</md-icon>
+                            <md-tooltip>Upload</md-tooltip>
+                        </md-button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 col-lg-3 col-sm-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Date</label>
+                    <md-datepicker md-hide-icons="calendar" md-max-date="maxDate" md-min-date="from_date"
+                                   md-open-on-focus ng-model="dateserch"></md-datepicker>
+                </md-input-container>
+            </div>
+            <div class="col-md-2 col-sm-4 " style="padding-top:13px">
+                <md-button class="md-fab md-mini md-primary custbutton" ng-click="searchload()">
+                    <md-icon>search</md-icon>
+                    <md-tooltip>Search</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row  table-responsive">
+            <div class="col-lg-12 col-sm-12">
+                <table class="table  table-striped table-bordered table-condensed table-hover" id="">
+                    <thead class="header">
+                    <tr>
+                        <td rowspan="2 " style="width:25px;">
+                            S.No
+                        </td>
+                        <td rowspan="2" style="width:25px;">
+                            Date
+                        </td>
+                        <td rowspan="2" style="width:25px;">
+                            Version
+                        </td>
+                        <td rowspan="2" style="width: 100px;">
+                            Sales
+                        </td>
+                        <td rowspan="2" style="width: 100px;">
+                            Outstanding
+                        </td>
+                        <td rowspan="2" style="width:25px;">
+                            Stock
+                        </td>
+                    </tr>
+                    </thead>
+                    <tbody ng-repeat="header in salesul.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                    <tr ng-if="header.Ctlsummary_Version == header.Ctlsummary_Version " style="text-align:center;">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <td>
+                            {{header.Ctlsummary_Date}}
+                        </td>
+                        <td>
+                            {{header.Ctlsummary_Version}}
+                        </td>
+                        <td ng-class="header.Ctlsummary_Status==header.Ctlsummary_Status ? 'info':'danger'"
+                            ng-click="Controlsheet(header.Ctlsummary_Date,header.Ctlsummary_Version)"
+                            ng-if="header.Ctlsummary_Type =='SALES'||header.newvar =='SALES'||header.newvar1 =='SALES' ">
+                            {{header.Ctlsummary_Status.replace("_"," ")}}
+                        </td>
+                        <td ng-if="header.Ctlsummary_Type==''||header.newvar==''||header.newvar1==''">-</td>
+                        <td ng-class="header.Ctlsummary_Status==header.Ctlsummary_Status ? 'info':'danger'"
+                            ng-click="outstandingcontrolsheet(header.Ctlsummary_Date,header.Ctlsummary_Version)"
+                            ng-if="header.Ctlsummary_Type =='OUTSTANDING'||header.newvar =='OUTSTANDING'||header.newvar1 =='OUTSTANDING'"
+                        >
+                            {{header.Ctlsummary_Status.replace("_"," ")}}
+                        </td>
+                        <td ng-if="header.Ctlsummary_Type=='' ||header.newvar=='' ||header.newvar1 == '' ">-</td>
+                        <td ng-class="header.Ctlsummary_Status==header.Ctlsummary_Status ? 'info':'danger'"
+                            ng-click="stockcontrolsheet(header.Ctlsummary_Date,header.Ctlsummary_Version)"
+                            ng-if="header.newvar =='STOCK'||header.Ctlsummary_Type =='STOCK'||header.newvar1 =='STOCK'"
+                        >
+                            {{header.Ctlsummary_Status.replace("_"," ")}}
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="4">
+                            <ul boundary-links="true" class="pagination-sm" items-per-page="itemsPerPage"
+                                max-size="maxSize" ng-model="currentPage" total-items="salesumddl.length"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{salesumddl.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Control_sheet', ['ngMaterial', 'ui.bootstrap', 'AppCommon']).config(function(
+        $httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+app.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+app.directive("fileinput", [function() {
+    return {
+        scope: {
+            fileinput: "=",
+            filepreview: "="
+        },
+        link: function(scope, element, attributes) {
+            element.bind("change", function(changeEvent) {
+                scope.fileinput = changeEvent.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    scope.$apply(function() {
+                        scope.filepreview = loadEvent.target.result;
+                    });
+                }
+                reader.readAsDataURL(scope.fileinput);
+            });
+        }
+    }
+}]);
+app.controller('Control_sheet_cl', ['$scope', '$filter', 'sales_outstanding_summary', '$mdDialog', '$window', function($scope,
+    $filter, sales_outstanding_summary, $mdDialog, $window) {
+    $scope.salesumddl = [];
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.pagelength = [];
+    this.myDate = new Date();
+    $scope.shwstck = false;
+    this.minDate = new Date(
+        this.myDate.getFullYear(),
+        this.myDate.getMonth() - 2,
+        this.myDate.getDate()
+    );
+    this.maxDate = new Date(
+        this.myDate.getFullYear(),
+        this.myDate.getMonth() + 2,
+        this.myDate.getDate()
+    );
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+    //session
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.tdate = convertdate(detail.date);
+    function reconname(item) {
+        var fileExtension = '.' + item.name.split('.').pop();
+        $scope.recon_name = "Sal_out" + new Date().getTime() + fileExtension;
+    };
+    format = function date2str(x, y) {
+        var z = {
+            M: x.getMonth() + 1,
+            d: x.getDate(),
+            h: x.getHours(),
+            m: x.getMinutes(),
+            s: x.getSeconds()
+        };
+        y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+            return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-2)
+        });
+        return y.replace(/(y+)/g, function(v) {
+            return x.getFullYear().toString().slice(-v.length)
+        });
+    }
+    $scope.review_status = [{
+        status: "Sales",
+        value:'sales'
+    }, {
+        status: "Outstanding",
+        value:'outstanding'
+    },{
+    status:"Stock",
+    value:'stock'
+    }]
+    $scope.clkformat = function(e){
+    if(e.value=='stock'){
+    $scope.shwstck = true;
+    }
+    else{
+    $scope.shwstck = false;
+    }
+    }
+    $scope.branchchange = function(item){
+    $scope.branchlist = item.lj_godown_data;
+    $scope.selectedItm = "";
+    }
+select_clasification()
+      function select_clasification(){
+     var dta = {
+                Group: 'BRANCH_SALES',
+                Type:'BILLING',
+                SubType: 'SALES',
+                data: {"Params": {
+                        "CLASSIFICATION": {
+                            "Entity_Gid": [$scope.entity_gid]
+                        },
+                        "FILTER": {
+                            "Employee_Gid": $scope.employgid
+                        }
+                    }}
+            }
+   $scope.getclasification = [];
+        var getcompaig = sales_outstanding_summary.getclasification(dta)
+            getcompaig.then(function(result) {
+                $scope.getclasification = result.data.DATA;
+                for(i=0;i<$scope.getclasification.length;i++){
+                var empname = $scope.getclasification[i].employee_name;
+                $scope.getclasification[i].lj_godown_data = JSON.parse($scope.getclasification[i].lj_godown_data)
+                if(empname != ""){
+                 $scope.selectedone = $scope.getclasification[i];
+                var d = $scope.getclasification[i]
+                $scope.branchchange(d);
+//             $scope.selectedItm = $scope.getclasification[i].lj_godown_data[0].Godown_Name;
+                }
+                }
+            }, function(err) {
+                alert('No data!.');
+            }).finally();
+        }
+    $scope.searchload = function() {
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Ctrl_Date": format(($scope.dateserch), 'yyyy-MM-dd'),
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": $scope.entity_gid
+                }
+            }
+        }
+        var data_int = {
+            Group: 'INITIAL_SUMMARY',
+            Type: 'CONTROL_SHEET',
+            SubType: 'CONTROL_SHEET',
+            Employee_Gid: $scope.employgid,
+            darta: data
+        };
+        get_summary(data_int);
+    }
+    //Excel Uploading
+    $scope.uploadFile = function() {
+        if ($scope.choose == undefined) {
+            alert('Select Excel format  then Proceed Upload')
+            return false;
+        }
+        if ($scope.files == undefined) {
+            alert("Fill the File field!.");
+            return false;
+        }
+        $scope.name = $scope.files[0].name;
+        $scope.varp = $scope.name.split('.')
+        if ($scope.files !== undefined) {
+            var excl = new FormData();
+            angular.forEach($scope.files, function(file) {
+                reconname(file);
+                excl.append
+                excl.append('file', file);
+                excl.append('Drop_value', $scope.choose);
+                excl.append('name', $scope.recon_name);
+                excl.append('Group', 'CONTROL_SALES');
+                excl.append('Godown_Gid',$scope.selectedItm.Godown_Gid);
+                excl.append('Action', 'INSERT');
+                excl.append('Type', 'CONTROL_SALES');
+                if ($scope.choose == 'stock'){
+                excl.append('Date', format(($scope.datefrstck), 'yyyy-MM-dd'));
+                }
+                loadexcl(excl);
+            });
+        }
+    }
+    function loadexcl(excl) {
+        $scope.loading();
+        var overalldtl = sales_outstanding_summary.get_sales_outstanding_excel(excl);
+        overalldtl.then(function(res) {
+            var hosmr = [];
+            $scope.hosmrymsg = res.data
+            if ($scope.hosmrymsg == "DATA") {
+                alert('Excel Not valid')
+            } else {
+                $scope.spmsg = res.data.MESSAGE;
+                alert($scope.spmsg);
+                $scope.hosmr = res.data.DATA[0].lj_Excel_count;
+                alert($scope.hosmr);
+            }
+            $scope.load()
+        }).finally($scope.endloading);
+    }
+    //getting summary details
+    main_summary()
+    function main_summary() {
+        var data = {
+            "Params": {
+                "FILTER": {
+                    "Ctrl_Date": '',
+                },
+                "CLASSIFICATION": {
+                    "Entity_Gid": $scope.entity_gid
+                }
+            }
+        }
+        var data_int = {
+            Group: 'INITIAL_SUMMARY',
+            Type: 'CONTROL_SHEET',
+            SubType: 'CONTROL_SHEET',
+            Employee_Gid: $scope.employgid,
+            darta: data
+        };
+        get_summary(data_int);
+    }
+    $scope.load = function() {
+        $scope.loading()
+        $window.location.href = "controlsheetsummary";
+    }
+    function get_summary(data_int) {
+       $scope.ary = [];
+        $scope.ary1 = [];
+        $scope.ary2 = [];
+        var salesum = sales_outstanding_summary.get_summarydetails(data_int);
+        salesum.then(function(result) {
+            $scope.salesumdd = result.data.DATA;
+            maintable = $scope.salesumdd
+            if($scope.salesumdd==undefined)
+            {
+            $scope.salesul=$scope.salesumdd
+            }
+            for (i = 0; i < maintable.length; i++) {
+                var d = maintable[i].lj_data[0]
+                $scope.ary.push(d)
+                if (maintable[i].lj_data[1] != undefined) {
+                    var d = maintable[i].lj_data[1]
+                    $scope.ary1.push(d)
+                }
+                if (maintable[i].lj_data[2] != undefined) {
+                    var d = maintable[i].lj_data[2]
+                    $scope.ary2.push(d)
+                }
+            }
+            for (var i = 0; i < $scope.ary.length; i++) {
+                    for (var j = 0; j < $scope.ary1.length; j++){
+                        if ($scope.ary[i].Ctlsummary_Date == $scope.ary1[j].Ctlsummary_Date && $scope.ary[i].Ctlsummary_Version == $scope.ary1[j].Ctlsummary_Version) {
+                            $scope.ary[i].newvar = $scope.ary1[j].Ctlsummary_Type
+                        }
+                }
+                for (var k = 0; k < $scope.ary2.length; k++){
+                        if ($scope.ary[i].Ctlsummary_Date == $scope.ary2[k].Ctlsummary_Date && $scope.ary[i].Ctlsummary_Version == $scope.ary2[k].Ctlsummary_Version) {
+                            $scope.ary[i].newvar1 = $scope.ary2[k].Ctlsummary_Type
+                        }
+                }
+            }
+for(i=0; i<$scope.ary.length; i++){
+if($scope.ary[i].newvar == undefined){
+$scope.ary[i].newvar = '';
+$scope.ary[i].newvar1 = '';
+}
+}
+            $scope.salesumddl = $filter('orderBy')($scope.ary, '-Ctlsummary_Version');
+           $scope.salesul = $filter('orderBy')($scope.salesumddl, '-Ctlsummary_Date');
+        }, function(err) {
+            alert('No data!.');
+        }).finally($scope.endloading);
+    }
+    $scope.datefilter = function() {
+        $scope.salesumddl = $filter('filter')($scope.salesumddl, {
+            "Ctlsummary_Date": $scope.update,
+        }, );
+    }
+//Stock routing
+    $scope.stockcontrolsheet = function(d, v) {
+        $scope.loading();
+        var data = {
+            'date': d,
+            'versionid': v
+        }
+        sessionStorage.setItem('details', JSON.stringify(data));
+        $window.location.href = "stockcontrolsheet ";
+    }
+//outstanding routing
+    $scope.outstandingcontrolsheet = function(d, v) {
+        $scope.loading();
+        var data = {
+            'date': d,
+            'versionid': v
+        }
+        sessionStorage.setItem('details', JSON.stringify(data));
+        $window.location.href = "outstandingcontrolsheet ";
+    }
+//Sales routing
+    $scope.Controlsheet = function(d, v) {
+        $scope.loading();
+        var data = {
+            'date': d,
+            'versionid': v
+        }
+        sessionStorage.setItem('details', JSON.stringify(data));
+        $window.location.href = "salecontrolsheet";
+    }
+}]);
+//SERVICE PART
+app.service("sales_outstanding_summary", function($http) {
+    //geting the Excel
+    this.get_sales_outstanding_excel = function(custid) {
+        var respons = $http.post(Appname + "/Control_Sheet/",
+            custid, {
+                transformRequest: angular.identity,
+                headers: {
+                    'Content-Type': undefined
+                }
+            }
+        );
+        return respons;
+    }
+    this.get_summarydetails = function(data) {
+        var respons = $http.post(Appname + "/getControl_Sheet/", data
+        );
+        return respons;
+    }
+        this.getclasification = function(custid) {
+        var respons = $http.post(Appname + "/getclasification/",
+            custid
+        );
+        return respons;
+    }
+});
+</script>
+{% endblock %}

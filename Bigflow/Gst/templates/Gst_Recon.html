@@ -1,0 +1,334 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}  GST RECON {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+
+<div class="maincontent">
+    <div ng-app="GST_APP" ng-controller="ctrlsummary" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>GST Recon</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12" style="padding:50px;">
+                <div class="col-md-3" style="margin-top:30px" ng-hide="filebutton">
+                    <input type="file" file-model="files" fileinput="file" id="file" multiple/>
+                </div>
+                <div class="col-md-3" style="margin-left:-50px;margin-top:10px" ng-hide="dailybutton">
+                    <md-button class="md-fab md-mini md-primary custbutton "
+                               ng-click="uploadFile()">
+                        <md-icon>cloud_upload</md-icon>
+                        <md-tooltip>File Upload</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr style="text-align:center">
+                        <th>S.No</th>
+                        <th>Filing Period"</th>
+                        <th><a ng-click="orderByField='invoiceheader_invoicetype'; reverseSort = !reverseSort"
+                               style="color:white">Supplier GSTIN
+                            <span ng-show="orderByField == 'invoiceheader_invoicetype'"><span
+                                    ng-show="!reverseSort">^</span><span
+                                    ng-show="reverseSort">v</span></span>
+                        </a></th>
+
+
+                        <th><a ng-click="orderByField='supplier_name'; reverseSort = !reverseSort" style="color:white">Supplier
+                            Name
+                            <span ng-show="orderByField == 'supplier_name'"><span ng-show="!reverseSort">^</span><span
+                                    ng-show="reverseSort">v</span></span>
+                        </a></th>
+                        <th><a ng-click="orderByField='employee_name'; reverseSort = !reverseSort" style="color:white">Invoice
+                            Number
+                            <span ng-show="orderByField == 'employee_name'"><span ng-show="!reverseSort">^</span><span
+                                    ng-show="reverseSort">v</span></span>
+                        </a></th>
+
+                        <th><a ng-click="orderByField='invoiceheader_invoiceno'; reverseSort = !reverseSort"
+                               style="color:white">Invoice Date
+                            <span ng-show="orderByField == 'invoiceheader_invoiceno'"><span
+                                    ng-show="!reverseSort">^</span><span ng-show="reverseSort">v</span></span>
+                        </a></th>
+                        <th>Customer GSTIN</th>
+                        <th>State Code</th>
+                        <th>Reverse Charge</th>
+                        <th>Invoice Type</th>
+                        <th>Tax Rate</th>
+                        <th>Taxable Amount</th>
+                        <th>IGST Amount</th>
+                        <th>CGST_Amount</th>
+                        <th>SGST Amount</th>
+                        <th>Cess Amount</th>
+                        <th>Total</th>
+                        <th>Select<br>
+                            <!--                            <input ng-click="selectAllSo()" ng-model="sosmry.allItemsSelectd" type="checkbox">-->
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="sum in gst_summary.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage)) | orderBy:orderByField:reverseSort">
+                        <td class="text-center" ng-model="dept_name">
+                            {{((currentPage-1)*itemsPerPage)+$index+1}}
+                        </td>
+                        <td><a href="">
+                            {{sum.gstupload_Filing_Period}}</a>
+                        </td>
+                        <td>
+                            {{sum.gstupload_Supplier_GSTIN}}
+                        </td>
+
+                        <td>
+                            {{sum.gstupload_Supplier_Name}}
+                        </td>
+                        <td>
+                            {{sum.gstupload_Invoice_Number}}
+                        </td>
+                        <td>{{sum.gstupload_Invoice_Date | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{sum.gstupload_Customer_GSTIN }}</td>
+                        <td align="right">{{sum.gstupload_Place_of_Supply_StateCode}}</td>
+                        <td>{{sum.gstupload_Reverse_Charge}}</td>
+                        <td>{{sum.gstupload_Invoice_Type}}</td>
+                        <td>{{sum.gstupload_Tax_Rate}}</td>
+                        <td>{{sum.gstupload_Taxable_Amount}}</td>
+                        <td>{{sum.gstupload_IGST_Amount}}</td>
+                        <td>{{sum.gstupload_CGST_Amount}}</td>
+                        <td>{{sum.gstupload_SGST_Amount}}</td>
+                        <td>{{sum.gstupload_Cess_Amount}}</td>
+                        <td>{{sum.gstupload_Total}}</td>
+                        <td>
+                            <input ng-model="sum.Is_selected" ng-true-value="1" ng-false-value="0"
+                                    ng-click="toggleCheck(sum)" type="checkbox">
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="14">
+                            <ul uib-pagination total-items="gst_summary.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="4" style="padding: 20px;">
+                            <strong>Total Count:{{gst_summary.length}}</strong>
+
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row ">
+            <div class="col-lg-12 col-sm-12 text-right">
+                <md-button ng-click="Close()" data-dismiss="modal" class="md-raised">
+                    Close
+                </md-button>
+                <md-button ng-click="Send_gstdata()" ng-hide="hide_show"
+                           data-dismiss="modal" class="md-raised md-warn">Submit
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app=angular.module('GST_APP',['ngMaterial','ui.bootstrap','AppCommon']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+});
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+app.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+app.directive("fileinput", [function() {
+    return {
+        scope: {
+            fileinput: "=",
+            filepreview: "="
+        },
+        link: function(scope, element, attributes) {
+            element.bind("change", function(changeEvent) {
+                scope.fileinput = changeEvent.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    scope.$apply(function() {
+                        scope.filepreview = loadEvent.target.result;
+                    });
+                }
+                reader.readAsDataURL(scope.fileinput);
+            });
+        }
+    }
+}]);
+
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesummary', '$window', '$mdDialog', '$element',
+    function($scope, $filter, $mdDateLocale, servicesummary, $window, $mdDialog, $element) {
+
+
+        function filegstname(item) {
+            var fileExtension = '.' + item.name.split('.').pop();
+            $scope.gstfile_name = "RECON" + new Date().getTime() + fileExtension;
+        };
+        $scope.endloading = function() {
+            $mdDialog.hide();
+        };
+        $scope.uploadFile = function() {
+
+            if ($scope.files == undefined) {
+                alert("Fill the File field!.");
+                return false;
+            }
+            $scope.name = $scope.files[0].name;
+            if ($scope.files !== undefined) {
+                var excl = new FormData();
+                angular.forEach($scope.files, function(file) {
+                    filegstname(file)
+                    excl.append('file', file);
+                    excl.append('name', $scope.gstfile_name);
+                    excl.append('Action', 'Insert');
+                    //   excl.append('Group', 'BANK_UPLOAD_AR');
+                    loadexcl(excl);
+
+                });
+            }
+
+        }
+        $scope.currentPage = 1;
+        $scope.maxSize = 3;
+        $scope.itemsPerPage = 10;
+        $scope.loading = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.body),
+                clickOutsideToClose: false
+            });
+        };
+
+
+
+        var summary = servicesummary.getgstsummary();
+        summary.then(function(result) {
+                //alert(JSON.stringify(result.data))
+                $scope.gst_summary = JSON.parse(result.data);
+                $scope.maintable = result.data;
+
+
+                console.log(result.data)
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+
+        function loadexcl(excl) {
+            $scope.loading();
+            var overalldtl = servicesummary.excelgen(excl);
+            overalldtl.then(function(res) {
+
+                var hosmr = [];
+                $scope.hosmr = res.data.MESSAGE;
+                if ($scope.hosmr == "SUCCESS") {
+                    alert("File Saved Successfully!.")
+
+                } else {
+                    alert(res.data);
+
+                }
+            }).finally($scope.endloading);
+        }
+
+       function selecteddate(date) {
+          var d = date;
+          var curr_date = d.getDate();
+          var curr_month = d.getMonth();
+          curr_month++;
+          var curr_year = d.getFullYear();
+          var date = curr_year + "-" + curr_month + "-" + curr_date;
+          return date;
+       }
+
+
+         $scope.checkgst = [];
+        $scope.toggleCheck = function (data) {
+            if ($scope.checkgst.indexOf(data) === -1) {
+                 date = new Date(data.gstupload_Invoice_Date);
+                 data.gstupload_Invoice_Date =  selecteddate(date);
+                $scope.checkgst.push(data);
+                console.log(data)
+            } else {
+                $scope.checkgst.splice($scope.checkgst.indexOf(data), 1);
+            }
+              //  alert( JSON.stringify($scope.checkgst))
+        };
+
+
+
+        $scope.Send_gstdata = function(){
+
+           var json_gst = {  "GSTRECON":$scope.checkgst
+                              }
+
+
+            var setgst = servicesummary.setgstsummary(json_gst);
+             setgst.then(function(result) {
+
+
+             })
+
+        }
+
+    }
+]);
+
+
+app.service("servicesummary", function ($http) {
+
+    this.excelgen = function(excl) {
+        var respons = $http.post(Appname + "/gstexcel_set/",
+            excl, {
+                transformRequest: angular.identity,
+                headers: {
+                    'Content-Type': undefined
+                }
+            }
+        );
+        return respons;
+    }
+
+    this.getgstsummary = function () {
+        var response=$http.post(Appname+"/gstsummary_get/",{params:{"sub_type":"","type":"SUMMARY"}});
+        return response;
+    }
+
+    this.setgstsummary = function (data) {
+        var response=$http.post(Appname+"/Gstvalidate_set/",{params:{"filter":data,"action":"Insert"}});
+        return response;
+    }
+});
+
+
+
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+{% endblock %}

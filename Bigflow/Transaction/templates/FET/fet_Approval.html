@@ -1,0 +1,631 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Approval{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="cardDemo2" ng-controller="AppCtrl" ng-cloak class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-10 col-sm-10">
+                    <h4><strong> Approval</strong></h4>
+                </div>
+                <div class="col-lg-2 col-sm-2">
+                    <md-input-container>
+                        <label>Client Name</label>
+                        <md-select ng-model="sltdclient" ng-change="chngclnt(sltdclient)">
+                            <md-optgroup label="Client Name">
+                                <md-option ng-repeat="c in clientname" ng-value="c.client_gid"> {{c.client_name}}
+                                </md-option>
+                            </md-optgroup>
+                        </md-select>
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-sm-12 col-xs-12" style="padding-top:15px;">
+                <uib-accordion close-others="true">
+                    <div uib-accordion-group class="panel-default" is-open="status.sales">
+                        <uib-accordion-heading>
+                            <p>Sales<span style="background:red;margin-left:5px;font-size:14px;"
+                                          class="badge">{{sales_data.length}}</span>
+                                <i class="pull-right material-icons">
+                                    {{!status.sales?'keyboard_arrow_up':'keyboard_arrow_down'}}
+                                </i>
+                            </p>
+                        </uib-accordion-heading>
+                        <div class="row scrollbar" style="height:400px;">
+                            <div class="col-md-12" ng-repeat="saledet in sales_data">
+                                <md-card>
+                                    <md-card-content>
+                                        <h4>{{saledet.display_name}}
+                                            <span class="editlink"
+                                                  ng-click="showComments(saledet);">
+                                                        <span style="font-size: 18px;" class="material-icons">insert_comment</span>
+                                                        <md-tooltip>Comments</md-tooltip>
+                                                </span>
+                                        </h4>
+                                        <label>{{saledet.employee_name }} - </label>
+                                        <label class="editlink"
+                                               ng-click="saledet.shownDetails=!saledet.shownDetails">
+                                            {{saledet.soheader_status}}</label>
+                                        <div class="row " ng-show="saledet.shownDetails">
+                                            <div class="col-md-4 table-responsive">
+                                                <label>Sales Details</label>
+                                                <table class="table">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>S.No</th>
+                                                        <th>Product</th>
+                                                        <th>Quantity</th>
+                                                        <th>Price</th>
+                                                        <th>Total Amt W/o Tax</th>
+                                                        <th>Total Amt With Tax</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr ng-repeat="sale in saledet.Sale_Details">
+                                                        <td>{{$index+1}}</td>
+                                                        <td>{{sale.product_displayname}}</td>
+                                                        <td>{{sale.sodetails_qty}}</td>
+                                                        <td>{{sale.final_rate}}</td>
+                                                        <td>
+                                                            {{sale.detail_amount | number}}
+                                                        </td>
+                                                        <td>
+                                                            {{sale.Total_Amount | number}}
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+<!--                                                Total_Amount-->
+                                                <label class="pull-right"
+                                                       ng-init="sales_total=totalbilling(saledet.Sale_Details)">Sales
+                                                    Total: {{sales_total | number}}</label>
+                                                <br>
+                                            </div>
+                                            <div class="col-md-4 table-responsive">
+                                                <label>Outstanding Details</label>
+                                                <table class="table">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>S.No</th>
+                                                        <th>Inv Date</th>
+                                                        <th>Inv No</th>
+                                                        <th>Net Amt</th>
+                                                        <th>Balance Amt</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr ng-repeat="os in saledet.Outstanding_Details">
+                                                        <td>{{$index+1}}</td>
+                                                        <td>{{os.fetsoutstanding_invoicedate}}</td>
+                                                        <td>{{os.fetsoutstanding_invoiceno}}</td>
+                                                        <td>{{os.fetsoutstanding_netamount | number}}</td>
+                                                        <td>{{os.balance_amount | number}}</td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                                <label class="pull-right"
+                                                       ng-init="outstanding_total=totaloutstanding( saledet.Outstanding_Details)">
+                                                    OutStanding Total: {{outstanding_total | number}}</label>
+                                            </div>
+                                            <div class="col-md-4 table-responsive">
+                                                <label>PDC Details</label>
+                                                <table class="table">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>S.No</th>
+                                                        <th>Date</th>
+                                                        <th>Mode</th>
+                                                        <th>Cheque Date</th>
+                                                        <th>cheque No</th>
+                                                        <th>Amount</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr ng-repeat="pdc in saledet.PDC_Pending">
+                                                        <td>{{$index+1}}</td>
+                                                        <td>{{pdc.fetcollectionheader_date}}</td>
+                                                        <td>{{pdc.fetcollectionheader_mode}}</td>
+                                                        <td>{{pdc.fetcollectionheader_chequedate}}</td>
+                                                        <td>{{pdc.cheque_no}}</td>
+                                                        <td>{{pdc.fetcollectionheader_amount | number}}</td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                                <label ng-init="pdc_total=totalpdc(saledet.PDC_Pending)"
+                                                       class="pull-right">
+                                                    PDC Total:k {{pdc_total | number}}</label>
+                                            </div>
+                                        </div>
+                                    </md-card-content>
+                                    <md-card-actions layout="row" layout-align="end center">
+                                        <div ng-hide="saledet.hide_btn" layout="row">
+                                            <md-button class="md-icon-button"
+                                                       ng-click="canclclck(saledet.soheader_gid,$index)">
+                                                <md-icon class="removelink">cancel</md-icon>
+                                                <md-tooltip>Sale Cancel</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-icon-button"
+                                                       ng-click="rejectclck(saledet.hide_btn,$index)">
+                                                <md-icon class="editlink">clear</md-icon>
+                                                <md-tooltip>Reject</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-icon-button"
+                                                       ng-click="apprvesale(saledet.soheader_gid,$index)">
+                                                <md-icon class="material-icons editlink">done_all
+                                                </md-icon>
+                                                <md-tooltip>Approve</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                        <div ng-show="saledet.hide_btn">
+                                            <form name="formcmnt">
+                                                <input id="name" class="textboxline" maxlength="60"
+                                                       placeholder="Comments for reject"
+                                                       ng-model="saledet.comment"
+                                                       required/>
+                                                <md-button class="md-icon-button"
+                                                           aria-label="Reject"
+                                                           ng-if="formcmnt.$valid"
+                                                           ng-click="custrejected(saledet,$index)">
+                                                    <md-icon class="material-icons editlink">done
+                                                    </md-icon>
+                                                    <md-tooltip>Reject</md-tooltip>
+                                                </md-button>
+                                                <md-button class="md-icon-button"
+                                                           aria-label="cancel"
+                                                           ng-if="!formcmnt.$valid"
+                                                           ng-click="rejectclck(saledet.hide_btn,$index)">
+                                                    <md-icon class="material-icons editlink">clear
+                                                    </md-icon>
+                                                    <md-tooltip>Cancel</md-tooltip>
+                                                </md-button>
+                                            </form>
+                                        </div>
+                                    </md-card-actions>
+                                </md-card>
+                            </div>
+
+                            <div ng-include="'comment'"></div>
+
+                        </div>
+                    </div>
+                    <div uib-accordion-group class="panel-default" heading="Delete account" is-open="status.procust">
+                        <uib-accordion-heading>
+                            <p>Prospect Customer <span style="background:red;margin-left:5px;font-size:14px;"
+                                                       class="badge">{{lead_data.length}}</span>
+                                <i class="pull-right material-icons">
+                                    {{!status.procust?'keyboard_arrow_up':'keyboard_arrow_down'}}
+                                </i>
+                            </p>
+                        </uib-accordion-heading>
+                        <div class="row">
+                            <div class="col-md-3" ng-repeat="proCust in lead_data">
+                                <md-card>
+                                    <md-card-content>
+                                        <p> {{proCust.leadsreq_name}}</p>
+                                        <address>{{proCust.leadsreq_address}}</address>
+                                        <p>{{proCust.leadsreq_contactno}}</p>
+                                    </md-card-content>
+                                    <md-card-actions layout="row" layout-align="end center">
+                                        <div ng-hide="proCust.hide_butn">
+                                            <md-button class="md-icon-button"
+                                                       ng-click="hideComment_procust(proCust.hide_butn,$index)">
+                                                <md-icon class="editlink">clear</md-icon>
+                                                <md-tooltip>Reject</md-tooltip>
+                                            </md-button>
+                                            <md-button class="md-icon-button" aria-label="Approval"
+                                                       ng-click="proCustApprove(proCust,$index)">
+                                                <md-icon class="material-icons editlink">done_all</md-icon>
+                                                <md-tooltip>Approve</md-tooltip>
+                                            </md-button>
+                                        </div>
+                                        <div ng-show="proCust.hide_butn">
+                                            <form name="formComment">
+                                                <input id="name1" class="textboxline" maxlength="60"
+                                                       placeholder="Comments for reject" ng-model="proCust.comments"
+                                                       required/>
+                                                <md-button class="md-icon-button" aria-label="Reject"
+                                                           ng-if="formComment.$valid"
+                                                           ng-click="custreject(proCust,$index)">
+                                                    <md-icon class="material-icons editlink">done</md-icon>
+                                                    <md-tooltip>Reject</md-tooltip>
+                                                </md-button>
+                                                <md-button class="md-icon-button" aria-label="cancel"
+                                                           ng-if="!formComment.$valid"
+                                                           ng-click="hideComment_procust(proCust.hide_butn,$index)">
+                                                    <md-icon class="material-icons editlink">clear</md-icon>
+                                                    <md-tooltip>Cancle</md-tooltip>
+                                                </md-button>
+                                            </form>
+                                        </div>
+                                    </md-card-actions>
+                                </md-card>
+                            </div>
+                        </div>
+                    </div>
+                    <div uib-accordion-group class="panel-default" is-open="status.others">
+                        <uib-accordion-heading>
+                            <p>Others<i class="pull-right material-icons">{{!status.others?'keyboard_arrow_up':'keyboard_arrow_down'}}</i>
+                            </p>
+                        </uib-accordion-heading>
+                        <md-card>
+                            <md-card-content><p>No records were found!!!</p></md-card-content>
+                        </md-card>
+                    </div>
+                </uib-accordion>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('cardDemo2', ['ngMaterial', 'ui.bootstrap'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+
+myApp.controller('AppCtrl', function($scope, $rootScope, approvalservice, $timeout, $mdDialog, $filter, $window) {
+$scope.sales_data=[];
+$scope.lead_data = [];
+$scope.cmd = [];
+     var detail = JSON.parse(sessionStorage.getItem('today'));
+     $scope.entity_gid = detail.entity_gid;
+
+    var client = approvalservice.getclient('')
+    client.then(function(result) {
+            $scope.clientname = [];
+            $scope.clientname = JSON.parse(result.data);
+        }),
+        function() {
+            alert('no data');
+        };
+
+    $scope.status = {
+        sales: true,
+        procust: true,
+        others: true,
+    };
+
+     $scope.showComments = function(data) {
+            $scope.cmd.comment = '';
+            $scope.cmd.customer_name=data.customer_display_name
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            $scope.cmd.Emp_name = detail.employee_name;
+            $scope.Emp_gids = detail.employee_gid;
+            $scope.sheinclud = true;
+            $scope.ref_no = data.customer_gid;
+            getComment($scope.ref_no);
+            modalshow('comment_view');
+     }
+     function getComment(refno) {
+            var JSON_data = {};
+            JSON_data = {
+                "Filters": [{
+                    "Comment_For": "COMMENT_CUSTOMER",
+                    "Ref_No": [refno],
+                }]
+            };
+            var cmd_detail = approvalservice.getcmd('COMMENTS', 'TRANSACTION', JSON_data);
+            cmd_detail.then(function(result) {
+                $scope.cmd.comment_details = result.data;
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            });
+            $scope.cmd.comment = '';
+     }
+
+     $scope.comment = function(remarks) {
+            var JSON = {};
+            JSON = {
+                "Employee_Gid": $scope.Emp_gids,
+                "Date": formatStringDate(new Date(),'yyyy-mm-dd hh:mm'),
+                "Comment_For": "COMMENT_CUSTOMER",
+                "EACH": [{
+                    "Ref_No": $scope.ref_no,
+                    "Remark": remarks
+                }]
+            };
+
+            var cmd_detail = approvalservice.setcmd('Insert', 'EACH', JSON);
+            cmd_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    getComment($scope.ref_no);
+                } else {
+                    alert("Not Inserted successfully!.")
+                }
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            });
+
+     }
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+   // $scope.loading();
+    var lead_detail = approvalservice.get_lead(0, '', 'PENDING', '');
+    lead_detail.then(function(lead_detail) {
+            $scope.lead_data = lead_detail.data;
+        }, function() {
+            <!--alert('No data');-->
+        })
+        .finally();
+
+
+    <!--For sales-->
+    $scope.date = new Date();
+    $scope.sales_data = [];
+
+    $scope.chngclnt = gotoClientChange;
+
+    function gotoClientChange(c) {
+        loaddata(c);
+    }
+
+
+
+
+    function loaddata(Cname) {
+        $scope.loading();
+        if (Cname == undefined) {
+            Cname = ''
+        } else {
+            Cname = $scope.sltdclient;
+        }
+
+        classification = {
+            'Entity_Gid': [$scope.entity_gid],
+            'Client_Gid': [1]
+        }
+        data = {
+            'Outstanding_Type': 'OUTSTANDING_REPORT_INVOICE_WISE'
+        };
+        data['Outstanding_SubType'] = 'APPROVE';
+        data['Classification'] = classification;
+
+        var sale_detail = approvalservice.get_sales('PENDING', 0, 0, 200, data);
+        sale_detail.then(function(sale_detail) {
+
+            $scope.sales_data = [];
+            if (sale_detail.data.MESSAGE == 'FOUND') {
+            debugger;
+                $scope.sales_data = sale_detail.data.DATA.SALES;
+            }
+
+        }, function(err) {
+            alert('No data');
+        }).finally($scope.endloading);
+    }
+
+    loaddata();
+
+    $scope.totalbilling = function(data) {
+        var totall = 0;
+        if (data) {
+            for (var i = 0; i < data.length; i++) {
+                totall = totall + data[i].Total_Amount;
+            }
+        }
+         return totall;
+    }
+
+    $scope.totaloutstanding = function(data) {
+        var totall = 0;
+        if (data) {
+            for (var i = 0; i < data.length; i++) {
+                totall = totall + data[i].fetsoutstanding_netamount;
+            }
+        }
+         return totall;
+    }
+
+    $scope.totalpdc = function(data) {
+        var totall = 0;
+        if (data) {
+            for (var i = 0; i < data.length; i++) {
+                totall = totall + data[i].fetcollectionheader_amount;
+            }
+        }
+        return totall;
+    }
+    $scope.apprvesale = function(headergid, index) {
+        $scope.loading();
+        var lead_detail = approvalservice.set_saleapprove('Approve', headergid, '');
+        $scope.showatsales = false;
+        lead_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    alert("Approved successfully!.")
+                    $scope.sales_data.splice(index, 1);
+                } else {
+                    alert("Not approved successfully!.")
+                }
+
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            })
+            .finally($scope.endloading);
+    };
+
+    $scope.canclclck = function(headergid, index) {
+        $scope.loading();
+        var lead_detail = approvalservice.set_saleapprove('Cancel', headergid, '');
+        $scope.showatsales = false;
+        lead_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    alert("Sales Cancelled successfully!.")
+                    $scope.sales_data.splice(index, 1);
+                } else {
+                    alert("Not approved successfully!.")
+                }
+
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            })
+            .finally($scope.endloading);
+    };
+    $scope.rejectclck = function(iscommnt, index) {
+        if (iscommnt) {
+            $scope.sales_data[index].hide_btn = false;
+            $scope.showatsales = false;
+        } else {
+            $scope.sales_data[index].hide_btn = true;
+        }
+    };
+
+    $scope.close = function() {
+        $window.location.href = "approval";
+    }
+
+    $scope.custrejected = function(sales_data, index) {
+        $scope.loading();
+        var lead_detail = approvalservice.set_saleapprove('Reject', sales_data.soheader_gid, sales_data.comment);
+
+        lead_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    alert("Rejected successfully!.")
+                    $scope.sales_data.splice(index, 1);
+                } else {
+                    alert("Data Not rejected successfully!.")
+                }
+            }, function(err) {
+                alert("Data Not rejected successfully!.")
+            })
+            .finally($scope.endloading);
+    };
+
+    $scope.hideComment_procust = function(iscomment, index) {
+        if (iscomment) {
+            $scope.lead_data[index].hide_butn = false;
+        } else {
+            $scope.lead_data[index].hide_butn = true;
+        }
+    };
+    $scope.proCustApprove = function(lead_data, index) {
+        $scope.loading();
+        var lead_detail = approvalservice.set_approve('Approve', lead_data.leadsreq_gid, 'APPROVED', '');
+        lead_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    alert("Approved successfully!.")
+                    $scope.lead_data.splice(index, 1);
+                } else {
+                    alert("Not approved successfully!.")
+                }
+
+            }, function(err) {
+                alert("Not Approved successfully!.")
+            })
+            .finally($scope.endloading);
+    };
+
+    $scope.custreject = function(lead_data, index) {
+        $scope.loading();
+        var lead_detail = approvalservice.set_approve('Approve', lead_data.leadsreq_gid, 'REJECTED', lead_data.comments);
+        lead_detail.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    alert("Rejected successfully!.")
+                    $scope.lead_data.splice(index, 1);
+                } else {
+                    alert("Data Not rejected successfully!.")
+                }
+            }, function(err) {
+                alert("Data Not rejected successfully!.")
+            })
+            .finally($scope.endloading);
+    };
+
+});
+
+myApp.service("approvalservice", function($http) {
+    this.get_lead = function(lead_gid, lead_name, status, mobile_no) {
+        var response = $http.get(Appname + "/leadrequest_get/", {
+            params: {
+                'leadref_gid': lead_gid,
+                'leadref_name': lead_name,
+                'leadref_status': status,
+                'mobile_no': mobile_no
+            }
+        });
+        return response;
+    }
+
+    this.get_sales = function(action, custid, empid, limit, data) {
+        var response = $http.post(Appname + "/sale_order_get/", {
+            parms: {
+                'action': action,
+                'custid': custid,
+                'empid': empid,
+                'limit': limit,
+                'data': data
+            }
+        });
+        return response;
+    }
+
+    this.set_approve = function(action, lead_gid, status, reason) {
+        var response = $http.post(Appname + "/leadapprove/", {
+            parms: {
+                "action": action,
+                "leadref_gid": lead_gid,
+                "status": status,
+                "reason": reason
+            }
+        });
+        return response;
+    }
+
+    this.set_saleapprove = function(action, headergid, reason) {
+        var response = $http.post(Appname + "/saleapprove/", {
+            parms: {
+                "action": action,
+                "headergid": headergid,
+                "reason": reason
+            }
+        });
+        return response;
+    }
+    this.getcmd = function(action, type, json) {
+            var response = $http.post(Appname + "/commentget/", {
+                params: {
+                    "action": action,
+                    "type": type,
+                    "json": json
+                }
+            });
+            return response;
+    };
+
+    this.setcmd = function(action, type, json) {
+            var response = $http.post(Appname + "/commentset/", {
+                params: {
+                    "action": action,
+                    "type": type,
+                    "json": json
+                }
+            });
+            return response;
+        };
+    this.getclient = function(client_gid) {
+        var response = $http.get(Appname + "/client_get/", {
+            params: {
+                "client_gid": client_gid
+            }
+        });
+        return response;
+    }
+});
+
+</script>
+{% endblock %}

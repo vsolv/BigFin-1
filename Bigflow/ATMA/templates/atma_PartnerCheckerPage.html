@@ -1,0 +1,156 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Catalog Approval{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Partner_Product_Checker_App" ng-controller="Partner_Product_Checker_ctrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                    <h4><strong>Catalog Approval Page</strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Supplier Name</label>
+                    <input type="text" ng-model="checker.Partnername" maxlength="64>=1" ng-change="change_checkerpage(checker)">
+                </md-input-container>
+            </div>
+            <div class="col-md-3">
+                <md-input-container class="md-block inputcontainer">
+                    <label>Product Name</label>
+                    <input type="text" ng-model="checker.Productname" maxlength="64>=1" ng-change="change_checkerpage(checker)">
+                </md-input-container>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                    <thead class="header">
+                    <tr>
+                        <th>S.No</th>
+                        <th>Supplier Name</th>
+                        <th>Branch Name</th>
+                        <th>Product Name</th>
+                        <th>Valid Date From</th>
+                        <th>Valid Date To</th>
+                        <th>Raised By</th>
+                        <th>Supplier Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="emp in checkerdetails.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))  | filter:search:strict ">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{emp.partner_name}}</td>
+                        <td class="text-center">{{emp.partnerbranch_name }}</td>
+                        <td>{{emp.product_name}}</td>
+                        <td>{{emp.mpartnerproduct_validfrom | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{emp.mpartnerproduct_validto | date:'dd-MMM-yyyy'}}</td>
+                        <td>{{emp.employee_name}}</td>
+                        <td>{{emp.mpartnerproduct_status}}</td>
+
+                        <td align="center">
+                            <a title="View" ng-click="checkerapprovalpage(emp)" align="center"
+                               class="editlink">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <ul uib-pagination total-items="checkerdetails.length" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm cust_pagination" boundary-links="true" items-per-page="itemsPerPage"></ul>
+                        </td>
+                         <td colspan="3">
+                            Total Count:{{checkerdetails.length}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var myApp = angular.module('Partner_Product_Checker_App', ['ngMaterial', 'ui.bootstrap', 'AppCommon'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        myApp.controller('Partner_Product_Checker_ctrl', ['$scope', '$mdDialog','PartnerProductCheckerService', '$rootScope', '$window', '$filter','SerCommon',
+            function($scope, $mdDialog,PartnerProductCheckerService, $rootScope, $window, $filter,SerCommon) {
+
+    $scope.itemsPerPage=10;
+    $scope.maxSize = 3;
+    $scope.currentPage = 1;
+    $scope.entity_gid = detail.entity_gid;
+
+getPartnerProductCheckerDetails();
+function getPartnerProductCheckerDetails(){
+    var data = {
+        "Params": {
+         },
+         "Classification": {
+            "Entity_Gid":$scope.entity_gid,
+         },
+    }
+    var details = {
+        Group: 'Checker_Get',
+        Action: 'Checker_Get',
+        Type:"",
+        data: data,
+    }
+    var get_checkerdetails = PartnerProductCheckerService.checkergetService(details)
+    get_checkerdetails.then(function(result) {
+        $scope.checkerdetails = result.data.DATA;
+        $scope.searchcheckerdetails=$scope.checkerdetails;
+        //alert(JSON.stringify($scope.checkerdetails))
+    }),
+    function(err) {
+        alert('no data');
+    };
+}
+
+$scope.change_checkerpage=function(e){
+
+        $scope.checkerdetails = $filter('filter')($scope.searchcheckerdetails , {
+               "partner_name": e.Partnername,
+               "product_name": e.Productname
+
+        });
+}
+$scope.checkerapprovalpage=function(e){
+
+
+sessionStorage.setItem('prapp_gid', JSON.stringify(e));
+//alert(JSON.stringify(e));
+$window.location.href="atma_PartnerCheckerApprovalPage";
+}
+}
+]);
+
+myApp.service("PartnerProductCheckerService", function($http) {
+    this.checkergetService = function(get_data) {
+        var response = $http.post(Appname + "/atma_CheckerDetails/", get_data);
+        return response;
+    }
+
+
+
+});
+
+
+
+
+
+</script>
+{% endblock %}

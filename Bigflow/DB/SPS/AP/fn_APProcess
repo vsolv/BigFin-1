@@ -1,0 +1,122 @@
+CREATE DEFINER=`developer`@`%` FUNCTION `fn_APProcess`(ls_Type varchar(64),li_Gid int,li_InvHeader_Gid int ) RETURNS varchar(9000) CHARSET utf8mb4
+fn_APProcess:BEGIN
+### selva jan 27 2020
+
+Declare Out_Message varchar(9000); 
+
+if ls_Type = 'ECF_INVOICE_INSERT' then
+              			
+                            
+								##### For Inv details
+							select concat(' { "DETAIL": [', group_concat(JSON_OBJECT('Item_Name',invoicedetails_item,'Description',invoicedetails_item,
+							'HSN_Code',invoicedetails_hsncode,'Unit_Price',invoicedetails_unitprice,'Quantity',1,'Amount',invoicedetails_amount,'Discount',0,'IGST',0,'CGST',0,'SGST',0,
+							'Total_Amount',invoicedetails_amount,'PO_Header_Gid',0,'PO_Detail_Gid',0,'GRN_Header_Gid',0,'GRN_Detail_Gid',0,
+                            'Invoice_Header_gid',li_InvHeader_Gid,
+								'Invoice_Sno',invoicedetails_gid
+                                
+							  )),'] }')  into @lj_Details
+							   from ecf_trn_tinvoicedetails
+				  where invoicedetails_invoiceheadergid  =li_Gid;
+							
+                            if @lj_Details = '' then
+									set Out_Message = 'No Details Data.';
+                                    return Out_Message;
+                            End if;
+                            
+                           
+                            #### For Debit details
+							
+                             select  group_concat(JSON_OBJECT('Invoice_Header_Gid',li_InvHeader_Gid,'Invoice_Details_Gid','9999',
+                            'Category_Gid',debit_categorygid,
+                            'Sub_Category_Gid',debit_subcategorygid,'GL_No',debit_glno,'cc_id',ccbsdtl_cc,'bs_id',ccbsdtl_bs,'Debit_percentage',ccbsdtl_percent,
+							'Debit_Amount',ccbsdtl_amount ,'Debit_Gid','0','Invoice_Sno',invoicedetails_gid,
+                            'CCBS',concat('[',JSON_OBJECT('cc',1,'bs',1,'percentage',100,'Amount',
+                           ccbsdtl_amount),']')
+							  ))   into @lj_Debit   from ecf_trn_tinvoicedetails as a
+                  inner join ecf_trn_tdebit as b on b.debit_invoicedetailsgid = a.invoicedetails_gid
+                  inner join ecf_trn_tccbsdtl as c on c.ccbsdtl_ecfdebitgid = b.debit_gid
+				  where a.invoicedetails_invoiceheadergid    = li_Gid;
+							
+							set @final_debit = '';
+                            
+                            select  concat(' { "DEBIT": [',@lj_Debit,'] }')  into @final_debit;
+                            
+                            if @lj_Debit = '' then
+									set Out_Message = 'No Debit Data.';
+                                    return Out_Message;
+                            End if;
+                            
+                            #### For Credit details
+ select concat(' { "CREDIT": [', (JSON_OBJECT('Invoice_Header_Gid',li_InvHeader_Gid,'Paymode_Gid','7','Bank_Gid','0',
+                                'Ref_No',credit_glno,'GL_No',credit_glno,'Credit_Amount',credit_amount,'Debit_Gid','0','Tax_Type','','Tax_Rate','','TDS_Exempt','N','Credit_Gid',0
+								  )),'] }')   into @lj_Credit
+								  from ecf_trn_tcredit  as a
+				  where a.credit_invoiceheadergid  =li_Gid ;
+                                
+                                if @lj_Credit = '' then
+									set Out_Message = 'No Credit Data.';
+                                    return Out_Message;
+                                End if;
+                            
+                            
+                            set @lf_full_data = concat('{
+									
+										"DETAILS": ',@lj_Details,' ,
+										"DEBIT": ',@final_debit,',
+										"CREDIT": ',@lj_Credit,'
+									
+
+								}');
+                                 
+                                set Out_Message = @lf_full_data;
+                               # set Out_Message = @lj_ccbs;
+                                
+                 
+					
+                 
+
+elseif  ls_Type = 'HEADER_INSERT' then
+		### Check the Invoice and GST applicable.               
+				 select concat(' { "HEADER": [', group_concat(JSON_OBJECT('Invoice_Type','AMORT',
+                 'Supplier_gid',0,
+				 'Sup_state_gid',0,
+				  'Inwarddetails_gid',1,
+                  'Is_GST','N', 
+				  'Invoice_Date',current_date(),
+				  'Invoice_No',0,
+				  'Advance_incr',' ',
+				  'Reprocessed','',
+				  'Remark',' ',
+				  'IS_ECF','Y',
+				  'ECF_NO',invoiceheader_crno,
+				  'BAR_CODE','Y',
+				  'RMU_CODE','Y',
+				  'BANK_CODE','Y',
+				  'Due_Adjustment','N',
+				  'Advance_incr',' ',
+				  'GROUP','INWARD',
+				  'Is_onward','N',
+				  'Is_amort','Y',
+				  'Invoice_Other_Amount',0,
+				  'Invoice_Tot_Amount',invoiceheader_amount,
+				  'Supplier_GST_No',0,
+				  'Header_Status','NEW',
+                  'Employee_gid',invoiceheader_employeegid,
+				  'branch_gid',invoiceheader_branchgid
+                  )),'] }')  into  @lj_Header
+				  from ecf_trn_tinvoiceheader  as a
+		
+				  where a.invoiceheader_gid  =li_Gid ;
+
+                 if @lj_Header = '' then
+					set Out_Message = '{"MESSAGE":"ERROR","DATA":"No Header Data."}';
+                    return Out_Message;
+                  else
+                      set Out_Message = concat('{"MESSAGE":"SUCCESS","DATA":',@lj_Header,'}');
+                 End if;
+                 
+End if;
+
+
+RETURN Out_Message;
+END

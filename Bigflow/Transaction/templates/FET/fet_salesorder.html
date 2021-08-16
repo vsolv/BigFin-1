@@ -1,0 +1,866 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Order Screen{% endblock %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="Appsales" ng-cloak ng-controller="Ctlsales as ctrl">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12 col-xs-12">
+                <h4><strong> Sales - {{cust_name}} </strong></h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class=" col-lg-12 col-sm-12 col-xs-12">
+                </br>
+                <md-radio-group ng-change="salestype(sales,$index);toggled()" ng-model="sales">
+                    <md-radio-button value="Sales">Sales</md-radio-button>
+                    <div class="row" ng-show="show_sales">
+                        <div class="col-md-12">
+                            <div class="col-md-8 col-xs-9">
+                                <md-autocomplete
+                                        md-clear-button="true"
+                                        md-floating-label="Add Product"
+                                        md-item-text="item.product_displayname"
+                                        md-items="item in querySearch(searchText)"
+                                        md-min-length=0
+                                        md-no-cache="true"
+                                        md-search-text="searchText"
+                                        md-selected-item="selectedItem"
+                                        md-selected-item-change="ACselectchange(item)">
+                                    <md-item-template>
+                                        <span md-highlight-text="searchText"> {{item.product_displayname}} </span>
+                                    </md-item-template>
+                                    <md-not-found>
+                                        No product matching "{{searchText}}" were found.
+                                    </md-not-found>
+                                </md-autocomplete>
+                            </div>
+
+                            <div class="col-md-4 col-xs-3 text-center">
+                                <md-button class="md-fab md-mini md-primary custbutton" ng-click="add()">
+                                    <md-icon>add</md-icon>
+                                    <md-tooltip>Add New</md-tooltip>
+                                </md-button>
+                            </div>
+                        </div>
+                        <div class="col-lg-12 col-sm-12 table-responsive">
+                            <form name="demoForm">
+                                <table class="table table-striped table-bordered table-condensed table-hover md-primary">
+                                    <thead class="header">
+                                    <th>S.No</th>
+                                    <th>Product Name</th>
+                                    <th>Last Date</th>
+                                    <th>Pre-Qty</th>
+                                    <th>Price Type</th>
+                                    <th>Order Qty</th>
+                                    <th ng-show="show_update">Action</th>
+                                    <th ng-show="show_update">Comments</th>
+                                    </thead>
+                                    <tbody>
+                                    <P class="editlink" ng-show="shwstats"><strong>Status is {{stats}} for
+                                        {{cust_name}}</strong></P>
+                                    <tr ng-class="m.sodetails_gid ?'success':''" ng-repeat="m in product">
+                                        <td class="text-center">{{$index + 1}}</td>
+                                        <td class="text-center">{{m.product_displayname}}</td>
+                                        <td class="align_center">{{m.dat| date : "dd-MMM-y"}}</td>
+                                        <td class="text-right">{{m.sodetails_qty}}</td>
+                                        <td class="text-right">
+                                            <select class="form-control" ng-model="m.campaign_gid">
+                                                <option ng-class="((pt.ratecard_gid==0) &&(pt.IS_Default=='N'))?'text-danger':''" ng-disabled="(pt.ratecard_gid==0) &&(pt.IS_Default=='N')"
+                                                        ng-repeat="pt in m.priceTypes"
+                                                        ng-value="{{pt.campaign_gid}}"
+                                                >
+                                                    {{pt.campaign_name}}
+                                                </option>
+                                            </select>
+
+                                        </td>
+                                        <td ng-hide="true">{{m.product_gid}}</td>
+                                        <td ng-hide="true">{{m.sodetails_gid}}</td>
+                                        <td ng-hide="true">{{m.soheader_gid}}</td>
+                                        <td class="text-center">
+                                            <input class="form-control" max="1000"
+                                                   maxlength="3" min="{{minvalue}}"
+                                                   name="amount{{$index}}"
+                                                   ng-disabled="m.campaign_gid == undefined" ng-disabled="m.soheader_status=='Approved'"
+                                                   ng-model="m.quantity" type="number">
+                                            <div ng-messages="demoForm['amount'+$index].$error">
+                                                <div ng-message="number">Should be a number</div>
+                                                <div ng-message="max">your quantity order exceeds 1000</div>
+                                                <div ng-message="min">your quantity should be greater thn zero</div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center" ng-show="shwbtn" ng-show="m.sodetails_gid">
+                            <span class="editlink"
+                                  ng-click="sodelete(m.sodetails_gid,m.soheader_gid)">
+                               <i class="material-icons">delete</i>
+                                <md-tooltip>Delete</md-tooltip>
+                            </span>
+                                        </td>
+                                        <td class="text-center" ng-show="shwbtn" ng-show="m.sodetails_gid">
+                                            <span>
+                                                    <md-button class="md-icon-button"
+                                                               ng-click="showat(m.sodetails_gid);">
+                                                        <md-icon>insert_comment</md-icon>
+                                                        <md-tooltip>Comments</md-tooltip>
+                                                    </md-button>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <p ng-show="shwremarks"> Remarks for Rejected is <span
+                                        class="removelink">{{remar}}</span></p>
+                            </form>
+                        </div>
+                        <div class="row" ng-show="sheinclud">
+                            <div class="col-lg-12 col-sm-12" ng-include="'comment'"></div>
+                        </div>
+                    </div>
+                    <md-radio-button ng-disabled="ptobuy" value="tobuy">Promised To Buy
+                    </md-radio-button>
+                    <div class="row" ng-show="show_tobuy">
+                        <form name="form_tobuy">
+                            <div class="col-lg-6 col-sm-6">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>Remarks</label>
+                                    <input id="premarks" maxlength="256" ng-model="ls_Remarks" ng-required="true"
+                                           no-special-char/>
+                                </md-input-container>
+                            </div>
+                            <div class="col-lg-6 col-sm-6">
+                                <md-input-container class="md-block inputcontainer" ng-show="show_tobuy">
+                                    <label>Promised to buy on</label>
+                                    <md-datepicker autocomplete="off" formatDate
+                                                   md-hide-icons="calendar"
+                                                   md-max-date="maxDate" md-min-date="minDate" md-open-on-focus
+                                                   ng-click="date" ng-model="ls_followup_date" ng-required="true"></md-datepicker>
+                                </md-input-container>
+                            </div>
+                        </form>
+                    </div>
+                    <md-radio-button ng-disabled="notnw" value="notnow">Not Now
+                    </md-radio-button>
+                    <div class="row" ng-show="show_notnow">
+                        <form name="form_notnow">
+                            <div class="col-lg-12 col-sm-12">
+                                <md-input-container class="md-block inputcontainer">
+                                    <label>Remarks</label>
+                                    <input id="nremarks" maxlength="256" ng-model="ls_Remarks" ng-required="true"
+                                           no-special-char
+                                           type="text"/>
+                                </md-input-container>
+                            </div>
+                        </form>
+                    </div>
+                    </form>
+                </md-radio-group>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right" ng-hide="show_submit">
+                <md-button class="md-raised" ng-click="close()">Back
+                    <md-tooltip>close</md-tooltip>
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="Save()">Submit
+                    <md-tooltip>Save</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <md-button class="md-raised" ng-click="close()" ng-show="shwbck">Back
+                    <md-tooltip>close</md-tooltip>
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="Delete()" ng-show="show_cancel">Sales Cancel
+                    <md-tooltip>Delete</md-tooltip>
+                </md-button>
+                <md-button class="btn btn-info custbutton" ng-click="Update()" ng-show="show_updte">Update
+                    <md-tooltip>Update</md-tooltip>
+                </md-button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('Appsales', ['ngMaterial', 'ngMessages', 'AppCommon']).config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+
+app.controller('Ctlsales', function($scope, $http, saleordrService, $mdDateLocale, $timeout, $filter, $window, $mdDialog, SerCommon, $mdToast) {
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var gid = detail.employee_gid;
+    var entity_gid = detail.entity_gid;
+    var customer_detail = JSON.parse(sessionStorage.getItem('cus_details'));
+    var schedule_gid = customer_detail.schedule_gid;
+    var custid = customer_detail.cus_gid;
+    var cust_group_gid = customer_detail.cus_group_gid;
+    var cust_name = customer_detail.cus_name
+    $scope.cust_name = cust_name
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.dbdate = convertdate(td);
+    $scope.ls_followup_date = convertdate(td);
+    $scope.product = [];
+    $scope.priceTypes = [];
+    $scope.productdetail = [];
+    $scope.sales = false;
+
+    $scope.minDate = new Date(
+        $scope.ls_followup_date.getFullYear(),
+        $scope.ls_followup_date.getMonth(),
+        $scope.ls_followup_date.getDate() + 1
+    );
+
+    $scope.maxDate = new Date(
+        $scope.ls_followup_date.getFullYear(),
+        $scope.ls_followup_date.getMonth() + 3,
+        $scope.ls_followup_date.getDate() + 1
+    );
+
+    <!--date picker format-->
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')($scope.ls_followup_date, "dd-MMM-yyyy");
+    };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    function checkedit() {
+        var schedule_check = saleordrService.getstatus(custid)
+        schedule_check.then(function(result) {
+            if (result.data.length > 0) {
+                $scope.sales = 'Sales';
+                $scope.ptobuy = true;
+                $scope.notnw = true;
+                sales_click();
+            }
+        }, function() {
+            $mdToast.show(SerCommon.new_toast('danger', "No Data..!"));
+        }).finally($scope.endloading);
+    };
+
+    $scope.querySearch = function(query) {
+        var result = $http.get(Appname + "/Productjson/").then(function(response) {
+            te = $filter('filter')(JSON.parse(response.data), {
+                'product_displayname': query
+            });
+            var res = te.filter(function(obj) {
+                var data_prod = $filter('filter')($scope.product, {
+                    sodetails_product_gid: obj.product_gid
+                }, true)[0];
+                if (data_prod == undefined) {
+                    return obj.name.toLowerCase().indexOf(query.toLowerCase()) != -1;
+                }
+            });
+            return res;
+        });
+        return result;
+    }
+
+    $scope.ACselectchange = function(query) {
+        $scope.productdetail = [];
+        $scope.productdetail = query;
+    }
+
+    function getPriceType() {
+
+        $scope.priceTypes = [];
+        var data = {
+            "Parms": {
+                "Classification": {
+                    "Entity_Gid": [entity_gid]
+                },
+                "Filter": {
+                    "Customer_Group_Gid": cust_group_gid,
+                    "Customer_Gid": custid,
+                }
+            }
+        }
+
+        var params = {
+            Group: 'CAMPAIGN_GET',
+            Type: 'INVOICE',
+            SubType: 'CUSTOMERGROUP',
+            data: data
+        }
+
+        var reqPriceType = saleordrService.getPriceType(params)
+        reqPriceType.then(function(result) {
+            $scope.priceTypes = result.data.DATA;
+            for (i = 0; i < $scope.priceTypes.length; i++) {
+                if ($scope.priceTypes[i].campaign_gid > 0) {
+                    $scope.priceTypes[i].num = i + 0;
+                }
+            }
+            checkedit();
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+    getPriceType();
+
+
+    $scope.add = function() {
+        $scope.priceadd = [];
+        var data = {
+            "Parms": {
+                "Classification": {
+                    "Entity_Gid": [entity_gid]
+                },
+                "Filter": {
+                    "Customer_Group_Gid": cust_group_gid,
+                    "Customer_Gid": custid,
+                    "Product_Gid": $scope.productdetail.product_gid
+                }
+            }
+        }
+
+        var params = {
+            Group: 'CAMPAIGN_GET',
+            Type: 'INVOICE',
+            SubType: 'CUSTOMERGROUP',
+            data: data
+        }
+
+        var reqPriceType = saleordrService.getPriceType(params)
+        reqPriceType.then(function(result) {
+            $scope.priceadd = result.data.DATA;
+            $scope.message = result.data.MESSAGE;
+
+            if ($scope.message == "FOUND") {
+                if ($scope.productdetail != undefined && $scope.productdetail != 0) {
+                    $scope.show_servicelist = true;
+                    var product_displayname = {
+                        "product_displayname": $scope.productdetail.product_displayname,
+                        "sodetails_product_gid": $scope.productdetail.product_gid,
+                        "sodetails_gid": $scope.productdetail.sodetails_gid,
+                        "soheader_gid": $scope.productdetail.soheader_gid,
+                        "campaign_gid": $scope.priceadd[0].campaign_gid,
+                        "priceTypes": $scope.priceadd
+                    };
+                    $scope.product.splice(0, 0, product_displayname);
+                    $scope.searchText = '';
+                }
+            } else {
+                alert('Price Type Not Updated for Selected Product')
+            }
+        }, function(err) {
+            alert('No data!.');
+        }).finally();
+    }
+
+
+    $scope.salestype = function(sales) {
+        if (sales == "Sales") {
+            sales_click();
+        } else if (sales == "tobuy") {
+            $scope.show_sales = false
+            $scope.show_tobuy = true
+            $scope.show_notnow = false
+            $scope.ls_Remarks = "";
+            $scope.ls_followup_date = "";
+        } else if (sales == "notnow") {
+            $scope.show_sales = false
+            $scope.show_tobuy = false
+            $scope.show_notnow = true
+            $scope.ls_Remarks = "";
+        }
+    };
+
+    function sales_click() {
+        $scope.show_sales = true;
+        $scope.show_tobuy = false;
+        $scope.show_notnow = false;
+        $scope.loading();
+        var salordr = saleordrService.getfavr(custid)
+        salordr.then(function(result) {
+            $scope.product = result.data;
+
+            for (var i = 0; i < $scope.product.length; i++) {
+                prodgid = $scope.product[i].sodetails_product_gid;
+                for (var j = 0; j < $scope.priceTypes.length; j++) {
+                    product_gid = $scope.priceTypes[j].product_gidS;
+                    if (prodgid == product_gid) {
+                        $scope.product[i].priceTypes = $scope.priceTypes[j];
+                    }
+                }
+            }
+            <!--set dropdown value-->
+            var filterValue = $filter('filter')($scope.priceTypes, {
+                IS_Default: "Y"
+            })
+            if (filterValue) {
+                var defaultPriceType = filterValue[0].campaign_gid;
+                for (var i = 0; i < $scope.product.length; i++) {
+                    var filterProduct = $filter('filter')($scope.priceTypes, function(item) {
+                        product_gid = item.product_gidS;
+                        if (product_gid != "") {
+                            product_gidList = product_gid.split(',');
+                            check_product_gid = $scope.product[i].sodetails_product_gid;
+                            var plist = $filter('filter')(product_gidList, function(item) {
+                                var pro_gid = parseInt(item);
+                                if (pro_gid == check_product_gid)
+                                    return true;
+                            }, true)
+                            if (plist.length > 0) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    })
+                    if (filterProduct.length > 0) {
+                        $scope.product[i].priceTypes = filterProduct;
+                        $scope.product[i].campaign_gid = filterProduct[0].campaign_gid;
+                    } else {
+                        $scope.product[i].priceTypes = [];
+
+                    }
+                }
+            }
+            $scope.minvalue = 1;
+            edit_details();
+        }, function() {
+            $mdToast.show(SerCommon.new_toast('danger', "No Data..!"));
+        }).finally($scope.endloading);
+    }
+
+    function edit_details() {
+        var editordr = saleordrService.getedit(custid, 'ALL')
+        editordr.then(function(result, index) {
+            $scope.produc = result.data;
+            if ($scope.produc.length > 0) {
+                for (var i = 0; i < $scope.produc.length; i++) {
+                    var stats = $scope.produc[i].soheader_status;
+                    $scope.stats = stats;
+                    var remar = $scope.produc[i].soheader_remarks;
+                    $scope.remar = remar;
+                    $scope.shwstats = true;
+                    var product_gid = $scope.produc[i].sodetails_product_gid;
+                    var data_product = $filter('filter')($scope.product, {
+                        sodetails_product_gid: product_gid
+                    }, true)[0];
+                    if (data_product != null) {
+                        $scope.show_update = true;
+                        $scope.show_cancel = true;
+                        $scope.shwbck = true;
+                        $scope.show_updte = true;
+                        $scope.shwbtn = true;
+                        $scope.show_submit = true;
+                        var is_approve = $scope.produc[0]["soheader_status"];
+                        if (is_approve == 'APPROVED') {
+                            $scope.show_update = false;
+                            $scope.show_cancel = true;
+                            $scope.shwbck = true;
+                            $scope.show_updte = false;
+                            $scope.shwbtn = false;
+                        }
+                        if (is_approve == 'CANCELLED') {
+                            $scope.show_update = false;
+                            $scope.show_cancel = false;
+                            $scope.show_updte = false;
+                            $scope.shwbck = true;
+                            $scope.shwbtn = false;
+                        }
+                        if (is_approve == 'REJECTED') {
+                            $scope.shwremarks = true;
+                        }
+                        $scope.minvalue = 0;
+                        $scope.ptobuy = true;
+                        $scope.notnw = true;
+                        if (data_product.sodetails_product_gid != null) {
+                            var index = $scope.product.indexOf(data_product);
+                            $scope.product[index]["quantity"] = $scope.produc[i].quantity;
+                            $scope.product[index]["sodetails_gid"] = $scope.produc[i].sodetails_gid;
+                            $scope.product[index]["soheader_gid"] = $scope.produc[i].soheader_gid;
+                            $scope.product[index]["soheader_status"] = $scope.produc[i].soheader_status;
+                            $scope.product[index]["campaign_gid"] = $scope.produc[i].sodetails_campaign_gid;
+                        }
+                    } else {
+                        $scope.product.push($scope.produc[i]);
+                        $scope.show_update = true;
+                        $scope.show_cancel = true;
+                        $scope.show_updte = true;
+                        $scope.shwbtn = true;
+                        $scope.show_submit = true;
+                    };
+                }
+            }
+        }, function(err) {
+            //$mdToast.show(SerCommon.new_toast('danger',"No Data..!"));
+        }).finally();
+    }
+
+    $scope.close = function() {
+        $window.location.href = "pschedule";
+    }
+
+    $scope.toggled = function() {
+        $timeout(function() {
+            $('#premarks').focus();
+            $('#nremarks').focus();
+        }, 50);
+    };
+
+    $scope.Save = function() {
+        if ($scope.sales == "tobuy") {
+            if (!$scope.form_tobuy.$valid) {
+                alert('Fill Requried field');
+                return false;
+            }
+            $scope.loading();
+            var followupreason_gid = 20;
+            var sales_save = saleordrService.setschedul(schedule_gid, followupreason_gid, formatDate($scope.ls_followup_date), $scope.ls_Remarks,
+                "INDATE");
+            sales_save.then(function(result) {
+                alert(result.data);
+                $window.location.href = "pschedule";
+            }, function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+        } else if ($scope.sales == "notnow") {
+            if (!$scope.form_notnow.$valid) {
+                alert('Fill Requried field');
+                return false;
+            }
+            //$scope.loading();
+            var followupreason_gid = 22;
+            var sales_save = saleordrService.setschedulee(schedule_gid, followupreason_gid, $scope.ls_Remarks, "INDATE");
+            sales_save.then(function(result) {
+                alert(result.data);
+                $window.location.href = "pschedule";
+            }, function(err) {
+                alert('no data');
+            }).finally($scope.endloading);
+        } else {
+            var result = checkSalesDetails('save');
+            if (!result) {
+                alert('Please enter valid data.!');
+                return false;
+            }
+            var Product = [];
+            Product = $filter('filter')($scope.product, function(item) {
+                return parseInt(item.quantity) <= 1000
+            })
+            if (Product.length == 0) {
+                alert('No detail to save.!');
+                return false;
+            }
+            var in_data = {
+                sodetails: Product,
+                Schedule_Affect: "Yes"
+            };
+            var salesdetails = saleordrService.setSales(gid, custid, in_data, 'Insert');
+            salesdetails.then(function(result) {
+                if (result.data == 'SUCCESS') {
+                    $mdToast.show(SerCommon.new_toast('success', "Sales Saved Successfully..!"));
+                    $window.location.href = "pschedule";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Sales not Saved Successfully..!"));
+                }
+            }, function(err) {
+                $mdToast.show(SerCommon.new_toast('error', "Sales not Saved Successfully..!"));
+            }).finally($scope.endloading);
+        }
+    }
+
+    function checkSalesDetails(type) {
+        var result = false;
+        if (!$scope.demoForm.$valid) {
+            return result;
+        }
+        if (type == '') {
+            var Product = [];
+            Product = $filter('filter')($scope.product, function(item) {
+                return (item.sodetails_gid != null) && (item.quantity == null)
+            })
+            if (Product.length > 0) {
+                alert('Edit details Not allow null.!');
+                return result;
+            } else {
+                result = true;
+                return result;
+            }
+        } else {
+            result = true;
+            return result;
+        }
+    }
+
+    $scope.Update = function() {
+        var result = checkSalesDetails('');
+        if (!result) {
+            alert('Please enter valid data.!');
+            return false;
+        }
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return parseInt(item.quantity) <= 1000
+        });
+        if (Product.length == 0) {
+            alert('No detail to save.!');
+            return false;
+        }
+        //$scope.loading();
+        if ($scope.produc[0]["soheader_status"] == "REJECTED") {
+            var in_data = {
+                sodetails: Product,
+                soheader: {
+                    status: "RESUBMIT",
+                }
+            };
+        } else {
+            var in_data = {
+                sodetails: Product
+            };
+        }
+
+        var salesdetails = saleordrService.setSales(gid, custid, in_data, 'Update');
+        salesdetails.then(function(responce) {
+            if (responce.data == 'SUCCESS') {
+                $mdToast.show(SerCommon.new_toast('success', "Sales Updated Successfully..!"));
+                $scope.product = {};
+                $window.location.href = "pschedule";
+            } else {
+                $mdToast.show(SerCommon.new_toast('danger', "Not Updated Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('danger', "Not Updated Successfully..!"));
+        }).finally($scope.endloading);
+    }
+
+    $scope.sodelete = function(sodtl_gid, hdr_gid) {
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return item.sodetails_gid;
+        });
+        if (Product.length > 1) {
+            $scope.loading();
+            var sodetails_gid = {
+                sodetails_gid: sodtl_gid
+            };
+            var in_data = {
+                sodetails: sodetails_gid
+            };
+            var sodeletedtl = saleordrService.setSales(gid, custid, in_data, 'Delete');
+            sodeletedtl.then(function(responce) {
+                if (responce.data == 'SUCCESS') {
+                    $mdToast.show(SerCommon.new_toast('success', "Deleted Successfully..!"));
+                    $scope.product = {};
+                    $window.location.href = "sales_order";
+                } else {
+                    $mdToast.show(SerCommon.new_toast('error', "Not Deleted Successfully..!"));
+                }
+            }, function(err) {
+                $mdToast.show(SerCommon.new_toast('error', "Not Deleted Successfully..!"));
+            }).finally($scope.endloading);
+        } else {
+            alert('If you want to Delete this Record Please Select Sales Cancel... ');
+        }
+    };
+
+    $scope.Delete = function() {
+        var Product = [];
+        Product = $filter('filter')($scope.product, function(item) {
+            return parseInt(item.quantity) <= 1000
+        });
+        if (Product.length == 0) {
+            alert('No detail to Delete');
+            return false;
+        }
+        $scope.loading();
+        var in_data = {
+            sodetails: Product,
+            schedule_gid: schedule_gid
+        };
+        var salesdetails = saleordrService.setSales(gid, custid, in_data, 'Delete');
+        salesdetails.then(function(responce) {
+            if (responce.data == 'SUCCESS') {
+                $mdToast.show(SerCommon.new_toast('success', "Cancelled Successfully..!"));
+                $scope.product = {};
+                $window.location.href = "pschedule";
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Cancelled Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Cancelled Successfully..!"));
+        }).finally($scope.endloading);
+    }
+
+    $scope.comment = function(remarks) {
+        var JSON = {};
+        JSON = {
+            "Employee_Gid": $scope.Emp_gid,
+            "Date": $scope.dbdate,
+            "Comment_For": "COMMENT_POP",
+            "EACH": [{
+                "Ref_No": $scope.ref_no,
+                "Remark": remarks
+            }]
+        };
+
+        var cmd_detail = saleordrService.setcmd('Insert', 'EACH', JSON);
+        cmd_detail.then(function(result) {
+            if (result.data == 'SUCCESS') {
+                getcmd($scope.ref_no);
+            } else {
+                $mdToast.show(SerCommon.new_toast('error', "Not Inserted Successfully..!"));
+            }
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Approved Successfully..!"));
+        });
+    }
+
+    $scope.cmd = [];
+    $scope.showat = function(refno) {
+        $scope.cmd.comment = '';
+        var detail = JSON.parse(sessionStorage.getItem('today'));
+        $scope.cmd.Emp_name = detail.employee_name;
+        $scope.Emp_gid = detail.employee_gid;
+        var td = detail.date
+        $scope.dbdate = formatDate(convertdate(td));
+        var array = $scope.dbdate.split('/');
+        $scope.dbdate = array[2] + "-" + array[1] + "-" + array[0];
+        $scope.sheinclud = true;
+        $scope.ref_no = refno;
+        getcmd(refno);
+        modalshow('comment_view');
+    }
+
+    function getcmd(refno) {
+        var JSON_data = {};
+        JSON_data = {
+            "Filters": [{
+                "Comment_For": "COMMENT_POP",
+                "Ref_No": [refno],
+            }]
+        };
+        var cmd_detail = saleordrService.getcmd('COMMENTS', 'TRANSACTION', JSON_data);
+        cmd_detail.then(function(result) {
+            console.log(result)
+            $scope.cmd.comment_details = result.data;
+        }, function(err) {
+            $mdToast.show(SerCommon.new_toast('error', "Not Approved Successfully..!"));
+        });
+        $scope.cmd.comment = '';
+    }
+
+});
+
+app.service("saleordrService", function($http, $filter) {
+    this.getcmd = function(action, type, json) {
+        var response = $http.post(Appname + "/commentget/", {
+            params: {
+                "action": action,
+                "type": type,
+                "json": json
+            }
+        });
+        return response;
+    };
+    this.setcmd = function(action, type, json) {
+        var response = $http.post(Appname + "/commentset/", {
+            params: {
+                "action": action,
+                "type": type,
+                "json": json
+            }
+        });
+        return response;
+    };
+    this.getfavr = function(d) {
+        var response = $http.post(Appname + "/sales_fav_product/", {
+            parms: {
+                "custid": d
+            }
+        });
+        return response;
+    }
+    this.getedit = function(e, action) {
+        var respons = $http.post(Appname + "/sales_order_get/", {
+            parms: {
+                "custid": e,
+                "action": action
+            }
+        });
+        return respons;
+    }
+    this.setschedule = function(schedule_gid, date, custid, followupreason_gid, sechedule_ref, resechedule_date) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                "schedule_type_gid": 1,
+                "TYPE": "UPDATE",
+                "schedule_gid": schedule_gid,
+                "Date": date,
+                "cust_gid": custid,
+                "followupreason_gid": followupreason_gid,
+                "sechedule_ref": sechedule_ref,
+                "resechedule_date": resechedule_date
+            }
+        });
+        return response;
+    }
+    this.setschedul = function(schedule_gid, followupreason_gid, ls_followup_date, ls_Remarks, TYPE) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                schedule_gid,
+                followupreason_gid,
+                ls_followup_date,
+                ls_Remarks,
+                TYPE
+            }
+        });
+        return response;
+    }
+    this.setschedulee = function(schedule_gid, followupreason_gid, ls_Remarks, TYPE) {
+        var response = $http.post(Appname + "/add_schedule/", {
+            parms: {
+                schedule_gid,
+                followupreason_gid,
+                ls_Remarks,
+                TYPE
+            }
+        });
+        return response;
+    }
+    this.setSales = function(emp_gid, custid, in_data, action) {
+        var respons = $http.post(Appname + "/sales_order_set/", {
+            parms: {
+                "emp_gid": emp_gid,
+                "custid": custid,
+                "data": in_data,
+                "ACTION": action
+            }
+        });
+        return respons;
+    }
+    this.getstatus = function(e) {
+        var respons = $http.post(Appname + "/status_qty/", {
+            parms: {
+                "custid": e
+            }
+        });
+        return respons;
+    }
+    this.getPriceType = function(e) {
+        var respons = $http.post(Appname + "/compgn/", e);
+        return respons;
+    }
+});
+</script>
+{% endblock %}

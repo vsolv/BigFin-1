@@ -1,0 +1,167 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Asset Financial Year {% endblock %}
+{% csrf_token %}
+{% block content %}
+{% verbatim %}
+<div class="maincontent">
+    <div class="container container1" ng-app="dateapp" ng-controller="datectrl" ng-cloak>
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>Asset Add Financial Year</h4>
+            </div>
+        </div>
+        <div class="row" class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Financial Year Code</label>
+                            <input maxlength="4" ng-model="fin_yr_code" ng-change="" numbers-only placeholder="Code"
+                                   type="text"/>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-3">
+                        <md-input-container class="md-block inputcontainer">
+                            <label>Financial Year Name</label>
+                            <input ng-model="fin_yr_name" ng-change="" placeholder="Year Name"
+                                   type="text"
+                            />
+                        </md-input-container>
+                    </div>
+<!--                    <div class="col-md-3">-->
+<!--                        <md-input-container class="md-block inputcontainer">-->
+<!--                            <label>Financial Year Status</label>-->
+<!--                            <md-select md-container-class="popup_select" ng-model="fin_yr_status">-->
+<!--                                <md-option ng-repeat="item in year_status" ng-value="item.id">-->
+<!--                                    {{item.data}}-->
+<!--                                </md-option>-->
+<!--                            </md-select>-->
+<!--                        </md-input-container>-->
+<!--                    </div>-->
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <md-button class="btn btn-info custbutton" ng-click="Save(emp)">Submit
+                    <md-tooltip>Submit</md-tooltip>
+                </md-button>
+                <md-button type="button" value="Reject"
+                           ng-click=""
+                           class="md-raised">Clear
+                </md-button>
+            </div>
+        </div>
+        {% endverbatim %}
+        <script>
+var app = angular.module('dateapp', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+    .config(function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+app.controller('datectrl', function($scope, newservice, $window, $mdDialog,$mdDateLocale, $rootScope, $filter) {
+    $scope.orderByField = '';
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.currentPage = 1;
+    $scope.asset_data = [];
+    $scope.asset = [];
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    var td = detail.date
+    $scope.cap_date = convertdate(td);
+    $scope.writeoff_date = convertdate(td);
+    var employgid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+     $mdDateLocale.formatDate = function(date) {
+            return $filter('date')(date, "dd-MMM-yyyy");
+        };
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+     $scope.year_status = [
+     {
+        id: 'O',
+        data: 'Opened'
+    },
+     {
+        id: 'C',
+        data: 'Closed'
+        },
+     {
+        id: 'R',
+        data: 'Reopened'
+        }];
+    $scope.Save = function() {
+    if($scope.fin_yr_code == undefined || $scope.fin_yr_name == undefined ){
+        alert("Enter the Year Name Or Code");
+        return false;
+    }
+    else{
+        var save_data = {
+            "Params": {
+                "DETAILS": {
+                     "Fin_year_code":$scope.fin_yr_code,
+                     "Fin_Name":$scope.fin_yr_name,
+                },
+            }
+        };
+        save_file(save_data);
+    }
+    }
+
+    function save_file(save_data) {
+        var asset_group = newservice.assets(save_data,employgid);
+        $scope.loading();
+        asset_group.then(function(res) {
+            alert(res.data.MESSAGE);
+            $scope.pagemove = "Y";
+        if($scope.pagemove == "N")
+        {
+            $window.location.href = "fa_financial_year";
+        }
+        else{
+            $window.location.href = "fa_financial_year_plus";
+            $scope.search();
+        }
+        }).finally($scope.endloading);
+   }
+
+});
+
+app.service('newservice', function($http) {
+    this.assets = function(save_data,employgid) {
+        var response = $http.post(Appname + "/fin_year/", {
+            params: {
+                "Sub_Type": "MAKER",
+                "Type": "FINANCIAL",
+                "Group": "FIN_YEAR_SET",
+                "Action": "INSERT ",
+                "Employee_Gid": employgid,
+                "json": save_data,
+            }
+        });
+        return response;
+    }
+});
+
+
+
+
+
+
+        </script>
+
+        {% endblock %}

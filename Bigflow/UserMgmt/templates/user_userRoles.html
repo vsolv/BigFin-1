@@ -1,0 +1,244 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} User Roles{% endblock %}
+{% block content %}
+
+{% verbatim %}
+<div class="maincontent" ng-app="Appusersrole" ng-controller="Ctlusersrole">
+    <div class="container container1">
+        <div class="row  ">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>User's Roles</h4>
+            </div>
+        </div>
+        <div ng-hide="edit_view" ng-init="edit_view=false" class='animate-show'>
+            <div class="row row-search">
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Cluster Group </label>
+                        <md-select ng-model="ddlClustGroup"
+                                   ng-change="getUserlist(ddlClustGroup)">
+                            <md-option ng-repeat="item in listClustGroup" ng-value="{{item.cluster_gid}}">
+                                {{item.cluster_name}}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>User Code</label>
+                        <input type="text" ng-model="txtUserCode" ng-change="searchlist(txtUserCode,txtUserName)"
+                               maxlength="16"/>
+                    </md-input-container>
+                </div>
+                <div class="col-lg-3 col-sm-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>User Name</label>
+                        <input type="text" ng-model="txtUserName" ng-change="searchlist(txtUserCode,txtUserName)"/>
+                        <md-icon>search</md-icon>
+                    </md-input-container>
+
+                </div>
+
+            </div>
+
+            <div class="row  table-responsive">
+                <div class="col-lg-12 col-sm-12">
+                    <table id="tabledtl" class="table  table-striped table-bordered table-condensed table-hover">
+                        <thead class="header">
+                        <tr>
+                            <th>
+                                S.NO
+                            </th>
+                            <th>
+                                User Code
+                            </th>
+                            <th>
+                                User Name
+                            </th>
+                            <th>
+                                Assign/Edit Group
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="item in users.slice(((currentPage-1)*itemsPerPage), ((currentPage)*itemsPerPage))">
+                            <td class="text-center">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                            <td class="text-center">{{item.employee_code}}</td>
+                            <td class="text-center">{{item.employee_name}}</td>
+                            <td class="text-center">
+                                <span title="Edit" ng-click="getroles(item.employee_gid,$index,item.employee_name)"
+                                      data-toggle="modal" data-target="#myModal" class="editlink">
+                                    <i class="material-icons">edit</i>
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                <ul uib-pagination total-items="userTotalItems" ng-model="currentPage"
+                                    max-size="maxSize" class="pagination-sm cust_pagination" boundary-links="true"
+                                    items-per-page="itemsPerPage"></ul>
+                            </td>
+                            <td colspan="1">
+                                Total Count:{{users.length}}
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+             style="height:auto;width:auto"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <form name="User" novalidate>
+                <div class="modal-dialog modal-style" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header popup-header">
+                            <h5 class="modal-title" id="exampleModalLabel">
+                                {{username_title}}
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </h5>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row scrollbar" style="height:400px;">
+                                <ol>
+                                    <li ng-repeat="role in roles">
+                                        <label>
+                                            <input type="checkbox" ng-model="role.STATUS"
+                                                   ng-checked="role.STATUS"/>
+                                            {{role.role_name + ' - ' + role.rolegroup_name}}
+                                        </label>
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="modal-footer text-right">
+                            <md-button class="md-raised" value="Close" data-dismiss="modal">Close</md-button>
+                            <md-button class="md-raised custbutton"
+                                       ng-click="savedetail(param_usergid)"
+                                       value="Submit"
+                            >Submit
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    {% endverbatim %}
+    <script>
+var Appusersrole = angular.module("Appusersrole", ['ngMaterial', 'ui.bootstrap']);
+Appusersrole=Appusersrole.config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    });
+Appusersrole = Appusersrole.controller('Ctlusersrole', ['$scope', '$http', '$window', '$filter', 'usersrolesSer', function ($scope, $http, $window, $filter, usersrolesSer) {
+
+    $scope.maxSize = 5;
+    $scope.currentPage = 1;
+    $scope.viewby = 10;
+    $scope.maintable=[];
+    $scope.roles=[];
+    $scope.users = [];
+    $scope.userTotalItems = $scope.users.length;
+    $scope.itemsPerPage = $scope.viewby;
+
+    var ClustGroup = usersrolesSer.getclustgrouplist();
+    ClustGroup.then(function (clustgroup) {
+        $scope.listClustGroup = clustgroup.data;
+    }, function () {
+        alert('Records not found')
+    });
+
+
+
+    $scope.getUserlist = function (clust_gid) {
+    if(!clust_gid){clust_gid=0;}
+        var getdetails = usersrolesSer.getusers(clust_gid);
+        getdetails.then(function (getuser) {
+            $scope.maintable=getuser.data;
+            $scope.users = $scope.maintable;
+            $scope.userTotalItems = $scope.users.length;
+        }, function () {
+            alert('Records not found');
+        });
+    };
+
+
+    //Initial loading
+    $scope.getUserlist();
+
+    //search box
+    $scope.searchlist = function (user_code,user_name) {
+        $scope.users = $filter('filter')($scope.maintable, { employee_code: user_code, employee_name: user_name })
+        $scope.userTotalItems = $scope.users.length;
+    };
+
+    //Edit click
+    $scope.getroles = function (user_gid,index,user_name) {
+        $scope.param_usergid=user_gid;
+        $scope.username_title=user_name;
+        var getdetails = usersrolesSer.getrolevsemployee(user_gid);
+        getdetails.then(function (getroles) {
+            $scope.roles.length=0;
+            $scope.roles = getroles.data;
+        }, function () {
+            alert('Records not found');
+        });
+
+    }
+
+    //submit click
+    $scope.savedetail = function (user_gid) {
+
+        var details = { user_gid: user_gid, user_role: $scope.roles };
+        var getdetails = usersrolesSer.setrolevsuser(details);
+        getdetails.then(function (getresult) {
+            var result = getresult.data;
+            if (result === "true") {
+                alert("Saved Sucessfully");
+                $scope.roles.length = 0;
+                modalhide("myModal");
+            }
+            else {
+                modalhide("myModal");
+            }
+
+        }, function (ev) {
+            alert(ev);
+        });
+
+    }
+
+
+}]);
+Appusersrole.service('usersrolesSer', function ($http) {
+    this.getclustgrouplist = function () {
+        var response = $http.get( Appname +  "/clustgroupList/");
+        return response;
+    };
+    this.getusers = function (clust_gid) {
+        var response = $http.get( Appname + "/employeeList/", { params: { "clust_gid": clust_gid } });
+        return response;
+    }
+    this.getrolevsemployee = function (user_gid) {
+        var response = $http.get( Appname + "/userList/", { params: { "role_gid": '0', "user_gid": user_gid, "gettype": 'ALL_ROLE' } });
+        return response;
+    }
+    this.setrolevsuser = function (ev) {
+        var response = $http.post( Appname + "/setempRoles/",{parms:ev});
+        return response;
+    };
+});
+
+    </script>
+    {% endblock %}

@@ -43,10 +43,18 @@
                         than six months</h5>
 
                 </div>
+                <!--                <div class="col-md-5">-->
+                <!--                    <span class="md-title title-color">Invoice Number : </span><span-->
+                <!--                        class="md-subhead">{{checker_data[0].invoiceheader_invoiceno}}</span>-->
+                <!--                </div>-->
+
                 <div class="col-md-5">
-                    <span class="md-title title-color">Invoice Number : </span><span
-                        class="md-subhead">{{checker_data[0].invoiceheader_invoiceno}}</span>
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Invoice Number</label>
+                        <input ng-model="checker_data[0].invoiceheader_invoiceno" ng-blur="Change_invoice_and_remark()">
+                    </md-input-container>
                 </div>
+                <!--                my-special-char-->
             </div>
         </div>
         <br/>
@@ -89,6 +97,7 @@
                           ng-click=view_supplier_details(checker_data[0].invoiceheader_suppliergid) style="color:green">View Supplier Details</span>
                     <span class="md-title title-color" ng-hide="supplier_header_status==0">Supplier Name : </span>
                     <span class="md-subhead">{{supplier_details[0].supplier_branchname}}</span>
+
                 </div>
             </div>
         </div>
@@ -102,8 +111,29 @@
                 <div class="col-md-5">
                     <span href="" ng-hide="commodity_show==0"
                           ng-click=view_commodity(checker_data[0].invoiceheader_crno) style="color:green">View Commodity Details</span>
-                    <span ng-hide="commodity_show==1" class="md-title title-color">Commodity Name : </span>
-                    <span ng-hide="commodity_show==1" class="md-subhead">{{commodity_data[0].commodity_name}}</span>
+                    <!--                    <span ng-hide="commodity_show==1" class="md-title title-color">Commodity Name : </span>-->
+                    <!--                    <span ng-hide="commodity_show==1" class="md-subhead">{{commodity_data[0].commodity_name}}</span>-->
+                    <md-autocomplete
+                            md-clear-button="true"
+                            md-floating-label="Change Commodity"
+                            md-input-maxlength=126
+                            md-item-text="item.commodity_name"
+                            md-items="item in commodity(searchCommodity)"
+                            md-min-length=0
+                            ng-hide="commodity_show==1"
+                            md-no-cache="true"
+                            md-search-text="searchCommodity"
+                            md-selected-item="selected_commodity"
+                            md-selected-item-change="Change_commodity(selected_commodity)"
+                            ng-required="true">
+                        <md-item-template>
+                            <span md-highlight-text="searchCommodity"> {{item.commodity_name}} </span>
+                        </md-item-template>
+                        <md-not-found>
+                            No Commodity matching "{{searchCommodity}}" were found.
+                        </md-not-found>
+                    </md-autocomplete>
+
                 </div>
             </div>
         </div>
@@ -125,10 +155,33 @@
         <br>
         <div class="row">
             <div class="col-md-12">
-                <div class="col-md-12">
-                    <span class="md-title title-color">Remarks : </span>
-                    <span class="md-subhead">{{checker_data[0].invoiceheader_remarks}}</span>
+                <!--                <div class="col-md-8">-->
+                <!--                    <span class="md-title title-color">Remarks : </span>-->
+                <!--                    <span class="md-subhead">{{checker_data[0].invoiceheader_remarks}}</span>-->
+                <!--                </div>-->
+
+                <div class="col-md-5">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Remarks</label>
+                        <input ng-model="checker_data[0].invoiceheader_remarks" ng-blur="Change_invoice_and_remark()"
+                               my-special-char>
+                    </md-input-container>
                 </div>
+                <div class="col-md-2">
+                    <md-button ng-show="ecf_edit==1" class="md-raised"
+                               ng-click="ecf_update()">
+                        Update
+                    </md-button>
+                </div>
+
+                <!--                <div class="col-md-4">-->
+                <!--                    <div class="col-md-2" ng-show="header_update_status==1">-->
+                <!--                        <md-button class="md-raised custbutton"-->
+                <!--                                   ng-click="header_update()">-->
+                <!--                            Header Update-->
+                <!--                        </md-button>-->
+                <!--                    </div>-->
+                <!--                </div>-->
             </div>
         </div>
         <br/>
@@ -361,11 +414,12 @@
                                                             items-per-page="credit_itemsPerPage"></ul>
                                                     </td>
                                                     <td colspan="4">
-                                                        <h3><span class="editlink material-icons"
-                                                                  style="color:green;"
-                                                                  ng-click="view_payment_ins()">arrow_upward
-                                                            </span>
-                                                        </h3>View Payment Instruction
+                                                        TDS Applicability :{{checker_data[0].invoiceheader_tds}}
+                                                        <h5>
+                                                            <a href="" style="color:green;"
+                                                               ng-click="view_payment_ins()"> View Payment / TDS
+                                                                Instruction</a>
+                                                        </h5>
                                                     </td>
                                                     <td colspan="2">
                                                         Total Records:{{credit_summary_new.length}}
@@ -522,7 +576,8 @@
             <div class="col-md-12">
                 <div class="col-md-3"></div>
                 <div class="col-md-2" ng-hide="main_status=='0' || screen=='Inventory'">
-                    <md-button class="md-raised custbutton" ng-disabled="!remark || selectedemp"
+                    <md-button ng-show="main_status==1" class="md-raised custbutton"
+                               ng-disabled="!remark || selectedemp || final_approve_submited==1"
                                ng-click="approv_set('APPROV')">
                         FINAL APPROVE
                     </md-button>
@@ -533,7 +588,8 @@
                     </md-button>
                 </div>
                 <div class="col-md-2" ng-hide="screen=='Inventory'">
-                    <md-button class="md-raised custbutton" ng-disabled="!remark || !selectedemp" ng-hide="apprver_view=='0'"
+                    <md-button class="md-raised custbutton" ng-disabled="!remark || !selectedemp"
+                               ng-hide="apprver_view=='0'"
                                ng-click="Moveto_approver()">
                         Approve and Forward
                     </md-button>
@@ -802,7 +858,7 @@
                                             <thead class="header">
                                             <tr>
                                                 <th>S.No</th>
-                                                <th>Fine Name</th>
+                                                <th>File Name</th>
                                                 <th>View File</th>
                                                 <th>Download File</th>
                                             </tr>
@@ -813,13 +869,26 @@
                                                 <td>{{((currentPages-1)*itemsPerPages)+$index+1}}
                                                 </td>
                                                 <td align="left">{{file.file_name}}</td>
-                                                <td><span class="editlink material-icons"
+                                                <td>
+                                                    <span class="editlink material-icons"
+                                                          ng-hide="file.file_path=='RENT'"
                                                           ng-click="view_file(file)">insert_photo
-                                                        </span>
+                                                    </span>
+
                                                 </td>
                                                 <td>
-                                                    <md-button class="md-icon-button md-primary" aria-label="Settings"
+                                                    <md-button class="md-icon-button md-primary"
+                                                               aria-label="Settings"
+                                                               ng-hide="file.file_path=='RENT'"
                                                                href="common_s3_file_download?filename={{file.file_name}}">
+                                                        <md-icon>get_app</md-icon>
+                                                        <md-tooltip>Download File</md-tooltip>
+                                                    </md-button>
+
+                                                    <md-button class="md-icon-button md-primary"
+                                                               aria-label="Settings"
+                                                               ng-click="download_rent_file(file)"
+                                                               ng-show="file.file_path=='RENT'">
                                                         <md-icon>get_app</md-icon>
                                                         <md-tooltip>Download File</md-tooltip>
                                                     </md-button>
@@ -879,7 +948,7 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="col-md-12" align="center">
-                                    <img src="{{url_datas[0].file_path}}"
+                                    <img src="{{local_url_data}}"
                                          alt="{{url_datas[0].file_name}}"
                                          class="img-thumbnail"
                                          align="center"
@@ -929,7 +998,7 @@
                                             <th>Invoice Date</th>
                                             <th>Branch GST Number</th>
                                             <th>Supplier Name</th>
-                                            <th>Supplier Code</th>
+                                            <th>Supplier Pin-Code</th>
                                             <th>Supplier GST Number</th>
                                         </tr>
                                         </thead>
@@ -939,7 +1008,10 @@
                                                 1
                                             </td>
                                             <td>{{other_datas.invoicedetails_invoiceno}}</td>
-                                            <td>{{other_datas.invoicedetails_invoicedate}}</td>
+                                            <td align="center">{{other_datas.invoicedetails_invoicedate |
+                                                date:"dd-MMM-yyyy"}}
+                                                <p style="color:red;">{{six_month_date_alert}}</p>
+                                            </td>
                                             <td>{{other_datas.invoicedetails_branchgstno}}</td>
                                             <td>{{other_datas.invoicedetails_suppliername}}</td>
                                             <td>{{other_datas.invoicedetails_suppliercode}}</td>
@@ -1196,6 +1268,32 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </style>
 
 <script>
@@ -1210,8 +1308,32 @@ app.run(function($mdDateLocale, $filter) {
     };
    });
 
-app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_service', '$window', '$mdDialog', '$element','$http','$sce','$q',
-    function($scope, $filter, $mdDateLocale, invoice_service, $window, $mdDialog, $element,$http,$sce,$q) {
+<!--    my-special-char-->
+    app.directive('mySpecialChar', function() {
+     function link(scope, elem, attrs, ngModel) {
+          ngModel.$parsers.push(function(viewValue) {
+            var reg = /^[0-9a-zA-Z ]*$/;
+            // if view values matches regexp, update model value
+            if (viewValue.match(reg)) {
+              return viewValue;
+            }
+            // keep the model value as it is
+            var transformedValue = ngModel.$modelValue;
+            ngModel.$setViewValue(transformedValue);
+            ngModel.$render();
+            return transformedValue;
+          });
+      }
+
+      return {
+          restrict: 'A',
+          require: 'ngModel',
+          link: link
+      };
+  });
+
+app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_service', '$window', '$mdDialog', '$element','$http','$sce','$q','$mdToast',
+    function($scope, $filter, $mdDateLocale, invoice_service, $window, $mdDialog, $element,$http,$sce,$q,$mdToast) {
 
     $element.find('input').on('keydown', function(ev) {
         ev.stopPropagation();
@@ -1360,7 +1482,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
     $scope.approval_emp = 0 ;
 
     $scope.Moveto_approver = function(){
-    debugger;
       if($scope.approval_emp != 0){
            var json = {"Invoice_Header_Gid": $scope.Header_gid, "Status": "PENDING FOR APPROVAL","Remark":$scope.remark,
                        "Individual_approval":"Y","Emp_id":$scope.approval_emp};
@@ -1382,8 +1503,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
 
                 img.append('file', file_img);
                 img.append('name', filename);
-            }
-            debugger;
+            };
             $scope.loaddata(file_img,img, function() {
                 if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
                     json.file_data=$scope.file_stored_data;
@@ -1435,7 +1555,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
     $scope.image_visible="false";
 
     $scope.imageUpload = function(event){
-    debugger;
     $scope.stepsModel=[];
     $scope.filenames = [];
     $scope.image_visible ="true";
@@ -1461,7 +1580,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
     }
 
     $scope.view_images_popup=function(){
-    debugger;
 
 <!--            $scope.file_path = $scope.stepsModel;-->
         $scope.file_path = $scope.sttepsModel_Last;
@@ -1473,7 +1591,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
 
     $scope.deleted_files=[];
     $scope.delete_one_file=function(index,file_name){
-        debugger;
         $scope.file_imglength = document.getElementById('file').files.length;
         for(i=0;i<$scope.file_imglength;i++){
             if(i==index){
@@ -1502,7 +1619,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
         $scope.file_stored_data=[];
         $scope.number_of_message=1;
         $scope.loaddata = function(file_img,img, callback) {
-            debugger;
                 var deferred = $q.defer();
                 var promise = deferred.promise;
                 promise.then(function() {
@@ -1566,15 +1682,22 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
         };
         $scope.file_status=1;
 
-
+    $scope.final_approve_submited=0;
     $scope.approv_set=function(status){
         debugger;
+        $scope.final_approve_submited=1;
         $scope.execute=1;
         $scope.error_code=0;
         if($scope.checker_data[0].invoiceheader_employeegid!=employgid){
             if($scope.total_credit_amount==0 || $scope.total_debit_amount==0){
                 $scope.execute=0;
                 $scope.error_code=1;
+            }
+            if(status!="REJECT"){
+                if($scope.main_status!=1){
+                   $scope.execute=0;
+                   $scope.error_code=2;
+                }
             }
             if(status=="APPROV"){
                 var json = {"Invoice_Header_Gid": $scope.Header_gid, "Status": "APPROVED","Remark":$scope.remark,"invoice_data":$scope.checker_data[0]};
@@ -1599,7 +1722,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
                         img.append('file', file_img);
                         img.append('name', filename);
                     }
-                    debugger;
                     $scope.loaddata(file_img,img, function() {
                         if($scope.file_status==1&&$scope.file_count==$scope.list_of_files){
                             json.file_data=$scope.file_stored_data;
@@ -1652,13 +1774,12 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
                             $scope.endloading();
                         }
                     });
-
-
-
-
             }
             if($scope.error_code==1){
                 alert("Debit Amount or Credit Amount is 0");
+            }
+            else if($scope.error_code==2){
+                alert("Your Not Final Approver");
             }
         }
         else{
@@ -1674,8 +1795,25 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
     ecf_header.then(function(result) {
 
         $scope.checker_data = result.data;
+        debugger;
+
         summary($scope.Header_gid);
-        console.log($scope.checker_data);
+        debugger;
+        $scope.invoice_type=$scope.checker_data[0].invoiceheader_invoicetype;
+        $scope.ppx_present=$scope.checker_data[0].invoiceheader_ppx;
+        $scope.Emp_gid = $scope.checker_data[0].invoiceheader_employeegid;
+         $scope.supplier_gid = $scope.checker_data[0].invoiceheader_suppliergid;
+         if($scope.type_of_page=="Approval"){
+             if($scope.invoice_type=="Non PO"){
+                if($scope.ppx_present == 'E'){
+                         ppx_getfunction('PAYMENT_EMPLOYEE');
+                }else if($scope.ppx_present == 'S' || $scope.ppx_present == ''){
+                 ppx_getfunction('PAYMENT_SUPPLIER');
+                }else{
+                 pass;
+                }
+            }
+         }
         $scope.temp_date=$scope.checker_data[0].invoiceheader_invoicedate;
             var res=$scope.temp_date.split("-");
             var day=res[0]
@@ -1744,7 +1882,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      $scope.srchname = "";
 
          $scope.getemployee_srch= function(searchText) {
-         debugger;
              $scope.selected_branch_gid=0;
             if($scope.selected_branch){
                 $scope.selected_branch_gid=$scope.selected_branch.branch_gid;
@@ -1788,6 +1925,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_attached_file=function(){
+     debugger;
         var datas={params:{"action":"GET","type":"FILE_DETAIL",
             "filter":{"file_reftablegid":$scope.Header_gid,"ref_name":"ECF_INVOICE"}}};
          $scope.loading();
@@ -1808,7 +1946,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      $scope.emp_code;
      }
 
-
+    $scope.local_url_data="";
      $scope.view_file=function(file_list){
         var datas={"file_data":[file_list]};
          $scope.loading_view_attached_file();
@@ -1816,6 +1954,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
          generated_urls.then(function(result) {
                 $scope.url_datas = result.data;
                 $scope.file_url_path=$scope.url_datas[0].file_path;
+                $scope.local_url_data="media/"+$scope.url_datas[0].file_name;
                 var final_file_name=$scope.url_datas[0].file_name;
                 $scope.extension=final_file_name.substr(final_file_name.lastIndexOf('.')+1);
                 if($scope.extension=="pdf"){
@@ -1833,9 +1972,25 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
         return $sce.trustAsHtml(html);
      }
      
-     $scope.view_other_details=function(invoice){
+     $scope.today_date = new Date();
+    $scope.maxDates = new Date(
+            $scope.today_date.getFullYear(),
+            $scope.today_date.getMonth() - 6,
+            $scope.today_date.getDate() - 1
+    );
+
+    $scope.six_month_date_alert="";
+    $scope.view_other_details=function(invoice){
+        debugger;
             $scope.other_datas=invoice;
-     };
+            $scope.other_date=new Date(invoice.invoicedetails_invoicedate)
+            if( $scope.other_date<$scope.maxDates){
+                $scope.six_month_date_alert="Date is greater than six months";
+            }
+            else{
+                $scope.six_month_date_alert="";
+            }
+    };
 
 
     $scope.view_payment_ins=function(){
@@ -1844,7 +1999,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
 
     $scope.note_execute=0;
      $scope.view_note_file=function(){
-        debugger;
         if($scope.note_execute==0){
             $scope.note_key="";
             var datas={params:{"action":"GET","type":"NOTE_DATA", "filter":{"InvoiceHeader_Crno":$scope.checker_data[0].invoiceheader_crno}}};
@@ -1922,7 +2076,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_emp=function(emp_gid){
-        debugger;
         $scope.emp_details=[];
         var datas={params:{"action":"GET","type":"EMP_DETAILS", "filter":{"employee_gid":emp_gid}}};
             $scope.loading_transaction();
@@ -1943,6 +2096,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_commodity=function(crnumber){
+        $scope.load_commodity_data();
         var datas={params:{"action":"GET","type":"COMMODITY_DATA",
          "filter":{"InvoiceHeader_Crno":crnumber}}};
             $scope.loading();
@@ -1954,6 +2108,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
                 }
                 $scope.commodity_show=0;
                 $scope.commodity_data= result.data;
+                $scope.selected_commodity=$scope.commodity_data[0].commodity_name;
                 console.log($scope.commodity_data);
 
             },
@@ -1963,7 +2118,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_header_emp=function(emp_gid){
-     debugger;
         var datas={params:{"action":"GET","type":"EMP_DETAILS", "filter":{"employee_gid":emp_gid}}};
             $scope.loading();
             var summarys = invoice_service.get_approval_summary(datas);
@@ -1984,7 +2138,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_supplier_details=function(supplier_gid){
-        debugger;
         var datas={params:{"action":"GET","type":"SUPPLIER_DETAILS", "filter":{"supplier_gid":supplier_gid}}};
             $scope.loading();
             var summarys = invoice_service.get_approval_summary(datas);
@@ -2005,7 +2158,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
     $scope.debit_ccbs=[];
      $scope.view_bscc=function(debit_gid){
-        debugger;
         $scope.debit_ccbs=[];
         var datas={params:{"action":"GET","type":"CCBS_DETAILS", "filter":{"Debit_Gid":debit_gid}}};
             $scope.loading();
@@ -2025,7 +2177,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
      }
 
      $scope.view_branch_data=function(branch_gid){
-        debugger;
         var datas={params:{"action":"GET","type":"BRANCH_DATA_BY_ID", "filter":{"Branch_gid":branch_gid}}};
             $scope.loading();
             var summarys_branch = invoice_service.get_approval_summary(datas);
@@ -2044,7 +2195,6 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
 
      }
      $scope.view_gl_details=function(gl){
-        debugger;
         var datas={params:{"action":"GET","type":"GL_DETAILS", "filter":{"GL_Number":gl}}};
             $scope.loading();
             var summarys_branch = invoice_service.get_invoice_billenty_summary(datas);
@@ -2080,6 +2230,185 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
             $scope.getemployee_srch();
         }
     }
+    $scope.header_update_status=0;
+    $scope.load_commodity_data=function(){
+        $scope.header_update_status=1;
+
+       var data = {
+            "Table_name": "ap_mst_tcommodity",
+            "Column_1": "commodity_gid, commodity_name",
+            "Column_2": "",
+            "Where_Common": "commodity",
+            "Where_Primary": "",
+            "Primary_Value": "",
+            "Order_by": "gid"
+        }
+
+        var patch = {
+            Action: "",
+            Entity_Gid: $scope.entity_gid,
+            data: data
+        }
+
+        var getcat = invoice_service.getcommodity(patch);
+            getcat.then(function(result) {
+                    $scope.commodityname = result.data;
+            }, function(err) {
+                alert('No data!.');
+        }).finally();
+    }
+
+    $scope.commodity = gotocust;
+    function gotocust(query) {
+        var result = $filter('filter')($scope.commodityname, {
+            'commodity_name': query
+        });
+        return result;
+    }
+    $scope.Change_commodity=function(commodity_data){
+    debugger
+         if($scope.status=="PENDING FOR APPROVAL"){
+            if(commodity_data.commodity_gid){
+                var r = confirm("Are You Sure Update Header");
+                if (r == true) {
+                     header_json={"HEADER":{"Invoice_Header_Gid":$scope.Header_gid,"Invoice_Header_Crno":$scope.checker_data[0].invoiceheader_crno,
+                     "Invoice_Header_Commodity_Gid":commodity_data.commodity_gid}}
+                    var appr_set = invoice_service.ecf_header_update(header_json,{});
+                    appr_set.then(function(result) {
+                        if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                alert(JSON.stringify(result.data.DATA));
+                        }
+                        if (result.data == 'SUCCESS') {
+                            alert("Successfully Updated");
+                            $window.location.href = "ECFApproval";
+                        }
+                        else{
+                            alert(result.data);
+                        }
+                    },
+                    function(err) {
+                        alert('Not Updated!.');
+                    }).finally($scope.endloading);
+                }
+            }
+         }
+         else{
+            alert("Header Update Allow For Only PENDING FOR APPROVAL ...");
+        }
+    }
+    $scope.ecf_edit=0;
+    $scope.Change_invoice_and_remark=function(){
+        $scope.ecf_edit=1;
+    }
+
+    $scope.ecf_update=function(){
+        if($scope.status=="PENDING FOR APPROVAL"){
+            var r = confirm("Are You Sure Update Header");
+            if (r == true) {
+                if($scope.selected_commodity){
+                    $scope.afer_commodity="";
+                }
+                 header_json={"HEADER":{"Invoice_Header_Gid":$scope.Header_gid,"Invoice_Header_Crno":$scope.checker_data[0].invoiceheader_crno,
+                 "Invoice_Header_Commodity_Gid":$scope.afer_commodity,
+                 "Invoice_Number":$scope.checker_data[0].invoiceheader_invoiceno,
+                 "Invoice_Header_Remark":$scope.checker_data[0].invoiceheader_remarks}}
+                var appr_set = invoice_service.ecf_header_update(header_json,{});
+                appr_set.then(function(result) {
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                            alert(JSON.stringify(result.data.DATA));
+                    }
+                    if (result.data == 'SUCCESS') {
+                        alert("Successfully Updated");
+                        $scope.ecf_edit=0;
+                    }
+                    else{
+                        alert(result.data);
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+            }
+        }
+        else{
+            alert("Header Update Allow For Only PENDING FOR APPROVAL ...");
+        }
+
+    }
+
+
+    $scope.header_update=function(){
+    debugger;
+        if($scope.status=="PENDING FOR APPROVAL"){
+            header_json={"HEADER":{"Invoice_Header_Gid":$scope.Header_gid,"Invoice_Header_Commodity_Gid":$scope.change_commodity_gid}}
+            var appr_set = invoice_service.ecf_header_update(header_json,{});
+                appr_set.then(function(result) {
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                            alert(JSON.stringify(result.data.DATA));
+                    }
+                    if (result.data == 'SUCCESS') {
+                        alert("Successfully Updated");
+                    }
+                    else{
+                        alert(result.data);
+                    }
+                },
+                function(err) {
+                    alert('Not Updated!.');
+                }).finally($scope.endloading);
+        }
+        else{
+            alert("Header Update Allow Only PENDING FOR APPROVAL ...");
+        }
+    }
+
+    $scope.download_rent_file=function(file){
+     debugger;
+        var file_gid=file.file_gid;
+        var file_name=file.file_name;
+        var token="";
+        debugger;
+        var datas={params:{"Action":"TOKEN"}};
+         $scope.loading_view_attached_file();
+            var summarys_branch = invoice_service.get_memo_details(datas);
+            summarys_branch.then(function(result) {
+                $scope.endloading();
+                token=result.data.token;
+                memo_ip=result.data.memo_ip;
+                if(token!=undefined){
+                    $window.open(memo_ip+"/prserv/file/"+file_name+'?token='+token,'_blank');
+                }
+                else{
+                    alert(JSON.stringify(result.data));
+                }
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+     }
+
+     function ppx_getfunction(action) {
+     debugger;
+           var filterdata_ppx = {"Employee_gid":$scope.Emp_gid,"Supplier_gid":$scope.supplier_gid}
+
+            var ppx_details = invoice_service.ppxdetails(action,filterdata_ppx);
+            ppx_details.then(function(result) {
+                if(((JSON.parse(result.data)).length) > 0 ){
+                        $mdToast.show(
+                      $mdToast.simple()
+                        .textContent('Check For Advance')
+                        .position('bottom right')
+                      .theme('error-toast')
+                        .hideDelay(0)
+                    );
+                }else{
+
+                }
+<!--                $scope.ppxdetails_grid = JSON.parse(result.data);-->
+
+            })
+        }
+
 
 
 
@@ -2099,6 +2428,11 @@ app.service("invoice_service", function ($http) {
 
     this.approvalset=function(header_json,status_json){
         var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE","type":"STATUS","header_json":header_json,"debit_json":{},"detail_json":{},"status_json":status_json}});
+        return response;
+    }
+
+    this.ecf_header_update=function(header_json,status_json){
+        var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE","type":"ECF_HEADER_UPDATE","header_json":header_json,"debit_json":{},"detail_json":{},"status_json":status_json}});
         return response;
     }
 
@@ -2136,11 +2470,52 @@ app.service("invoice_service", function ($http) {
                }
           );
           return response;
-}
+    }
+
+     this.getcommodity = function(patch){
+        var respons = $http.post(Appname + "/get_tablevalue/", patch);
+        return respons;
+    }
+
+    this.get_memo_details = function (data) {
+            var response = $http.post(Appname + "/memo_details/", data,
+            );
+            return response;
+    }
+    this.ppxdetails = function (action,filter_data) {
+            var responsee = $http.post(Appname+"/PPPXDeatails_get/",{params:{"group":action,"type":"PPX","Filterdata":filter_data}});
+            return responsee;
+    }
 
 
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -13,7 +13,7 @@
 {% csrf_token %}
 {% verbatim %}
 <div class="maincontent">
-    <div ng-app="Appsmry" ng-controller="Ctrlsmry" class="container container1">
+    <div ng-app="Appsmry" ng-controller="Ctrlsmry" class="container container1" ng-cloak>
         <div class="row">
 
             <div class="row-header col-lg-12 col-sm-12">
@@ -86,7 +86,7 @@
                         <div class="col-md-3">
                             <md-input-container class="md-block inputcontainer">
                                 <label>Purpose</label>
-                                <input ng-model="remarks" ng-disabled="true" maxlength="160" required/>
+                                <input ng-model="remarks" ng-disabled="true" my-special-char maxlength="80" required/>
                             </md-input-container>
                         </div>
                         <div class="col-md-3">
@@ -264,9 +264,10 @@
                         <div class="col-md-2">
                             <md-input-container class="md-block inputcontainer">
                                 <label>Invoice Number</label>
-                                <input ng-model="invoicenum" ng-disabled="true" numbers-only maxlength="10" required/>
+                                <input ng-model="invoicenum" ng-blur="Change_invoice_and_remark()" required/>
                             </md-input-container>
                         </div>
+                        <!--                        my-special-char-->
                         <div class="col-md-2">
                             <md-input-container class="md-block inputcontainer">
                                 <label>Invoice Amount</label>
@@ -288,16 +289,23 @@
                         <div class="col-md-3">
                             <md-input-container class="md-block inputcontainer">
                                 <label>Purpose</label>
-                                <input ng-model="remarks" ng-disabled="true" maxlength="160" required/>
+                                <input ng-model="remarks" maxlength="80" ng-blur="Change_invoice_and_remark()"
+                                       my-special-char required/>
                             </md-input-container>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3" ng-hide="selectedtype == 'PETTYCASH'">
                             <md-input-container class="md-block inputcontainer">
                                 <label> Supplier GST No</label>
                                 <input ng-model="gstno" ng-disabled="true" maxlength="160"/>
                             </md-input-container>
                         </div>
-                        <div class="col-md-3" ng-show="!Employe_hide">
+                        <div class="col-md-1">
+                            <md-button ng-show="ecf_edit==1" class="md-raised"
+                                       ng-click="ecf_update()">
+                                Update
+                            </md-button>
+                        </div>
+                        <div class="col-md-1" ng-show="!Employe_hide">
                             <!--                            <md-input-container class="md-block inputcontainer">-->
                             <!--                                <label>Employee Name</label>-->
                             <!--                                <md-select ng-model="Emp_gid" ng-disabled="true" required>-->
@@ -327,7 +335,6 @@
                 </div>
                 <div class="row">
                     <div class="col-md-12">
-
                         <div class="col-md-3">
                             <!--                            <md-input-container class="md-block inputcontainer" >-->
                             <!--                                <label>Bill Desitination</label>-->
@@ -338,31 +345,58 @@
                             <!--                                    </md-option>-->
                             <!--                                </md-select>-->
                             <!--                            </md-input-container>-->
-                            <md-input-container class="md-block inputcontainer"
-                            >
+                            <md-input-container class="md-block inputcontainer">
                                 <label>Branch Name</label>
                                 <input ng-model="branch_name_" ng-disabled="true" maxlength="16"/>
                             </md-input-container>
                         </div>
 
                         <div class="col-md-3">
-                            <md-input-container class="md-block inputcontainer" ng-disabled="true"
-                            >
+                            <md-input-container class="md-block inputcontainer" ng-disabled="true"                            >
                                 <label>Branch GST No</label>
                                 <input ng-model="dest_gstno" ng-disabled="true" maxlength="16"/>
                             </md-input-container>
                         </div>
+                        <!--                        <div class="col-md-4">-->
+                        <!--                            <span href="" ng-hide="commodity_show==0"-->
+                        <!--                                  ng-click=view_commodity(checker_data[0].invoiceheader_crno) style="color:green">View Commodity Details</span>-->
+                        <!--                            <md-input-container class="md-block inputcontainer" ng-hide="commodity_show==1">-->
+                        <!--                                <label>Commodity Name</label>-->
+                        <!--                                <input ng-model="commodity_data[0].commodity_name" ng-disabled="true" maxlength="16"/>-->
+                        <!--                            </md-input-container>-->
+                        <!--                        </div>-->
+
                         <div class="col-md-4">
-                            <span href="" ng-hide="commodity_show==0"
-                                  ng-click=view_commodity(checker_data[0].invoiceheader_crno) style="color:green">View Commodity Details</span>
-                            <md-input-container class="md-block inputcontainer" ng-hide="commodity_show==1">
-                                <label>Commodity Name</label>
-                                <input ng-model="commodity_data[0].commodity_name" ng-disabled="true" maxlength="16"/>
-                            </md-input-container>
+                    <span href="" ng-hide="commodity_show==0"
+                          ng-click=view_commodity(checker_data[0].invoiceheader_crno) style="color:green">View Commodity Details</span>
+                            <!--                    <span ng-hide="commodity_show==1" class="md-title title-color">Commodity Name : </span>-->
+                            <!--                    <span ng-hide="commodity_show==1" class="md-subhead">{{commodity_data[0].commodity_name}}</span>-->
+                            <md-autocomplete
+                                    md-clear-button="true"
+                                    md-floating-label="Change Commodity"
+                                    md-input-maxlength=126
+                                    md-item-text="item.commodity_name"
+                                    md-items="item in commodity(searchCommodity)"
+                                    md-min-length=0
+                                    ng-hide="commodity_show==1"
+                                    md-no-cache="true"
+                                    md-search-text="searchCommodity"
+                                    md-selected-item="selected_commodity"
+                                    md-selected-item-change="Change_commodity(selected_commodity)"
+                                    ng-required="true">
+                                <md-item-template>
+                                    <span md-highlight-text="searchCommodity"> {{item.commodity_name}} </span>
+                                </md-item-template>
+                                <md-not-found>
+                                    No Commodity matching "{{searchCommodity}}" were found.
+                                </md-not-found>
+                            </md-autocomplete>
+
                         </div>
-                        <div class="col-md-1" ng-show="gstkeyhide">
-                            <input type="checkbox" id="myCheckECF" ng-model="GSTKEYIN.value">
-                            <strong id="text1">GST KEY-IN</strong></div>
+                        <!--                        <div class="col-md-1" ng-show="gstkeyhide">-->
+                        <!--                            <input type="checkbox" id="myCheckECF" ng-model="GSTKEYIN.value">-->
+                        <!--                            <strong id="text1">GST KEY-IN</strong>-->
+                        <!--                        </div>-->
                     </div>
                 </div>
             </div>
@@ -460,13 +494,13 @@
                                 <td><input type="text" class="textboxgeneral" maxlength="100"
                                            ng-disabled="invoiceview"
                                            style="width:150px"
-                                           ng-model="dtl.item"/>
+                                           ng-model="dtl.item" no-special-char/>
                                 </td>
                                 <td><input type="text" class="textboxgeneral" maxlength="100"
                                            ng-disabled="invoiceview"
                                            style="width:150px"
                                            ng-model="dtl.description"
-                                           only-numbers/>
+                                           only-numbers no-special-char/>
                                 </td>
                                 <td align="center" ng-show="imprest_view"
                                 ><a href=""
@@ -948,6 +982,7 @@
                         </tbody>
 
                     </table>
+<!--                                        <pre> {{invoicedetails | json}}</pre>-->
                     <div ng-show="isSet(1)">
                         <div class="row ">
                             <div class="col-lg-12 col-sm-12 pull-right">
@@ -1081,9 +1116,22 @@
                             </div>
 
                             <div class="col-lg-12 col-sm-12">
-                                <div class="col-md-10">
+                                <div class="col-md-2">
                                     <md-input-container class="md-block inputcontainer">
-                                        <label>Payment Instruction</label>
+                                        <label>TDS Applicability</label>
+                                        <md-select ng-model="selected_tds_app_type" ng-required="true"
+                                                   ng-disabled="imprest_view==true">
+                                            <md-option ng-repeat="x in tds_instruction"
+                                                       ng-selected="tds_instruction_selected==x.tds_instruction_name"
+                                                       ng-value="x.tds_instruction_name">{{ x.tds_instruction_name }}
+                                            </md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                </div>
+
+                                <div class="col-md-7">
+                                    <md-input-container class="md-block inputcontainer">
+                                        <label>Payment / TDS Instruction</label>
                                         <input ng-model="payment_ins">
                                     </md-input-container>
                                 </div>
@@ -1366,7 +1414,7 @@
                             <div class="col-md-12">
                                 <div class="col-md-4">
                                     <md-autocomplete
-                                            ng-disabled="ECFcheckboxModel.value"
+                                            ng-disabled="supplier_branch_is==true"
                                             md-clear-button="true" md-floating-label="Choose Branch"
                                             md-input-maxlength=126
                                             md-item-text="item.branch_detail"
@@ -1404,8 +1452,9 @@
                                 </div>
                                 <div class="col-md-3">
                                     <md-input-container class="md-block inputcontainer">
-                                        <label>Supplier Code</label>
-                                        <input ng-model="invoicedetails[supplierindex].suppliercode" maxlength="160"
+                                        <label>Supplier Pin-Code</label>
+                                        <input ng-model="invoicedetails[supplierindex].suppliercode"
+                                               valid-number maxlength="8"
                                                required/>
                                     </md-input-container>
                                 </div>
@@ -1430,14 +1479,17 @@
                                         <label>Date</label>
                                         <md-datepicker md-hide-icons="calendar"
                                                        ng-model="invoicedetails[supplierindex].invoicedate"
-                                                       md-hide-icons="calendar" ng-click="date" md-min-date="maxDate"
+                                                       md-hide-icons="calendar" ng-click="date"
+                                                       ng-change="validate_date(invoicedetails[supplierindex].invoicedate)"
                                                        md-max-date="minDate" required></md-datepicker>
                                     </md-input-container>
+                                    <p style="color:red;">{{six_month_date_alert}}</p>
                                 </div>
                             </div>
+                            <!--                            <pre>{{invoicedetails | json}}</pre>-->
                             <div class="row ">
                                 <div class="col-lg-12 col-sm-12 text-right">
-                                    <md-button ng-click="Close()" data-dismiss="modal" class="md-raised">
+                                    <md-button ng-click="Close_supplier(supplierindex)" data-dismiss="modal" class="md-raised">
                                         Close
                                     </md-button>
                                     <md-button ng-click="save_supplierdata(supplierindex)"
@@ -1481,18 +1533,29 @@
                                 </span>
                                     <span>Remove All</span>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
                                 <div ng-repeat="files in file_path">
                                     <div class="col-md-10">
-                                        <img src="{{files}}" alt="{{files}}" class="myimage img-responsive thumbnail">
+                                        <h5 style="color:blue">{{files.file_name}}</h5>
+                                        <img src="{{files.file}}" alt="{{files}}" ng-hide="files.extension=='pdf'"
+                                             class="myimage img-responsive thumbnail">
+
+                                        <object width="870px" height="500px" ng-show="files.extension=='pdf'"
+                                                data="{{files.file}}" class="internal">
+                                            <embed src="{{files.file}}"/>
+                                            <br/>
+                                        </object>
                                         <hr/>
                                     </div>
-                                    <div class="col-md-2" style="margin-top:200px;">
-                                        <span class="editlink" ng-click="delete_one_file($index)">
+                                    <div class="col-md-1" style="margin-top:200px;">
+                                        <span class="editlink" ng-click="delete_one_file($index,files.file_name)">
                                         <span class="material-icons removelink">delete</span>
                                         </span>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
 
@@ -1705,6 +1768,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
 </style>
 <script>(function (global) {
 
@@ -1786,6 +1858,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
 </script>
 <script>
 var myApp = angular.module('Appsmry', ['ngMaterial', 'ui.bootstrap', 'AppCommon','textAngular'])
@@ -1797,6 +1878,31 @@ var myApp = angular.module('Appsmry', ['ngMaterial', 'ui.bootstrap', 'AppCommon'
         $mdDateLocale.formatDate = function(date) {
             return $filter('date')(date, "dd-MMM-yyyy");
         };  })
+
+<!--    my-special-char-->
+    myApp.directive('mySpecialChar', function() {
+     function link(scope, elem, attrs, ngModel) {
+          ngModel.$parsers.push(function(viewValue) {
+            var reg = /^[0-9a-zA-Z ]*$/;
+            // if view values matches regexp, update model value
+            if (viewValue.match(reg)) {
+              return viewValue;
+            }
+            // keep the model value as it is
+            var transformedValue = ngModel.$modelValue;
+            ngModel.$setViewValue(transformedValue);
+            ngModel.$render();
+            return transformedValue;
+          });
+      }
+
+      return {
+          restrict: 'A',
+          require: 'ngModel',
+          link: link
+      };
+  });
+
 myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', '$mdDialog', '$mdDateLocale', '$timeout','$http','$q','$mdToast',
     function($scope, invoiceService, $window, $filter, $mdDialog, $mdDateLocale, $timeout,$http,$q,$mdToast) {
 
@@ -1833,6 +1939,9 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
         $scope.gstkeyhide = false;
         $scope.commodity_show=1;
 
+        $scope.tds_instruction=[{"tds_instruction_name":"NA"},
+        {"tds_instruction_name":"NOT-KNOWN"},
+        {"tds_instruction_name":"YES"}]
 
        $scope.imagetoggle = function () {
           $scope.state = !$scope.state;
@@ -1851,6 +1960,23 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
             $scope.ls_followup_date.getMonth() - 12,
             $scope.ls_followup_date.getDate() - 1
         );
+
+        $scope.maxDates = new Date(
+            $scope.ls_followup_date.getFullYear(),
+            $scope.ls_followup_date.getMonth() - 6,
+            $scope.ls_followup_date.getDate() - 1
+        );
+
+        $scope.six_month_date_alert="";
+        $scope.validate_date=function(date){
+            if(date<$scope.maxDates){
+                $scope.six_month_date_alert="Date is greater than six months";
+            }
+            else{
+                $scope.six_month_date_alert="";
+            }
+
+        }
 
         $scope.loading = function() {
             $mdDialog.show({
@@ -2110,6 +2236,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
         }
 
         function amount_to_debit(index_header) {
+        debugger;
 
 
             $scope.Debitdetail = [];
@@ -2118,6 +2245,18 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
             var sendcount = 0;
             var no = 1;
             var i = 0;
+
+             if (value.IGST == 0 && value.CGST == 0 && value.SGST == 0 ){
+                if($scope.invoicedetails[index_header].DEBIT_DETAILS.length!=0){
+                    if($scope.invoicedetails[index_header].DEBIT_DETAILS[0].Debit_percentage != undefined){
+                        if($scope.invoicedetails[index_header].DEBIT_DETAILS[0].Debit_percentage == 100){
+                            $scope.invoicedetails[index_header].DEBIT_DETAILS.splice(1, 1);
+                            $scope.invoicedetails[index_header].DEBIT_DETAILS.splice(2, 1);
+                        }
+                    }
+                }
+            }
+
             if (value.Amount !== "" && value.Amount !== undefined && value.Amount != NaN) {
 
                 if ($scope.invoicedetails[index_header].DEBIT_DETAILS[i] === undefined) {
@@ -2238,17 +2377,18 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
         }
 
         $scope.ACselectchange = function(index, value, unnitprice, qty, discount,hsnrate) {
+        debugger;
 
             if($scope.GSTKEYIN.value == false ){
                 if($scope.selectedtype == 'PETTYCASH'){
-                                            $scope.dest_gstno =  $scope.invoicedetails[index].dest_gstno;
+<!--                            $scope.dest_gstno =  $scope.invoicedetails[index].dest_gstno;-->
                             $scope.gstno =  $scope.invoicedetails[index].suppliergstno;
 
 
 
                   if( $scope.selectedtype == 'PETTYCASH' && $scope.invoicedetails[index].subcategory != undefined){
 
-                            $scope.dest_gstno =  $scope.invoicedetails[index].dest_gstno;
+<!--                            $scope.dest_gstno =  $scope.invoicedetails[index].dest_gstno;-->
                             $scope.gstno =  $scope.invoicedetails[index].suppliergstno;
 
                   }
@@ -2851,9 +2991,9 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
                         $mdToast.show(
                       $mdToast.simple()
                         .textContent('Check For Advance')
-                        .position('right')
+                        .position('bottom right')
                       .theme('error-toast')
-                        .hideDelay(5000)
+                        .hideDelay(0)
                     );
                 }else{
 
@@ -2942,6 +3082,14 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
            // IMPREST WITH GST//
 
          $scope.save_supplierdata = function(index){
+         debugger;
+
+         $scope.invoicedetails[index].HSN_Code="";
+         $scope.invoicedetails[index].hsn_igstrate="";
+         $scope.invoicedetails[index].IGST=0;
+         $scope.invoicedetails[index].CGST=0;
+         $scope.invoicedetails[index].SGST=0;
+
             if($scope.invoicedetails[index].suppliergstno != undefined && $scope.invoicedetails[index].dest_gstno != undefined &&  $scope.invoicedetails[index].dest_gstno != "" ){
 
                                   modalhide('mdl_ccbs')
@@ -2954,6 +3102,15 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
                   }
 
             }
+         }
+
+         $scope.Close_supplier=function(index){
+         debugger;
+            if($scope.invoicedetails[index].suppliergstno==0 || $scope.invoicedetails[index].suppliergstno==undefined){
+             $scope.invoicedetails[index].dest_gstno="";
+             $scope.invoicedetails[index].branch="";
+             $scope.invoicedetails[index].branch_gid="";
+             }
          }
 
         $scope.soourcedata = function(query) {
@@ -2990,8 +3147,14 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
            }
         }
        $scope.Supplier_split = function(index) {
-                    $scope.supplierindex = index;
-                     modalshow('mdl_ccbs');
+            debugger;
+            if ($scope.selectedtype == "PETTYCASH") {
+                $scope.invoicedetails[index].branch=$scope.branch_name_;
+                $scope.invoicedetails[index].branch_gid=$scope.selectedsource;
+                $scope.invoicedetails[index].dest_gstno=$scope.dest_gstno;
+            }
+            $scope.supplierindex = index;
+            modalshow('mdl_ccbs');
 
 
 
@@ -3101,10 +3264,12 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
             promise.then(function() {
                 var summary = invoiceService.getmakerservice(jsondata.id, jsondata.status);
                 summary.then(function(result) {
+                debugger;
                         $scope.transactionbranch =  result.data[0].branch_code;
                         $scope.commodity_gid = result.data[0].invoiceheader_commoditygid;
                         $scope.loading()
                         $scope.modelhead.invoicenum
+                        $scope.Invoice_Header_Crno=result.data[0].invoiceheader_crno;
                         $scope.invoiceheader_imagepath = result.data[0].invoiceheader_imagepath;
                         $scope.pono = result.data[0].invoiceheader_ponumber;
                         $scope.invoicenum = result.data[0].invoiceheader_invoiceno;
@@ -3169,6 +3334,8 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
                         }
                           if ($scope.selectedtype == "PETTYCASH") {
                              $scope.imprest_view = true;
+                             $scope.selected_tds_app_type="NA";
+                             $scope.supplier_branch_is=true;
                           }
                         if($scope.selectedtype == 'ADVANCE'){
                            $scope.statecode = 0;
@@ -3747,6 +3914,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
             if($scope.selectedtype == "PETTYCASH"){
              _branchgid =0;_branchgstno=0;_suppliername=0;_suppliercode=0;_suppliergstno=0;_invoiceno=0;_invoicedate=0;
 
+
                        if(value.dest_gstno !== undefined){ _branchgstno = value.dest_gstno; }
                        if(value.invoiceno !== undefined){ _invoiceno = value.invoiceno; }
                        if(value.suppliercode !== undefined){ _suppliercode = value.suppliercode; }
@@ -4179,6 +4347,28 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
                     javascript_abort();
                 };
 
+             if($scope.selected_tds_app_type==""){
+                alert("Please Select TDS Applicability");
+                return false;
+            }
+            if($scope.selected_tds_app_type==undefined){
+                alert("Please Select TDS Applicability");
+                return false;
+            }
+
+
+            if($scope.selected_tds_app_type=="YES"){
+                if($scope.payment_ins==""){
+                    alert("Payment and TDS Instrucation is missing");
+                    return false;
+                }
+                if($scope.payment_ins==undefined){
+                    alert("Payment and TDS Instuction is missing");
+                    return false;
+                }
+
+            }
+
 
             var debit_amt = $scope.debit_netamt.toFixed(2);
             var debit_amt = parseFloat(debit_amt).toFixed(1);
@@ -4392,6 +4582,7 @@ myApp.controller('Ctrlsmry', ['$scope', 'invoiceService', '$window', '$filter', 
                 "Emp_id":$scope.approval_emp,
                 "Individual_approval":'Y',
                 "payment_instruction":$scope.payment_ins,
+                "tds_applicability":$scope.selected_tds_app_type,
                 "Is_billentry":"Y"
             }
             $scope.loading();
@@ -4687,7 +4878,7 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
 
                     }else{
                         credit_data($scope.supplier_gid, $scope.ppx_present);
-                    //    ppx_getfunction('PAYMENT_SUPPLIER');
+                        ppx_getfunction('PAYMENT_SUPPLIER');
 
 
                     }
@@ -5136,16 +5327,24 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
              }
         }
         $scope.imageIsLoaded = function(e){
+        debugger;
             $scope.$apply(function() {
                 $scope.stepsModel.push(e.target.result);
                 modalshow('view_payment_details');
             });
+             $scope.sttepsModel_Last=[];
+            for(var k=0;k<$scope.filenames.length;k++){
+                $scope.extension_1=$scope.filenames[k].substr($scope.filenames[k].lastIndexOf('.')+1);
+                $scope.sttepsModel_Last.push({"file":$scope.stepsModel[k],"file_name":$scope.filenames[k],"extension":$scope.extension_1});
+            }
         }
 
 
         $scope.view_images_popup=function(){
+        debugger;
 
-            $scope.file_path = $scope.stepsModel;
+<!--            $scope.file_path = $scope.stepsModel;-->
+            $scope.file_path = $scope.sttepsModel_Last;
             modalshow('view_images');
 
         }
@@ -5219,10 +5418,11 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
                 }
             }
         }
-        $scope.view_commodity=function(){
 
+        $scope.view_commodity=function(crnumber){
+            $scope.load_commodity_data();
             var datas={params:{"action":"GET","type":"COMMODITY_DATA",
-             "filter":{"InvoiceHeader_Crno":$scope.statusdtl.invoiceheader_crno}}};
+             "filter":{"InvoiceHeader_Crno":$scope.Invoice_Header_Crno}}};
                 $scope.loading();
                 var commodity_datas = invoiceService.get_invoice_billenty_summary(datas);
                 commodity_datas.then(function(result) {
@@ -5232,6 +5432,7 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
                     }
                     $scope.commodity_show=0;
                     $scope.commodity_data= result.data;
+                    $scope.selected_commodity=$scope.commodity_data[0].commodity_name;
                     console.log($scope.commodity_data);
 
                 },
@@ -5258,9 +5459,148 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
             }
         }
 
+        $scope.ecf_edit=0;
+        $scope.Change_invoice_and_remark=function(){
+            $scope.ecf_edit=1;
+        }
+
+        $scope.ecf_update=function(){
+        debugger
+            if(1){
+                var r = confirm("Are You Sure Update Header");
+                if (r == true) {
+                    if($scope.selected_commodity){
+                        $scope.afer_commodity="";
+                    }
+                     header_json={"HEADER":{"Invoice_Header_Gid":$scope.invoiceheader_gid,"Invoice_Header_Crno":$scope.Invoice_Header_Crno,
+                     "Invoice_Number":$scope.invoicenum,
+                     "Invoice_Header_Remark":$scope.remarks}}
+                    var appr_set = invoiceService.ecf_header_update(header_json,{});
+                    appr_set.then(function(result) {
+                        if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                alert(JSON.stringify(result.data.DATA));
+                        }
+                        if (result.data == 'SUCCESS') {
+                            alert("Successfully Updated");
+                             $scope.ecf_edit=0;
+                        }
+                        else{
+                            alert(result.data);
+                        }
+                    },
+                    function(err) {
+                        alert('Not Updated!.');
+                    }).finally($scope.endloading);
+                }
+            }
+            else{
+                alert("Header Update Allow For Only PENDING FOR APPROVAL ...");
+            }
+        }
+
+        $scope.header_update_status=0;
+        $scope.load_commodity_data=function(){
+            $scope.header_update_status=1;
+
+           var data = {
+                "Table_name": "ap_mst_tcommodity",
+                "Column_1": "commodity_gid, commodity_name",
+                "Column_2": "",
+                "Where_Common": "commodity",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "gid"
+            }
+
+            var patch = {
+                Action: "",
+                Entity_Gid: $scope.entity_gid,
+                data: data
+            }
+
+            var getcat = invoiceService.getcommodity(patch);
+                getcat.then(function(result) {
+                        $scope.commodityname = result.data;
+                }, function(err) {
+                    alert('No data!.');
+            }).finally();
+        }
+
+        $scope.commodity = gotocust;
+        function gotocust(query) {
+            var result = $filter('filter')($scope.commodityname, {
+                'commodity_name': query
+            });
+            return result;
+        }
+
+
+        $scope.header_update=function(){
+            debugger;
+            if(1){
+                header_json={"HEADER":{"Invoice_Header_Gid":$scope.invoiceheader_gid,"Invoice_Header_Commodity_Gid":$scope.change_commodity_gid}}
+                var appr_set = invoice_service.ecf_header_update(header_json,{});
+                    appr_set.then(function(result) {
+                        if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                alert(JSON.stringify(result.data.DATA));
+                        }
+                        if (result.data == 'SUCCESS') {
+                            alert("Successfully Updated");
+                        }
+                        else{
+                            alert(result.data);
+                        }
+                    },
+                    function(err) {
+                        alert('Not Updated!.');
+                    }).finally($scope.endloading);
+            }
+            else{
+                alert("Header Update Allow Only PENDING FOR APPROVAL ...");
+            }
+        }
+        $scope.Change_commodity=function(commodity_data){
+        debugger
+             if(1){
+                if(commodity_data.commodity_gid){
+                    var r = confirm("Are You Sure Update Header");
+                    if (r == true) {
+                         header_json={"HEADER":{"Invoice_Header_Gid":$scope.invoiceheader_gid,"Invoice_Header_Crno":$scope.Invoice_Header_Crno,
+                         "Invoice_Header_Commodity_Gid":commodity_data.commodity_gid}}
+                        var appr_set = invoiceService.ecf_header_update(header_json,{});
+                        appr_set.then(function(result) {
+                            if(result.data.MESSAGE=="ERROR_OCCURED"){
+                                    alert(JSON.stringify(result.data.DATA));
+                            }
+                            if (result.data == 'SUCCESS') {
+                                alert("Successfully Updated");
+                                $window.location.href="ECFinventry";
+                            }
+                            else{
+                                alert(result.data);
+                            }
+                        },
+                        function(err) {
+                            alert('Not Updated!.');
+                        }).finally($scope.endloading);
+                    }
+                }
+             }
+             else{
+                alert("Header Update Allow For Only PENDING FOR APPROVAL ...");
+            }
+        }
+
+
     }
 ]);
     myApp.service("invoiceService", function ($http,$filter) {
+
+        this.ecf_header_update=function(header_json,status_json){
+            var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE","type":"ECF_HEADER_UPDATE","header_json":header_json,"debit_json":{},"detail_json":{},"status_json":status_json}});
+            return response;
+        }
+
         this.getdropdown = function (tablename) {
             var responsee = $http.post(Appname+"/Dropdown_detail_ap/",{params:{"tablename":tablename,"gid":0,"name":''}});
             return responsee;
@@ -5357,41 +5697,41 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
             return response;
         }
 
-            this.approvalset=function(status_json){
-        var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE","type":"STATUS","header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
-        return response;
-    }
-       this.approvalset_amort=function(status_json){
-        var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE_AMORT","type":"STATUS_AMORT","header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
-        return response;
-    }
-
-      this.getreasondata = function () {
-        var response=$http.post(Appname+"/Getreason_data/",{params:{"type":"DEBIT","reason_json":{
-                                    "Table_name":"ap_mst_trejectreason",
-                                    "Column_1":"rejectreason_gid,rejectreason_reason,rejectreason_solution",
-                                    "Column_2":"",
-                                    "Where_Common":"rejectreason",
-                                    "Where_Primary":"",
-                                    "Primary_Value":"",
-                                    "Order_by":"reason"
-                                    },}});
-        return response;
+        this.approvalset=function(status_json){
+            var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE","type":"STATUS","header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
+            return response;
         }
-               this.setreject = function (reject_json) {
-            var responsee = $http.post(Appname+"/APrejectinv_set/",{params:{"action":"Insert","type":"CLAIM_REJECT","reject_json":reject_json}});
-            return responsee;
+           this.approvalset_amort=function(status_json){
+            var response=$http.post(Appname+"/ECFInvoiceheader_set/",{params:{"action":"UPDATE_AMORT","type":"STATUS_AMORT","header_json":{},"debit_json":{},"detail_json":{},"status_json":status_json}});
+            return response;
         }
 
-     this.getemployee=function(data){
-        var response=$http.post(Appname+"/employee_mst_data/",data);
-        return response;
-     }
+          this.getreasondata = function () {
+            var response=$http.post(Appname+"/Getreason_data/",{params:{"type":"DEBIT","reason_json":{
+                                        "Table_name":"ap_mst_trejectreason",
+                                        "Column_1":"rejectreason_gid,rejectreason_reason,rejectreason_solution",
+                                        "Column_2":"",
+                                        "Where_Common":"rejectreason",
+                                        "Where_Primary":"",
+                                        "Primary_Value":"",
+                                        "Order_by":"reason"
+                                        },}});
+            return response;
+            }
+                   this.setreject = function (reject_json) {
+                var responsee = $http.post(Appname+"/APrejectinv_set/",{params:{"action":"Insert","type":"CLAIM_REJECT","reject_json":reject_json}});
+                return responsee;
+            }
 
-       this.setauditchklist=function(chklist_json){
-        var response=$http.post(Appname+"/auditchklist_set/",{params:{"action":"Insert","type":"","chklist_json":chklist_json}});
-        return response;
-    }
+         this.getemployee=function(data){
+            var response=$http.post(Appname+"/employee_mst_data/",data);
+            return response;
+         }
+
+           this.setauditchklist=function(chklist_json){
+            var response=$http.post(Appname+"/auditchklist_set/",{params:{"action":"Insert","type":"","chklist_json":chklist_json}});
+            return response;
+        }
 
 
 <!--        this.getsupplierdata_sup = function (supp_gid) {-->
@@ -5400,10 +5740,10 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
 <!--        return response;-->
 <!--    }-->
 
-    this.ECFcheckersummary= function (Ecfno,type) {
-            if(type == 'PPX' || type == 'EMP Claim'){ var action = 'ECF_DETAILS_EDIT_EMP' }else{ var action = 'ECF_DETAILS_EDIT' };
-            var response=$http.post(Appname+"/ECF_ApChecker_get/",{params:{"action":action,"ecfnumber":Ecfno,"supplier_gid":0,"inwarddetail_gid":0,"inwardheader_gid":0,"status":""}});
-            return response;
+        this.ECFcheckersummary= function (Ecfno,type) {
+                if(type == 'PPX' || type == 'EMP Claim'){ var action = 'ECF_DETAILS_EDIT_EMP' }else{ var action = 'ECF_DETAILS_EDIT' };
+                var response=$http.post(Appname+"/ECF_ApChecker_get/",{params:{"action":action,"ecfnumber":Ecfno,"supplier_gid":0,"inwarddetail_gid":0,"inwardheader_gid":0,"status":""}});
+                return response;
         }
 
 
@@ -5429,9 +5769,22 @@ var ECF_session_A = sessionStorage.getItem('ECF_session_A');
             var response = $http.post(Appname + "/common_read_file/", data);
             return response;
         }
+        this.getcommodity = function(patch){
+        var respons = $http.post(Appname + "/get_tablevalue/", patch);
+        return respons;
+    }
 
 
  });
+
+
+
+
+
+
+
+
+
 
 
 

@@ -396,10 +396,10 @@
                             <tbody>
                             <tr ng-repeat="d in Expensesummary| filter: { branchexpense_type: tab.title }:true">
                                 <td class="text-center" ng-model="dept_name">
-                                    {{$index+1}}
+                                    <center>{{((pagination.currentPages-1)*pagination.itemsPerPages)+$index+1}}</center>
                                 </td>
                                 <td>{{d.branchexpense_amount}}</td>
-                                <td>{{d.supplier_name}}</td>
+                                <td>{{d.supplier_branchname}}</td>
                                 <td>{{d.branchexpense_recurringdate}}</td>
                                 <td>{{d.branchexpense_fromdate | date:'dd-MMM-yyyy'}}</td>
                                 <td>{{d.branchexpense_todate | date:'dd-MMM-yyyy'}}</td>
@@ -421,9 +421,23 @@
                                     </i></a>
                                 </td>
                             </tr>
+                            <tr ng-show="Expensesummary.length ==  0">
+                                <td class="warning" colspan="11">
+                                    No Records Found.
+                                </td>
+                            </tr>
                             </tbody>
                             <tfoot>
-
+                            <tr>
+                                <td colspan="9">
+                                    <ul uib-pagination total-items="Total_Row" ng-model="pagination.currentPages"
+                                        max-size="pagination.maxSizes" ng-change="pageChanged()"
+                                        class="pagination-sm" boundary-links="true" items-per-page="pagination.itemsPerPages"></ul>
+                                </td>
+                                <td colspan="4">
+                                    <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
+                                </td>
+                            </tr>
                             </tfoot>
                         </table>
                     </div>
@@ -1157,14 +1171,14 @@
                                                 md-clear-button="true" md-floating-label="Choose Supplier"
                                                 md-input-maxlength=126
                                                 md-input-id="Supplier_Names"
-                                                md-item-text="supplier.supplier_name"
+                                                md-item-text="supplier.supplier_branchname"
                                                 md-items="supplier in getSupplierName(search_supplier_name)"
                                                 md-selected-item-change="supplierNameChanged(supplier)"
                                                 md-min-length=0 md-search-text="search_supplier_name"
                                                 md-no-cache="true" size="5"
                                                 md-selected-item="models[click_titles].supplier">
                                             <md-item-template>
-                                                <span md-highlight-text="search_supplier_name"> {{supplier.supplier_name}}</span>
+                                                <span md-highlight-text="search_supplier_name"> {{supplier.supplier_branchname}}</span>
                                             </md-item-template>
                                             <md-not-found>
                                                 No Supplier Name matching "{{search_supplier_name}}" were found.
@@ -1177,7 +1191,7 @@
                                 <div class="col-md-12">
                                     <div class="col-md-5">
                                         <div class="row">
-                                            <span><h4 style="color:green;">Supplier Name:<span style="color:black">  {{supplier_data.supplier_name}}</span></h4></span>
+                                            <span><h4 style="color:green;">Supplier Name:<span style="color:black">  {{supplier_data.supplier_branchname}}</span></h4></span>
                                         </div>
                                         <div class="row">
                                             <span><h4 style="color:green;">Supplier Code:<span style="color:black">  {{supplier_data.Supplier_code}}</span></h4></span>
@@ -1296,7 +1310,7 @@
 <!--    height: 1000px !important;-->
 <!--}-->
 md-tabs:not(.md-no-tab-content):not(.md-dynamic-height) {
-    min-height: 1000px;
+    min-height: 1500px;
     overflow:auto;
 }
 
@@ -1344,6 +1358,8 @@ md-tabs:not(.md-no-tab-content):not(.md-dynamic-height) {
 
 
 
+
+
 </style>
 <script>jQuery.event.special.touchstart = {
   setup: function( _, ns, handle ){
@@ -1354,6 +1370,8 @@ md-tabs:not(.md-no-tab-content):not(.md-dynamic-height) {
     }
   }
 };
+
+
 
 
 
@@ -1389,10 +1407,22 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
 
         $scope.currentPage=1;
         $scope.maxSize=10;
-        $scope.itemsPerPage=5;
+        $scope.itemsPerPage=10;
+
+<!--        $scope.currentPages=1;-->
+<!--        $scope.maxSizes=10;-->
+<!--        $scope.itemsPerPages=10;-->
+
+
+        $scope.pagination = {
+            currentPages: 1,
+            maxSizes: 10,
+            itemsPerPages:10
+        };
 
         $scope.final_expense_type="";
         $scope.final_date_values=[];
+        $scope.Expensesummary=[];
 
         $scope.execute_ccbs=0;
 
@@ -1498,7 +1528,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
                 $scope.clear_old_supplier_values();
             }
             var datas={"Params":{"Group":"GET_EMP_DATA","Type":"SUPPLIER","Sub_Type":"SUPPLIER_ALL",
-                 "FILTER":{"Supplier_name" :$scope.search_supplier_name,
+                 "FILTER":{"supplier_branchname" :$scope.search_supplier_name,
                  "Supplier_code":$scope.search_supplier_code,
                  "Supplier_gstno":$scope.search_supplier_gstno,"Pan_Number":$scope.pan_number},"Limit": 0 + "," + 30,}};
 
@@ -1519,7 +1549,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
         $scope.supplierNameChanged=function(supplier,click_titles){
             if (supplier.supplier_gid > 0) {
                 $scope.supplier_data=supplier;
-                $scope.supplier_name=supplier.supplier_name;
+                $scope.supplier_name=supplier.supplier_branchname;
 <!--                $scope.supplierclick(supplier.supplier_gid);-->
             }
             else
@@ -1541,7 +1571,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
             $scope.search_supplier_gstno="";
             $scope.supplier_data="";
         }
-
+        $scope.tabvalue_="";
         $scope.setTab = function(Tab) {
             $scope.parameters = [];
             //alert(Tab)
@@ -1551,23 +1581,26 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
             $scope.parameters = $filter('filter')($scope.parameters_, {
                 expensecolumn_type: Tab
             });
-            $scope.currentPages=1;
-            $scope.maxSizes=10;
-            $scope.itemsPerPages=10;
+            $scope.pagination.currentPages=1;
+            $scope.pagination.maxSizes=10;
+            $scope.pagination.itemsPerPages=10;
+            $scope.total_row_execute=0;
+            $scope.expensesummary();
             $scope.endloading();
         };
 
-        function expensesummary(){
 
+        $scope.expensesummary=function(){
+        debugger;
          var datas = {
                 "Params": {
                     "FILTER": {
-                        "Propertygid": $scope.tabs[0].Property_gid
+                        "Propertygid": $scope.tabs[0].Property_gid,"branchexpense_type":$scope.tabvalue_,
+                        "Page_Index":$scope.pagination.currentPages-1,"Page_Size":$scope.pagination.itemsPerPages
                     },
                     "CLASSIFICATION": {
                         "Entity_Gid": [1]
                     }
-
                 },
                 "Group": "EXPENSE_DATA",
                 "Type": "EXPENSE",
@@ -1577,12 +1610,57 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
             var columndata = br_rentcreate.get_expensesummary(datas);
             columndata.then(function(result) {
                 $scope.Expensesummary = result.data.DATA;
+                if($scope.total_row_execute==0){
+                        $scope.Total_Row=($scope.Expensesummary.length)+($scope.pagination.currentPages*10);
+                }
            },
            function(err) {
                 alert(JSON.stringify(result.data));
            }).finally($scope.endloading);
 
         }
+
+        $scope.expensesummary_count=function(){
+        debugger;
+         var datas = {
+                "Params": {
+                    "FILTER": {
+                        "Propertygid": $scope.tabs[0].Property_gid,"branchexpense_type":$scope.tabvalue_,
+                        "Page_Index":0,"Page_Size":$scope.pagination.itemsPerPages
+                    },
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [1]
+                    }
+
+                },
+                "Group": "EXPENSE_DATA",
+                "Type": "EXPENSE",
+                "Sub_Type": "SUMMARY_COUNT"
+            }
+            $scope.loading();
+            var columndata = br_rentcreate.get_expensesummary(datas);
+            columndata.then(function(result) {
+                $scope.Expensesummary_count = result.data.DATA;
+                 $scope.Total_Row=$scope.Expensesummary_count[0].count;
+           },
+           function(err) {
+                alert(err);
+           }).finally($scope.endloading);
+
+        }
+
+        $scope.total_row_execute=0;
+        $scope.pageChanged = function(){
+             if($scope.Expensesummary.length==0){
+                $scope.pagination.currentPages=1;
+             }
+             if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.expensesummary_count();
+              }
+             $scope.expensesummary();
+        }
+
 
         var Expense_titles = sessionStorage.getItem('Expense_values');
 
@@ -1591,7 +1669,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
 
             $scope.tabs = JSON.parse(Expense_titles);
 
-            expensesummary();
+<!--            $scope.expensesummary();-->
              var resaondata = br_rentcreate.getentitydata($scope.tabs[0].Property_gid);
             resaondata.then(function(result) {
 
@@ -2596,9 +2674,10 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
                             var columndata = br_rentcreate.setcolumndata(datas);
                             columndata.then(function(result) {
                                 if(result.data.MESSAGE == 'SUCCESS'){
+                                debugger;
                                     alert("Data Inserted Successfully")
                                      modalhide("expense_data");
-                                  expensesummary();
+                                  $scope.expensesummary();
                                   $scope.endloading();
                                 }
                                 else if(result.data.MESSAGE=="ERROR_OCCURED"){
@@ -2709,7 +2788,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'br_rentcre
                         alert("Updated Successfully")
                        modalhide('expense_data');
                        $mdDialog.cancel();
-                       expensesummary();
+                       $scope.expensesummary();
                  }else{
                    alert(result.data.MESSAGE)
                  }
@@ -3107,6 +3186,8 @@ app.service("br_rentcreate", function ($http) {
 
 
 });
+
+
 
 
 

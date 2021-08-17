@@ -254,6 +254,9 @@ def JV_Approve(request):
                 out_put_data = jv_Object.jv_process_set_model()
                 out_data = out_put_data.get("MESSAGE")
                 result_data = out_data[0]
+
+
+
                 if (result_data == "SUCCESS" or result_data=="ALREADY INSERTED"):
                     try:
                         jv_Object.action = "GET"
@@ -279,6 +282,24 @@ def JV_Approve(request):
                             Final_Unique_Values = []
                             for i in range(len(Unique_Values)):
                                 Single_Unique_Values = Unique_Values[i]
+
+                                Final_status = "APPROVED"
+                                jv_Object.action = "INSERT"
+                                jv_Object.type = "JV_ENTRY_UPDATE"
+                                jv_Object.filter = json.dumps(
+                                    {"jventry_gid": JV_Header_Gid, "jvcrno": Single_Unique_Values, "remark": remark,
+                                     "jvrefno": Single_Unique_Values, "status_": Final_status,
+                                     "jventry_type": JV_Entry_Type, "jventry_refno": JV_Entry_Ref_Number,
+                                     "jventry_amount": JV_Header_Amount})
+                                jv_Object.classification = json.dumps(
+                                    {"entity_gid": entity_gid, "entity_detailsgid": 1})
+                                jv_Object.create_by = create_by
+                                out_put_final_data = jv_Object.jv_process_set_model()
+                                out_data_final = out_put_final_data.get("MESSAGE")
+                                final_result = out_data_final[0]
+
+                                return JsonResponse(final_result, safe=False)
+
                                 Fetched_values = data_frame[(data_frame['Entry_refno'] == Single_Unique_Values)]
                                 Final_send_data = orginal_data_frame[
                                     (orginal_data_frame['Entry_refno'] == Single_Unique_Values)]

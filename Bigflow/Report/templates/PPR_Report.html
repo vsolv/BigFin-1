@@ -269,6 +269,14 @@
                             <md-tooltip>Download XL</md-tooltip>
                         </md-button>
                     </div>
+                    <!-- Rub Btn -->
+                    <div class="col-lg-5 col-sm-5"></div>
+                    <div class="col-lg-2 col-sm-2 text-right">
+                        <button class="md-raised md-button md-ink-ripple" type="button" ng-click="RUN_function()"
+                            data-dismiss="modal">
+                            RUN
+                        </button>
+                    </div>
                 </div>
                 <div class="row" style="padding: 10px;">
                     <div class="col-lg-12 col-sm-12" style="text-align: right;color: blue;">
@@ -282,7 +290,6 @@
                                 <thead>
                                     <tr style="text-align: right;">
                                         <th class="header" ng-repeat="(y,z) in Quarterly_table_head">{{y}}</th>
-
                                     </tr>
                                 </thead>
                                 <tbody ng-repeat="x in Quarterly_table_body">
@@ -368,7 +375,6 @@
                                 <thead>
                                     <tr style="text-align: right;">
                                         <th class="header" ng-repeat="(y,z) in Monthly_table_head">{{y}}</th>
-
                                     </tr>
                                 </thead>
                                 <tbody ng-repeat="x in Monthly_table_body">
@@ -540,9 +546,6 @@
                                                 </div>
                                             </div>
                                         </td>
-
-
-
                                     </tr>
                                 </tbody>
                             </table>
@@ -989,7 +992,6 @@
                     return typeof value === 'number';
                 }
                 $scope.amount_money_convert = function (value) {
-
                     return new Intl.NumberFormat('en-IN').format(value.toFixed(2))
                 }
                 $scope.isJpg = function (filename) {
@@ -1044,37 +1046,38 @@
                     $mdDialog.hide();
                 };
                 //loader spinner ends
-                try {
-                    var Fin_data = {
-                        "Params": {},
-                        "Classification": {
-                            "Entity_Gid": entitygid,
-                            "Create_By": employgid
+                function Fin_year_fun() {
+                    try {
+                        var Fin_data = {
+                            "Params": {},
+                            "Classification": {
+                                "Entity_Gid": entitygid,
+                                "Create_By": employgid
+                            }
                         }
+                        var fin_send_data = {
+                            'Group': 'PPR_Data',
+                            'Action': "FinYear_Fetch",
+                            'data': Fin_data
+                        }
+                        var fin_api = PPR_service.expense_api(fin_send_data)
+                        fin_api.then(function (fin_resp) {
+                            $scope.fin_year = fin_resp.data.DATA;
+                            $scope.finalBTN = false;
+                            $scope.filter_year_val = "Quarterly"
+                        })
+                    } catch (err) {
+                        alert(err)
+                        return false
                     }
-                    var fin_send_data = {
-                        'Group': 'PPR_Data',
-                        'Action': "FinYear_Fetch",
-                        'data': Fin_data
-                    }
-                    var fin_api = PPR_service.expense_api(fin_send_data)
-                    fin_api.then(function (fin_resp) {
-                        $scope.fin_year = fin_resp.data.DATA;
-                        $scope.finalBTN = false;
-                        $scope.filter_year_val = "Quarterly"
-                    })
-                } catch (err) {
-                    alert(err)
-                    return false
                 }
+                Fin_year_fun()
                 $scope.select_amount = function (data) {
-
                     if ($scope.selected5 != null) {
                         $rootScope.amount_L_K = data;
                         $scope.branch_fun('')
                         $scope.sector_fucn('')
                     }
-
                 }
                 $scope.branch_fun = function (query) {
                     $rootScope.fin_year_selected = $scope.searchText5;
@@ -1112,7 +1115,7 @@
                             $scope.searchBTN = true;
                             $scope.searchText1 = "";
                             $scope.searchText2 = "";
-                            $scope.searchText3 = "";
+                            $scope.searchText3_exp_gid = "";
                             $scope.BS_text = "";
                             $scope.CC_text = "";
                             $rootScope.branchGID = '';
@@ -1165,7 +1168,7 @@
                                 $scope.sectorBTN = false;
                                 $scope.searchText1 = "";
                                 $scope.searchText2 = "";
-                                $scope.searchText3 = "";
+                                $scope.searchText3_exp_gid = "";
                                 $scope.BS_text = "";
                                 $scope.CC_text = "";
                                 $scope.sector = sector_response.data.DATA;
@@ -1418,7 +1421,7 @@
                                     }
                                     temp_EXP_GRP["YTD"] = ""
                                     XL_EXP_GRP["YTD"] = ""
-                                    temp_EXP_GRP["Padding"] = 0
+                                    temp_EXP_GRP["Padding"] = 10
                                     output_data.push(temp_EXP_GRP)
                                     future_use.push(temp_EXP_GRP)
                                     XL_export_use.push(XL_EXP_GRP)
@@ -1476,6 +1479,7 @@
                                                     n];
                                             future_data_row["pprdata_bizname"] = "";
                                             future_data_row["pprdata_apsubcatgid"] = "";
+                                            debugger;
                                             Total_of_amount = [];
                                             for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
                                                 temp_row[unique_month_Year[m_y]] = "0.00";
@@ -1560,10 +1564,16 @@
                                                 'en-IN').format(parseFloat(total_Amount)
                                                 .toFixed(
                                                     2)))
+                                            if (total_Amount == 0) {
+                                                temp_row["YTD"] = "0.00"
+                                                future_data_row["YTD"] = "0.00"
+                                                XL_export_row["YTD"] = "0.00"
+                                            }
                                             temp_row["Padding"] = 100
                                             output_data.push(temp_row)
                                             future_use.push(future_data_row)
                                             XL_export_use.push(XL_export_row)
+                                            Total_of_amount = []
                                         }
                                     }
                                 }
@@ -1601,6 +1611,10 @@
                                     XL_over_all_row_all[sum_Total_dict_keys[row_keys]] = new Intl
                                         .NumberFormat('en-IN').format(total.toFixed(
                                             2))
+                                    if (total == 0) {
+                                        over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                        XL_over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                    }
                                 }
                                 over_all_row_all["Padding"] = 100
                                 output_data.push(over_all_row_all)
@@ -1611,9 +1625,17 @@
                                 $scope.Monthly_table_body = output_data;
                                 $scope.Quarterly_table = true;
                                 $scope.Monthly_table = false;
-
                                 var xldata = {
-                                    "data": XL_export_use
+                                    "data": XL_export_use,
+                                    "filter_data": {
+                                        "FY": $scope.searchText5,
+                                        "Branch": $scope.searchText4,
+                                        "Sector": $scope.searchText1,
+                                        "Business": $scope.searchText2,
+                                        "BS": bs_select,
+                                        "CC": cc_select
+                                    },
+                                    "M_Q": "Monthly"
                                 }
                                 $http.post(Appname + '/Generate_PPR_XL/', xldata).then(function (
                                     xl_response) {})
@@ -1670,7 +1692,7 @@
                                         XL_EXP_GRP[unique_month_Year[m_y]] = "";
                                     }
                                     temp_EXP_GRP["YTD"] = ""
-                                    temp_EXP_GRP["Padding"] = 0
+                                    temp_EXP_GRP["Padding"] = 10
                                     XL_EXP_GRP["YTD"] = ""
                                     output_data.push(temp_EXP_GRP)
                                     future_use.push(temp_EXP_GRP)
@@ -1816,6 +1838,11 @@
                                                 .format(parseFloat(total_Amount)
                                                     .toFixed(
                                                         2)))
+                                            if (total_Amount == 0) {
+                                                temp_row["YTD"] = "0.00"
+                                                future_data_row["YTD"] = "0.00"
+                                                XL_export_row["YTD"] = "0.00"
+                                            }
                                             temp_row["Padding"] = 100
                                             output_data.push(temp_row)
                                             future_use.push(future_data_row)
@@ -1857,6 +1884,10 @@
                                     XL_over_all_row_all[sum_Total_dict_keys[row_keys]] = new Intl
                                         .NumberFormat('en-IN').format(total.toFixed(
                                             2))
+                                    if (total == 0) {
+                                        over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                        XL_over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                    }
                                 }
                                 over_all_row_all["Padding"] = 100
                                 output_data.push(over_all_row_all)
@@ -1867,9 +1898,17 @@
                                 $scope.Quarterly_table_body = output_data;
                                 $scope.Monthly_table = true;
                                 $scope.Quarterly_table = false;
-
                                 var xldata = {
-                                    "data": XL_export_use
+                                    "data": XL_export_use,
+                                    "filter_data": {
+                                        "FY": $scope.searchText5,
+                                        "Branch": $scope.searchText4,
+                                        "Sector": $scope.searchText1,
+                                        "Business": $scope.searchText2,
+                                        "BS": bs_select,
+                                        "CC": cc_select
+                                    },
+                                    "M_Q": "Quarterly"
                                 }
                                 $http.post(Appname + '/Generate_PPR_XL/', xldata).then(function (
                                     xl_response) {})
@@ -1890,7 +1929,6 @@
                 $scope.ccbs = "CCBS";
                 $scope.vender = "Supdet_Fetch";
                 $scope.popup = function (selected_tabs, item_data, item_date, item_amount, row_index_num) {
-
                     $rootScope.selected_tabs = selected_tabs
                     $scope.ecf_detial = "";
                     if (item_data["Direct Cost"] != $rootScope.popup_item_data["Direct Cost"] ||
@@ -2471,6 +2509,18 @@
                         .parent(document.querySelectorAll('#toaster_view'))
                     );
                 };
+
+                $scope.RUN_function = function () {
+                    info_toast("Processing",time_toast)
+                    $http.get("http://127.0.0.1:8000/ppr_schudle/").then(function(response){
+                        if(response.data.MESSAGE == "SUCCESS"){
+                            success_toast()
+                        }
+                        else if(response.data.MESSAGE == "ERROR_OCCURED" || response.data.MESSAGE == "FAILED"){
+                            error_toast(response.data.MESSAGE,time_toast)
+                        }
+                    });
+                }
             });
             //service start
             app.service('PPR_service', function ($http) {

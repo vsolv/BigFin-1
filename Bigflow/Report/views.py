@@ -29,6 +29,13 @@ from Bigflow.Core.models import Excelfilename
 from Bigflow.Report.Model.mastersyncdata import MasterSyncData
 from Bigflow.menuClass import utility as utl
 
+from Bigflow.Report.Model import magentsummary
+from datetime import datetime
+from apscheduler.scheduler import Scheduler
+
+sched = Scheduler()
+sched.start()
+
 ip = common.localip()
 
 
@@ -37,40 +44,47 @@ def StockSummaryIndex(request):
     return render(request, "Stock_Summary.html")
 
 
-#Control sheet summary
+# Control sheet summary
 def Control_Sheet_summary(request):
     utl.check_authorization(request)
     return render(request, "Control_sheet_summary.html")
 
 
-#sales &Outstanding_control
+# sales &Outstanding_control
 def Controlsheet(request):
     utl.check_authorization(request)
     return render(request, "Sales_Outstanding_Control_Sheet.html")
 
-#Outstanding_control
+
+# Outstanding_control
 def os_Controlsheet(request):
     utl.check_authorization(request)
     return render(request, "Outstanding_controlsheet.html")
 
-#agentsummary
+
+# agentsummary
 #
 # #master_sync_data
 def master_sync_data(request):
     utl.check_authorization(request)
     return render(request, "MasterSync_Data.html")
-#master_sync_failed
+
+
+# master_sync_failed
 def master_sync_employee(request):
     utl.check_authorization(request)
     return render(request, "MasterSync_Employee.html")
+
 
 def master_sync_branch(request):
     utl.check_authorization(request)
     return render(request, "MasterSync_Branch.html")
 
+
 def master_sync_gl(request):
     utl.check_authorization(request)
     return render(request, "MasterSync_Gl.html")
+
 
 def trandatadetails(request):
     utl.check_authorization(request)
@@ -78,26 +92,30 @@ def trandatadetails(request):
         jsondata = json.loads(request.body.decode('utf-8'))
         action = jsondata.get('Action')
         type = jsondata.get('Type')
-        classification = {"entity_gid":decry_data(request.session['Entity_gid'])}
-        jsondata['classification']=classification
+        classification = {"entity_gid": decry_data(request.session['Entity_gid'])}
+        jsondata['classification'] = classification
 
         main = json.dumps(jsondata)
         params = {'Action': "" + action + "",
-                  'Type': "" +type + ""}
+                  'Type': "" + type + ""}
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-        resp = requests.post("" + ip + "/Agaentsmry", params=params, data=main, headers=headers,verify=False)
+        resp = requests.post("" + ip + "/Agaentsmry", params=params, data=main, headers=headers, verify=False)
         response = resp.content.decode("utf-8")
         return JsonResponse(response, safe=False)
-#stock_controlsheet
+
+
+# stock_controlsheet
 def stock_controlsheet(request):
     utl.check_authorization(request)
     return render(request, "stock_controlsheet.html")
 
-#PR PO Query Page
+
+# PR PO Query Page
 def pr_po_query(request):
     utl.check_authorization(request)
-    return  render(request,'pr_po_query.html')
+    return render(request, 'pr_po_query.html')
+
 
 def get_alltable(request):
     utl.check_authorization(request)
@@ -110,37 +128,37 @@ def get_alltable(request):
             drop_m = {
                 "Table_name": "gal_mst_temployee",
                 "Column_1": "employee_gid,employee_name",
-                    "Column_2": "",
+                "Column_2": "",
                 "Where_Common": "employee",
                 "Where_Primary": "dept_gid",
                 "Primary_Value": "1",
                 "Order_by": "name"
             }
-            response = alltable(drop_m,actn,entity)
+            response = alltable(drop_m, actn, entity)
             return HttpResponse(response)
         elif actn == 'commodity':
             drop_m = {
-                "Table_name":"ap_mst_tcommodity",
-                "Column_1":"commodity_gid,commodity_name",
-                "Column_2":"",
-                "Where_Common":"commodity",
-                "Where_Primary":"",
-                "Primary_Value":"",
-                "Order_by":"name"
+                "Table_name": "ap_mst_tcommodity",
+                "Column_1": "commodity_gid,commodity_name",
+                "Column_2": "",
+                "Where_Common": "commodity",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "name"
             }
-            response = alltable(drop_m,actn,entity)
+            response = alltable(drop_m, actn, entity)
             return HttpResponse(response)
         elif actn == 'product':
             drop_m = {
-                "Table_name":"gal_mst_tproduct",
-                "Column_1":"product_gid,product_name,product_displayname",
-                "Column_2":"",
-                "Where_Common":"product",
-                "Where_Primary":"",
-                "Primary_Value":"",
-                "Order_by":"code"
+                "Table_name": "gal_mst_tproduct",
+                "Column_1": "product_gid,product_name,product_displayname",
+                "Column_2": "",
+                "Where_Common": "product",
+                "Where_Primary": "",
+                "Primary_Value": "",
+                "Order_by": "code"
             }
-            response = alltable(drop_m,actn,entity)
+            response = alltable(drop_m, actn, entity)
             return HttpResponse(response)
         elif actn == 'branch':
             drop_m = {
@@ -152,16 +170,16 @@ def get_alltable(request):
                 "Primary_Value": "",
                 "Order_by": "name"
             }
-            response = alltable(drop_m,actn,entity)
+            response = alltable(drop_m, actn, entity)
             return HttpResponse(response)
 
-def alltable(table_data,act,entity):
 
+def alltable(table_data, act, entity):
     drop_table = {"data": table_data}
     obj = view_sales.SalesOrder_Register()
     obj.action = act
     obj.entity_gid = entity
-    params = {'Action':obj.action, 'Entity_Gid': obj.entity_gid}
+    params = {'Action': obj.action, 'Entity_Gid': obj.entity_gid}
     token = jwt.token(request)
     headers = {"content-type": "application/json", "Authorization": "" + token + ""}
     datas = json.dumps(drop_table.get('data'))
@@ -169,6 +187,7 @@ def alltable(table_data,act,entity):
                          verify=False)
     response = resp.content.decode("utf-8")
     return HttpResponse(response)
+
 
 def Pr_Po_data(request):
     utl.check_authorization(request)
@@ -189,15 +208,16 @@ def Pr_Po_data(request):
         response = resp.content.decode("utf-8")
         return HttpResponse(response)
 
-#Excel UPload for Control-sheet
+
+# Excel UPload for Control-sheet
 def Control_Sheet(request):
-     utl.check_authorization(request)
-     if request.method == 'POST':
-        encrypt_ex = base64.b64encode(request.FILES['file'].read())#convert excel to base64
+    utl.check_authorization(request)
+    if request.method == 'POST':
+        encrypt_ex = base64.b64encode(request.FILES['file'].read())  # convert excel to base64
 
         dcrypt_ex = encrypt_ex.decode("utf-8")
         entry_id = request.session['Entity_gid']
-        excel_file = request.FILES['file']#geting the excel file from angular
+        excel_file = request.FILES['file']  # geting the excel file from angular
         group = request.POST['Group']
         action = request.POST['Action']
 
@@ -221,17 +241,17 @@ def Control_Sheet(request):
                 # df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d')
                 # print(df)
                 df = df.iloc[:-1]
-                final_df = df[["Party's Name", 'Date', 'Ref. No.', 'Pending','Opening']]
+                final_df = df[["Party's Name", 'Date', 'Ref. No.', 'Pending', 'Opening']]
                 final_df['Opening'] = final_df['Opening'].replace('Dr', ' ', regex=True)
                 delivery_date = final_df['Date'].dt.strftime('%Y-%m-%d')
                 final_df['Date'] = delivery_date
-                final_df.columns = ['Customer_Name', 'Invoice_Date', 'Invoice_No', 'Pending_Amount','Amount']
+                final_df.columns = ['Customer_Name', 'Invoice_Date', 'Invoice_No', 'Pending_Amount', 'Amount']
 
                 jdata = final_df.to_dict(orient='records')
 
-
-                param = {'Group': "" + 'CONTROL_OUTSTANDING' + "", 'Action': "" + 'INSERT' + "", 'Type': "" + 'CONTROL_OUTSTANDING' + "",'SubType':"" + 'TALLY' +"",
-                        'Create_by': "" + created_by + ""}
+                param = {'Group': "" + 'CONTROL_OUTSTANDING' + "", 'Action': "" + 'INSERT' + "",
+                         'Type': "" + 'CONTROL_OUTSTANDING' + "", 'SubType': "" + 'TALLY' + "",
+                         'Create_by': "" + created_by + ""}
 
                 resultdata = {
                     "Params": {
@@ -263,17 +283,18 @@ def Control_Sheet(request):
 
         elif drop_value == 'stock':
             try:
-                df = pd.read_excel(excel_file, skiprows=[0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11])
+                df = pd.read_excel(excel_file, skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
                 date = request.POST['Date']
                 Godown_Gid = request.POST['Godown_Gid']
                 df = df.iloc[:-1]
                 df['Quantity'].fillna(0, inplace=True)
-                final_df = df[['Unnamed: 0','Quantity']]
+                final_df = df[['Unnamed: 0', 'Quantity']]
                 final_df['Quantity'] = final_df['Quantity'].replace('NaN', 0, regex=True)
-                final_df.columns = ['Particulars','Quantity']
+                final_df.columns = ['Particulars', 'Quantity']
                 jdata = final_df.to_dict(orient='records')
-                param = {'Group': "" + 'CONTROL_STOCK' + "", 'Action': "" + 'INSERT' + "", 'Type': "" + 'CONTROL_STOCK' + "",'SubType':"" + 'TALLY' +"",
-                        'Create_by': "" + created_by + ""}
+                param = {'Group': "" + 'CONTROL_STOCK' + "", 'Action': "" + 'INSERT' + "",
+                         'Type': "" + 'CONTROL_STOCK' + "", 'SubType': "" + 'TALLY' + "",
+                         'Create_by': "" + created_by + ""}
                 resultdata = {
                     "Params": {
                         "DETAILS": {
@@ -303,12 +324,14 @@ def Control_Sheet(request):
         else:
             try:
 
-                final_df = df[['Party Name','Item Name', 'Date', 'Voucher Number', 'Billed Quantity', 'Rate', 'Amount']]
+                final_df = df[
+                    ['Party Name', 'Item Name', 'Date', 'Voucher Number', 'Billed Quantity', 'Rate', 'Amount']]
                 # final_df['Date']=pd.to_datetime(final_df['Date'])
                 delivery_date = final_df['Date'].dt.strftime('%Y-%m-%d')
                 final_df['Date'] = delivery_date
-                final_df.columns=['Customer_Name','Product_Name', 'Invoice_Date', 'Invoice_No', 'Quantity', 'Per_Rate', 'Amount']
-                jdata= final_df.to_dict(orient='records')
+                final_df.columns = ['Customer_Name', 'Product_Name', 'Invoice_Date', 'Invoice_No', 'Quantity',
+                                    'Per_Rate', 'Amount']
+                jdata = final_df.to_dict(orient='records')
                 resultdata = {
                     "Params": {
                         "DETAILS": {
@@ -332,9 +355,9 @@ def Control_Sheet(request):
                 response = resp.content.decode("utf-8")
                 return HttpResponse(response)
             except:
-                 ld_dict = {"DATA": 'ERROR_OCCURED.'}
+                ld_dict = {"DATA": 'ERROR_OCCURED.'}
 
-                 return HttpResponse(ld_dict)
+                return HttpResponse(ld_dict)
 
 
 def Four_Line_Mis(request):
@@ -348,21 +371,18 @@ def newoverallReportIndex(request):
     return render(request, "New_Overall_Report.html")
 
 
-def report_PPR_main(request):
-    return render(request,'PPR_Report.html')
-
-
 def newoverallReportsmryIndex(request):
     # utility.sendFlashNotification("", "", ['dsfsdf', ])
     # utl.check_authorization(request)
     return render(request, "New_overallreportSmry.html")
+
 
 def performance_excel(request):
     utl.check_authorization(request)
     utl.check_pointaccess(request)
     if request.method == 'GET':
         jsondata = json.loads(request.GET['Main'])
-        jsondata1=json.loads(request.GET['Sub'])
+        jsondata1 = json.loads(request.GET['Sub'])
         obj_totalsales = mSales.Sales_Model()
         obj_totalsales.type = jsondata.get('Type')
         obj_totalsales.sub_type = jsondata.get('Sub_Type')
@@ -376,18 +396,20 @@ def performance_excel(request):
         # response['Content-Disposition'] = 'attachment; filename="FourLineMIS.xlsx"'
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
         df_view = obj_totalsales.get_sales()
-        df_view['CUSTOMER_NAME']=df_view['customer_name']
+        df_view['CUSTOMER_NAME'] = df_view['customer_name']
         df_view['CUSTOMER_GROUP_NAME'] = df_view['customergroup_name']
-        df_view['EMPLOYEE_NAME']=df_view['employee_name']
-        df_view['BRANCH_NAME']=df_view['branch_name']
-        df_view['DEPARTMENT_NAME']=df_view['dept_name']
-        df_view['LOCATION_NAME']=df_view['location_name']
-        df_view['MONTH_WISE']=df_view['mntdate']
-        df_view['SALES']=df_view['invtot']
-        df_view['RECEIPT']=df_view['reptamt']
-        df_view['CREDIT']=df_view['cramt']
-        df_view['OUTSTANDING']=df_view['oss']
-        final=df_view[['CUSTOMER_NAME','CUSTOMER_GROUP_NAME','EMPLOYEE_NAME','BRANCH_NAME','DEPARTMENT_NAME','LOCATION_NAME','MONTH_WISE','SALES','RECEIPT','CREDIT','OUTSTANDING']]
+        df_view['EMPLOYEE_NAME'] = df_view['employee_name']
+        df_view['BRANCH_NAME'] = df_view['branch_name']
+        df_view['DEPARTMENT_NAME'] = df_view['dept_name']
+        df_view['LOCATION_NAME'] = df_view['location_name']
+        df_view['MONTH_WISE'] = df_view['mntdate']
+        df_view['SALES'] = df_view['invtot']
+        df_view['RECEIPT'] = df_view['reptamt']
+        df_view['CREDIT'] = df_view['cramt']
+        df_view['OUTSTANDING'] = df_view['oss']
+        final = df_view[
+            ['CUSTOMER_NAME', 'CUSTOMER_GROUP_NAME', 'EMPLOYEE_NAME', 'BRANCH_NAME', 'DEPARTMENT_NAME', 'LOCATION_NAME',
+             'MONTH_WISE', 'SALES', 'RECEIPT', 'CREDIT', 'OUTSTANDING']]
         final.to_excel(writer, 'Sheet1')
         writer.save()
         return response
@@ -396,51 +418,49 @@ def performance_excel(request):
 def get_totalsales_and_totaloutstanding(request):
     utl.check_authorization(request)
     if request.method == 'POST':
-        jsondata=json.loads(request.body.decode('utf-8'))
+        jsondata = json.loads(request.body.decode('utf-8'))
         obj = views_API.StockAPI()
-        obj.group=jsondata.get('Group')
+        obj.group = jsondata.get('Group')
         obj.sub_type = jsondata.get('Sub_Type')
         obj.type = jsondata.get('Type')
-        params={
-                'Group': "" + obj.group + "",
-                'Type': "" + obj.type + "",
-                'Sub_Type': "" + obj.sub_type + "",
-            "entity":request.session['Entity_gid']
-               }
-        datas=json.dumps(jsondata.get('data'))
+        params = {
+            'Group': "" + obj.group + "",
+            'Type': "" + obj.type + "",
+            'Sub_Type': "" + obj.sub_type + "",
+            "entity": request.session['Entity_gid']
+        }
+        datas = json.dumps(jsondata.get('data'))
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-        resp=requests.post(""+ip+"/Report_Total_Sales",params=params,data=datas,headers=headers,verify=False)
+        resp = requests.post("" + ip + "/Report_Total_Sales", params=params, data=datas, headers=headers, verify=False)
         response = resp.content.decode("utf-8")
         return HttpResponse(response)
 
 
-
-
-#get controlsheetsummary
+# get controlsheetsummary
 def getControl_Sheet(request):
     utl.check_authorization(request)
     jsondata = json.loads(request.body.decode('utf-8'))
     if (jsondata.get('Group')) == 'INITIAL_SUMMARY':
-       group=jsondata.get('Group')
-       type = jsondata.get('Type')
-       subtype = jsondata.get('SubType')
-       emp_gid = jsondata.get('Employee_Gid')
-       # data = jsondata.get('darta')
+        group = jsondata.get('Group')
+        type = jsondata.get('Type')
+        subtype = jsondata.get('SubType')
+        emp_gid = jsondata.get('Employee_Gid')
+        # data = jsondata.get('darta')
 
-       params = {'Group': "" + group + "",  'Type': "" + type + "",
-                 'SubType': "" + subtype + "", 'Employee_Gid': "" + emp_gid + ""}
-       token = jwt.token(request)
-       headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+        params = {'Group': "" + group + "", 'Type': "" + type + "",
+                  'SubType': "" + subtype + "", 'Employee_Gid': "" + emp_gid + ""}
+        token = jwt.token(request)
+        headers = {"content-type": "application/json", "Authorization": "" + token + ""}
 
-       datas = json.dumps(jsondata.get('darta'))
-       resp = requests.post("" + ip + "/Control_Sheet", params=params, data=datas, headers=headers, verify=False)
-       response = resp.content.decode("utf-8")
+        datas = json.dumps(jsondata.get('darta'))
+        resp = requests.post("" + ip + "/Control_Sheet", params=params, data=datas, headers=headers, verify=False)
+        response = resp.content.decode("utf-8")
 
-       return HttpResponse(response)
+        return HttpResponse(response)
 
 
-#sale summary
+# sale summary
 def getComparesale(request):
     utl.check_authorization(request)
     if request.method == 'POST':
@@ -461,7 +481,7 @@ def getComparesale(request):
         return HttpResponse(response)
 
 
-#outstanding summary
+# outstanding summary
 def getCompareos(request):
     utl.check_authorization(request)
     if request.method == 'POST':
@@ -481,26 +501,25 @@ def getCompareos(request):
         return HttpResponse(response)
 
 
-
 def setupdate(request):
     utl.check_authorization(request)
     if request.method == 'POST':
-        jsondata=json.loads(request.body.decode('utf-8'))
+        jsondata = json.loads(request.body.decode('utf-8'))
         obj = views_API.StockAPI()
-        obj.group=jsondata.get('Group')
+        obj.group = jsondata.get('Group')
         obj.action = jsondata.get('Action')
         obj.type = jsondata.get('Type')
         obj.create_by = request.session['Entity_gid']
-        params={
-                'Group': "" + obj.group + "",
-                'Action': "" + obj.action + "",
-                'Type': "" + obj.type + "",
-                'Create_by': "" + obj.create_by + ""
-               }
-        datas=json.dumps(jsondata.get('data'))
+        params = {
+            'Group': "" + obj.group + "",
+            'Action': "" + obj.action + "",
+            'Type': "" + obj.type + "",
+            'Create_by': "" + obj.create_by + ""
+        }
+        datas = json.dumps(jsondata.get('data'))
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-        resp=requests.post(""+ip+"/Stock_Summary_API",params=params,data=datas,headers=headers,verify=False)
+        resp = requests.post("" + ip + "/Stock_Summary_API", params=params, data=datas, headers=headers, verify=False)
         response = resp.content.decode("utf-8")
         return HttpResponse(response)
 
@@ -520,7 +539,7 @@ def StockSum(request):
         obj.Entity_Gid = request.session['Entity_gid']
         params = {'Group': "" + obj.group + "", 'Type': "" + obj.type + "", 'Sub_Type': "" + obj.sub_type + "",
                   'From_Date': "" + obj.from_date + "", 'To_Date': "" + obj.to_date + "",
-                  'Product_Gid':  obj.Product_Gid ,
+                  'Product_Gid': obj.Product_Gid,
                   'Supplier_Gid': "" + obj.Supplier_Gid + "", 'Entity_Gid': "" + obj.Entity_Gid + ""}
         datas = json.dumps(jsondata.get('data'))
 
@@ -532,11 +551,9 @@ def StockSum(request):
         return HttpResponse(response)
 
 
-
 def stcksumry_overall_rept(request):
-
     utl.check_authorization(request)
-    if request.method == "GET" :
+    if request.method == "GET":
         jsondata = json.loads(request.GET['Main'])
         obj = views_API.StockAPI()
         before_date = (datetime.strptime(jsondata.get('Cur_date'), '%Y-%m-%d') - timedelta(days=6)).strftime('%Y-%m-%d')
@@ -562,7 +579,7 @@ def stcksumry_overall_rept(request):
         data = data.get('DATA')
         df_curstk = pd.DataFrame(data)
         data = {"Params":
-               { "FILTER":{"date":before_date}}}
+                    {"FILTER": {"date": before_date}}}
         datas = json.dumps(data)
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
@@ -575,37 +592,37 @@ def stcksumry_overall_rept(request):
         obj_sales = mPurchase.Purchase_model()
         obj_sales.type = 'SUMMARY_DATEWISE'
         obj_sales.sub_type = 'ALL'
-        obj_sales.fliter = {"From_Date":before_date,"To_Date":jsondata.get('Cur_date')}
-        obj_sales.classification = {"Entity_Gid":1}
+        obj_sales.fliter = {"From_Date": before_date, "To_Date": jsondata.get('Cur_date')}
+        obj_sales.classification = {"Entity_Gid": 1}
         obj_sales.create_by = '1'
         data = obj_sales.get_salescount()
         df_sales = data
-        df_cus = df_curstk[['product_name','stockbalance_cb']]
+        df_cus = df_curstk[['product_name', 'stockbalance_cb']]
         df_yes = df_tostk[['stockbalance_cb']]
         df_cus['yesclsstk'] = df_tostk[['stockbalance_cb']]
         f_data = []
         headerdate = []
-        for x,row in df_cus.iterrows():
+        for x, row in df_cus.iterrows():
             product_name = row["product_name"]
             yescb = row["yesclsstk"]
             curcb = row["stockbalance_cb"]
-            dteonly=0
-            for y,row in df_sales.iterrows():
-               if row["product_name"] == product_name:
-                   dteonly = {}
-                   date = row["Dates"]
-                   headerdate.append(date)
-                   qty = int(row["qty"])
-                   d = {'product_name':product_name,'cb1':yescb,date:qty,'cb2':curcb}
-                   dteonly={date:qty}
-                   for e in f_data:
-                       for u in list(e):
-                           prodname = e[u]
-                           if(product_name == prodname):
-                               e.update(dteonly)
-                               d={}
-                               pass
-                   f_data.append(d)
+            dteonly = 0
+            for y, row in df_sales.iterrows():
+                if row["product_name"] == product_name:
+                    dteonly = {}
+                    date = row["Dates"]
+                    headerdate.append(date)
+                    qty = int(row["qty"])
+                    d = {'product_name': product_name, 'cb1': yescb, date: qty, 'cb2': curcb}
+                    dteonly = {date: qty}
+                    for e in f_data:
+                        for u in list(e):
+                            prodname = e[u]
+                            if (product_name == prodname):
+                                e.update(dteonly)
+                                d = {}
+                                pass
+                    f_data.append(d)
         headerdate = list(dict.fromkeys(headerdate))
         headerdate.sort(key=lambda date: datetime.strptime(date, "%d-%m-%Y"))
         headerdate.insert(0, "product_name")
@@ -622,14 +639,13 @@ def stcksumry_overall_rept(request):
         dff = pd.DataFrame(f_data, columns=headerdate)
         dff.index = range(1, len(dff) + 1)
         dff.to_excel(writer, sheet_name='Stock', index_label='SL NO',
-                         freeze_panes=(1, 0),
-                         header=headerdate)
+                     freeze_panes=(1, 0),
+                     header=headerdate)
         writer.save()
         return response
 
 
-
-def getOutstandingDetails(employee_gid,request):
+def getOutstandingDetails(employee_gid, request):
     type = 'OUTSTANDING_REPORT_INVOICE_WISE'
     sub_type = 'BUCKET'
     params = {'Type': "" + type + "", 'Sub_Type': "" + sub_type + ""}
@@ -647,28 +663,29 @@ def getOutstandingDetails(employee_gid,request):
 
     outstandingList = []
     head_columns = ['S.No', 'Customer Name', 'Location', 'Invoice No', 'Invoice Date', 'Quantity', 'Bill Amount'
-        , 'Due Amount', 'Due Days','Credit Days','< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120', '120 - 150',
+        , 'Due Amount', 'Due Days', 'Credit Days', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120',
+                    '120 - 150',
                     '150 - 180', '> 180', 'Last pmt Date',
-                    'Payment Amt', 'Aging Days','Employee Name']
-        # ,'Customer Code',]
-        # ,'paymentamt','lastpmtdate','aging']
+                    'Payment Amt', 'Aging Days', 'Employee Name']
+    # ,'Customer Code',]
+    # ,'paymentamt','lastpmtdate','aging']
 
     # bhead_columns = ['S.No', 'Customer Name', 'Employee Name', 'Bill Amount'
     #     , 'Due Amount', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120', '120 - 150',
     #                  '150 - 180', '> 180', 'paymentamt', 'lastpmtdate', 'aging']
     for y, df in dff.iterrows():
         outstanding = {head_columns[0]: y + 1
-           , head_columns[1]: df['customer_name']
+            , head_columns[1]: df['customer_name']
             , head_columns[2]: df['location_name']
             , head_columns[3]: df['fetsoutstanding_invoiceno'], head_columns[4]: df['fetsoutstanding_invoicedate']
             , head_columns[5]: df['total_sale_qty'], head_columns[6]: df['fetsoutstanding_netamount']
             , head_columns[7]: df['balance_amount'],
-             head_columns[8]: df['Due_Days'],
-            head_columns[9]:df['fetsoutstanding_creditdays']
-            # ,head_columns[23]: df['customer_code']
+                       head_columns[8]: df['Due_Days'],
+                       head_columns[9]: df['fetsoutstanding_creditdays']
+                       # ,head_columns[23]: df['customer_code']
                        }
         due_days = df['Due_Days']
-        default_vale= 0
+        default_vale = 0
         if (due_days <= 30):
             outstanding[head_columns[10]] = df['balance_amount']
         else:
@@ -677,13 +694,12 @@ def getOutstandingDetails(employee_gid,request):
         if (due_days > 30 and due_days <= 45):
             outstanding[head_columns[11]] = df['balance_amount']
         else:
-            outstanding[head_columns[11]] =default_vale
+            outstanding[head_columns[11]] = default_vale
 
         if (due_days > 45 and due_days <= 60):
             outstanding[head_columns[12]] = df['balance_amount']
         else:
             outstanding[head_columns[12]] = default_vale
-
 
         if (due_days > 60 and due_days <= 75):
             outstanding[head_columns[13]] = df['balance_amount']
@@ -727,6 +743,7 @@ def getOutstandingDetails(employee_gid,request):
     df_data = df_data[head_columns]
     return df_data
 
+
 def get_Attendance_MIS(request):
     try:
         objdata = mPurchase.PurchaseModel()
@@ -738,9 +755,9 @@ def get_Attendance_MIS(request):
         objdata.Type = 'OUTSTANDING_PRODUCTIVITY'
         objdata.SubType = 'ATTENDANCE'
         jsondata = {
-            'Filter' :{"From_Date":from_date,"To_Date":to_date}
-                   }
-        Filter=jsondata.get('Filter')
+            'Filter': {"From_Date": from_date, "To_Date": to_date}
+        }
+        Filter = jsondata.get('Filter')
         objdata.Filter = json.dumps(Filter)
         objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
         XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -751,31 +768,31 @@ def get_Attendance_MIS(request):
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
         writer.book = workbook
         df_view = objdata.get_attendance_mis()
-        final_df = df_view[['employee_gid','employee_name','tot','workingdays','noofcust','schdate']]
-        final_df1=df_view[['employee_gid','employee_name','tot','workingdays']]
-        final_df1.columns=['Employee_Gid','Employee Name','Present Days','Working Days']
-        final_df.columns = ['Employee_Gid','Employee Name','Present Days','Working Days','noofcust','schdate']
+        final_df = df_view[['employee_gid', 'employee_name', 'tot', 'workingdays', 'noofcust', 'schdate']]
+        final_df1 = df_view[['employee_gid', 'employee_name', 'tot', 'workingdays']]
+        final_df1.columns = ['Employee_Gid', 'Employee Name', 'Present Days', 'Working Days']
+        final_df.columns = ['Employee_Gid', 'Employee Name', 'Present Days', 'Working Days', 'noofcust', 'schdate']
         final_df2 = final_df1.groupby(['Employee_Gid']).size().reset_index(name='count')
         final_df1.drop_duplicates(subset="Employee Name",
                                   keep='first', inplace=True)
-        final_df1.sort_values("Employee Name", axis = 0,ascending=True,inplace = True)
+        final_df1.sort_values("Employee Name", axis=0, ascending=True, inplace=True)
         table = pd.pivot_table(final_df, values='noofcust',
-                               index=['Employee Name','Present Days','Working Days'],
-                               columns=['schdate'],aggfunc=np.sum,fill_value=0)
+                               index=['Employee Name', 'Present Days', 'Working Days'],
+                               columns=['schdate'], aggfunc=np.sum, fill_value=0)
         for i, row in final_df1.iterrows():
             for j, row2 in final_df2.iterrows():
                 if row['Employee_Gid'] == row2['Employee_Gid']:
                     final_df1.at[i, 'Present Days'] = row2['count']
         table['Grand_Total'] = table.iloc[:, :].sum(1)
         final_df1.drop(["Employee_Gid"], axis=1, inplace=True)
-        details = pd.DataFrame(final_df1, columns=['Followup Date'],index=['f'])
+        details = pd.DataFrame(final_df1, columns=['Followup Date'], index=['f'])
         rslt_df = details.sort_values(by=['Followup Date'])
-        final_df1.to_excel(writer, sheet_name='Attendance Details',startrow=1, startcol=0,
-                        index=False)
-        table.to_excel(writer, sheet_name='Attendance Details',startrow=1,
-                            startcol=3, index=False)
+        final_df1.to_excel(writer, sheet_name='Attendance Details', startrow=1, startcol=0,
+                           index=False)
+        table.to_excel(writer, sheet_name='Attendance Details', startrow=1,
+                       startcol=3, index=False)
         rslt_df.to_excel(writer, sheet_name='Attendance Details', startrow=0,
-                 startcol=3, index=False)
+                         startcol=3, index=False)
         writer.save()
         return response
     except Exception as e:
@@ -783,64 +800,65 @@ def get_Attendance_MIS(request):
 
 
 def get_FollowUp_MIS(request):
-        utl.check_authorization(request)
-        utl.check_pointaccess(request)
-        try:
-            objdata =mPurchase.PurchaseModel()
-            get_values = request.GET
-            data = json.dumps(get_values)
-            final_data = json.loads(data)
-            objdata.Type = 'Follow_up120'
-            objdata.SubType = 'Payment'
-            objdata.data ={
-                'From_Date': '',
-                'To_Date': ''
-            }
-            # objdata.jsonData = json.dumps('data')
-            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-            XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            response = HttpResponse(content_type=XLSX_MIME)
-            filename = Excelfilename('FollowUp120 Details_')
-            response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-            writer = pd.ExcelWriter(response, engine='xlsxwriter')
-            df_view = objdata.get_followup_mis()
-            objdata1 = mPurchase.PurchaseModel()
-            get_values = request.GET
-            data = json.dumps(get_values)
-            final_data = json.loads(data)
-            objdata1.Type = 'Follow_up120_count'
-            objdata1.SubType = 'Payment_count'
-            objdata1.data = {
-                'From_Date': '',
-                'To_Date': ''
-            }
-            objdata1.jsonData = json.dumps('data')
-            objdata1.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-            XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            response = HttpResponse(content_type=XLSX_MIME)
-            filename = Excelfilename('FollowUp120 Details_')
-            response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-            writer = pd.ExcelWriter(response, engine='xlsxwriter')
-            df_view1 = objdata1.get_followup_mis()
+    utl.check_authorization(request)
+    utl.check_pointaccess(request)
+    try:
+        objdata = mPurchase.PurchaseModel()
+        get_values = request.GET
+        data = json.dumps(get_values)
+        final_data = json.loads(data)
+        objdata.Type = 'Follow_up120'
+        objdata.SubType = 'Payment'
+        objdata.data = {
+            'From_Date': '',
+            'To_Date': ''
+        }
+        # objdata.jsonData = json.dumps('data')
+        objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(content_type=XLSX_MIME)
+        filename = Excelfilename('FollowUp120 Details_')
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+        writer = pd.ExcelWriter(response, engine='xlsxwriter')
+        df_view = objdata.get_followup_mis()
+        objdata1 = mPurchase.PurchaseModel()
+        get_values = request.GET
+        data = json.dumps(get_values)
+        final_data = json.loads(data)
+        objdata1.Type = 'Follow_up120_count'
+        objdata1.SubType = 'Payment_count'
+        objdata1.data = {
+            'From_Date': '',
+            'To_Date': ''
+        }
+        objdata1.jsonData = json.dumps('data')
+        objdata1.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(content_type=XLSX_MIME)
+        filename = Excelfilename('FollowUp120 Details_')
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+        writer = pd.ExcelWriter(response, engine='xlsxwriter')
+        df_view1 = objdata1.get_followup_mis()
 
-            final_df = df_view[
-                ['customer_name', 'customer_code', 'location_name', 'employee_name', 'emphourtrack_date', 'due_amount',
-                 'Due_Days', 'followup']]
-            final_df.columns = ['Customer Name', 'Customer Code', 'Location', 'Employee Name', 'Emphourtrack Date',
-                                'Due Amount', 'Due Days', 'Followup']
-            final_df.to_excel(writer, sheet_name='FollowUp Details', index=False)
+        final_df = df_view[
+            ['customer_name', 'customer_code', 'location_name', 'employee_name', 'emphourtrack_date', 'due_amount',
+             'Due_Days', 'followup']]
+        final_df.columns = ['Customer Name', 'Customer Code', 'Location', 'Employee Name', 'Emphourtrack Date',
+                            'Due Amount', 'Due Days', 'Followup']
+        final_df.to_excel(writer, sheet_name='FollowUp Details', index=False)
 
-            final_dff = df_view1[
-                ['employee_name', 'sumofdueyes', 'sumofduenos', 'followup', 'countofcust']]
-            final_dff.columns = ['Employee Name', 'Sum of Due-Yes', 'Sum of Due-nos', 'Followup', 'Count of Customers']
-            final_dff.to_excel(writer, sheet_name='Followup total count', index=False)
+        final_dff = df_view1[
+            ['employee_name', 'sumofdueyes', 'sumofduenos', 'followup', 'countofcust']]
+        final_dff.columns = ['Employee Name', 'Sum of Due-Yes', 'Sum of Due-nos', 'Followup', 'Count of Customers']
+        final_dff.to_excel(writer, sheet_name='Followup total count', index=False)
 
-            writer.save()
-            return response
+        writer.save()
+        return response
 
 
-        except Exception as e:
-            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def get_FollowUp_90_MIS(request):
     utl.check_authorization(request)
@@ -907,6 +925,73 @@ def get_FollowUp_90_MIS(request):
         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
+def get_FollowUp_60_MIS(request):
+    utl.check_authorization(request)
+    utl.check_pointaccess(request)
+    try:
+        objdata = mPurchase.PurchaseModel()
+        get_values = request.GET
+        data = json.dumps(get_values)
+        final_data = json.loads(data)
+        objdata.Type = 'Follow_up60'
+        objdata.SubType = 'Payment'
+        objdata.data = {
+            'From_Date': '',
+            'To_Date': ''
+        }
+        # objdata.jsonData = json.dumps('data')
+        objdata.json_classification = json.dumps({'Entity_Gid': [1]})
+        XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(content_type=XLSX_MIME)
+        x = datetime.datetime.now()
+        y = "FollowUp Details_" + (x.strftime("%c")) + '.xlsx'
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(y)
+        # response['Content-Disposition'] = 'attachment; filename="FollowUp Details.xlsx"'
+        writer = pd.ExcelWriter(response, engine='xlsxwriter')
+        df_view = objdata.get_followup60_mis()
+        objdata1 = mPurchase.PurchaseModel()
+        get_values = request.GET
+        data = json.dumps(get_values)
+        final_data = json.loads(data)
+        objdata1.Type = 'Follow_up60_count'
+        objdata1.SubType = 'Payment_count'
+        objdata1.data = {
+            'From_Date': '',
+            'To_Date': ''
+        }
+        # objdata1.jsonData = json.dumps('data')
+        objdata1.json_classification = json.dumps({'Entity_Gid': [1]})
+        XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(content_type=XLSX_MIME)
+        x = datetime.datetime.now()
+        y = "FollowUp Details_" + (x.strftime("%c")) + '.xlsx'
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(y)
+        # response['Content-Disposition'] = 'attachment; filename="FollowUp Details.xlsx"'
+        writer = pd.ExcelWriter(response, engine='xlsxwriter')
+        df_view1 = objdata1.get_followup60_mis()
+
+        final_df = df_view[
+            ['customer_name', 'customer_code', 'location_name', 'employee_name', 'emphourtrack_date', 'due_amount',
+             'Due_Days', 'followup']]
+        final_df.columns = ['Customer Name', 'Customer Code', 'Location', 'Employee Name', 'Emphourtrack Date',
+                            'Due Amount', 'Due Days', 'Followup']
+
+        final_df.to_excel(writer, sheet_name='FollowUp Details', index=False)
+
+        final_dff = df_view1[
+            ['employee_name', 'sumofdueyes', 'sumofduenos', 'followup', 'countofcust']]
+        final_dff.columns = ['Employee Name', 'Sum of Due-Yes', 'Sum of Due-nos', 'Followup', 'Count of Customers']
+        # final_dff.loc["Total"] = final_dff['Sum of Due-Yes'].sum()
+        # final_dff.loc["Total"] = final_dff['Sum of Due-nos'].sum()
+
+        final_dff.to_excel(writer, sheet_name='Followup total count', index=False)
+
+        writer.save()
+        return response
+
+
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def get_Chequesinclear_MIS(request):
@@ -920,8 +1005,8 @@ def get_Chequesinclear_MIS(request):
         objdata.Action = 'Summary'
         objdata.Type = ''
         objdata.data = {
-          'From_Date': '',
-           'To_Date': ''
+            'From_Date': '',
+            'To_Date': ''
         }
 
         objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
@@ -931,9 +1016,9 @@ def get_Chequesinclear_MIS(request):
         # response['Content-Disposition'] = 'attachment; filename="Cheque Details.xlsx"'
         filename = Excelfilename('Cheque Details_')
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-        workbook=Workbook(response,{'in_memory': True})
+        workbook = Workbook(response, {'in_memory': True})
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
-        writer.book=workbook
+        writer.book = workbook
         df_view = objdata.get_cheques_mis()
         objdata1 = mPurchase.PurchaseModel()
         get_values = request.GET
@@ -983,7 +1068,7 @@ def get_Chequesinclear_MIS(request):
 
         df_view2 = objdata2.get_cheques_mis()
 
-        objdata3 =mPurchase.PurchaseModel()
+        objdata3 = mPurchase.PurchaseModel()
         get_values = request.GET
         data = json.dumps(get_values)
         final_data = json.loads(data)
@@ -1002,7 +1087,6 @@ def get_Chequesinclear_MIS(request):
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
         # response['Content-Disposition'] = 'attachment; filename="Cheque Details.xlsx"'
         writer = pd.ExcelWriter(response, engine='xlsxwriter')
-
 
         df_view3 = objdata3.get_cheques_mis()
 
@@ -1054,25 +1138,25 @@ def get_Chequesinclear_MIS(request):
         total_row_count = len(final_df.index) + 3
         column_count = len(final_df.index) - 1
         final_df.index = range(1, len(final_df) + 1)
-        final_df.to_excel(writer, sheet_name='Cheque Details',startrow=6, startcol=0, index=True,index_label='S.No')
+        final_df.to_excel(writer, sheet_name='Cheque Details', startrow=6, startcol=0, index=True, index_label='S.No')
         ws = writer.sheets['Cheque Details']
         header_format = utility.headerFormat(workbook)
         ws.merge_range(5, 0, 5, column_count, 'FUTURE CLEARING CHEQUE DETAILS', header_format)
         final_df1 = df_view1[
-            ['customer_name','Collection_Date','collected_by','deposit_date','deposited_by',
-             'deposited_amt','Funds_expDt','Comments']
+            ['customer_name', 'Collection_Date', 'collected_by', 'deposit_date', 'deposited_by',
+             'deposited_amt', 'Funds_expDt', 'Comments']
         ]
-        final_df1.columns =['customer_name','Collection_Date','collected_by','deposit_date','deposited_by',
-                                    'deposited_amt',
-                                   'Funds_expDt','Comments']
+        final_df1.columns = ['customer_name', 'Collection_Date', 'collected_by', 'deposit_date', 'deposited_by',
+                             'deposited_amt',
+                             'Funds_expDt', 'Comments']
 
-        total_row_count=len(final_df1.index) +3
-        column_count=len(final_df.index)-1
+        total_row_count = len(final_df1.index) + 3
+        column_count = len(final_df.index) - 1
         final_df1.loc['Total'] = pd.Series(final_df1['deposited_amt'].sum(), index=['deposited_amt'])
         final_df1.index = range(1, len(final_df1) + 1)
-        final_df1.to_excel(writer, sheet_name='Cheque Details', startrow=15, startcol=0, index=True,index_label='S.No')
+        final_df1.to_excel(writer, sheet_name='Cheque Details', startrow=15, startcol=0, index=True, index_label='S.No')
         header_format = utility.headerFormat(workbook)
-        ws.merge_range(14, 0,14, 8, 'CHEQUES EXPECTED TO BE DEPOSITED DAY AFTER TOMORROW', header_format)
+        ws.merge_range(14, 0, 14, 8, 'CHEQUES EXPECTED TO BE DEPOSITED DAY AFTER TOMORROW', header_format)
 
         final_df2 = df_view2[
             ['customer_name', 'Collection_Date', 'collected_by', 'deposit_date', 'deposited_by',
@@ -1086,7 +1170,7 @@ def get_Chequesinclear_MIS(request):
         final_df2.index = range(1, len(final_df2) + 1)
 
         final_df2.to_excel(writer, sheet_name='Cheque Details', startrow=25, startcol=0, index=True
-                           ,index_label='S.No'
+                           , index_label='S.No'
                            )
         header_format = utility.headerFormat(workbook)
 
@@ -1101,12 +1185,14 @@ def get_Chequesinclear_MIS(request):
         final_df3.loc['Total'] = pd.Series(final_df3['deposited_amt'].sum(), index=['deposited_amt'])
         final_df3.index = range(1, len(final_df3) + 1)
 
-        final_df3.to_excel(writer, sheet_name='Cheque Details', startrow=40, startcol=0, index=True,index_label='S.No'
+        final_df3.to_excel(writer, sheet_name='Cheque Details', startrow=40, startcol=0, index=True, index_label='S.No'
                            )
 
         header_format = utility.headerFormat(workbook)
 
-        ws.merge_range(39, 0, 39, 8, 'CHEQUES DEPOSITED TODAY EXPECTED TO BE  -IN CLEARING STATUS TOMORROW OR DAY AFTER', header_format)
+        ws.merge_range(39, 0, 39, 8,
+                       'CHEQUES DEPOSITED TODAY EXPECTED TO BE  -IN CLEARING STATUS TOMORROW OR DAY AFTER',
+                       header_format)
 
         final_df4 = df_view4[
             ['customer_name', 'Collection_Date', 'collected_by', 'deposit_date', 'deposited_by',
@@ -1117,12 +1203,13 @@ def get_Chequesinclear_MIS(request):
         final_df4.loc['Total'] = pd.Series(final_df4['deposited_amt'].sum(), index=['deposited_amt'])
 
         final_df4.index = range(1, len(final_df4) + 1)
-        final_df4.to_excel(writer, sheet_name='Cheque Details', startrow=55, startcol=0, index=True,index_label='S.No'
+        final_df4.to_excel(writer, sheet_name='Cheque Details', startrow=55, startcol=0, index=True, index_label='S.No'
                            )
 
         header_format = utility.headerFormat(workbook)
 
-        ws.merge_range(54, 0, 54, 8, 'CHEQUES DEPOSITED TODAY OR EARLIER EXPECTED TO BE  -IN CLEARING STATUS TOMORROW', header_format)
+        ws.merge_range(54, 0, 54, 8, 'CHEQUES DEPOSITED TODAY OR EARLIER EXPECTED TO BE  -IN CLEARING STATUS TOMORROW',
+                       header_format)
 
         final_df5 = df_view5[
             ['customer_name', 'Collection_Date', 'collected_by', 'deposit_date', 'deposited_by',
@@ -1133,7 +1220,8 @@ def get_Chequesinclear_MIS(request):
         final_df5.loc['Total'] = pd.Series(final_df5['deposited_amt'].sum(), index=['deposited_amt'])
 
         final_df5.index = range(1, len(final_df5) + 1)
-        final_df5.to_excel(writer, sheet_name='Cheque Details', startrow=70, startcol=0, index=True,index_label='S.No',header=69)
+        final_df5.to_excel(writer, sheet_name='Cheque Details', startrow=70, startcol=0, index=True, index_label='S.No',
+                           header=69)
         header_format = utility.headerFormat(workbook)
         ws.merge_range(69, 0, 69, 8, 'TODAYS COLLECTION', header_format)
         writer.save()
@@ -1143,6 +1231,7 @@ def get_Chequesinclear_MIS(request):
     except Exception as e:
         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
+
 def get_Outstanding_comparison(request):
     if request.method == 'POST':
         objdata = mPurchase.PurchaseModel()
@@ -1151,21 +1240,21 @@ def get_Outstanding_comparison(request):
         objdata.sub_type = jsondata.get('SubType')
         objdata.jsondata = json.dumps({'Entity_Gid': 1})
         df2 = objdata.get_Outstanding_comparison()
-        #jdata = obj_cancel_data.to_json(orient='records')
-        #data=jdata
-        objdata.type ='OUTSTANDING_COMPARISON'
-        objdata.sub_type ='BUCKETNEW'
+        # jdata = obj_cancel_data.to_json(orient='records')
+        # data=jdata
+        objdata.type = 'OUTSTANDING_COMPARISON'
+        objdata.sub_type = 'BUCKETNEW'
         objdata.jsondata = json.dumps({'Entity_Gid': 1})
         df1 = objdata.get_Outstanding_comparison()
         # jdata = obj_cancel_data.to_json(orient='records')
-        #data1=jdata
-        #return JsonResponse(json.loads(jdata), safe=False)
+        # data1=jdata
+        # return JsonResponse(json.loads(jdata), safe=False)
         objdata.type = 'OUTSTANDING_COMPARISON'
         objdata.sub_type = 'BUCKETPAYMENT'
         objdata.jsondata = json.dumps({'Entity_Gid': 1})
-        df3= objdata.get_Outstanding_comparison()
+        df3 = objdata.get_Outstanding_comparison()
         df3['payment_120'] = pd.to_numeric(df3['payment_120'], errors='coerce')
-        df3['payment_90']  =pd.to_numeric(df3['payment_90'],errors='coerce')
+        df3['payment_90'] = pd.to_numeric(df3['payment_90'], errors='coerce')
 
         # Main logic
         for i, row in df1.iterrows():
@@ -1178,7 +1267,6 @@ def get_Outstanding_comparison(request):
                     df1.at[i, 'payment_90'] = row3['payment_90']
                     df1.at[i, 'payment_120'] = row3['payment_120']
         df1 = df1.fillna(value='')
-
 
         # change new 90 and 120 as old 90 and old 120
         for i, row in df1.iterrows():
@@ -1282,21 +1370,22 @@ def outstandingExcel(request):
     if request.method == 'GET':
         employee_gid = request.GET['employee_gid']
         head_columns = ['S.No', 'Customer Name', 'Location', 'Invoice No', 'Invoice Date', 'Quantity', 'Bill Amount'
-            , 'Due Amount', 'Due Days','Credit Days', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120', '120 - 150',
+            , 'Due Amount', 'Due Days', 'Credit Days', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120',
+                        '120 - 150',
                         '150 - 180', '> 180', 'Last pmt Date', 'Payment Amt',
-                        'Aging Days','Employee Name']
-            # ,'Customer Code']
-            # ,'paymentamt','lastpmtdate','aging']
+                        'Aging Days', 'Employee Name']
+        # ,'Customer Code']
+        # ,'paymentamt','lastpmtdate','aging']
 
-        bhead_columns = ['S.No', 'Customer Name','Employee Name','Bill Amount'
+        bhead_columns = ['S.No', 'Customer Name', 'Employee Name', 'Bill Amount'
             , 'Due Amount', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120', '120 - 150',
                          '150 - 180', '> 180']
-        df_data = getOutstandingDetails(employee_gid,request)
+        df_data = getOutstandingDetails(employee_gid, request)
 
-        df_group = df_data.groupby([head_columns[1],head_columns[22]])[
-         [head_columns[6], head_columns[7], head_columns[10], head_columns[11]
+        df_group = df_data.groupby([head_columns[1], head_columns[22]])[
+            [head_columns[6], head_columns[7], head_columns[10], head_columns[11]
                 , head_columns[12], head_columns[13], head_columns[14], head_columns[15]
-               , head_columns[16], head_columns[17], head_columns[18]
+                , head_columns[16], head_columns[17], head_columns[18]
              # ,'paymentamt'
              ]].sum()
         # df_data = df_data.drop(['paymentamt','lastpmtdate','aging'], axis=1)
@@ -1309,8 +1398,8 @@ def outstandingExcel(request):
         sixty = df_data['60 - 75'].sum()
         seventyfive = df_data['75 - 90'].sum()
         ninty = df_data['90 - 120'].sum()
-        one20 =df_data['120 - 150'].sum()
-        one50 =df_data['150 - 180'].sum()
+        one20 = df_data['120 - 150'].sum()
+        one50 = df_data['150 - 180'].sum()
         greter180 = df_data['> 180'].sum()
         Bill6 = df_data['Bill Amount'].sum()
         # df_group = df_data(head_columns[1]).aggregate({head_columns[6]: Total
@@ -1335,8 +1424,6 @@ def outstandingExcel(request):
         workbook = Workbook(output, {'in_memory': True})
 
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
-
-
 
         writer.book = workbook
         df_data.to_excel(writer, sheet_name='OutstandingReport', startrow=3, startcol=0, index=False
@@ -1451,15 +1538,14 @@ def outstandingExcel(request):
         # ws.set_column(19, 19, cell_format=number_format)
         writer.save()
         workbook.close()
-        #XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        #response = HttpResponse(content_type=XLSX_MIME)
-        #filename = Excelfilename('FourLineMIS_')
-        #response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+        # XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        # response = HttpResponse(content_type=XLSX_MIME)
+        # filename = Excelfilename('FourLineMIS_')
+        # response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
         return getReponse(output, "Outstanding Report.xlsx")
 
 
 def getReponse(ioStream, fileName):
-
     ioStream.seek(0)
     response = HttpResponse(ioStream.read(),
                             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -1468,15 +1554,15 @@ def getReponse(ioStream, fileName):
     return response
 
 
-
 def outstandingReportIndex(request):
-
     utl.check_authorization(request)
     return render(request, "Overall_Report.html")
 
+
 def out_summary(request):
-      utl.check_authorization(request)
-      return render(request, "Outstanding_Summary.html")
+    utl.check_authorization(request)
+    return render(request, "Outstanding_Summary.html")
+
 
 def invoicesmryy_get(request):
     # utl.check_authorization(request)
@@ -1491,14 +1577,14 @@ def invoicesmryy_get(request):
         objdata.type = 'OUTSTANDING_REPORT'
         objdata.subtype = 'SUMMARY'
         objdata.data = {
-         'Invoice_wise':"Y",
-         'Outstanding_date':from_date,
-         'Employee_Gid':'',
-         'Customer_Gid':'',
-         'customergroup_gid':''
+            'Invoice_wise': "Y",
+            'Outstanding_date': from_date,
+            'Employee_Gid': '',
+            'Customer_Gid': '',
+            'customergroup_gid': ''
         }
 
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+        objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
         # common.main_fun1(request.read(), request.path)
         XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         response = HttpResponse(content_type=XLSX_MIME)
@@ -1537,10 +1623,12 @@ def invoicesmryy_get(request):
         # response['Content-Disposition'] = 'attachment; filename="Invoicewise Details.xlsx"'
         # writer = pd.ExcelWriter(response, engine='xlsxwriter')
         # writer.book = workbook
-        final_df = obj_cancel_data[['customer_name', 'employee_name', 'fetsoutstanding_invoiceno', 'fetsoutstanding_netamount',
-                            'paid', 'balance_amount','Due_Days']]
+        final_df = obj_cancel_data[
+            ['customer_name', 'employee_name', 'fetsoutstanding_invoiceno', 'fetsoutstanding_netamount',
+             'paid', 'balance_amount', 'Due_Days']]
 
-        final_df.columns = ['Customer Name', 'Executive Name', 'Invoice No', 'Bill Amount','Payment Amount','Due Amount','Due_Days']
+        final_df.columns = ['Customer Name', 'Executive Name', 'Invoice No', 'Bill Amount', 'Payment Amount',
+                            'Due Amount', 'Due_Days']
         final_dff = df_view1[
             ['customer_name', 'employee_name', 'netamt', 'paid', 'balance_amount', 'Due_Days']]
 
@@ -1570,208 +1658,203 @@ def invoicesmryy_get(request):
             else:
                 final_dff.at[i, '>120'] = default_value
 
-        for i,row in final_df.iterrows():
+        for i, row in final_df.iterrows():
 
-            if row['Due_Days']<=30 and row['Due_Days']>0:
-               final_df.at[i,'0-30']=row['Due Amount']
+            if row['Due_Days'] <= 30 and row['Due_Days'] > 0:
+                final_df.at[i, '0-30'] = row['Due Amount']
             else:
-               final_df.at[i,'0-30']= default_value
-            if row['Due_Days']<=60 and row['Due_Days']>30:
+                final_df.at[i, '0-30'] = default_value
+            if row['Due_Days'] <= 60 and row['Due_Days'] > 30:
                 final_df.at[i, '30-60'] = row['Due Amount']
             else:
                 final_df.at[i, '30-60'] = default_value
-            if row['Due_Days']<=90 and row['Due_Days']>60:
+            if row['Due_Days'] <= 90 and row['Due_Days'] > 60:
                 final_df.at[i, '60-90'] = row['Due Amount']
             else:
                 final_df.at[i, '60-90'] = default_value
-            if row['Due_Days']<=120 and row['Due_Days']>90:
+            if row['Due_Days'] <= 120 and row['Due_Days'] > 90:
                 final_df.at[i, '90-120'] = row['Due Amount']
             else:
                 final_df.at[i, '90-120'] = default_value
-            if row['Due_Days'] >= 120 :
+            if row['Due_Days'] >= 120:
                 final_df.at[i, '>120'] = row['Due Amount']
             else:
                 final_df.at[i, '>120'] = default_value
 
-
         final_df.to_excel(writer, sheet_name='Invoicewise Details', startrow=1, startcol=0,
-                             index=False)
-        final_dff.to_excel(writer, sheet_name='Branchwise Details', startrow=1, startcol=0,
                           index=False)
+        final_dff.to_excel(writer, sheet_name='Branchwise Details', startrow=1, startcol=0,
+                           index=False)
 
         writer.save()
         return response
 
     except Exception as e:
-     return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def invoicesmry_get(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
     try:
-      if request.method == 'POST':
-        # token = jwt.token(request)
-        objdata = mPurchase.PurchaseModel()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.type = jsondata.get('Type')
-        objdata.subtype = jsondata.get('SubType')
-        objdata.json_Data = json.dumps(jsondata.get('data').get('params').get('Filter'))
-        # objdata.json_classification=decry_data(request.session['Entity_gid'])
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-        # print(request.read())
-        common.main_fun1(request.read(), request.path)
-        final_df = objdata.invoicesummary_get()
+        if request.method == 'POST':
+            # token = jwt.token(request)
+            objdata = mPurchase.PurchaseModel()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.type = jsondata.get('Type')
+            objdata.subtype = jsondata.get('SubType')
+            objdata.json_Data = json.dumps(jsondata.get('data').get('params').get('Filter'))
+            # objdata.json_classification=decry_data(request.session['Entity_gid'])
+            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+            # print(request.read())
+            common.main_fun1(request.read(), request.path)
+            final_df = objdata.invoicesummary_get()
 
-        default_value = 0
+            default_value = 0
 
-        for i, row in final_df.iterrows():
-           if row['Due_Days'] <= 30 and row['Due_Days'] > 0:
-                final_df.at[i, 'Due_30'] = row['balance_amount']
-           else:
-               final_df.at[i, 'Due_30'] = default_value
+            for i, row in final_df.iterrows():
+                if row['Due_Days'] <= 30 and row['Due_Days'] > 0:
+                    final_df.at[i, 'Due_30'] = row['balance_amount']
+                else:
+                    final_df.at[i, 'Due_30'] = default_value
 
-           if row['Due_Days'] <= 60 and row['Due_Days'] > 30:
-               final_df.at[i, 'Due_60'] = row['balance_amount']
+                if row['Due_Days'] <= 60 and row['Due_Days'] > 30:
+                    final_df.at[i, 'Due_60'] = row['balance_amount']
 
-           else:
-              final_df.at[i, 'Due_60'] = default_value
+                else:
+                    final_df.at[i, 'Due_60'] = default_value
 
-           if row['Due_Days'] <= 90 and row['Due_Days'] > 60:
-                final_df.at[i, 'Due_90'] = row['balance_amount']
-           else:
-                final_df.at[i, 'Due_90'] = default_value
+                if row['Due_Days'] <= 90 and row['Due_Days'] > 60:
+                    final_df.at[i, 'Due_90'] = row['balance_amount']
+                else:
+                    final_df.at[i, 'Due_90'] = default_value
 
-           if row['Due_Days'] <= 120 and row['Due_Days'] > 90:
-                 final_df.at[i, 'Due_120'] = row['balance_amount']
-           else:
-              final_df.at[i, 'Due_120'] = default_value
+                if row['Due_Days'] <= 120 and row['Due_Days'] > 90:
+                    final_df.at[i, 'Due_120'] = row['balance_amount']
+                else:
+                    final_df.at[i, 'Due_120'] = default_value
 
-           if row['Due_Days'] >=120:
-                 final_df.at[i, 'Due120'] = row['balance_amount']
-           else:
-                 final_df.at[i, 'Due120'] = default_value
-        final_df = final_df.to_json(orient='records')
-        return JsonResponse(json.loads(final_df), safe=False)
+                if row['Due_Days'] >= 120:
+                    final_df.at[i, 'Due120'] = row['balance_amount']
+                else:
+                    final_df.at[i, 'Due120'] = default_value
+            final_df = final_df.to_json(orient='records')
+            return JsonResponse(json.loads(final_df), safe=False)
     except Exception as e:
-     return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def branchsmry_get(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
     try:
-      if request.method == 'POST':
-        # token = jwt.token(request)
-        objdata = mPurchase.PurchaseModel()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.type = jsondata.get('Type')
-        objdata.subtype = jsondata.get('SubType')
-        objdata.json_Datas = json.dumps(jsondata.get('data').get('params').get('Filter'))
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-        common.main_fun1(request.read(), request.path)
-        final_dff = objdata.branchsummary_get()
-        default_value = 0
-        for i, row in final_dff.iterrows():
-            if row['Due_Days'] <= 30 and row['Due_Days'] > 0:
-                final_dff.at[i, 'Due_30'] = row['balance_amount']
-            else:
-                final_dff.at[i, 'Due_30'] = default_value
-            if row['Due_Days'] <= 60 and row['Due_Days'] > 30:
-                final_dff.at[i, 'Due_60'] = row['balance_amount']
-            else:
-                final_dff.at[i, 'Due_60'] = default_value
-            if row['Due_Days'] <= 90 and row['Due_Days'] > 60:
-                final_dff.at[i, 'Due_90'] = row['balance_amount']
-            else:
-                final_dff.at[i, 'Due_90'] = default_value
-            if row['Due_Days'] <= 120 and row['Due_Days'] > 90:
-                final_dff.at[i, 'Due_120'] = row['balance_amount']
-            else:
-                final_dff.at[i, 'Due_120'] = default_value
+        if request.method == 'POST':
+            # token = jwt.token(request)
+            objdata = mPurchase.PurchaseModel()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.type = jsondata.get('Type')
+            objdata.subtype = jsondata.get('SubType')
+            objdata.json_Datas = json.dumps(jsondata.get('data').get('params').get('Filter'))
+            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+            common.main_fun1(request.read(), request.path)
+            final_dff = objdata.branchsummary_get()
+            default_value = 0
+            for i, row in final_dff.iterrows():
+                if row['Due_Days'] <= 30 and row['Due_Days'] > 0:
+                    final_dff.at[i, 'Due_30'] = row['balance_amount']
+                else:
+                    final_dff.at[i, 'Due_30'] = default_value
+                if row['Due_Days'] <= 60 and row['Due_Days'] > 30:
+                    final_dff.at[i, 'Due_60'] = row['balance_amount']
+                else:
+                    final_dff.at[i, 'Due_60'] = default_value
+                if row['Due_Days'] <= 90 and row['Due_Days'] > 60:
+                    final_dff.at[i, 'Due_90'] = row['balance_amount']
+                else:
+                    final_dff.at[i, 'Due_90'] = default_value
+                if row['Due_Days'] <= 120 and row['Due_Days'] > 90:
+                    final_dff.at[i, 'Due_120'] = row['balance_amount']
+                else:
+                    final_dff.at[i, 'Due_120'] = default_value
 
-            if row['Due_Days'] >= 120:
-                final_dff.at[i, 'Due120'] = row['balance_amount']
-            else:
+                if row['Due_Days'] >= 120:
+                    final_dff.at[i, 'Due120'] = row['balance_amount']
+                else:
 
-                final_dff.at[i, 'Due120'] = default_value
-        final_dff = final_dff.to_json(orient='records')
-        return JsonResponse(json.loads(final_dff), safe=False)
+                    final_dff.at[i, 'Due120'] = default_value
+            final_dff = final_dff.to_json(orient='records')
+            return JsonResponse(json.loads(final_dff), safe=False)
 
 
     except Exception as e:
-     return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def employeename_get(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
-  try:
-    if request.method == 'POST':
-        objdata = mPurchase.PurchaseModel()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.type = jsondata.get('action')
-        objdata.subtype = jsondata.get('type')
-        objdata.json_Data = json.dumps(jsondata.get('data').get('Params'))
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-        common.main_fun1(request.read(), request.path)
-        emp_data = objdata.empname_get()
-        jdata = emp_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-  except Exception as e:
-      return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
+    try:
+        if request.method == 'POST':
+            objdata = mPurchase.PurchaseModel()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.type = jsondata.get('action')
+            objdata.subtype = jsondata.get('type')
+            objdata.json_Data = json.dumps(jsondata.get('data').get('Params'))
+            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+            common.main_fun1(request.read(), request.path)
+            emp_data = objdata.empname_get()
+            jdata = emp_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def custgrpname_get(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
-  try:
-    if request.method == 'POST':
-        objdata = mPurchase.PurchaseModel()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.type = jsondata.get('action')
-        objdata.subtype = jsondata.get('type')
-        objdata.json_Data = json.dumps(jsondata.get('data').get('Params'))
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-        common.main_fun1(request.read(), request.path)
-        custgroup_data = objdata.custgrp_get()
-        jdata = custgroup_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
-  except Exception as e:
-      return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+    try:
+        if request.method == 'POST':
+            objdata = mPurchase.PurchaseModel()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.type = jsondata.get('action')
+            objdata.subtype = jsondata.get('type')
+            objdata.json_Data = json.dumps(jsondata.get('data').get('Params'))
+            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+            common.main_fun1(request.read(), request.path)
+            custgroup_data = objdata.custgrp_get()
+            jdata = custgroup_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
 
 def custname_get(request):
     # utl.check_authorization(request)
     # utl.check_pointaccess(request)
-  try:
-    if request.method == 'POST':
-        objdata = mPurchase.PurchaseModel()
-        jsondata = json.loads(request.body.decode('utf-8'))
-        objdata.type = jsondata.get('action')
-        objdata.subtype = jsondata.get('type')
-        objdata.jsonDatas = json.dumps(jsondata.get('data').get('Params').get('FILTER'))
-        objdata.json_classification=json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
-        common.main_fun1(request.read(), request.path)
-        custname_data = objdata.cust_get()
-        # return JsonResponse(obj_cancel_data, safe=False)
-        jdata = custname_data.to_json(orient='records')
-        return JsonResponse(json.loads(jdata), safe=False)
+    try:
+        if request.method == 'POST':
+            objdata = mPurchase.PurchaseModel()
+            jsondata = json.loads(request.body.decode('utf-8'))
+            objdata.type = jsondata.get('action')
+            objdata.subtype = jsondata.get('type')
+            objdata.jsonDatas = json.dumps(jsondata.get('data').get('Params').get('FILTER'))
+            objdata.json_classification = json.dumps({"Entity_Gid": decry_data(request.session['Entity_gid'])})
+            common.main_fun1(request.read(), request.path)
+            custname_data = objdata.cust_get()
+            # return JsonResponse(obj_cancel_data, safe=False)
+            jdata = custname_data.to_json(orient='records')
+            return JsonResponse(json.loads(jdata), safe=False)
 
-  except Exception as e:
-    return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
-
-
-
-
-
-
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
 def querysummaryIndex(request):
     utl.check_authorization(request)
-    return  render(request,"Query_Summary.html")
+    return render(request, "Query_Summary.html")
 
-#masterSyncData
+
+# masterSyncData
 # from Bigflow.Core.views import master_sync_Data_
 
 def master_sync_get(request):
@@ -1779,15 +1862,17 @@ def master_sync_get(request):
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         type = jsondata.get('params').get('Type')
-        group =jsondata.get('params').get('Group')
+        group = jsondata.get('params').get('Group')
         action = jsondata.get('params').get('Action')
         params = {'Type': type, 'Action': action, 'Group': group}
         token = jwt.token(request)
-        datas=json.dumps(jsondata)
+        datas = json.dumps(jsondata)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-        resp = requests.post("" + ip + "/Master_Sync_Data_API", params=params, data=datas, headers=headers,verify=False)
+        resp = requests.post("" + ip + "/Master_Sync_Data_API", params=params, data=datas, headers=headers,
+                             verify=False)
         response = resp.content.decode("utf-8")
         return JsonResponse(response, safe=False)
+
 
 def master_sync_employee_get(request):
     utl.check_authorization(request)
@@ -1797,12 +1882,14 @@ def master_sync_employee_get(request):
         group = jsondata.get('params').get('Group')
         action = jsondata.get('params').get('Action')
         params = {'Type': type, 'Action': action, 'Group': group}
-        datas=json.dumps(jsondata)
+        datas = json.dumps(jsondata)
         token = jwt.token(request)
         headers = {"content-type": "application/json", "Authorization": "" + token + ""}
-        resp = requests.post("" + ip + "/Master_Sync_Data_API", params=params, data=datas, headers=headers,verify=False)
+        resp = requests.post("" + ip + "/Master_Sync_Data_API", params=params, data=datas, headers=headers,
+                             verify=False)
         response = resp.content.decode("utf-8")
         return JsonResponse(response, safe=False)
+
 
 def master_sync_branch_get(request):
     utl.check_authorization(request)
@@ -1820,6 +1907,7 @@ def master_sync_branch_get(request):
         response = resp.content.decode("utf-8")
         return JsonResponse(response, safe=False)
 
+
 def master_sync_gl_get(request):
     utl.check_authorization(request)
     if request.method == 'POST':
@@ -1836,6 +1924,11 @@ def master_sync_gl_get(request):
         response = resp.content.decode("utf-8")
         return JsonResponse(response, safe=False)
 
+
+def report_PPR_main(request):
+    return render(request, 'PPR_Report.html')
+
+
 def PPR_report_url(request):
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
@@ -1847,9 +1940,11 @@ def PPR_report_url(request):
             token = jwt.token(request)
             headers = {"content-type": "application/json", "Authorization": "" + token + ""}
             datas = json.dumps(jsondata.get('data'))
-            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers, verify=False)
+            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers,
+                                 verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
         elif (jsondata.get('Group')) == 'bussinessName':
             grp = jsondata.get('Group')
             action = jsondata.get('Action')
@@ -1858,9 +1953,11 @@ def PPR_report_url(request):
             token = jwt.token(request)
             headers = {"content-type": "application/json", "Authorization": "" + token + ""}
             datas = json.dumps(jsondata.get('data'))
-            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers, verify=False)
+            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers,
+                                 verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
         elif (jsondata.get('Group')) == 'bussinessGid':
             grp = jsondata.get('Group')
             action = jsondata.get('Action')
@@ -1869,9 +1966,11 @@ def PPR_report_url(request):
             token = jwt.token(request)
             headers = {"content-type": "application/json", "Authorization": "" + token + ""}
             datas = json.dumps(jsondata.get('data'))
-            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers, verify=False)
+            resp = requests.post("" + ip + "/AllTableValues_Get", params=params, data=datas, headers=headers,
+                                 verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
         elif (jsondata.get('Group')) == 'PPR_Data':
             grp = jsondata.get('Group')
             action = jsondata.get('Action')
@@ -1883,6 +1982,7 @@ def PPR_report_url(request):
             resp = requests.post("" + ip + "/PPR_Data_Get", params=params, data=datas, headers=headers, verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
+
         elif (jsondata.get('Group')) == 'bussinessGidname':
             grp = jsondata.get('Group')
             action = jsondata.get('Action')
@@ -1895,15 +1995,18 @@ def PPR_report_url(request):
                                  verify=False)
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
-        
+
+
 class store_ppr_XL_data:
     def __init__(self):
         self.ppr_xl_data = {}
+
 
 def Generate_PPR_XL(request):
     try:
         if request.method == 'POST':
             jsondata = json.loads(request.body.decode('utf-8'))
+            store_ppr_XL_data.ppr_xl_data = {}
             store_ppr_XL_data.ppr_xl_data = jsondata
             return JsonResponse({"MESSAGE": "Created"})
         elif request.method == 'GET':
@@ -1911,9 +2014,191 @@ def Generate_PPR_XL(request):
             response = HttpResponse(content_type=XLSX_MIME)
             response['Content-Disposition'] = 'attachment; filename="PPR_report.xlsx"'
             writer = pd.ExcelWriter(response, engine='xlsxwriter')
+            header = pd.DataFrame([f"Profitablity Report for {store_ppr_XL_data.ppr_xl_data['M_Q']}"], columns=[""])
+            header.to_excel(writer, 'Sheet1', index=False, startrow=0, startcol=0)
+            filter_data_xl = pd.DataFrame(np.array(list(store_ppr_XL_data.ppr_xl_data["filter_data"].items())),
+                                          columns=["Filter", "Selected"])
+            filter_data_xl.to_excel(writer, 'Sheet1', index=False, startrow=4, startcol=0)
             convertTo_XL = pd.DataFrame(store_ppr_XL_data.ppr_xl_data["data"])
-            convertTo_XL.to_excel(writer,'Sheet1', index=False)
+            convertTo_XL.to_excel(writer, 'Sheet1', index=False, startrow=13, startcol=0)
+            workbook = writer.book
+            worksheet = writer.sheets['Sheet1']
+            fmt_header = workbook.add_format({"bold": True, "border": 5, "align": "center"})
+            fmt_header_M_Q = workbook.add_format({"bold": True, "align": "center"})
+            for col, value in enumerate(convertTo_XL.columns.values):
+                worksheet.write(13, col, value, fmt_header)
+            for col, value in enumerate(filter_data_xl.columns.values):
+                worksheet.write(4, col, value, fmt_header)
+            for col, value in enumerate(header.columns.values):
+                worksheet.write(0, col, value, fmt_header_M_Q)
             writer.save()
             return response
     except Exception as e:
         return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def Auto_PPR_Set_schdule():
+    Current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    obj = magentsummary.control()
+    obj.action = "Insert"
+    obj.jsonData = json.dumps({"tran_todate": str(Current_date_time)})
+    obj.dataw = json.dumps({"Entity_Gid": "1", "Create_By": "0ADMIN"})
+    common.logger.error([{"BEFORE_PPRDATA_AUTO_START": {
+        "PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Response": ""}}])
+    response = obj.sp_PPR_Data_Set_frm_gen()
+    common.logger.error([{"AFTER_PPRDATA_AUTO_END": {
+        "PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Response": str(response)}}])
+
+
+sched.add_cron_job(Auto_PPR_Set_schdule, hour=7, minute=50)
+
+
+# def Auto_PPR_Set_schdule():
+#
+#     Current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#     json_body = json.dumps({
+#         "Params": {"tran_todate": str(Current_date_time)},
+#         "Classification": {"Entity_Gid": "1", "Create_By": "0ADMIN"}
+#     })
+#     params = {"Group": "PPR_SET", "Action": "Insert", "Local": ""}
+#     common.logger.error(
+#         [{"BEFORE_PPRDATA_AUTO_START": {"PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),"Response":""}}])
+#     resp = requests.post("" + ip + "/PPR_Data_Set", params=params, data=json_body,
+#                          verify=False)
+#     response = resp.content.decode("utf-8")
+#     print("sidhu",response)
+#     common.logger.error([{"AFTER_PPRDATA_AUTO_END":{"PPR_Auto_Schdule":str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),"Response":str(response)}}])
+
+
+# sched.add_cron_job(Auto_PPR_Set_schdule, hour=21, minute=30)
+# sched.add_cron_job(Auto_PPR_Set_schdule, hour=6, minute=47)
+
+
+def PPR_Schudle(request):
+    try:
+        if request.method == 'GET':
+            Entity_gid = request.session['Entity_gid']
+            Create_By = request.session['Emp_gid']
+            Current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            json_body = json.dumps({
+                "Params": {"tran_todate": str(Current_date_time)},
+                "Classification": {"Entity_Gid": Entity_gid, "Create_By": Create_By}
+            })
+            params = {"Group": "PPR_SET", "Action": "Insert"}
+            token = jwt.token(request)
+            headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+            common.logger.error([{"BEFORE_PPRDATA_MANUAL_END": {
+                "PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Response": ""}}])
+            resp = requests.post("" + ip + "/PPR_Data_Set", params=params, data=json_body, headers=headers,
+                                 verify=False)
+            common.logger.error([{"AFTER_PPRDATA_MANUAL_END": {
+                "PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Response": resp}}])
+            response = resp.content.decode("utf-8")
+            return HttpResponse(response)
+    except Exception as e:
+        return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def ppr_supplier_report(request):
+    return render(request, 'PPR_Supplier_report.html')
+
+
+def Budget_Summary(request):
+    return render(request, 'Budget_Summary.html')
+
+
+def PPR_Budget_Get_Summary(request):
+    if request.method == 'POST':
+        try:
+            jsondata = json.loads(request.body.decode('utf-8'))
+            if (jsondata.get(
+                    'Group')) == 'SUMMARY' or "FinYear_Fetch" or "Sector_Fetch" or "Business_Fetch" or "Bs_Fetch" or "CC_Fetch" or "Expense_grp":
+                grp = jsondata.get('Group')
+                action = jsondata.get('Action')
+                typ = jsondata.get('Group')
+                params = {'Group': "" + grp + "", 'Action': "" + action + "", 'Type': "" + typ + ""}
+                token = jwt.token(request)
+                headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+                datas = json.dumps(jsondata.get('data'))
+                resp = requests.post("" + ip + "/PPR_Budget_Get", params=params, data=datas, headers=headers,
+                                     verify=False)
+                response = resp.content.decode("utf-8")
+                return HttpResponse(response)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def PPR_Budget_Excel_Upload(request):
+    return render(request, 'PPR_excel_upload.html')
+
+
+def PPR_Budget_Upload_XL_genetate_Json(request):
+    if request.method == 'POST':
+        try:
+            Entity_gid = request.session['Entity_gid']
+            Create_By = request.session['Emp_gid']
+            params = {'Group': "PPR_FIND_ALL", 'Action': "GET"}
+            token = jwt.token(request)
+            headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+            excel_data_DF = pd.read_excel(request.FILES['file'])
+            column_arr = [
+                'Sl. No',
+                'Date',
+                'Financial Year',
+                'Quarter (in nos)',
+                'Month (in numarical)',
+                'Branch Code',
+                'Sector Name',
+                'Business Name',
+                'BS Name',
+                'CC Name',
+                'Category Code',
+                'Subcategory Code',
+                'GL No',
+                'Budget Amount'
+            ]
+            if column_arr == list(excel_data_DF.columns):
+                Json_data_XL = excel_data_DF.drop(
+                    ["Sl. No"],
+                    axis=1).rename(columns={
+                    "Branch Code": "Branch", "Sector Name": "Sector", "Business Name": "Bizname", "BS Name": "BS",
+                    "CC Name": "CC",
+                    "Category Code": "Category", "Subcategory Code": "Subcategory", "GL No": "CBSGL",
+                    "Budget Amount": "Amount", "Financial Year": "Fin_year", "Quarter (in nos)": "Quarter",
+                    "Month (in numarical)": "trn_month"
+                }).to_json(orient="records", date_format="iso")
+                print(Json_data_XL)
+                datas = json.dumps({"Params": {"detail": json.loads(Json_data_XL)},
+                                    "Classification": {"Entity_Gid": Entity_gid, "Create_By": Create_By}})
+                resp = requests.post("" + ip + "/PPR_Budget_Get", params=params, data=datas, headers=headers,
+                                     verify=False)
+                response = resp.content.decode("utf-8")
+                return HttpResponse(response)
+            elif column_arr != list(excel_data_DF.columns):
+                return JsonResponse({"MESSAGE": "Wrong Format"})
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def PPR_Buget_XL_Set(request):
+    if request.method == 'POST':
+        try:
+            jsondata = json.loads(request.body.decode('utf-8'))
+            if (jsondata.get('Group')) == 'Budget_Insert':
+                grp = jsondata.get('Group')
+                action = jsondata.get('Action')
+                typ = jsondata.get('Group')
+                params = {'Group': "" + grp + "", 'Action': "" + action + "", 'Type': "" + typ + ""}
+                token = jwt.token(request)
+                headers = {"content-type": "application/json", "Authorization": "" + token + ""}
+                datas = json.dumps(jsondata.get('data'))
+                resp = requests.post("" + ip + "/PPR_Budget_Set", params=params, data=datas, headers=headers,
+                                     verify=False)
+                response = resp.content.decode("utf-8")
+                return HttpResponse(response)
+        except Exception as e:
+            return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
+
+
+def PPR_report_3(request):
+    return render(request, 'PPR_report3.html')

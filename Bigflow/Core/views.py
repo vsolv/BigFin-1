@@ -390,7 +390,7 @@ def token_jwt(request,ref,username):
                 return request.session["access_token"]
             elif datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S") < request.session["refresh_expirytime"]:
                 common.logger.error([{"LG_Check_Logins": "BC"}])
-                utl.check_login(request)
+                # utl.check_login(request)
                 common.logger.error([{"LG_Check_Logins": "AC"}])
                 headers = {"content-type": "application/json"}
                 params = ''

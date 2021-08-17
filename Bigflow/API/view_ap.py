@@ -449,8 +449,8 @@ class ECFInvoice_get(APIView):
             print(response)
             classify = {
                 "bar_code_path": response,
-                "logo_path": ip + "/static/Images/kvbLogo.png",
-                "icon_path": ip + "/static/Images/kvb_logo.jpg"
+                "logo_path": ip + "/static/Images/vsolvLogo.png",
+                "icon_path": ip + "/static/Images/vsolvLogo.png"
             }
             output['INVOICE_HEADER'][0].update(classify)
             invoicedetails_totalamt = 0

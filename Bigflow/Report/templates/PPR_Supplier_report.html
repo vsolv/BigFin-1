@@ -1,0 +1,1518 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} PPR Expense - Supplier Report{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        md-tabs:not(.md-no-tab-content):not(.md-dynamic-height) {
+            min-height: 450px;
+        }
+        td:nth-child(1) {
+            text-align: left;
+            font-weight: bolder;
+            width: 175px;
+        }
+        .header {
+            position: sticky;
+            top: 85px;
+            z-index: 3;
+        }
+        .popupheader {
+            position: sticky;
+            top: 0;
+            background-color: #607b8d;
+            color: white;
+        }
+        .from {
+            padding-top: 25px;
+        }
+        .to {
+            padding-top: 25px;
+        }
+        #toaster .md-toast-content {
+            background-color: green;
+            color: white;
+        }
+        #toaster_view .md-toast-content {
+            background-color: green;
+            color: white;
+        }
+    </style>
+</head>
+<body ng-app="PPR_report" ng-controller="myCtrl">
+    <div class="maincontent">
+        <div class="container container1">
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>PPR Expense - Supplier Report</h4>
+                </div>
+            </div>
+            <div class="dropdown">
+                <div class="row">
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="Fin-Year"
+                                        ng-disabled="finalBTN" md-input-maxlength="126"
+                                        md-item-text="item.pprdata_finyear"
+                                        md-items="item in fin_year | filter:searchText5" md-min-length="0"
+                                        md-no-cache="true" md-search-text="searchText5" md-selected-item="selected5"
+                                        md-selected-item-change="" required="" md-has-not-found="true" tabindex="-1"
+                                        class="ng-isolate-scope">
+                                        <span md-highlight-text="searchText5"
+                                            md-highlight-flags="^i">{{item.pprdata_finyear}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-2">
+                        <br>
+                        <label>Select Quarterly or Monthly*</label>
+                        <md-radio-group layout="row" ng-model="filter_year_val" required=""
+                            class="ng-pristine ng-untouched _md layout-row ng-empty ng-invalid ng-invalid-required"
+                            role="radiogroup" tabindex="0" aria-required="true" aria-disabled="false"
+                            aria-invalid="true">
+                            <md-radio-button value="Quarterly">Quarterly</md-radio-button>
+                            <md-radio-button value="Monthly">Monthly</md-radio-button>
+                        </md-radio-group>
+                    </div>
+                    <div class="col-lg-3 col-sm-3">
+                        <br>
+                        <label>Select Amount*</label>
+                        <div class="btn-group" id="statusa" data-toggle="buttons">
+                            <label ng-class="newcls" ng-click="select_amount('L')" title="click to active" role="button"
+                                tabindex="0" class="btn btn-default btn-on btn-xs">
+                                <input type="radio" checked="checked" required=""
+                                    class="ng-pristine ng-untouched ng-empty ng-invalid ng-invalid-required" name="11"
+                                    aria-invalid="true">Amount in Lakhs</label>
+                            <label ng-class="newcls1" ng-click="select_amount('K')" title="click to deactive"
+                                role="button" tabindex="0" class="btn btn-default btn-off btn-xs">
+                                <input type="radio" checked="checked" class="ng-pristine ng-untouched ng-valid ng-empty"
+                                    name="12" aria-invalid="false">Amount in Thousands</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="Branch"
+                                        ng-disabled="branchBTN" md-input-maxlength="126"
+                                        md-item-text="item.branch_detail" md-items="item in branch_fun(searchText4)"
+                                        md-min-length="0" md-no-cache="true" md-search-text="searchText4"
+                                        md-selected-item="selected4"
+                                        md-selected-item-change="sector_fucn(item.branch_gid)" required=""
+                                        md-has-not-found="true" tabindex="-1" class="ng-isolate-scope">
+                                        <span md-highlight-text="searchText4"
+                                            md-highlight-flags="^i">{{item.branch_detail}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="Sector"
+                                        ng-disabled="sectorBTN" md-input-maxlength="126" md-item-text="item.sector_name"
+                                        md-items="item in sector | filter:searchText1" md-min-length="0"
+                                        md-no-cache="true" md-search-text="searchText1" md-selected-item="selected1"
+                                        md-selected-item-change="bussinessNameClick(item.sector_gid,item.sector_name)"
+                                        required="" md-has-not-found="true" tabindex="-1" class="ng-isolate-scope">
+                                        <span md-highlight-text="searchText1"
+                                            md-highlight-flags="^i">{{item.sector_name}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="Business"
+                                        ng-disabled="bussinesssBTN" md-input-maxlength="126"
+                                        md-item-text="item.businesssegment_name"
+                                        md-items="item in bussiness | filter:searchText2" md-min-length="0"
+                                        md-no-cache="true" md-search-text="searchText2" md-selected-item="selected2"
+                                        md-selected-item-change="BS_dropDown(item.businesssegment_gid,item.businesssegment_name)"
+                                        required="" md-has-not-found="true" tabindex="-1" class="ng-isolate-scope">
+                                        <span md-highlight-text="searchText2"
+                                            md-highlight-flags="^i">{{item.businesssegment_name}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                    <!-- BS -->
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="BS" ng-disabled="BS_btn"
+                                        md-input-maxlength="126" md-item-text="item.tbs_name"
+                                        md-items="item in BS_item | filter:BS_text" md-min-length="0" md-no-cache="true"
+                                        md-search-text="BS_text" md-selected-item="BS_selected"
+                                        md-selected-item-change="CC_dropDown(item.tbs_gid)" required=""
+                                        md-has-not-found="true" tabindex="-1" class="ng-isolate-scope">
+                                        <span md-highlight-text="BS_text"
+                                            md-highlight-flags="^i">{{item.tbs_name}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                    <!-- CC -->
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <md-autocomplete md-clear-button="true" md-floating-label="CC" ng-disabled="CC_btn"
+                                        md-input-maxlength="126" md-item-text="item.tcc_name"
+                                        md-items="item in CC_item | filter:CC_text" md-min-length="0" md-no-cache="true"
+                                        md-search-text="CC_text" md-selected-item="CC_selected"
+                                        md-selected-item-change="" required="" md-has-not-found="true" tabindex="-1"
+                                        class="ng-isolate-scope">
+                                        <span md-highlight-text="CC_text"
+                                            md-highlight-flags="^i">{{item.tcc_name}}</span>
+                                        <md-not-found>
+                                            Not found.
+                                        </md-not-found>
+                                    </md-autocomplete>
+                                </div>
+                                <div>
+                                    <div class="md-errors-spacer"></div>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-3 col-sm-3">
+                        <md-input-container class="md-block inputcontainer md-input-has-placeholder md-input-has-value">
+                            <form>
+                                <div class="process">
+                                    <label>Expense Group</label>
+                                    <md-select ng-model="searchText3_exp_gid" multiple="" ng-disabled="expenseBTN">
+                                        <md-optgroup label="Expense Group">
+                                            <md-option ng-value="item.expensegrp_gid"
+                                                ng-repeat="item in Expence_BUSGID">
+                                                {{item.expensegrp_name}}
+                                            </md-option>
+                                        </md-optgroup>
+                                    </md-select>
+                                </div>
+                            </form>
+                        </md-input-container>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="md-fab md-mini md-primary custbutton md-button md-ink-ripple" type="button"
+                            ng-click="show_table_exp_GID(searchText5,filter_year_val)" ng-disabled="searchBTN"
+                            aria-label="Search" md-labeled-by-tooltip="md-tooltip-3">
+                            <md-icon class="ng-scope material-icons" role="img" aria-label="search">search</md-icon>
+                        </button>
+                    </div>
+
+                    <!-- Rub Btn -->
+
+                </div>
+                <div class="row" style="padding: 10px;">
+                    <div class="col-lg-12 col-sm-12" style="text-align: right;color: blue;">
+                        <h4>{{Amount_info}}</h4>
+                    </div>
+                    <div class="row">
+                        <!-- table -->
+                        <div class="col-md-12 col-lg-12 col-sm-12" ng-hide="Quarterly_table">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                md-progress="deferred">
+                                <thead>
+                                    <tr>
+                                        <th class="header">Direct Cost</th>
+                                        <th class="header">Quarterly-1</th>
+                                        <th class="header">Quarterly-2</th>
+                                        <th class="header">Quarterly-3</th>
+                                        <th class="header">Quarterly-4</th>
+                                        <th class="header">YTD</th>
+                                    </tr>
+                                </thead>
+                                <tbody ng-repeat="x in Quarterly_table_body">
+                                    <tr style="text-align: right;" ng-model="row_index" ng-init="row_index=$index">
+                                        <td ng-style="{'padding-left':{{x.Padding}}}">
+                                            <div ng-if="x['Supplier'] == 'YES'">
+                                                <div ng-click="Supplier_Detials($index)">
+                                                    <a href="" class="ng-binding">
+                                                        {{x['Direct Cost']}}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div ng-if="x['Supplier'] != 'YES'">
+                                                <div>
+                                                    {{x['Direct Cost']}}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div ng-if="isString(x['Quarterly-1'])">
+                                                <div>{{x['Quarterly-1']}}</div>
+                                            </div>
+                                            <div ng-if="isNumber(x['Quarterly-1'])">
+                                                <div>
+                                                    {{amount_money_convert(x['Quarterly-1'])}}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Quarterly-2'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Quarterly-3'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Quarterly-4'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['YTD'])}}
+                                        </td>
+                                    </tr>
+                                    <tr ng-repeat="supplier in x.Supplier_detials" style="text-align: right;">
+                                        <td ng-style="{'padding-left':{{supplier.Padding}}}">
+                                            {{supplier['Direct Cost']}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Quarterly-1'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Quarterly-2'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Quarterly-3'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Quarterly-4'])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['YTD'])}}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-12 col-lg-12 col-sm-12" ng-hide="Monthly_table">
+                            <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                md-progress="deferred">
+                                <thead>
+                                    <tr style="text-align: right;">
+                                        <th class="header">Direct Cost</th>
+                                        <th class="header">Apr-{{start_year}}
+                                        </th>
+                                        <th class="header">May-{{start_year}}
+                                        </th>
+                                        <th class="header">Jun-{{start_year}}
+                                        </th>
+                                        <th class="header">Jul-{{start_year}}
+                                        </th>
+                                        <th class="header">Aug-{{start_year}}
+                                        </th>
+                                        <th class="header">Sep-{{start_year}}
+                                        </th>
+                                        <th class="header">Oct-{{start_year}}
+                                        </th>
+                                        <th class="header">Nov-{{start_year}}
+                                        </th>
+                                        <th class="header">Dec-{{start_year}}
+                                        </th>
+                                        <th class="header">Jan-{{end_year}}
+                                        </th>
+                                        <th class="header">Feb-{{end_year}}
+                                        </th>
+                                        <th class="header">Mar-{{end_year}}
+                                        </th>
+                                        <th class="header">YTD
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody ng-repeat="x in Monthly_table_body">
+                                    <tr style="text-align: right;" ng-model="row_index" ng-init="row_index=$index">
+                                        <td ng-style="{'padding-left':{{x.Padding}}}">
+                                            <div ng-if="x['Supplier'] == 'YES'">
+                                                <div ng-click="Supplier_Detials($index)">
+                                                    <a href="" class="ng-binding">
+                                                        {{x['Direct Cost']}}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div ng-if="x['Supplier'] != 'YES'">
+                                                <div>
+                                                    {{x['Direct Cost']}}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Apr-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['May-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Jun-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Jul-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Aug-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Sep-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Oct-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Nov-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Dec-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Jan-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Feb-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['Mar-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(x['YTD'])}}
+                                        </td>
+                                    </tr>
+                                    <tr ng-repeat="supplier in x.Supplier_detials" style="text-align: right;">
+                                        <td ng-style="{'padding-left':{{supplier.Padding}}}">
+                                            {{supplier['Direct Cost']}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Apr-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['May-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Jun-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Jul-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Aug-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Sep-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Oct-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Nov-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Dec-'.concat(start_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Jan-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Feb-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['Mar-'.concat(end_year)])}}
+                                        </td>
+                                        <td>
+                                            {{amount_money_convert(supplier['YTD'])}}
+                                        </td>
+                                    </tr>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endverbatim %}
+        <!-- <script>
+            function zoomin() {
+                var GFG = document.getElementById("zooming");
+                var currWidth = GFG.clientWidth;
+                GFG.style.width = (currWidth + 150) + "px";
+            }
+            function zoomout() {
+                var GFG = document.getElementById("zooming");
+                var currWidth = GFG.clientWidth;
+                GFG.style.width = (currWidth - 150) + "px";
+            }
+            function clk() {
+                var GFG = document.getElementById("zooming");
+                var currWidth = GFG.clientWidth;
+                GFG.style.width = (892) + "px";
+            }
+        </script> -->
+        <script>
+            var app = angular.module('PPR_report', ['ngMaterial', 'ui.bootstrap'], function ($httpProvider) {
+                $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+                $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+            });
+            app.run(function ($mdDateLocale, $filter) {
+                $mdDateLocale.formatDate = function (date) {
+                    return $filter('date')(date, "dd-MMM-yyyy");
+                };
+            })
+            app.run(function ($rootScope) {
+                $rootScope.sectorID = '';
+                $rootScope.sectorName = '';
+                $rootScope.bussinessID = '';
+                $rootScope.bussinessName = '';
+                $rootScope.expenceID = '';
+                $rootScope.expenceNAME = '';
+                $rootScope.subcatGID = "";
+                $rootScope.table_api = '';
+                $rootScope.popup_item_data = '';
+                $rootScope.popup_item_date = '';
+                $rootScope.popup_item_amount = '';
+                $rootScope.row_index_num = 0;
+                $rootScope.selected_tabs = '';
+                $rootScope.selected_tabs_changed = '';
+                $rootScope.tran_month = '';
+                $rootScope.bizname = '';
+                $rootScope.apexpenceID = '';
+                $rootScope.apsubcatGID = '';
+                $rootScope.supplier_gid = '';
+                $rootScope.branchGID = '';
+                $rootScope.amount_L_K = '';
+                $rootScope.fin_year_selected = '';
+            });
+            app.controller('myCtrl', function ($scope, $filter, $http, $rootScope, $mdDialog, $mdToast, $log,
+                PPR_service, $sce) {
+                //validating html template data to fix click event start
+                $scope.isString = function (value) {
+                    return typeof value === 'string';
+                }
+                $scope.isNumber = function (value) {
+                    return typeof value === 'number';
+                }
+                $scope.amount_money_convert = function (value) {
+                    if(value != ""){
+                        var value = (Number(value)).toLocaleString(
+                    undefined, {
+                        minimumFractionDigits: 2
+                    }
+                );
+                    }
+
+                return value
+                }
+                $scope.isJpg = function (filename) {
+                    return filename.split(".")[1] === "jpeg" || "png";
+                }
+                $scope.isPdf = function (filename) {
+                    return filename.split(".")[1] === "pdf";
+                }
+                //validating html template data to fix click event end
+                $scope.currentPage = 1;
+                $scope.maxSize = 3;
+                $scope.itemsPerPage = 10;
+                $scope.pageLength = '';
+                $scope.currentPageECF = 1;
+                $scope.pageLengthECF = "";
+                $scope.today = new Date()
+                $scope.sectorBTN = true;
+                $scope.bussinesssBTN = true;
+                $scope.BS_btn = true;
+                $scope.CC_btn = true;
+                $scope.expenseBTN = true;
+                $scope.searchBTN = true;
+
+                $scope.ecf_table_hide = true;
+                $scope.img_path = true;
+                $scope.pdf_path = true;
+                $scope.branchBTN = true;
+                $scope.finalBTN = true;
+                $scope.Quarterly_table = true;
+                $scope.Monthly_table = true;
+                var detail = JSON.parse(sessionStorage.getItem('today'));
+                employgid = detail.employee_gid;
+                entitygid = detail.entity_gid;
+                $scope.employgid = employgid;
+                $scope.entitygid = entitygid;
+                //loader spinner start
+                $scope.loading = function () {
+                    $mdDialog.show({
+                        templateUrl: 'loaderSpinner',
+                        parent: angular.element(document.body),
+                        clickOutsideToClose: false
+                    });
+                };
+                $scope.loading_popup = function () {
+                    $mdDialog.show({
+                        templateUrl: 'loaderSpinner',
+                        parent: angular.element(document.getElementById('view_pop_up')),
+                        clickOutsideToClose: false
+                    });
+                };
+                $scope.endloading = function () {
+                    $mdDialog.hide();
+                };
+                //loader spinner ends
+                function Fin_year_fun() {
+                    try {
+                        var Fin_data = {
+                            "Params": {},
+                            "Classification": {
+                                "Entity_Gid": entitygid,
+                                "Create_By": employgid
+                            }
+                        }
+                        var fin_send_data = {
+                            'Group': 'PPR_Data',
+                            'Action': "FinYear_Fetch",
+                            'data': Fin_data
+                        }
+                        var fin_api = PPR_service.expense_api(fin_send_data)
+                        fin_api.then(function (fin_resp) {
+                            $scope.fin_year = fin_resp.data.DATA;
+                            $scope.finalBTN = false;
+                            $scope.filter_year_val = "Quarterly"
+                        })
+                    } catch (err) {
+                        alert(err)
+                        return false
+                    }
+                }
+                Fin_year_fun()
+                $scope.select_amount = function (data) {
+                    if ($scope.selected5 != null) {
+                        $rootScope.amount_L_K = data;
+                        $scope.branch_fun('')
+                        $scope.sector_fucn('')
+                    }
+                }
+                $scope.branch_fun = function (query) {
+                    $rootScope.fin_year_selected = $scope.searchText5;
+                    var datas = {
+                        params: {
+                            "type": "Mode",
+                            "Sub_Type": "Summary_new",
+                            "FILTER": {
+                                "Limit_Start": 0,
+                                "Limit_End": 30,
+                                "branch_name": "",
+                                "branch_detail": query,
+                                "branch_code": ""
+                            },
+                            "CLASSIFICATION": {
+                                "Entity_Gid": [0]
+                            }
+                        }
+                    };
+                    return $http.post(Appname + '/classificationdata_get/', datas).then(function (data) {
+                        var final_values = data.data.DATA;
+                        $scope.branchBTN = false;
+                        return final_values;
+                    });
+                }
+                //sector
+                $scope.sector_fucn = function (branch_gid) {
+                    try {
+                        if (branch_gid == '' || branch_gid == undefined) {
+                            $scope.sectorBTN = true;
+                            $scope.bussinesssBTN = true;
+                            $scope.BS_btn = true;
+                            $scope.CC_btn = true;
+                            $scope.expenseBTN = true;
+                            $scope.searchBTN = true;
+                            $scope.searchText1 = "";
+                            $scope.searchText2 = "";
+                            $scope.searchText3_exp_gid = "";
+                            $scope.BS_text = "";
+                            $scope.CC_text = "";
+                            $rootScope.branchGID = '';
+                            var sector_data = {
+                                "Params": {
+                                    "Table_name": "ap_mst_tsector",
+                                    "Column_1": "sector_gid,sector_name",
+                                    "Column_2": "",
+                                    "Where_Common": "sector",
+                                    "Where_Primary": "",
+                                    "Primary_Value": "",
+                                    "Order_by": "gid"
+                                },
+                                "Classification": "1"
+                            }
+                            var Sector_sendData = {
+                                "Group": "sector",
+                                "Action": "",
+                                "data": sector_data
+                            }
+                            var sector_api = PPR_service.sector_api(Sector_sendData);
+                            sector_api.then(function (sector_response) {
+                                $scope.sectorBTN = false;
+                                $scope.sector = sector_response.data.DATA;
+                            });
+                        } else if (branch_gid != '') {
+                            $scope.bussinesssBTN = true;
+                            $scope.expenseBTN = true;
+                            $scope.BS_btn = true;
+                            $scope.CC_btn = true;
+                            $scope.searchBTN = true;
+                            $scope.sectorBTN = true;
+                            $rootScope.branchGID = branch_gid
+                            var sector_data = {
+                                "Params": {
+                                    "pprdata_apinvoicebranchgid": branch_gid // 1903
+                                },
+                                "Classification": {
+                                    "Entity_Gid": entitygid,
+                                    "Create_By": employgid
+                                }
+                            }
+                            var Sector_sendData = {
+                                "Group": "PPR_Data",
+                                "Action": "Sector_Fetch",
+                                "data": sector_data
+                            }
+                            var sector_api = PPR_service.expense_api(Sector_sendData);
+                            sector_api.then(function (sector_response) {
+                                $scope.sectorBTN = false;
+                                $scope.searchText1 = "";
+                                $scope.searchText2 = "";
+                                $scope.searchText3_exp_gid = "";
+                                $scope.BS_text = "";
+                                $scope.CC_text = "";
+                                $scope.sector = sector_response.data.DATA;
+                            });
+                        }
+                    } catch (err) {
+                        alert("DATA NOT FOUND")
+                        return false
+                    }
+                }
+                //get bussiness name
+                $scope.bussinessNameClick = function (sectorgid, sectorName) {
+                    try {
+                        $scope.searchText2 = "";
+                        $scope.BS_text = "";
+                        $scope.CC_text = "";
+                        $scope.bussinesssBTN = true;
+                        $scope.expenseBTN = true;
+                        $scope.BS_btn = true;
+                        $scope.CC_btn = true;
+                        $scope.searchBTN = true;
+                        if (sectorgid != undefined && sectorName != undefined) {
+                            $scope.BS_dropDown();
+                            $rootScope.sectorID = sectorgid;
+                            $rootScope.sectorName = sectorName;
+                            var buss_name = {
+                                "Params": {
+                                    "businesssegment_sectorgid": sectorgid
+                                },
+                                "Classification": {
+                                    "Entity_Gid": entitygid,
+                                    "Create_By": employgid
+                                }
+                            }
+                            var Buss_send_data = {
+                                'Group': 'bussinessName',
+                                'Action': "BS_Fetch",
+                                'data': buss_name
+                            }
+                            var bussiness_api = PPR_service.bussinessNmae_api(Buss_send_data)
+                            bussiness_api.then(function (business_response) {
+                                $scope.bussiness = business_response.data.DATA;
+                                $scope.bussinesssBTN = false;
+                            });
+                        }
+                    } catch (err) {
+                        alert("DATA NOT FOUND")
+                        return false
+                    }
+                }
+                //get BS names
+                $scope.BS_dropDown = function (itemBUSGid, itemBUSName) {
+                    $scope.BS_text = "";
+                    $scope.CC_text = "";
+                    $scope.BS_btn = true;
+                    $scope.CC_btn = true;
+                    if (itemBUSGid != undefined && itemBUSName != undefined) {
+                        $scope.expenseClick(itemBUSGid, itemBUSName)
+                        var BS_data = {
+                            "Params": {
+                                "Table_name": "ap_mst_tbs",
+                                "Column_1": "tbs_name,tbs_gid",
+                                "Column_2": "",
+                                "Where_Common": "tbs",
+                                "Where_Primary": "businesssegment_gid",
+                                "Primary_Value": itemBUSGid,
+                                "Order_by": "name"
+                            },
+                            "Classification": "1"
+                        }
+                        var BS_send_data = {
+                            "Group": "sector",
+                            "Action": "PPR_BS",
+                            "data": BS_data
+                        }
+                        var BS_api = PPR_service.sector_api(BS_send_data);
+                        BS_api.then(function (response) {
+                            $scope.BS_item = response.data.DATA;
+                            $scope.BS_btn = false;
+                        })
+                    }
+                }
+                $scope.CC_dropDown = function (tbs_gid) {
+                    $scope.CC_text = "";
+                    $scope.CC_btn = true;
+                    if (tbs_gid != undefined) {
+                        var CC_data = {
+                            "Params": {
+                                "Table_name": "ap_mst_tcc",
+                                "Column_1": "tcc_gid,tcc_name",
+                                "Column_2": "",
+                                "Where_Common": "tcc",
+                                "Where_Primary": "bsgid",
+                                "Primary_Value": tbs_gid,
+                                "Order_by": "name"
+                            },
+                            "Classification": "1"
+                        }
+                        var CC_send_data = {
+                            "Group": "sector",
+                            "Action": "PPR_CC",
+                            "data": CC_data
+                        }
+                        var CC_api = PPR_service.sector_api(CC_send_data);
+                        CC_api.then(function (response) {
+                            $scope.CC_item = response.data.DATA;
+                            $scope.CC_btn = false;
+                        })
+                    }
+                }
+                //get expense name
+                $scope.expenseClick = function (itemBUSGid, itemBUSName) {
+                    try {
+                        $scope.searchText3_exp_gid = "";
+                        $scope.expenseBTN = true;
+                        $scope.searchBTN = true;
+                        if (itemBUSGid != undefined && itemBUSName != undefined) {
+                            $rootScope.bussinessID = itemBUSGid;
+                            $rootScope.bussinessName = itemBUSName;
+                            var BGid_pa = {
+                                "Params": {
+                                    "businesssegment_gid": itemBUSGid
+                                },
+                                "Classification": {
+                                    "Entity_Gid": entitygid,
+                                    "Create_By": employgid
+                                }
+                            }
+                            var BGid_send_data = {
+                                'Group': 'bussinessGid',
+                                'Action': "ExpenseGrp_Fetch",
+                                'data': BGid_pa
+                            }
+                            var Bussiness_Gid_api = PPR_service.bussinessGID_EXP_api(BGid_send_data)
+                            Bussiness_Gid_api.then(function (Gid_response) {
+                                $scope.Expence_BUSGID = Gid_response.data.DATA;
+                                $scope.expenseBTN = false;
+                                $scope.searchBTN = false;
+                            });
+                        }
+                    } catch (err) {
+                        alert("DATA NOT FOUND")
+                        return false
+                    }
+                }
+                $scope.expense_detial = function (expenceGID, expenceName) {
+                    try {
+                        $rootScope.expenceID = expenceGID;
+                        $rootScope.expenceNAME = expenceName;
+                        if (expenceGID == undefined || expenceName == undefined) {
+                            $rootScope.expenceID = ""
+                            $rootScope.expenceNAME = ""
+                        }
+                    } catch (err) {
+                        alert("DATA NOT FOUND")
+                        return false
+                    }
+                }
+                $scope.show_table_exp_GID = function (fin_year, filter_type) {
+                    $scope.loading();
+                    var cc_select = "";
+                    var bs_select = "";
+                    if ($scope.CC_selected != null) {
+                        cc_select = $scope.CC_selected.tcc_name
+                    }
+                    if ($scope.BS_selected != null) {
+                        bs_select = $scope.BS_selected.tbs_name
+                    }
+                    var expen_data = {
+                        "Params": {
+                            "fin_year": fin_year,
+                            "filter_type": filter_type,
+                            "amt_details": $rootScope.amount_L_K,
+                            "pprdata_apinvoicebranchgid": $rootScope.branchGID,
+                            "pprdata_sectorname": $rootScope.sectorName,
+                            "pprdata_bsname": bs_select,
+                            "pprdata_ccname": cc_select,
+                            "pprdata_bizname": $rootScope.bussinessName,
+                            "expensegrp_gid": $scope.searchText3_exp_gid,
+                            "Page_Index": "0",
+                            "Page_Size": "10"
+                        },
+                        "Classification": {
+                            "Entity_Gid": entitygid,
+                            "Create_By": employgid
+                        }
+                    }
+                    var exp_send_data = {
+                        'Group': 'PPR_Data',
+                        'Action': "PPR_Data_Fetch",
+                        'data': expen_data
+                    }
+                    $rootScope.expenceID = $scope.searchText3_exp_gid;
+                    var expence_api = PPR_service.expense_api(exp_send_data)
+                    expence_api.then(function (expense_response) {
+                        try {
+                            if ($scope.filter_year_val == "Monthly") {
+                                table_api = expense_response.data;
+                                $rootScope.table_api = table_api.DATA;
+                                var out_expGRPname_arr = table_api.DATA.map(myFunctionEXP_grp_name);
+                                function myFunctionEXP_grp_name(value, index, array) {
+                                    return value.expensegrp_name;
+                                }
+                                function removeDuplicateExpname(data) {
+                                    return data.filter((value, index) => data.indexOf(value) ===
+                                        index);
+                                }
+                                var Expense_Grp_name = removeDuplicateExpname(out_expGRPname_arr);
+                                var start_year = $scope.searchText5.replace('FY', "").split("-")[0];
+                                var end_year = $scope.searchText5.replace('FY', "").split("-")[1];
+                                $scope.start_year = start_year
+                                $scope.end_year = end_year
+                                //sort date end
+                                //filter month year api start
+                                var month = new Array();
+                                month[0] = "Jan-";
+                                month[1] = "Feb-";
+                                month[2] = "Mar-";
+                                month[3] = "Apr-";
+                                month[4] = "May-";
+                                month[5] = "Jun-";
+                                month[6] = "Jul-";
+                                month[7] = "Aug-";
+                                month[8] = "Sep-";
+                                month[9] = "Oct-";
+                                month[10] = "Nov-";
+                                month[11] = "Dec-";
+                                var unique_month_Year = ["Apr-".concat(start_year), "May-".concat(
+                                        start_year), "Jun-"
+                                    .concat(start_year), "Jul-".concat(start_year), "Aug-"
+                                    .concat(start_year),
+                                    "Sep-".concat(start_year), "Oct-".concat(start_year), "Nov-"
+                                    .concat(start_year), "Dec-"
+                                    .concat(start_year), "Jan-".concat(end_year), "Feb-".concat(
+                                        end_year), "Mar-".concat(end_year)
+                                ]
+                                output_data = []
+                                for (exp_grp = 0; exp_grp < Expense_Grp_name.length; exp_grp++) {
+                                    let temp_EXP_GRP = {}
+                                    temp_EXP_GRP["Direct Cost"] = Expense_Grp_name[exp_grp]
+                                    for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                        temp_EXP_GRP[unique_month_Year[m_y]] = "";
+                                    }
+                                    temp_EXP_GRP["YTD"] = ""
+                                    temp_EXP_GRP["Padding"] = 10
+                                    output_data.push(temp_EXP_GRP)
+                                    Exp_name_arr = []
+                                    for (nafi = 0; nafi < table_api.DATA.length; nafi++) {
+                                        if (table_api.DATA[nafi].expensegrp_name ==
+                                            Expense_Grp_name[exp_grp])
+                                            Exp_name_arr.push(table_api.DATA[nafi].expense_name)
+                                    }
+                                    function removeDuplicateEXPname_arr(data) {
+                                        return data.filter((value, index) => data.indexOf(value) ===
+                                            index);
+                                    }
+                                    let Expence_name = removeDuplicateEXPname_arr(Exp_name_arr)
+                                    for (exp = 0; exp < Expence_name.length; exp++) {
+                                        let temp_data = {};
+                                        temp_data["Direct Cost"] = Expence_name[exp];
+                                        for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                            temp_data[unique_month_Year[m_y]] = "";
+                                        }
+                                        temp_data["YTD"] = ""
+                                        temp_data["Padding"] = 50
+                                        output_data.push(temp_data)
+                                        name_arr = [];
+                                        for (nafi = 0; nafi < table_api.DATA.length; nafi++) {
+                                            if (table_api.DATA[nafi].expense_name == Expence_name[
+                                                    exp])
+                                                name_arr.push(table_api.DATA[nafi].subcategory_name)
+                                        }
+                                        function removeDuplicatename_arr(data) {
+                                            return data.filter((value, index) => data.indexOf(
+                                                    value) ===
+                                                index);
+                                        }
+                                        for (n = 0; n < removeDuplicatename_arr(name_arr)
+                                            .length; n++) {
+                                            let temp_row = {};
+                                            temp_row["Direct Cost"] = removeDuplicatename_arr(
+                                                name_arr)[n];
+                                            Total_of_amount = [];
+                                            for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                                temp_row[unique_month_Year[m_y]] = "0.00";
+                                            }
+                                            for (api = 0; api < table_api.DATA.length; api++) {
+                                                var d = new Date(table_api.DATA[api]
+                                                    .pprdata_transactiondate)
+                                                if (Expence_name[exp] == table_api.DATA[api]
+                                                    .expense_name) {
+                                                    if (removeDuplicatename_arr(name_arr)[n] ==
+                                                        table_api
+                                                        .DATA[
+                                                            api]
+                                                        .subcategory_name) {
+                                                        if (unique_month_Year.includes(month[d
+                                                                .getMonth()].concat(d
+                                                                .getFullYear().toString()
+                                                                .substr(-2)))) {
+                                                            Total_of_amount.push(parseFloat(
+                                                                parseFloat(
+                                                                    table_api
+                                                                    .DATA[api]
+                                                                    .Monthly_Amt).toFixed(2)
+                                                            ));
+                                                            temp_row[month[d.getMonth()].concat(d
+                                                                .getFullYear().toString()
+                                                                .substr(-2))] = parseFloat(
+                                                                parseFloat(
+                                                                    table_api
+                                                                    .DATA[api]
+                                                                    .Monthly_Amt).toFixed(2)
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            total_Amount = 0
+                                            for (total = 0; total < Total_of_amount
+                                                .length; total++) {
+                                                total_Amount = total_Amount + Total_of_amount[total]
+                                            }
+                                            temp_row["YTD"] = String(new Intl.NumberFormat('en-IN')
+                                                .format(parseFloat(total_Amount)
+                                                    .toFixed(
+                                                        2)))
+                                            if (total_Amount == 0) {
+                                                temp_row["YTD"] = "0.00"
+                                            }
+                                            temp_row["Padding"] = 100
+                                            temp_row['Supplier'] = "YES"
+                                            output_data.push(temp_row)
+                                            Total_of_amount = []
+                                        }
+                                    }
+                                }
+                                //final overall total row code start
+                                var sum_Total_dict_keys = Object.keys(output_data[0]).splice(1)
+                                sum_Total_dict_keys.splice(13)
+                                var over_all_row_all = {}
+                                over_all_row_all["Direct Cost"] = 'Total : ';
+                                for (row_keys = 0; row_keys < sum_Total_dict_keys
+                                    .length; row_keys++) {
+                                    total = 0
+                                    for (row_add = 0; row_add < output_data.length; row_add++) {
+                                        if (output_data[row_add][sum_Total_dict_keys[row_keys]] !=
+                                            '' || output_data[row_add][sum_Total_dict_keys[
+                                                row_keys]] != undefined) {
+                                            if (typeof (output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ]) == 'string') {
+                                                total = total + Number(output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ].replace(",", ""))
+                                            } else if (typeof (output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ]) == 'number') {
+                                                total = total + Number(output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ])
+                                            }
+                                        }
+                                    }
+                                    over_all_row_all[sum_Total_dict_keys[row_keys]] = new Intl
+                                        .NumberFormat('en-IN').format(total.toFixed(
+                                            2))
+                                    if (total == 0) {
+                                        over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                    }
+                                }
+                                over_all_row_all["Padding"] = 100
+                                output_data.push(over_all_row_all)
+                                //final overall total row code end
+                                $scope.endloading();
+                                $scope.Monthly_table_body = output_data;
+                                $scope.Quarterly_table = true;
+                                $scope.Monthly_table = false;
+
+                                if ($rootScope.amount_L_K == 'L') {
+                                    $scope.Amount_info = "Amount in Lakhs";
+                                } else if ($rootScope.amount_L_K == 'K') {
+                                    $scope.Amount_info = "Amount in Thousands";
+                                }
+                            } else if ($scope.filter_year_val == "Quarterly") {
+                                table_api = expense_response.data;
+                                $rootScope.table_api = table_api.DATA;
+                                var out_expGRPname_arr = table_api.DATA.map(myFunctionEXP_grp_name);
+                                function myFunctionEXP_grp_name(value, index, array) {
+                                    return value.expensegrp_name;
+                                }
+                                function removeDuplicateExpname(data) {
+                                    return data.filter((value, index) => data.indexOf(value) ===
+                                        index);
+                                }
+                                var Expense_Grp_name = removeDuplicateExpname(out_expGRPname_arr);
+                                //sort date end
+                                //filter month year api start
+                                var month = new Array();
+                                month[0] = "Jan-";
+                                month[1] = "Feb-";
+                                month[2] = "Mar-";
+                                month[3] = "Apr-";
+                                month[4] = "May-";
+                                month[5] = "Jun-";
+                                month[6] = "Jul-";
+                                month[7] = "Aug-";
+                                month[8] = "Sep-";
+                                month[9] = "Oct-";
+                                month[10] = "Nov-";
+                                month[11] = "Dec-";
+                                // var unique_month_Year = test_qurl(uniqueNums);
+                                var unique_month_Year = ["Quarterly-1", "Quarterly-2",
+                                    "Quarterly-3", "Quarterly-4",
+                                ]
+                                output_data = []
+                                for (exp_grp = 0; exp_grp < Expense_Grp_name.length; exp_grp++) {
+                                    let temp_EXP_GRP = {}
+                                    temp_EXP_GRP["Direct Cost"] = Expense_Grp_name[exp_grp]
+                                    for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                        temp_EXP_GRP[unique_month_Year[m_y]] = "";
+                                    }
+                                    temp_EXP_GRP["YTD"] = ""
+                                    temp_EXP_GRP["Padding"] = 10
+                                    output_data.push(temp_EXP_GRP)
+                                    Exp_name_arr = []
+                                    for (nafi = 0; nafi < table_api.DATA.length; nafi++) {
+                                        if (table_api.DATA[nafi].expensegrp_name ==
+                                            Expense_Grp_name[exp_grp])
+                                            Exp_name_arr.push(table_api.DATA[nafi].expense_name)
+                                    }
+                                    function removeDuplicateEXPname_arr(data) {
+                                        return data.filter((value, index) => data.indexOf(value) ===
+                                            index);
+                                    }
+                                    let Expence_name = removeDuplicateEXPname_arr(Exp_name_arr)
+                                    for (exp = 0; exp < Expence_name.length; exp++) {
+                                        let temp_data = {};
+                                        temp_data["Direct Cost"] = Expence_name[exp];
+                                        for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                            temp_data[unique_month_Year[m_y]] = "";
+                                        }
+                                        temp_data["YTD"] = ""
+                                        temp_data["Padding"] = 50
+                                        output_data.push(temp_data)
+                                        name_arr = [];
+                                        for (nafi = 0; nafi < table_api.DATA.length; nafi++) {
+                                            if (table_api.DATA[nafi].expense_name == Expence_name[
+                                                    exp])
+                                                name_arr.push(table_api.DATA[nafi].subcategory_name)
+                                        }
+                                        function removeDuplicatename_arr(data) {
+                                            return data.filter((value, index) => data.indexOf(
+                                                    value) ===
+                                                index);
+                                        }
+                                        for (n = 0; n < removeDuplicatename_arr(name_arr)
+                                            .length; n++) {
+                                            let temp_row = {};
+                                            temp_row["Direct Cost"] = removeDuplicatename_arr(
+                                                name_arr)[n];
+                                            Total_of_amount = [];
+                                            for (m_y = 0; m_y < unique_month_Year.length; m_y++) {
+                                                temp_row[unique_month_Year[m_y]] = "0.00";
+                                            }
+                                            for (api = 0; api < table_api.DATA.length; api++) {
+                                                var d = new Date(table_api.DATA[api]
+                                                    .pprdata_transactiondate)
+                                                if (Expence_name[exp] == table_api.DATA[api]
+                                                    .expense_name) {
+                                                    if (removeDuplicatename_arr(name_arr)[n] ==
+                                                        table_api
+                                                        .DATA[
+                                                            api]
+                                                        .subcategory_name) {
+                                                        if (unique_month_Year.includes("Quarterly-"
+                                                                .concat(table_api
+                                                                    .DATA[api]
+                                                                    .pprdata_quarter))) {
+                                                            Total_of_amount.push(parseFloat(
+                                                                parseFloat(
+                                                                    table_api
+                                                                    .DATA[api]
+                                                                    .Monthly_Amt).toFixed(2)
+                                                            ));
+                                                            temp_row["Quarterly-"
+                                                                    .concat(table_api
+                                                                        .DATA[api]
+                                                                        .pprdata_quarter)] =
+                                                                parseFloat(
+                                                                    parseFloat(table_api
+                                                                        .DATA[api]
+                                                                        .Monthly_Amt).toFixed(2));
+                                                            temp_row["subcat_gid"] = table_api
+                                                                .DATA[api]
+                                                                .pprdata_apsubcatgid
+                                                            temp_row["expense_gid"] = table_api
+                                                                .DATA[api]
+                                                                .pprdata_apexpensegid
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            total_Amount = 0
+                                            for (total = 0; total < Total_of_amount
+                                                .length; total++) {
+                                                total_Amount = total_Amount + Total_of_amount[total]
+                                            }
+                                            temp_row["YTD"] = String(new Intl.NumberFormat('en-IN')
+                                                .format(parseFloat(total_Amount)
+                                                    .toFixed(
+                                                        2)))
+                                            if (total_Amount == 0) {
+                                                temp_row["YTD"] = "0.00"
+                                            }
+                                            temp_row["Padding"] = 100
+                                            temp_row['Supplier'] = "YES"
+                                            output_data.push(temp_row)
+                                        }
+                                    }
+                                }
+                                //final overall total row code start
+                                var sum_Total_dict_keys = Object.keys(output_data[0]).splice(1)
+                                sum_Total_dict_keys.splice(13)
+                                var over_all_row_all = {}
+                                over_all_row_all["Direct Cost"] = 'Total : ';
+                                for (row_keys = 0; row_keys < sum_Total_dict_keys
+                                    .length; row_keys++) {
+                                    total = 0
+                                    for (row_add = 0; row_add < output_data.length; row_add++) {
+                                        if (output_data[row_add][sum_Total_dict_keys[row_keys]] !=
+                                            '' || output_data[row_add][sum_Total_dict_keys[
+                                                row_keys]] != undefined) {
+                                            if (typeof (output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ]) == 'string') {
+                                                total = total + Number(output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ].replace(",", ""))
+                                            } else if (typeof (output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ]) == 'number') {
+                                                total = total + Number(output_data[row_add][
+                                                    sum_Total_dict_keys[row_keys]
+                                                ])
+                                            }
+                                        }
+                                    }
+                                    over_all_row_all[sum_Total_dict_keys[row_keys]] = new Intl
+                                        .NumberFormat('en-IN').format(total.toFixed(
+                                            2))
+                                    if (total == 0) {
+                                        over_all_row_all[sum_Total_dict_keys[row_keys]] = "0.00"
+                                    }
+                                }
+                                over_all_row_all["Padding"] = 100
+                                output_data.push(over_all_row_all)
+                                //final overall total row code end
+                                $scope.endloading();
+                                $scope.Quarterly_table_body = output_data;
+                                $scope.Monthly_table = true;
+                                $scope.Quarterly_table = false;
+
+                                if ($rootScope.amount_L_K == 'L') {
+                                    $scope.Amount_info = "Amount in Lakhs";
+                                } else if ($rootScope.amount_L_K == 'K') {
+                                    $scope.Amount_info = "Amount in Thousands";
+                                }
+                            }
+                        } catch (err) {
+                            alert(err)
+                            $scope.endloading();
+                        }
+                    });
+                }
+                $scope.Supplier_Detials = function (row_index_num) {
+                    function myFunctionSupplier_name(value, index, array) {
+                        return value.supplier_name;
+                    }
+                    function removeDuplicateSuppliername(data) {
+                        return data.filter((value, index) => data.indexOf(value) ===
+                            index);
+                    }
+                    if ($scope.filter_year_val == 'Quarterly') {
+                        if ($rootScope.row_index_num != row_index_num) {
+                            $scope.Quarterly_table_body[$rootScope.row_index_num]["Supplier_detials"] = []
+                            row_data = $scope.Quarterly_table_body
+                            $rootScope.row_index_num = row_index_num
+                            var Quarterly_list = ["Quarterly-1", "Quarterly-2",
+                                "Quarterly-3", "Quarterly-4",
+                            ]
+                            var Api_data = {
+                                "Params": {
+                                    "amt_details": $rootScope.amount_L_K,
+                                    "pprdata_apexpensegid": row_data[row_index_num]["expense_gid"],
+                                    "pprdata_apsubcatgid": row_data[row_index_num]["subcat_gid"],
+                                    "pprdata_transactionmonth": "",
+                                    "pprdata_bizname": check_null_undefind($scope.selected2,
+                                        "businesssegment_name"),
+                                    "pprdata_sectorname": check_null_undefind($scope.selected1,
+                                        "sector_name"),
+                                    "filter_type": "Quarterly",
+                                },
+                                "Classification": {
+                                    "Entity_Gid": entitygid,
+                                    "Create_By": employgid
+                                }
+                            }
+                            var send_data = {
+                                'Group': 'bussinessGidname',
+                                'Action': "PPR_Sup_Fetch",
+                                'data': Api_data
+                            }
+                            var Api = PPR_service.supplier_api(send_data)
+                            Api.then(function (response) {
+                                var supplier_name = response.data.MESSAGE.DATA.map(
+                                    myFunctionSupplier_name);
+                                supplier_name = removeDuplicateSuppliername(supplier_name);
+                                supplier_Array = []
+                                for (supplier of supplier_name) {
+                                    temp_row = {}
+                                    temp_row["Direct Cost"] = supplier
+                                    for (Quarterly of Quarterly_list) {
+                                        temp_row[Quarterly] = "0.00"
+                                    }
+                                    temp_row["YTD"] = "0.00"
+                                    var Total_of_amount = []
+                                    for (api_data of response.data.MESSAGE.DATA) {
+                                        if (supplier == api_data.supplier_name) {
+                                            if (Quarterly_list.includes("Quarterly-".concat(api_data
+                                                    .pprdata_quarter))) {
+                                                temp_row["Quarterly-".concat(api_data
+                                                    .pprdata_quarter)] = Number(api_data
+                                                    .total_amt).toFixed(2);
+                                                Total_of_amount.push(Number(api_data.total_amt)
+                                                    .toFixed(2))
+                                            }
+                                        }
+                                    }
+                                    total = 0
+                                    for (amount of Total_of_amount) {
+                                        total = total + Number(amount)
+                                    }
+                                    temp_row["YTD"] = total
+                                    temp_row["Padding"] = 150
+                                    supplier_Array.push(temp_row)
+                                }
+                                row_data[row_index_num]["Supplier_detials"] = supplier_Array;
+                                $scope.Quarterly_table_body = row_data
+                            })
+                        } else if ($rootScope.row_index_num == row_index_num) {
+                            $scope.Quarterly_table_body[$rootScope.row_index_num]["Supplier_detials"] = []
+                            $rootScope.row_index_num = 0
+                        }
+                    } else if ($scope.filter_year_val == 'Monthly') {
+                        if ($rootScope.row_index_num != row_index_num) {
+                            $scope.Monthly_table_body[$rootScope.row_index_num]["Supplier_detials"] = []
+                            row_data = $scope.Monthly_table_body
+                            $rootScope.row_index_num = row_index_num
+                            var month = new Array();
+                            month[0] = "Jan-";
+                            month[1] = "Feb-";
+                            month[2] = "Mar-";
+                            month[3] = "Apr-";
+                            month[4] = "May-";
+                            month[5] = "Jun-";
+                            month[6] = "Jul-";
+                            month[7] = "Aug-";
+                            month[8] = "Sep-";
+                            month[9] = "Oct-";
+                            month[10] = "Nov-";
+                            month[11] = "Dec-";
+                            var unique_month_Year = ["Apr-".concat($scope.start_year), "May-".concat(
+                                    $scope.start_year), "Jun-"
+                                .concat($scope.start_year), "Jul-".concat($scope.start_year), "Aug-"
+                                .concat($scope.start_year),
+                                "Sep-".concat($scope.start_year), "Oct-".concat($scope.start_year),
+                                "Nov-"
+                                .concat($scope.start_year), "Dec-"
+                                .concat($scope.start_year), "Jan-".concat($scope.end_year), "Feb-"
+                                .concat(
+                                    $scope.end_year), "Mar-".concat($scope.end_year)
+                            ]
+                            var Api_data = {
+                                "Params": {
+                                    "amt_details": $rootScope.amount_L_K,
+                                    "pprdata_apexpensegid": row_data[row_index_num]["expense_gid"],
+                                    "pprdata_apsubcatgid": row_data[row_index_num]["subcat_gid"],
+                                    "pprdata_transactionmonth": "",
+                                    "pprdata_bizname": check_null_undefind($scope.selected2,
+                                        "businesssegment_name"),
+                                    "pprdata_sectorname": check_null_undefind($scope.selected1,
+                                        "sector_name"),
+                                    "filter_type": "Monthly",
+                                },
+                                "Classification": {
+                                    "Entity_Gid": entitygid,
+                                    "Create_By": employgid
+                                }
+                            }
+                            var send_data = {
+                                'Group': 'bussinessGidname',
+                                'Action': "PPR_Sup_Fetch",
+                                'data': Api_data
+                            }
+                            var Api = PPR_service.supplier_api(send_data)
+                            Api.then(function (response) {
+                                var supplier_name = response.data.MESSAGE.DATA.map(
+                                    myFunctionSupplier_name);
+                                supplier_name = removeDuplicateSuppliername(supplier_name);
+                                supplier_Array = []
+                                for (supplier of supplier_name) {
+                                    var temp_row = {}
+                                    temp_row["Direct Cost"] = supplier
+                                    for (month_year of unique_month_Year) {
+                                        temp_row[month_year] = "0.00"
+                                    }
+                                    temp_row["YTD"] = "0.00"
+                                    var Total_of_amount = []
+                                    for (api_data of response.data.MESSAGE.DATA) {
+                                        var d = new Date(api_data.pprdata_transactiondate)
+
+                                        if (supplier == api_data.supplier_name) {
+                                            if (unique_month_Year.includes(month[d
+                                                    .getMonth()].concat(d
+                                                    .getFullYear().toString()
+                                                    .substr(-2)))) {
+                                                temp_row[month[d
+                                                    .getMonth()].concat(d
+                                                    .getFullYear().toString()
+                                                    .substr(-2))] = Number(api_data
+                                                    .total_amt).toFixed(2);
+                                                Total_of_amount.push(Number(api_data.total_amt)
+                                                    .toFixed(2))
+                                            }
+                                        }
+                                    }
+                                    total = 0
+                                    for (amount of Total_of_amount) {
+                                        total = total + Number(amount)
+                                    }
+                                    temp_row["YTD"] = total
+                                    temp_row["Padding"] = 150
+                                    supplier_Array.push(temp_row)
+                                }
+                                row_data[row_index_num]["Supplier_detials"] = supplier_Array;
+                                $scope.Monthly_table_body = row_data
+                            })
+                        } else if ($rootScope.row_index_num == row_index_num) {
+                            $scope.Monthly_table_body[$rootScope.row_index_num]["Supplier_detials"] = []
+                            $rootScope.row_index_num = 0
+                        }
+                    }
+                }
+                function check_null_undefind(data, key) {
+                    if (data == undefined || data == null || data == '') {
+                        return data = String("")
+                    }
+                    return data[key]
+                }
+
+            });
+            //service start
+            app.service('PPR_service', function ($http) {
+                this.sector_api = function (secrot_para) {
+                    var response = $http.post(Appname + "/PPR_report_url/", secrot_para);
+                    return response;
+                }
+                this.bussinessNmae_api = function (bussiness_para) {
+                    var response = $http.post(Appname + "/PPR_report_url/", bussiness_para);
+                    return response;
+                }
+                this.bussinessGID_EXP_api = function (busGid_para) {
+                    var response = $http.post(Appname + "/PPR_report_url/", busGid_para);
+                    return response;
+                }
+                this.expense_api = function (exp_para) {
+                    var response = $http.post(Appname + "/PPR_report_url/", exp_para);
+                    return response;
+                }
+                this.supplier_api = function (popup_para) {
+                    var response = $http.post(Appname + "/PPR_report_url/", popup_para);
+                    return response;
+                }
+            });
+        </script>
+</body>
+{% endblock %}
+</html>

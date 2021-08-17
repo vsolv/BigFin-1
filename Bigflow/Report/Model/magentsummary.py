@@ -24,6 +24,7 @@ class control(mVariable.variable):
         df_sales = pd.DataFrame(rows, columns=columns).to_dict(orient='records')
         return {"DATA": df_sales, "MESSAGE": outmsg_sp[0]}
 
+
     def sp_AllTableValues_Get_frm_gen(self):
         cursor = connection.cursor()
         Parameters = ('', self.jsonData, self.entity_gid, '')
@@ -48,3 +49,32 @@ class control(mVariable.variable):
         df_sales = pd.DataFrame(rows, columns=columns).to_dict(orient='records')
         return {"DATA": df_sales, "MESSAGE": outmsg_sp[0]}
 
+    def sp_PPR_Data_Set_frm_gen(self):
+        cursor = connection.cursor()
+        Parameters = (self.action, self.jsonData, self.dataw, '')
+        cursor.callproc('sp_PPR_Data_Set', Parameters)
+        cursor.execute('select @_sp_PPR_Data_Set_3')
+        outmsg_sp = cursor.fetchone()
+        return {"MESSAGE": outmsg_sp[0]}
+
+    def sp_PPR_Budget_Get_frm_gen(self):
+        cursor = connection.cursor()
+        Parameters = (self.action,self.type, self.jsonData, self.dataw, '')
+        cursor.callproc('sp_PPR_Budget_Get', Parameters)
+        columns = [x[0] for x in cursor.description]
+        rows = cursor.fetchall()
+        cursor.execute('select @_sp_PPR_Budget_Get_4')
+        outmsg_sp = cursor.fetchone()
+        rows = list(rows)
+        df_sales = pd.DataFrame(rows, columns=columns).to_dict(orient='records')
+        if columns[0] == '@finaldata':
+            return {"DATA": df_sales[0], "MESSAGE": outmsg_sp[0]}
+        return {"DATA": df_sales, "MESSAGE": outmsg_sp[0]}
+
+    def sp_PPR_Budget_Set_frm_gen(self):
+        cursor = connection.cursor()
+        Parameters = (self.action, self.jsonData, self.dataw, '')
+        cursor.callproc('sp_PPR_Budget_Set', Parameters)
+        cursor.execute('select @_sp_PPR_Budget_Set_3')
+        outmsg_sp = cursor.fetchone()
+        return {"MESSAGE": outmsg_sp[0]}

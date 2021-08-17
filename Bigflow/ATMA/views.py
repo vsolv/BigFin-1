@@ -428,18 +428,19 @@ def atma_attachmentupload(request):
    utl.check_authorization(request)
    if request.method == 'POST' and request.FILES['file']:
 
-        # current_month = datetime.now().strftime('%m')
-        # current_day = datetime.now().strftime('%d')
-        # current_year_full = datetime.now().strftime('%Y')
-        # save_path = str(settings.MEDIA_ROOT) + '/Atma_Documents/' + str(current_year_full) + '/' + str(current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
-        # print(save_path)
-        # path = default_storage.save(str(save_path), request.FILES['file'])
+        current_month = datetime.now().strftime('%m')
+        current_day = datetime.now().strftime('%d')
+        current_year_full = datetime.now().strftime('%Y')
         filename = str(request.FILES['file'])
         millis = int(round(time.time() * 1000))
         s1 = str(millis)
-        Create_By= decry_data(request.POST['Create_By'])
+        Create_By = decry_data(request.POST['Create_By'])
         c1 = str(Create_By)
         concat_filename = c1 + "_" + s1 + "_" + filename
+        save_path = str(settings.MEDIA_ROOT) + '/Atma_Documents/' + str(current_year_full) + '/' + str(current_month) + '/' + str(current_day) + '/' + concat_filename
+        # print(save_path)
+        path = default_storage.save(str(save_path), request.FILES['file'])
+
 
         grp = request.POST['Group']
         action=request.POST['Action']
@@ -449,11 +450,11 @@ def atma_attachmentupload(request):
                 "Documents_Period": request.POST['Documents_Period'],"Description": request.POST['Description'],"File_Name": concat_filename,
                                       "File_Path": "save_path", "Entity_Gid":request.POST['Entity_Gid'],"Create_By": request.POST['Create_By']
         }
-        s3 = boto3.resource('s3')
-        s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
-        s3_obj.put(Body=request.FILES['file'])
-
-        s3_client = boto3.client('s3')
+        # s3 = boto3.resource('s3')
+        # s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
+        # s3_obj.put(Body=request.FILES['file'])
+        #
+        # s3_client = boto3.client('s3')
         #a=master_views.fileUploadS3(request)
 
         datas = json.dumps(data)
@@ -507,13 +508,6 @@ def atma_taxdetailsfileupload(request):
     utl.check_authorization(request)
     if request.POST['Group'] == "TAXINSERTSUMMARYEXEMPTEDYES":
         if request.method == 'POST' and request.FILES['file']:
-            # current_month = datetime.now().strftime('%m')
-            # current_day = datetime.now().strftime('%d')
-            # current_year_full = datetime.now().strftime('%Y')
-            # save_path = str(settings.MEDIA_ROOT) + '/Atma_TDSDocuments/' + str(current_year_full) + '/' + str(
-            #     current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
-            # print(save_path)
-            # path = default_storage.save(str(save_path), request.FILES['file'])
             grp = request.POST['Group']
             action = request.POST['Action']
             Create_By = request.POST['Create_By']
@@ -539,12 +533,25 @@ def atma_taxdetailsfileupload(request):
                     "Create_By": request.POST['Create_By'],"Tds":request.POST['Tds'],
                     "TaxDetails_Is_MSME": request.POST['TaxDetails_Is_MSME']
                     }, {"Entity_Gid": request.session['Entity_gid']}
+            current_month = datetime.now().strftime('%m')
+            current_day = datetime.now().strftime('%d')
+            current_year_full = datetime.now().strftime('%Y')
+            filename = str(request.FILES['file'])
+            millis = int(round(time.time() * 1000))
+            s1 = str(millis)
+            Create_By = decry_data(request.POST['Create_By'])
+            c1 = str(Create_By)
+            concat_filename = c1 + "_" + s1 + "_" + filename
+            save_path = str(settings.MEDIA_ROOT) + '/Atma_TaxDetails/' + str(current_year_full) + '/' + str(
+                current_month) + '/' + str(current_day) + '/' + concat_filename
+            # print(save_path)
+            path = default_storage.save(str(save_path), request.FILES['file'])
 
-            s3 = boto3.resource('s3')
-            s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
-            s3_obj.put(Body=request.FILES['file'])
-
-            s3_client = boto3.client('s3')
+            # s3 = boto3.resource('s3')
+            # s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
+            # s3_obj.put(Body=request.FILES['file'])
+            #
+            # s3_client = boto3.client('s3')
             datas = json.dumps(data)
             params = {'Group': "" + grp + "", 'Action': "" + action + ""}
             token = jwt.token(request)
@@ -605,13 +612,6 @@ def atma_taxdetailsfileupload(request):
         return HttpResponse(response)
     if request.POST['Group'] == "TAXINSERTSUMMARYEXEMPTEDUPDATEYES":
         if request.method == 'POST' and request.FILES['file']:
-            # current_month = datetime.now().strftime('%m')
-            # current_day = datetime.now().strftime('%d')
-            # current_year_full = datetime.now().strftime('%Y')
-            # save_path = str(settings.MEDIA_ROOT) + '/Atma_TDSDocuments/' + str(current_year_full) + '/' + str(
-            #     current_month) + '/' + str(current_day) + '/' + str(request.POST['name'])
-            # print(save_path)
-            # path = default_storage.save(str(save_path), request.FILES['file'])
             Create_By = request.POST['Create_By']
             # File_Names=request.POST['File_Name']
             filename = str(request.FILES['file'])
@@ -639,10 +639,24 @@ def atma_taxdetailsfileupload(request):
                     "File_Name": concat_filename, "FilePath": "save_path"
                     }, {"Entity_Gid": request.session['Entity_gid'], "Update_By": request.POST['Create_By']}
 
-            s3 = boto3.resource('s3')
-            s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
-            s3_obj.put(Body=request.FILES['file'])
-            s3_client = boto3.client('s3')
+            current_month = datetime.now().strftime('%m')
+            current_day = datetime.now().strftime('%d')
+            current_year_full = datetime.now().strftime('%Y')
+            filename = str(request.FILES['file'])
+            millis = int(round(time.time() * 1000))
+            s1 = str(millis)
+            Create_By = decry_data(request.POST['Create_By'])
+            c1 = str(Create_By)
+            concat_filename = c1 + "_" + s1 + "_" + filename
+            save_path = str(settings.MEDIA_ROOT) + '/Atma_Documents/' + str(current_year_full) + '/' + str(
+                current_month) + '/' + str(current_day) + '/' + concat_filename
+            # print(save_path)
+            path = default_storage.save(str(save_path), request.FILES['file'])
+
+            # s3 = boto3.resource('s3')
+            # s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
+            # s3_obj.put(Body=request.FILES['file'])
+            # s3_client = boto3.client('s3')
             datas = json.dumps(data)
             params = {'Group': "" + grp + "", 'Action': "" + action + ""}
             token = jwt.token(request)

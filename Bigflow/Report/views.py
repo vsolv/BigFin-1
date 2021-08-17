@@ -2093,6 +2093,7 @@ def PPR_Schudle(request):
                                  verify=False)
             common.logger.error([{"AFTER_PPRDATA_MANUAL_END": {
                 "PPR_Auto_Schdule": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Response": resp}}])
+
             response = resp.content.decode("utf-8")
             return HttpResponse(response)
     except Exception as e:
@@ -2200,5 +2201,14 @@ def PPR_Buget_XL_Set(request):
             return JsonResponse({"MESSAGE": "ERROR_OCCURED", "DATA": str(e)})
 
 
-def PPR_report_3(request):
-    return render(request, 'PPR_report3.html')
+def Budget_builder(request):
+    return render(request, 'Budget_builder.html')
+
+
+def Budget_reviewer(request):
+    return render(request, 'Budget_Review.html')
+
+
+def Budget_approval(request):
+    return render(request, 'Budget_Approval.html')
+

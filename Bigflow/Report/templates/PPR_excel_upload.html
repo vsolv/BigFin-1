@@ -1,0 +1,361 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} Budget Excel Upload {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+</head>
+
+<body ng-app="PPR_excel" ng-controller="myCtrl">
+    <div class="maincontent">
+        <div class="container container1">
+            <div class="row">
+                <div class="row-header col-lg-12 col-sm-12">
+                    <h4>Budget Excel Upload</h4>
+                </div>
+            </div>
+
+            <!-- file upload -->
+            <div class="row" style="margin-top: 20px;">
+                <div class="col-md-3" style="margin-top: 20px;">
+
+                    <input class="ng-isolate-scope" file-model="files" fileinput="file" id="file" multiple=""
+                        type="file" accept=".xlsx">
+                </div>
+
+
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton" ng-click="upload_data()">
+                        <md-icon>backup</md-icon>
+                        <md-tooltip>Upload Excel</md-tooltip>
+                    </md-button>
+                </div>
+
+
+
+
+
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-warn " ng-click="ClearXl_table()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Clear</md-tooltip>
+                    </md-button>
+                </div>
+
+
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton">
+                        <md-icon>get_app</md-icon>
+                        <md-tooltip>Download Excel</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+
+            <div class="row" ng-hide="submitBtn">
+                <div class="col-md-12 col-lg-12 col-sm-12" style="margin-top: 20px; padding: 20px;">
+                    <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                        md-progress="deferred">
+                        <thead>
+                            <tr>
+                                <th class="header">SI.No</th>
+                                <th class="header">Date</th>
+                                <th class="header">Fn-Year</th>
+                                <th class="header">Branch code</th>
+
+                                <th class="header">Branch Name</th>
+                                <th class="header">Sector Name</th>
+                                <th class="header">Business Name</th>
+
+
+                                <th class="header">BS Name</th>
+                                <th class="header">CC Name</th>
+                                <th class="header">Category Code</th>
+
+
+
+
+                                <th class="header">SubCategory Code</th>
+
+                                <th class="header">SubCategory Glno</th>
+                                <th class="header">Amount</th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="body in table_body">
+                                <td style="text-align: center;">{{((currentPage-1)*itemsPerPage)+$index+1}}</td>
+                                <td style="text-align: center;">{{body.details_bddate}}</td>
+                                <td style="text-align: center;">{{body.details_finyear}}</td>
+                                <td style="text-align: center;">{{body.details_branch_code}}</td>
+
+                                <td>{{body.details_branch_name}}</td>
+                                <td>{{body.details_sector_name}}</td>
+                                <td>{{body.details_biz_name}}</td>
+
+
+                                <td>{{body.details_bs_name}}</td>
+                                <td>{{body.details_cc_name}}</td>
+                                <td>{{body.details_cat_code}}</td>
+
+
+
+
+                                <td>{{body.details_subcat_code}}</td>
+
+                                <td style="text-align: center;">{{body.details_subcat_glno}}</td>
+                                <td style="text-align: right;">{{amount_money_convert(body.details_bdamount)}}</td>
+                            </tr>
+
+                        </tbody>
+                        <tbody>
+                            <tr>
+                                <td colspan="11"></td>
+                                <td>Total: </td>
+                                <td style="text-align: right;">{{amount_money_convert(sum_Amount)}}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="13">
+                                    <ul boundary-links="true" class="pagination-sm cust_pagination"
+                                        items-per-page="itemsPerPage" max-size="maxSize" ng-change="paginationXL()"
+                                        ng-model="currentPage" total-items="pageLength" uib-pagination></ul>
+                                </td>
+                            </tr>
+                        </tfoot>
+
+                    </table>
+                </div>
+            </div>
+
+            <div class="row " ng-hide="submitBtn">
+                <div class="col-md-12 col-lg-12 col-sm-12" style="padding-top: 20px;" class="">
+                    <div class="col-md-4 "></div>
+                    <div class="col-md-2 ">
+                        <button class="md-raised md-warn md-button md-ink-ripple" type="button" aria-label="Submit"
+                            md-labeled-by-tooltip="md-tooltip-10" ng-click="Submit_fun()">Submit
+
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="md-raised md-button md-ink-ripple" type="button"
+                            ng-click="redirect_page_BudgetSum()" aria-label="Cancel"
+                            md-labeled-by-tooltip="md-tooltip-10">Cancel
+                        </button>
+                    </div>
+                    <div class="col-md-4 "></div>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+    {% endverbatim %}
+    <script>
+        var app = angular.module('PPR_excel', ['ngMaterial', 'ui.bootstrap'], function ($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+        app.controller('myCtrl', function ($scope, PPR_service, $window, $mdDialog) {
+            $scope.amount_money_convert = function (value) {
+                // console.log("total", new Intl.NumberFormat('en-IN').format(Number(1000).toFixed(2)))
+                // return new Intl.NumberFormat('en-IN').format(value)
+                var value = (Number(value)).toLocaleString(
+                    undefined, {
+                        minimumFractionDigits: 2
+                    }
+                );
+                return value
+            }
+
+            var detail = JSON.parse(sessionStorage.getItem('today'));
+            employgid = detail.employee_gid;
+            entitygid = detail.entity_gid;
+            $scope.employgid = employgid;
+            $scope.entitygid = entitygid;
+            $scope.currentPage = 1;
+            $scope.maxSize = 3;
+            $scope.itemsPerPage = 10;
+            $scope.pageLength = '';
+
+
+            //loader spinner start
+            $scope.loading = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.body),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.loading_popup = function () {
+                $mdDialog.show({
+                    templateUrl: 'loaderSpinner',
+                    parent: angular.element(document.getElementById('view_pop_up')),
+                    clickOutsideToClose: false
+                });
+            };
+            $scope.endloading = function () {
+                $mdDialog.hide();
+            };
+            //loader spinner ends
+            var Excel_data = ''
+            var Final_data = ''
+            $scope.submitBtn = true
+            $scope.upload_data = function () {
+                try {
+                    begin = (($scope.currentPage - 1) * $scope.itemsPerPage)
+                    end = begin + $scope.itemsPerPage
+
+                    $scope.loading()
+                    var file_Excel = document.getElementById('file').files[0];
+                    Excel_data = new FormData();
+                    Excel_data.append('file', file_Excel);
+                    var file_upload = PPR_service.EXcel_upload(Excel_data)
+                    file_upload.then(function (response) {
+                        console.log("sidhu",response.data)
+                        if (response.data.MESSAGE == "ERROR_OCCURED") {
+                            $scope.endloading()
+                            alert("Please Upload Excel File");
+                            return false;
+                        } else if (response.data.MESSAGE == "Wrong Format") {
+                            $scope.endloading()
+                            alert("Excel Format Is Wrong");
+                            return false;
+                        } else if (response.data.MESSAGE == "ERROR") {
+                            $scope.endloading()
+                            alert("Please Check The File Data or Data Mismatch");
+                            return false;
+                        } else if (response.data.MESSAGE == "Error in Data") {
+                            $scope.endloading()
+                            alert(response.data.DATA['@finaldata']);
+                            return false;
+                        } else {
+                            $scope.endloading()
+                            Final_data = JSON.parse(response.data.DATA["@finaldata"])
+                            $scope.table_body = Final_data.slice(begin, end);
+                            $scope.submitBtn = false;
+                            $scope.pageLength = Final_data.length
+                            $scope.sum_Amount = sumOf_Array_dict(Final_data, 'details_bdamount')
+                        }
+
+
+
+                    })
+                } catch (err) {
+                    alert(err);
+                    $scope.endloading()
+                }
+
+
+            };
+
+            $scope.Submit_fun = function () {
+                // var uploadS3 = PPR_service.save_files_S3(Excel_data)
+                // uploadS3.then(function (respo) {
+                //     console.log("file upload", respo.data)
+                // })
+                var data = {
+                    "Params": {
+                        "File_Data": Final_data
+                    },
+                    "Classification": {
+                        "Entity_Gid": entitygid,
+                        "Create_By": employgid
+                    }
+                }
+                var data_send = {
+                    'Group': 'Budget_Insert',
+                    'Action': "INSERT_DETAILS",
+                    'data': data
+                }
+
+                var Api = PPR_service.Excel__Data_Set(data_send)
+                Api.then(function (response) {
+                    if (response.data.MESSAGE == "SUCCESS") {
+                        success_toast()
+                    }
+                })
+
+                // console.log(Final_data)
+
+
+
+            }
+
+            function sumOf_Array_dict(array, dicy_key) {
+                total = 0
+                for (x of array) {
+
+                    total = total + Number(x[dicy_key])
+                }
+
+                return total
+            }
+
+
+            $scope.ClearXl_table = function () {
+                $scope.table_head = []
+                $scope.table_body = []
+                $scope.submitBtn = true;
+                document.getElementById('file').value = ''
+            }
+
+            $scope.redirect_page_BudgetSum = function () {
+                $window.location.href = "Budget_Summary";
+            }
+
+            $scope.paginationXL = function () {
+                begin = (($scope.currentPage - 1) * $scope.itemsPerPage)
+                end = begin + $scope.itemsPerPage
+                $scope.table_body = Final_data.slice(begin, end);
+            }
+
+
+
+
+
+
+
+
+        });
+        app.service('PPR_service', function ($http) {
+
+            this.EXcel_upload = function (data) {
+                var response = $http.post(Appname + "/PPR_Upload_XL/", data, {
+                    transformRequest: angular.identity,
+                    headers: {
+                        'Content-Type': undefined
+                    }
+                });
+                return response;
+            }
+
+            this.save_files_S3 = function (file) {
+                var response = $http.post(Appname + "/fileUploadS3/", file, {
+                    transformRequest: angular.identity,
+                    headers: {
+                        'Content-Type': undefined
+                    }
+                });
+                return response;
+            }
+
+            this.Excel__Data_Set = function (data) {
+                var response = $http.post(Appname + "/PPR_Buget_XL_Set/", data);
+                return response;
+            }
+        });
+    </script>
+</body>
+{% endblock %}
+
+</html>

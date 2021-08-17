@@ -9,7 +9,7 @@
     <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker as ctrl" class="container container1">
         <div class="row">
             <div class="row-header col-lg-12 col-sm-12">
-                <h4>Ticket Rise</h4>
+                <h4>Ticket Raise</h4>
             </div>
         </div>
         </br>
@@ -30,7 +30,7 @@
                                             <div class="col-md-12">
                                                 <div class="form-group">
                                                     <dt>
-                                                        <label for="id_title">Summary of the problem</label>
+                                                        <label for="id_title">Summary of the Problem</label>
                                                     </dt>
                                                     <dd>
                                                         <input type="text" name="title" class="form-control"
@@ -104,7 +104,7 @@
                                                 <div class="col-md-3">
                                                     <md-input-container class="md-block inputcontainer">
                                                         <label>Asset ID</label>
-                                                        <input ng-model="asset_id">
+                                                        <input ng-model="asset_id" ng-change="filter_asset()">
                                                     </md-input-container>
                                                 </div>
 
@@ -263,7 +263,7 @@
                                                     </md-input-container>
                                                 </div>
                                                 <div class="col-md-1" style="left:30px;">
-                                                    <a title="Add Nature of The Problem" align="center"
+                                                    <a title="Add Nature of the Problem" align="center"
                                                        data-toggle="modal" ng-required="true"
                                                        data-target="#add_problem"
                                                        style='cursor: pointer; text-decoration:none;color:green;'>
@@ -272,7 +272,7 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <h5>
-                                                        <span>Nature Of The Probelm: </span>
+                                                        <span>Nature of the Probelm: </span>
                                                         <span ng-if="ErrorCategory_Gid!=0" style="color:green;">{{final_problem}}</span>
                                                         <span ng-if="ErrorCategory_Gid==0"
                                                               style="color:red;">{{final_problem}}</span>
@@ -440,14 +440,6 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
 
      $scope.emp_gid=0;
     $scope.ticket_data_summary_all=[];
-    if (sessionStorage.getItem('today') != null)
-        {
-            $scope.emp= JSON.parse(sessionStorage.getItem('today'));
-            debugger;
-            $scope.emp_gid=$scope.emp.employee_gid;
-
-        }
-
 
     $scope.loading = function() {
             $mdDialog.show({
@@ -455,11 +447,19 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
                 parent: angular.element(document.body),
                 clickOutsideToClose: false
             });
-        };
+    };
 
-        $scope.endloading = function() {
-            $mdDialog.hide();
-        };
+    $scope.loading_nature = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('add_problem')),
+                clickOutsideToClose: false
+            });
+   };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
 
     var supplier = Service_Ticket.getsupplierdata_sup(0);
         supplier.then(function(result) {
@@ -505,6 +505,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
                         supplier.then(function(result) {
                          var res = result.data;
                          $scope.br_assets=res;
+                         $scope.br_assets_filter=res;
                          console.log($scope.br_assets);
                              }, function(err) {
                           alert(res);
@@ -514,6 +515,12 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
             alert("Give Branch Gid");
         }
     }
+
+    $scope.filter_asset = function() {
+            $scope.br_assets = $filter('filter')($scope.br_assets_filter, {
+                "assetdetails_id": $scope.asset_id,
+            });
+     }
 
 
 
@@ -679,7 +686,6 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
                                  "TicketHeader_Status":"open",
                                  "Ticketheader_Summary":$scope.ticket_summary,
                                  "Ticketheader_Description":$scope.ticket_problem,
-                                 "TicketHeader_AssignedTo":$scope.emp_gid,
                                  "TicketHeader_SupplierGid":$scope.supplier_gid,
                                  "TicketHeader_BranchGid":$scope.branch_gid,
                                  "TicketHeader_OnHold":"N",
@@ -727,6 +733,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
                 "filter":{"ErrorCategory_Gid":0}}};
       $scope.loading();
      var nature = Service_Ticket.get_problem(datas);
+     debugger;
         nature.then(function(result) {
         $scope.finaldata.push({
               "clustlist": result.data,
@@ -756,10 +763,10 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_Ticket','$
               }
               var datas={params:{"type":"GET","sub_type":"ErrorCategory",
                     "filter":{"ErrorCategory_Gid":id}}};
-                $scope.loading();
+               $scope.loading_nature();
                  var child = Service_Ticket.get_problem(datas);
                     child.then(function(result) {
-                    console.log(result);
+                    $scope.endloading();
                         if(result.data.length  !== 0){
                              $scope.finaldata.push({
                                   "clustlist": result.data,

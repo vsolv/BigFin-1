@@ -6,17 +6,22 @@ import json
 
 class ServiceManagement(mVariable.variable):
     def print_parameters(sp_name, parameters):
-        #pass
+        message_tuple = ("@message",)
+        listx = list(parameters)
+        # listx.remove("")
+        listx.pop()
+        tuplex = tuple(listx)
+        parameters3 = tuplex + message_tuple
         print("set @message=0;")
-        print("call galley.",sp_name, parameters,";")
+        print("call galley." + sp_name, parameters3, end="")
+        print(";")
         print("select @message;")
 
     def get_supplier_data(self):
         cursor = connection.cursor()
         parameters = (self.type, self.sub_type, self.filter, self.classification, '')
 
-        p = (self.type, self.sub_type, self.filter, self.classification, "@message")
-        ServiceManagement.print_parameters("sp_SupplierDetails_Get", p);
+        ServiceManagement.print_parameters("sp_SupplierDetails_Get", parameters);
 
         cursor.callproc('sp_SupplierDetails_Get', parameters)
         columns = [x[0] for x in cursor.description]
@@ -30,6 +35,9 @@ class ServiceManagement(mVariable.variable):
     def get_branch_name(self):
         cursor = connection.cursor()
         parameters = (self.type, self.sub_type, self.filter,self.classification, '')
+
+        ServiceManagement.print_parameters("sp_Classification_Get", parameters);
+
         cursor.callproc('sp_Classification_Get', parameters)
         columns = [x[0] for x in cursor.description]
         rows = cursor.fetchall()
@@ -44,8 +52,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.type, self.sub_type, self.filter,self.classification, '')
 
-        p= (self.type, self.sub_type, self.filter, self.classification,"@message")
-        ServiceManagement.print_parameters("sp_SVSProcess_Get",p);
+        ServiceManagement.print_parameters("sp_SVSProcess_Get", parameters);
 
         cursor.callproc('sp_SVSProcess_Get', parameters)
         columns = [x[0] for x in cursor.description]
@@ -61,8 +68,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter,self.classification,self.create_by, '')
 
-        p = (self.action, self.type, self.filter, self.classification,self.create_by, "@message")
-        ServiceManagement.print_parameters("sp_SVSProcess_Set", p);
+        ServiceManagement.print_parameters("sp_SVSProcess_Set", parameters);
 
         cursor.callproc('sp_SVSProcess_Set', parameters)
         cursor.execute('select @_sp_SVSProcess_Set_5')
@@ -73,8 +79,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, self.create_by, '')
 
-        p = (self.action, self.type, self.filter, self.classification,self.create_by,"@message")
-        ServiceManagement.print_parameters("sp_SVSamc_Set", p);
+        ServiceManagement.print_parameters("sp_SVSamc_Set", parameters);
 
         cursor.callproc('sp_SVSamc_Set', parameters)
         cursor.execute('select @_sp_SVSamc_Set_5')
@@ -85,8 +90,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, self.create_by, '')
 
-        p = (self.action, self.type, self.filter, self.classification, self.create_by, "@message")
-        ServiceManagement.print_parameters("sp_SVSamc_Set", p);
+        ServiceManagement.print_parameters("sp_SVSamc_Set", parameters);
 
         cursor.callproc('sp_SVSamc_Set', parameters)
         cursor.execute('select @_sp_SVSamc_Set_5')
@@ -98,8 +102,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter,self.classification, '')
 
-        p = (self.action, self.type, self.filter, self.classification, "@message")
-        ServiceManagement.print_parameters("sp_SVSamc_get", p);
+        ServiceManagement.print_parameters("sp_SVSamc_get", parameters);
 
         cursor.callproc('sp_SVSamc_get', parameters)
         columns = [x[0] for x in cursor.description]
@@ -116,6 +119,9 @@ class ServiceManagement(mVariable.variable):
         jsondt = self.jsonData
         # jsondata = json.dumps(jsondt)
         Parameters = (self.action, jsondt,self.entity_gid,'')
+        
+        ServiceManagement.print_parameters("sp_AllTableValues_Get", Parameters);
+        
         cursor.callproc('sp_AllTableValues_Get', Parameters)
         columns = [d[0] for d in cursor.description]
         rows = cursor.fetchall()
@@ -126,6 +132,9 @@ class ServiceManagement(mVariable.variable):
     def get_product_data(self):
         cursor = connection.cursor()
         parameters = (self.type, self.sub_type, self.filter, self.classification, '')
+        
+        ServiceManagement.print_parameters("sp_SuppProdType_Get", parameters);
+
         cursor.callproc('sp_SuppProdType_Get', parameters)
         columns = [x[0] for x in cursor.description]
         rows = cursor.fetchall()
@@ -139,8 +148,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.type, self.sub_type, self.filter,self.classification, '')
 
-        p = (self.type, self.sub_type, self.filter, self.classification, "@message")
-        ServiceManagement.print_parameters("sp_SVSFollowup_Get", p);
+        ServiceManagement.print_parameters("sp_SVSFollowup_Get", parameters);
 
         cursor.callproc('sp_SVSFollowup_Get', parameters)
         columns = [x[0] for x in cursor.description]
@@ -163,6 +171,9 @@ class ServiceManagement(mVariable.variable):
     def get_emp_data(self):
         cursor = connection.cursor()
         Parameters = (self.table_name, self.gid, self.name,self.entity_gid,'')
+        
+        ServiceManagement.print_parameters("sp_Dropdown_Common_Get", Parameters);
+
         cursor.callproc('sp_Dropdown_Common_Get', Parameters)
         columns = [d[0] for d in cursor.description]
         rows = cursor.fetchall()
@@ -174,8 +185,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, self.create_by, '')
 
-        p = (self.action, self.type, self.filter, self.classification, self.create_by, "@message")
-        ServiceManagement.print_parameters("sp_SVSFollowup_Set", p);
+        ServiceManagement.print_parameters("sp_SVSFollowup_Set", parameters);
 
         cursor.callproc('sp_SVSFollowup_Set', parameters)
         cursor.execute('select @_sp_SVSFollowup_Set_5')
@@ -186,8 +196,7 @@ class ServiceManagement(mVariable.variable):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, '{}', self.classification_json, self.create_by, '')
 
-        p = (self.action, self.type, self.filter, self.classification, '{}', self.classification_json, self.create_by,"@message")
-        ServiceManagement.print_parameters("sp_PRrequestSPS_Set", p);
+        ServiceManagement.print_parameters("sp_PRrequestSPS_Set", parameters);
 
         cursor.callproc('sp_PRrequestSPS_Set', parameters)
         cursor.execute('select @_sp_PRrequestSPS_Set_7')

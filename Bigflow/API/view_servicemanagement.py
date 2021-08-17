@@ -93,7 +93,7 @@ class Service_Management_Set(APIView):
                 ser_mgmt_set.filter = json.dumps(jsondata.get("params").get("filter"))
                 ser_mgmt_set.classification = json.dumps(jsondata.get("params").get("classification"))
                 ser_mgmt_set.create_by = self.request.query_params.get("create_by")
-                common.main_fun1(request.read(), path)
+                #common.main_fun1(request.read(), path)
                 result = ser_mgmt_set.create_ticket()
                 return Response(result)
             elif self.request.query_params.get("action") == "INSERT" and self.request.query_params.get("type")=="INSERT_FOLLOWUP":
@@ -140,7 +140,7 @@ class AMC_Details_Set(APIView):
                 ser_mgmt_set.filter = json.dumps(jsondata.get("params").get("filter"))
                 ser_mgmt_set.classification = json.dumps(jsondata.get("params").get("classification"))
                 ser_mgmt_set.create_by = self.request.query_params.get("create_by")
-                common.main_fun1(request.read(), path)
+                #common.main_fun1(request.read(), path)
                 result = ser_mgmt_set.amc_Update()
                 return Response(result)
         except Exception as e:

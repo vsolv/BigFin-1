@@ -395,7 +395,7 @@ var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ng
 		};
 	});
 myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdDialog','$window','$filter', function($scope,$mdDateLocale,Service_amc,$mdDialog,$window,$filter) {
-  $scope.currentPage=1;
+    $scope.currentPage=1;
     $scope.maxSize=3;
     $scope.itemsPerPage=5;
 
@@ -409,44 +409,51 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
     $scope.maintable = [];
     $scope.amc_det_amount;
     $scope.selected_assets=[];
-   sessionStorage.setItem('grn_header', '');
+
+    $scope.amcheader_gid=0;
+    $scope.update="";
 
 
-         $scope.loading = function() {
-            $mdDialog.show({
-                templateUrl: 'loaderSpinner',
-                parent: angular.element(document.body),
-                clickOutsideToClose: false
-            });
-        };
+    $scope.loading = function() {
+        $mdDialog.show({
+        templateUrl: 'loaderSpinner',
+        parent: angular.element(document.body),
+        clickOutsideToClose: false
+        });
+    };
 
-        $scope.endloading = function() {
+    $scope.endloading = function() {
             $mdDialog.hide();
-        };
+    };
 
+    $scope.get_session_Data = function(){
+        var datas = {"action":"GET","type":"BRANCH_EXPENSE_GID",
+        "filter": {"SMS_AMC_Header_Gid":"","View":""}}
 
+        var setcolumndata = Service_amc.get_session_sms(datas);
+            setcolumndata.then(function(result) {
 
-    if (sessionStorage.getItem('amcs') != null)
-        {
-            var ticket_all = JSON.parse(sessionStorage.getItem('amcs'));
-            console.log(ticket_all);
-            $scope.update = ticket_all.view;
-            $scope.amcheader_gid=ticket_all.amcheader_gid;
-
-        }
-        else{
-
+            $scope.amcheader_gid=result.data.SMS_AMC_Header_Gid;
+            $scope.update=result.data.View;
+            console.log(result.data);
+            if($scope.amcheader_gid!=0){
+                $scope.Get_SMS_Data();
+            }
+        },
+       function(err) {
             alert("No AMC Header Gid");
+       }).finally($scope.endloading);
+    }
+    $scope.get_session_Data();
 
-        }
 
-
-     var datas={params:{"action":"GET","type":"AMC_HEADER",
+    $scope.Get_SMS_Data=function(){
+        var datas={params:{"action":"GET","type":"AMC_HEADER",
                 "filter":{"AmcHeader_Gid":$scope.amcheader_gid}}};
 
-      $scope.loading();
-     var amc_header = Service_amc.get_amc_header(datas);
-        amc_header.then(function(result) {
+       $scope.loading();
+         var amc_header = Service_amc.get_amc_header(datas);
+         amc_header.then(function(result) {
          var res = result.data;
          $scope.amc_header_all=res;
          console.log($scope.amc_header_all);
@@ -468,6 +475,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
          }, function(err) {
           alert(result);
         }).finally($scope.endloading);
+    }
 
 
 
@@ -491,7 +499,7 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
            return result;
       }
       $scope.SupplierChanged=function(sup_gid){
-   $scope.supplier_gid=sup_gid;
+      $scope.supplier_gid=sup_gid;
 
    };
 
@@ -506,17 +514,16 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
            alert("Some Interanal Error");
    });
 
-       $scope.getServicePeriod=find_service_name;
-           function find_service_name(query){
+    $scope.getServicePeriod=find_service_name;
+    function find_service_name(query){
+        var result = $filter('filter')($scope.service_period_list, {
+           'metadata_value': query
+             });
+           return result;
+    }
 
-                var result = $filter('filter')($scope.service_period_list, {
-               'metadata_value': query
-                 });
-               return result;
-            }
 
-
-   var branch = Service_amc.get_branch_details();
+    var branch = Service_amc.get_branch_details();
         branch.then(function(result) {
 
             var branches_list = result.data.DATA;
@@ -525,19 +532,20 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
         }, function() {
             alert(branches_list);
 
-   });
+    });
 
-   $scope.getBranch_Name = Change_Branch_Name;
-       function Change_Branch_Name(query) {
+    $scope.getBranch_Name = Change_Branch_Name;
+    function Change_Branch_Name(query) {
            var result = $filter('filter')($scope.branches_list, {
            'branch_name': query
              });
            return result;
-   }
-   $scope.BranchChanged=function(br_gid){
-   $scope.branch_gid=br_gid;
+    }
 
-   };
+    $scope.BranchChanged=function(br_gid){
+       $scope.branch_gid=br_gid;
+
+    };
 
 
     var property = Service_amc.get_property_details();
@@ -549,24 +557,23 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
         }, function() {
             alert(result);
 
-   });
+    });
 
-   $scope.getPropertyName = Change_Property_Name;
+    $scope.getPropertyName = Change_Property_Name;
        function Change_Property_Name(query) {
            var result = $filter('filter')($scope.all_propertY_details, {
            'property_name': query
              });
            return result;
-   }
-   $scope.PropertyNameChanged=function(property_gid){
+    }
+
+    $scope.PropertyNameChanged=function(property_gid){
        $scope.property_gid=property_gid;
 
-   };
+    };
 
 
-
-
-   var category = Service_amc.get_category_details();
+    var category = Service_amc.get_category_details();
         category.then(function(result) {
 
             var category_list = result.data.DATA;
@@ -575,20 +582,18 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
         }, function() {
             alert("No Data")
 
-   });
+    });
 
-   $scope.getCategory_Name = Change_Category_Name;
-       function Change_Category_Name(query) {
-           var result = $filter('filter')($scope.category_list, {
-           'assetcat_subcatname': query
-             });
-           return result;
-      }
+    $scope.getCategory_Name = Change_Category_Name;
+    function Change_Category_Name(query) {
+       var result = $filter('filter')($scope.category_list, {
+       'assetcat_subcatname': query
+         });
+       return result;
+    }
 
     $scope.CategoryChanged=function(cat_gid){
-    $scope.cate_gid=cat_gid;
-
-
+        $scope.cate_gid=cat_gid;
     };
 
 
@@ -610,13 +615,10 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
                  }, function(err) {
                   alert(res);
                 }).finally($scope.endloading);
-
-
     };
 
 
     $scope.assets = [];
-
     $scope.add_assets = function(value,index) {
         var amcdetails_assetdetailid=value.assetdetails_id;
         var assetcat_gid=value.assetdetails_assetcatgid;
@@ -661,8 +663,6 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
 
 
     }
-
-
 
     $scope.create_amc=function(){
     debugger;
@@ -790,68 +790,54 @@ myApp.controller('Ctrl_amc_maker', ['$scope','$mdDateLocale','Service_amc','$mdD
 
 
 
-
-
-
   }]);
 
-
- myApp.service("Service_amc", function ($http) {
-
+myApp.service("Service_amc", function ($http) {
     this.getsupplierdata = function (supp_gid) {
             var response=$http.post(Appname+"/Get_Service_Management/",{params:{"type":"Suppplier","sub_type":"DROPDOWN",
                                    "filter":{"Supplier_gid":supp_gid}}});
             return response;
-     }
-
+    }
     this.amc_set=function (data) {
         var response=$http.post(Appname+"/Set_AMC_Details/",data);
         return response;
     }
-
     this.get_branch_details = function () {
         var response=$http.post(Appname+"/Get_Category/",{params:{"type":"Branch","sub_type":"Summary",
                                "filter":{}}});
         return response;
-     }
-
-
+    }
     this.get_all_table_metadata_values = function () {
         var response=$http.post(Appname+"/Get_All_Table_Metadata/",{params:{"action":"Get","type":"Metadata","sub_type":"Service_Period",
                                "filter":{}}});
         return response;
-     }
-
-     this.get_asset_details = function (data) {
+    }
+    this.get_asset_details = function (data) {
         var response=$http.post(Appname+"/Get_Service_Management/",data);
         return response;
-     }
-
-
-     this.get_service_details = function (data) {
+    }
+    this.get_service_details = function (data) {
         var response=$http.post(Appname+"/Get_Service_Management/",data);
         return response;
-     }
-
-
-     this.get_property_details = function () {
+    }
+    this.get_property_details = function () {
                 var response = $http.post(Appname+"/Get_All_Table_Metadata/",{params:{"action":"Get","type":"Metadata","sub_type":"Property_Type",
                                "filter":{}}});
                 return response;
-     }
-
-
-      this.get_category_details = function () {
+    }
+    this.get_category_details = function () {
         var response=$http.post(Appname+"/Get_Category/",{params:{"type":"Mode","sub_type":"Summary",
                                "filter":{}}});
         return response;
-     }
-
-
-     this.get_amc_header = function (data) {
-            var response=$http.post(Appname+"/Get_AMC_Details/",data);
+    }
+    this.get_amc_header = function (data) {
+             var response=$http.post(Appname+"/Get_AMC_Details/",data);
             return response;
-         }
+    }
+    this.get_session_sms = function (data) {
+        var response=$http.post(Appname+"/Session_Get_SMS_Data/",data);
+        return response;
+    }
 
 
  });

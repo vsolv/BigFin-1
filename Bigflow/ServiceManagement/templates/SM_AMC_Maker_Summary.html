@@ -51,14 +51,14 @@
                     <thead class="header">
                     <tr>
                         <th>S NO</th>
-                        <th>AMC Code</th>
-                        <th>AMC Maker Name</th>
-                        <th>AMC Header Name</th>
-                        <th>AMC Header Type</th>
+                        <th>Code</th>
+                        <th>Maker Name</th>
+                        <th>Header Name</th>
+                        <th>Header Type</th>
                         <th>Supplier Name</th>
                         <th>Service Period From Date</th>
                         <th>Service period To Date</th>
-                        <th>AMC Total Amount</th>
+                        <th>Total Amount</th>
                         <th>Status</th>
                         <th>Action</th>
 
@@ -67,7 +67,7 @@
                     <tbody>
                     <tr ng-repeat="amc in amc_data_summary | filter:search:strict"
                         align="center">
-<!--                        ng-if="amc.amcheader_status=='PENDING FOR APPROVAL' || amc.amcheader_status=='APPROVED' "-->
+                        <!--                        ng-if="amc.amcheader_status=='PENDING FOR APPROVAL' || amc.amcheader_status=='APPROVED' "-->
                         <td>
                             <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
                         </td>
@@ -113,10 +113,10 @@
                     </tbody>
                     <tfoot>
                     <tr>
-                        <td colspan="9">
+                        <td colspan="9" align="center">
                             <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
                                 max-size="maxSize"
-                                 ng-change="pageChanged()"
+                                ng-change="pageChanged()"
                                 class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
                         </td>
                         <td colspan="2" align="center">
@@ -151,8 +151,10 @@
                                         <thead class="header">
                                         <tr>
                                             <th>S NO</th>
+                                            <th>Branch Name</th>
                                             <th>Asset ID</th>
                                             <th>Asset Name</th>
+
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -161,27 +163,35 @@
                                             <td>
                                                 <center>{{((currentPages-1)*itemsPerPages)+$index+1}}</center>
                                             </td>
+                                            <td>{{amcs.branch_name}}</td>
                                             <td>{{amcs.amcdetails_assetdetailid}}</td>
                                             <td>{{amcs.product_name}}</td>
-
                                         </tr>
                                         </tbody>
                                         <tfoot>
-                                        <tr>
-                                            <td colspan="2">
+                                        <tr align="center">
+                                            <td colspan="3">
                                                 <ul uib-pagination total-items="amc_assets.length"
                                                     ng-model="currentPages"
                                                     max-size="maxSizes"
                                                     class="pagination-sm" boundary-links="true"
                                                     items-per-page="itemsPerPages"></ul>
                                             </td>
-                                            <td colspan="2">
+                                            <td colspan="2" align="center">
                                                 Total Count:{{amc_assets.length}}
                                             </td>
                                         </tr>
                                         </tfoot>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5"></div>
+                            <div class="col-md-2">
+                                <md-button class="md-raised" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
                             </div>
                         </div>
                     </div>
@@ -224,6 +234,19 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
         $mdDialog.hide();
     };
 
+    $scope.empty_sms_session = function(amc,e) {
+        var datas={"action":"SET","type":"SMS",
+        "filter":{"SMS_AMC_Header_Gid":"",
+        "View": ""}};
+        var asset = Service_amc.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
+
+               }
+            }).finally($scope.endloading);
+    };
+    $scope.empty_sms_session();
+
 
 
      $scope.summary=function(){
@@ -239,6 +262,12 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
                 if($scope.currentPage==1){
                         $scope.Total_Row=$scope.amc_data_summary[0].Total_Row;
                 }
+
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                        $scope.amc_data_summary=[];
+                }
+
                 $scope.amc_data_summary1 = amc_all_data;
                 console.log($scope.amc_data_summary1);
             },
@@ -264,41 +293,32 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
                 "amcheader_name":$scope.amc_header_name,
 
             });
-        }
+    }
 
-        $scope.view_assets=function(amc_assets){
-            $scope.amc_assets=JSON.parse(amc_assets.asset_detail);
-        };
+    $scope.view_assets=function(amc_assets){
+        $scope.amc_assets=JSON.parse(amc_assets.asset_detail);
+    };
 
-
-
-        $scope.edit_data = function(amc,e) {
-               var amc_data = {
-               amcheader_gid: amc.amcheader_gid,
-               view:e
-            };
-            sessionStorage.setItem('amcs', JSON.stringify(amc_data));
-            $window.location.href = "ServiceManagement/SM_AMC_Edit/";
-        }
-
-        $scope.approv_data = function(amc,e) {
-               var amc_data = {
-               amc_gid: amc.amcdetails_gid,
-               view:e
-            };
-            sessionStorage.setItem('amcs', JSON.stringify(amc_data));
-            $window.location.href = "ServiceManagement/SM_AMC_Approval/";
-        }
+    $scope.edit_data = function(amc,e) {
+        var datas={"action":"SET","type":"SMS",
+        "filter":{"SMS_AMC_Header_Gid":amc.amcheader_gid,
+        "View": e}};
+        var asset = Service_amc.set_session_sms(datas);
+            asset.then(function(result) {
+               if(result.data="SUCCESS"){
+                     $window.location.href = "ServiceManagement/SM_AMC_Edit/";
+               }
+            }).finally($scope.endloading);
+    }
 
 
-        $scope.activeDeactive_click = function(is_active, amc_header_gid) {
-        debugger;
-                if (is_active == 'Y') {
-                    $scope.act_in_act("N",amc_header_gid)
-                } else {
+    $scope.activeDeactive_click = function(is_active, amc_header_gid) {
+        if (is_active == 'Y') {
+            $scope.act_in_act("N",amc_header_gid)
+        } else {
                     $scope.act_in_act("Y",amc_header_gid)
                 }
-            }
+        }
 
          $scope.act_in_act = function(action,amc_header_gid) {
          debugger;
@@ -317,25 +337,32 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
                         $window.location.href = "ServiceManagement/SM_AMC_Maker_Summary/";
                     }
                 }).finally($scope.endloading);
-        };
+    };
 
 
 
    }]);
 
- myApp.service("Service_amc", function ($http) {
+myApp.service("Service_amc", function ($http) {
 
     this.get_amc_data=function (data) {
         var response=$http.post(Appname+"/Get_AMC_Details/",data);
         return response;
     }
-
     this.amc_activate_inactivate=function (data) {
         var response=$http.post(Appname+"/Set_AMC_Details/",data);
         return response;
     }
+    this.set_session_sms = function (data) {
+        var response=$http.post(Appname+"/Session_Set_SMS_Data/",data);
+        return response;
+    }
 
  });
+
+
+
+
 
 
 
@@ -345,6 +372,10 @@ myApp.controller('Ctrl_amc_maker', ['$scope','Service_amc','$mdDialog','$window'
     .app-modal-window .modal-dialog {
     width: 1000px;
 }
+
+
+
+
 
 
 

@@ -79,7 +79,6 @@
                                        ng-change="myfun()"/>
                             </md-input-container>
                         </div>
-                        <div class="col-md-2"></div>
                         <div class="col-md-1">
                             <div class="col-md-1 col-md-offset-1">
                                 <md-button class="md-fab md-mini md-primary custbutton"
@@ -88,6 +87,13 @@
                                     <md-tooltip>Search</md-tooltip>
                                 </md-button>
                             </div>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-warn"
+                                       ng-click="clear_seach()">
+                                <md-icon>search_off</md-icon>
+                                <md-tooltip>Clear Search</md-tooltip>
+                            </md-button>
                         </div>
                     </div>
                 </div>
@@ -143,7 +149,7 @@
                         </td>
                         <td align="center">{{sum.branchexpense_type}}</td>
                         <td align="left">{{sum.branchexpense_amount}}</td>
-                        <td align="center">{{sum.supplier_name}}</td>
+                        <td align="center">{{sum.supplier_branchname}}</td>
                         <td align="center">{{sum.branchexpense_recurringdate}}</td>
                         <td align="center">{{sum.branchexpense_fromdate | date:'dd-MMM-yyyy'}}</td>
                         <td align="center">{{sum.branchexpense_todate | date:'dd-MMM-yyyy'}}</td>
@@ -158,15 +164,15 @@
                             arrow_upward
                         </i></a>
                         </td>
-
-
                         <td class="text-center" ng-click="go_to_approval(sum)">
-                            <a href=""><i class="material-icons">
-                                send
-                            </i></a>
-
+                            <a href=""><i class="material-icons">send</i>
+                            </a>
                         </td>
-
+                    </tr>
+                    <tr ng-show="Expensesummary.length ==  0">
+                        <td class="warning" colspan="15">
+                            No Records Found.
+                        </td>
                     </tr>
                     </tbody>
                     <tfoot>
@@ -178,7 +184,7 @@
                                 items-per-page="itemsPerPage"></ul>
                         </td>
                         <td colspan="2" style="padding: 34px">
-                            <strong>Total Count:{{Total_Row}}</strong>
+                             <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
 
                         </td>
                     </tr>
@@ -319,6 +325,10 @@
 
 
 
+
+
+
+
 </style>
 
 
@@ -342,6 +352,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
         $scope.maxSize = 3;
         $scope.itemsPerPage = 10;
         $scope.run_button=1;
+        $scope.Expensesummary=[];
 
         $scope.loading = function() {
             $mdDialog.show({
@@ -355,13 +366,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
             $mdDialog.hide();
         };
 
-        $scope.pageChanged = function(){
-             if($scope.Expensesummary.length==0){
-                $scope.currentPage=1;
-             }
-             expensesummary();
-        }
-        function expensesummary(){
+        $scope.expensesummary=function(){
             $scope.fdate = $filter('date')($scope.fromdate, 'yyyy-MM-dd');
             $scope.tdate = $filter('date')($scope.todate, 'yyyy-MM-dd');
             var datas = {
@@ -388,8 +393,8 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
                       $scope.Expensesummary = result.data.DATA;
                       console.log($scope.Expensesummary);
                       $scope.maker_summary_filter = result.data.DATA;
-                      if($scope.currentPage==1){
-                        $scope.Total_Row=$scope.Expensesummary[0].Total_Row;
+                      if($scope.total_row_execute==0){
+                        $scope.Total_Row=($scope.Expensesummary.length)+($scope.currentPage*10);
                       }
                       if(result.data.MESSAGE=="ERROR_OCCURED"){
                             alert(JSON.stringify(result.data.DATA));
@@ -400,12 +405,62 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
                           alert(res);
                         }).finally($scope.endloading);
         }
-        expensesummary();
+        $scope.expensesummary();
         $scope.search_expense_summary=function(){
             $scope.currentPage=1;
             $scope.Total_Row=0;
-            expensesummary();
+            $scope.expensesummary();
+            $scope.total_row_execute=0;
         }
+
+        $scope.expensesummary_count=function(){
+        debugger;
+            $scope.fdate = $filter('date')($scope.fromdate, 'yyyy-MM-dd');
+            $scope.tdate = $filter('date')($scope.todate, 'yyyy-MM-dd');
+            var datas = {
+                "Params": {
+                    "FILTER":{"branchexpense_type":$scope.expense_type,
+                    "branchexpense_amount":$scope.expense_amount,"branchexpense_fromdate":$scope.fdate,
+                    "branchexpense_todate":$scope.tdate,"supplier_name":$scope.expense_supplier_name,
+                    "branchexpense_status":$scope.expense_recurring_status,
+                    "branchexpense_recurringperiod":$scope.expense_recurring_peroid,
+                    "Page_Index":0,"Page_Size":$scope.itemsPerPage},
+                    "CLASSIFICATION": {
+                        "Entity_Gid": [1]
+                    }
+
+                },
+                "Group": "EXPENSE_DATA",
+                "Type": "EXPENSE",
+                "Sub_Type": "SUMMARY_COUNT"
+            }
+            $scope.loading();
+            var columndata = summary.get_expensesummary(datas);
+            columndata.then(function(result) {
+                     //$scope.endloading();
+                      $scope.Expensesummary_count = result.data.DATA;
+                        $scope.Total_Row=$scope.Expensesummary_count[0].count;
+                      if(result.data.MESSAGE=="ERROR_OCCURED"){
+                            alert(JSON.stringify(result.data.DATA));
+
+                       }
+            }, function(err) {
+                          alert(res);
+                        }).finally($scope.endloading);
+        }
+
+        $scope.total_row_execute=0;
+        $scope.pageChanged = function(){
+             if($scope.Expensesummary.length==0){
+                $scope.currentPage=1;
+             }
+             if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.expensesummary_count();
+              }
+               $scope.expensesummary();
+        }
+
 
         $scope.branchdetails = function(value){
             $scope.expense_details = JSON.parse(value.branchdetails);
@@ -437,7 +492,7 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
                 $scope.Expensesummary = $filter('filter')($scope.maker_summary_filter, {
                     "branchexpense_type": $scope.expense_type,
                     "branchexpense_amount": $scope.expense_amount,
-                    "supplier_name": $scope.expense_supplier_name,
+                    "supplier_branchname": $scope.expense_supplier_name,
                     "branchexpense_recurringdate": $scope.expense_recurring_date,
                     "branchexpense_status": $scope.expense_recurring_status,
                     "branchexpense_recurringperiod": $scope.expense_recurring_peroid,
@@ -468,7 +523,13 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'summary', 
             console.log(result.data.DATA);
        });
 
-
+       $scope.clear_seach=function(){
+            $scope.expense_recurring_status="";
+            $scope.expense_recurring_peroid="";
+            $scope.expense_supplier_name="";
+            $scope.expense_amount="";
+            $scope.expense_type="";
+        }
 
         $scope.go_to_approval = function(expense) {
             debugger;
@@ -511,6 +572,10 @@ app.service("summary", function ($http) {
     }
 
 });
+
+
+
+
 
 
 

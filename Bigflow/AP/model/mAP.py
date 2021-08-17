@@ -6,8 +6,17 @@ from Bigflow.Transaction.Model import mFET
 
 class ap_model(mFET.FET_model):
     def print_parameters(sp_name, parameters):
-        pass
-    
+        message_tuple = ("@message",)
+        listx = list(parameters)
+        # listx.remove("")
+        listx.pop()
+        tuplex = tuple(listx)
+        parameters3 = tuplex + message_tuple
+        print("set @message=0;")
+        print("call galley." + sp_name, parameters3, end="")
+        print(";")
+        print("select @message;")
+
     def get_grn(self):
         cursor = connection.cursor()
         parameters = (self.action, self.POnumber, self.supplier_gid, self.entity_gid, '')
@@ -439,6 +448,31 @@ class ap_model(mFET.FET_model):
         rows = list(rows)
         grn_dtl = pd.DataFrame(rows, columns=columns)
         return grn_dtl
+
+    def hsn_Credittaxget_multiple(self):
+        cursor = connection.cursor()
+        hsndtl = self.hsndtl
+        hsndtl_json = json.dumps(hsndtl)
+        data = {}
+        parameters = (self.group, '', hsndtl_json, 1, '')
+        ap_model.print_parameters("sp_TAXcalculate_Get", parameters);
+        cursor.callproc('sp_TAXcalculate_Get', parameters)
+        columns = [x[0] for x in cursor.description]
+        rows = cursor.fetchall()
+        rows = list(rows)
+        result_data = pd.DataFrame(rows, columns=columns)
+        data['Tax_Amount'] = json.loads(result_data.to_json(orient='records'))
+        i = 0
+        while (cursor.nextset()):
+            if (i != 1):
+                columns = [x[0] for x in cursor.description]
+                rows = cursor.fetchall()
+                rows = list(rows)
+                result_data = pd.DataFrame(rows, columns=columns)
+                if i == 0:
+                    data['Subtax_Amount'] = json.loads(result_data.to_json(orient='records'))
+                    i = 1
+        return data
 
     def tablevalue_get(self):
         cursor = connection.cursor()
@@ -1175,6 +1209,18 @@ class ap_model(mFET.FET_model):
         bank_details = pd.DataFrame(rows, columns=columns)
         return bank_details
 
+    def get_advance_details(self):
+        cursor = connection.cursor()
+        parameters = (self.action, self.type, self.filter, self.classification, '');
+        ap_model.print_parameters("sp_APAdvance_Get",parameters)
+        cursor.callproc('sp_APAdvance_Get', parameters)
+        columns = [x[0] for x in cursor.description]
+        rows = cursor.fetchall()
+        rows = list(rows)
+        bank_details = pd.DataFrame(rows, columns=columns)
+        return bank_details
+
+
     def set_pmd_details(self):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, '')
@@ -1206,6 +1252,26 @@ class ap_model(mFET.FET_model):
         hedergid = pd.DataFrame(rows, columns=columns)
         return hedergid
 
+    def get_EntryUpdate(self):
+        cursor = connection.cursor()
+        parameters = (self.action, self.type, self.filter,self.create_by,'');
+        ap_model.print_parameters("sp_EntryUpdate_Get",parameters)
+        cursor.callproc('sp_EntryUpdate_Get', parameters)
+        columns = [x[0] for x in cursor.description]
+        rows = cursor.fetchall()
+        rows = list(rows)
+        hedergid = pd.DataFrame(rows, columns=columns)
+        return hedergid
+
+    def set_EntryUpdate(self):
+        cursor = connection.cursor()
+        parameters = (self.action, self.type, self.filter, self.classification, '')
+        ap_model.print_parameters("sp_EntryUpdate_Set", parameters);
+        cursor.callproc('sp_EntryUpdate_Set', parameters)
+        cursor.execute('select @_sp_EntryUpdate_Set_4')
+        output_msg = cursor.fetchone()
+        return output_msg
+
     def ap_update_flag(self):
         cursor = connection.cursor()
         parameters = (self.action, self.type, self.filter, self.classification, self.create_by, '');
@@ -1223,3 +1289,17 @@ class ap_model(mFET.FET_model):
         cursor.execute('select @_sp_Dayentry_Set_5')
         output_msg = cursor.fetchone()
         return output_msg
+
+    def get_WS_PROFFING_API_details(self):
+        cursor = connection.cursor()
+        parameters = (self.type, self.sub_type, self.filter, self.classification, '');
+        ap_model.print_parameters("sp_WS_PROFFING_Get", parameters);
+        cursor.callproc('sp_WS_PROFFING_Get', parameters)
+        # print(cursor.description)
+        columns = [x[0] for x in cursor.description]
+        rows = cursor.fetchall()
+        rows = list(rows)
+        grn_dtl = {}
+        grn_dtl['DATA'] = pd.DataFrame(rows, columns=columns)
+        grn_dtl['MESSAGE'] = 'FOUND' if len(rows) > 0 else 'NOT_FOUND'
+        return grn_dtl

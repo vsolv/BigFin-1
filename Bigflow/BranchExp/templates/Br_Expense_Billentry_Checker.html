@@ -21,7 +21,7 @@
                 </div>
                 <div class="col-md-5">
                     <span class="md-title title-color">Supplier Name : </span><span
-                        class="md-subhead">{{checker_data[0].supplier_name}}</span>
+                        class="md-subhead">{{checker_data[0].supplier_branchname}}</span>
                 </div>
             </div>
         </div>
@@ -318,9 +318,10 @@
         <hr/>
         <div class="row">
             <div class="col-md-12">
-                <div class="col-md-4" ng-hide="commodity_type=='Contractual Commodity'">
+                <!--                ng-hide="commodity_type=='Contractual Commodity'">-->
+                <!--                ng-hide="apprver_view=='0'"-->
+                <div class="col-md-4" ng-hide="apprver_view=='0'">
                     <md-autocomplete
-                            ng-hide="apprver_view=='0'"
                             md-clear-button="true"
                             md-floating-label="Choose Approver"
                             md-item-text="item.employee_name"
@@ -332,8 +333,7 @@
                             md-selected-item="selectedemp"
                             md-selected-item-change="employee_change(item)"
                             ng-disabled="Customer_disab"
-                            ng-init="count=0"
-                    >
+                            ng-init="count=0">
                         <md-item-template>
                             <span md-highlight-text="searchTex"> {{item.employee_name}} - {{item.employee_code}} - {{item.delmat_limit}} - {{item.designation_name}} </span>
                         </md-item-template>
@@ -375,36 +375,37 @@
         </div>
         <hr>
         <br/><br/>
-        <div class="row">
+        <div class="row" ng-hide="apprver_view=='0'">
             <div class="col-md-12">
-                <div class="col-md-4" ng-hide="apprver_view=='0'">
+                <div class="col-md-4">
                     <md-input-container class="md-block inputcontainer">
                         <label>Remarks</label>
                         <input ng-model="remark" maxlength="80" no-special-char/>
                     </md-input-container>
                 </div>
-                <div class="col-md-2" ng-hide="main_status=='0'">
-                    <md-button class="md-raised custbutton" ng-disabled="!remark"
+                <div class="col-md-2" ng-hide="screen=='MAKER'">
+                    <md-button class="md-raised custbutton" ng-disabled="!remark || selectedemp"
                                ng-click="approv_set('APPROV')">
                         APPROVE
                     </md-button>
                 </div>
-                <div class="col-md-2">
-                    <md-button class="md-raised md-warn" value="submit" ng-disabled="!remark"
+                <div class="col-md-2" ng-hide="screen=='MAKER'">
+                    <md-button class="md-raised md-warn" value="submit" ng-disabled="!remark || selectedemp"
                                ng-click="approv_set('REJECT')">REJECT
                     </md-button>
                 </div>
                 <div class="col-md-2"></div>
                 <div class="col-md-2">
                     <md-button class="md-raised custbutton" ng-disabled="!remark"
-                               ng-hide="commodity_type!='Transactional Commodity'"
                                ng-click="Moveto_approver()">
                         Move To Approval
                     </md-button>
                 </div>
+                <!--                 ng-hide="commodity_type!='Transactional Commodity'"-->
             </div>
 
         </div>
+
         <div class="modal fade" id="view_tran_details" tabindex="-1" role="dialog" data-backdrop="static"
              data-keyboard="false"
              aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -805,6 +806,14 @@
 
 
 
+
+
+
+
+
+
+
+
 </style>
 
 <script>
@@ -895,11 +904,10 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'invoice_se
     $scope.main_status=header_details.main_status;
     $scope.status=header_details.status;
     $scope.screen=header_details.screen;
-    $scope.apprver_view = false;
+    $scope.apprver_view = 0;
 
-    if($scope.status == 'PENDING FOR APPROVAL' && $scope.screen =='Approval'){
-
-      $scope.apprver_view = true;
+    if($scope.status == 'PENDING FOR APPROVAL' && ($scope.screen =='Approval' || $scope.screen =='MAKER')){
+      $scope.apprver_view = 1;
     }
     if($scope.Header_gid!=0){
         summary($scope.Header_gid);
@@ -1094,7 +1102,7 @@ $scope.approval_emp = 0 ;
          var ecf_tran_status = invoice_service.get_approval_summary(datas);
          ecf_tran_status.then(function(result) {
                 if(result.data.MESSAGE=="ERROR_OCCURED"){
-	                alert(JSON.stringify(result.data.DATA));
+                    alert(JSON.stringify(result.data.DATA));
                 }
                 $scope.ecf_tran_summary = result.data;
                 console.log($scope.ecf_tran_summary);
@@ -1301,6 +1309,14 @@ app.service("invoice_service", function ($http) {
     }
 
 });
+
+
+
+
+
+
+
+
 
 
 

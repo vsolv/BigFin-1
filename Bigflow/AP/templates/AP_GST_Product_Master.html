@@ -1,0 +1,482 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} GST Product Master{% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>GST Product Master </h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="tax_id"
+                               ng-change="filtersearch()" placeholder="Tax ID">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Tax Type</label>
+                        <md-select ng-model="selectedtype" ng-required="true">
+                            <md-option ng-repeat="x in jv_types"
+                                       ng-value="x.metadata_gid"
+                                       ng-click="typeclick(x.metadata_value)">{{ x.metadata_value }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="hsn"
+                               ng-change="filtersearch()" placeholder="HSN">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="amount"
+                               ng-change="filtersearch()" placeholder="Tax Percent">
+                    </md-input-container>
+                </div>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="status"
+                               ng-change="filtersearch()" placeholder="Applicability of ITC">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="status"
+                               ng-change="filtersearch()" placeholder="Specified Service">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-click="find_maker_summary()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-click="clear_seach()">
+                        <md-icon>search_off</md-icon>
+                        <md-tooltip>Clear Search</md-tooltip>
+                    </md-button>
+
+                    <a>
+                        <md-button class="md-fab md-mini md-primary custbutton" ng-click="add_product_master()">
+                            <md-icon>add</md-icon>
+                            <md-tooltip>Product Master Creation</md-tooltip>
+                        </md-button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>Tax ID</th>
+                        <th>Tax Type</th>
+                        <th>HSN</th>
+                        <th>Tax Percent</th>
+                        <th>Applicability of ITC</th>
+                        <th>Specified Service</th>
+                        <th>Edit</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="pr in product_summary_data"
+                        align="center">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{pr.gstproduct_taxid}}</td>
+                        <td>{{pr.gstproduct_taxtype}}</td>
+                        <td>{{pr.gstproduct_hsn}}</td>
+                        <td>{{pr.gstproduct_taxpercent}}</td>
+                        <td>{{pr.gstproduct_isitc}}</td>
+                        <td>{{pr.gstproduct_specifiedservice}}</td>
+                        <td>
+                            <span class="editlink material-icons"
+                                  ng-click="edit_eb_details(eb)">edit
+                            </span>
+                        </td>
+                        <td align="center">
+                            <a href="" ng-click="view_entries_file(jv)" ng-show="jv.jventry_status=='APPROVED'">
+                                VIEW </a>
+                        </td>
+                    </tr>
+                    <tr ng-show="product_summary_data.length ==  0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr align="center">
+                        <td colspan="7">
+                            <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm"
+                                boundary-links="true"
+                                ng-change="pageChanged()"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{Total_Row}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="add_product_master" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false" aria-labelledby="exampleModalLabel" aria-hidden="true" style="overflow:auto">
+            <div class="modal-dialog modal-lg" role="document" style="width:80%">
+                <div class="modal-content" style="overflow:auto;">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabel">
+                            ADD GST Product Master
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body" style="overflow:auto">
+                        <form class="modal-body popup-body" name="product_form" novalidate>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Tax ID</label>
+                                            <input ng-model="tax_id" ng-required="true">
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Tax Type</label>
+                                            <input ng-model="tax_type" ng-required="true">
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>HSN</label>
+                                            <input ng-model="hsn" ng-required="true">
+                                        </md-input-container>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <md-input-container class="md-block inputcontainer">
+                                            <label>Tax Percent</label>
+                                            <input ng-model="tax_percent" ng-required="true">
+                                        </md-input-container>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-4 text-center">
+                                        <md-button class="md-raised custbutton"
+                                                   ng-show="update!='edit'"
+                                                   value="submit"
+                                                   ng-disabled="product_form.$invalid"
+                                                   ng-click="save_product('NEW')">
+                                            Save
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close"
+                                                   ng-click="clear_download_fields()"
+                                                   aria-label="Close">Clear
+                                        </md-button>
+
+                                        <md-button class="md-raised" value="close" data-dismiss="modal"
+                                                   aria-label="Close">Cancel
+                                        </md-button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','product_service','$mdDialog','$window','$filter', function($scope,product_service,$mdDialog,$window,$filter) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+
+    $scope.currentPage3=1;
+    $scope.maxSize3=3;
+    $scope.itemsPerPage3=10;
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    var get_jv_types = product_service.get_all_table_metadata_values();
+        get_jv_types.then(function(result) {
+            $scope.jv_types = result.data.DATA;
+            console.log($scope.jv_types);
+
+        }, function() {
+           alert("Some Interanal Error");
+   });
+
+    $scope.pageChanged = function(){
+        debugger;
+        if($scope.product_summary_data.length==0){
+            $scope.currentPage=1;
+        }
+        $scope.summary();
+    }
+
+    $scope.summary=function(){
+        var datas={"action":"GET","type":"GST_PRODUCT_SUMMARY",
+        "filter":{"Page_Index":$scope.currentPage-1,"Page_Size":$scope.itemsPerPage}};
+            $scope.loading();
+            var product_summary = product_service.get_gst_product(datas);
+             product_summary.then(function(result) {
+            debugger;
+                    $scope.product_summary_data =result.data;
+                    $scope.product_summary_data_filter =result.data;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data));
+                    }
+                    if($scope.currentPage==1){
+                        $scope.Total_Row=$scope.product_summary_data[0].Total_Row;
+                    }
+                    console.log($scope.product_summary_data);
+                },
+                function(err) {
+                    alert("No JV Data");
+        }).finally($scope.endloading);
+    }
+    $scope.summary();
+    $scope.find_maker_summary=function(){
+                $scope.currentPage=1;
+                $scope.Total_Row=0;
+                $scope.summary();
+    }
+
+    $scope.filtersearch = function(selected_type) {
+    debugger;
+        $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+        $scope.product_summary_data = $filter('filter')($scope.product_summary_data_filter, {
+            "jventry_crno": $scope.cr_number,
+            "metadata_value": selected_type,
+            "jventry_refno": $scope.ref_number,
+            "branch_name": $scope.branch_name,
+            "jventry_transactiondate": $scope.transaction_date,
+            "jventry_amount": $scope.amount,
+            "jventry_status": $scope.status,
+        });
+    }
+
+    $scope.clear_seach=function(){
+        $scope.status="";
+        $scope.amount="";
+        $scope.txn_date="";
+        $scope.branch_name="";
+        $scope.ref_number="";
+        $scope.cr_number="";
+        $scope.entry_type="";
+        $scope.filtersearch();
+    }
+
+    $scope.add_product_master=function(value){
+            modalshow('add_product_master');
+    }
+
+    $scope.save_product=function(type){
+        $scope.execute=1;
+
+        if(type=="NEW"){
+            var datas={"action":"ANY","type":"PRODUCT_SET",
+            "filter":{"taxid":$scope.tax_id,"hsn":$scope.hsn,"taxtype":$scope.tax_type,
+            "taxpercent":$scope.tax_percent}};
+        }
+        else if(type=="UPDATE"){
+            if($scope.pmd_gid!=0){
+                var datas={"action":"INSERT","type":"PMD_SET",
+                "filter":{}};
+            }
+            else{
+                $scope.execute=0;
+                alert("PMD Gid Missing...");
+
+            }
+        }
+
+        if($scope.execute==1){
+            $scope.loading();
+            var pmd_creations = product_service.set_gst_product(datas);
+                pmd_creations.then(function(result) {
+                    var res=result.data;
+                     if (res=== "SUCCESS") {
+                    alert("SUCCESS");
+                    $window.location.href = "pmd_branch_summary";
+                    } else {
+                  alert(res);
+                  }
+                }, function(err) {
+                  alert('Data Not Inserted');
+                }).finally($scope.endloading);
+        }
+    }
+
+
+
+
+   }]);
+
+ myApp.service("product_service", function ($http) {
+
+    this.set_gst_product=function (data) {
+        var response=$http.post(Appname+"/gst_product_master_set/",data);
+        return response;
+    }
+    this.get_gst_product=function(data){
+        var response=$http.post(Appname+"/gst_product_master_get/",data);
+        return response;
+    }
+    this.get_all_table_metadata_values = function () {
+        var response=$http.post(Appname+"/jv_get_all_table_metadata_value/",{"action":"Get","type":"JV_Type","filter":{}});
+        return response;
+   }
+
+
+ });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

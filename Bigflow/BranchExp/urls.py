@@ -24,6 +24,7 @@ urlpatterns = [
     path('set_schedule/', views.task_number_one, name='set_schedule'),
     path('Session_Set_Expense_Data/', views.Session_Set_Expense_Data, name='Session_Set_Expense_Data'),
     path('Session_Get_Expnese_Data/', views.Session_Get_Expnese_Data, name='Session_Get_Expnese_Data'),
+    # path('thread_testing/', views.thread_testing, name='thread_testing'),
     # path('Invoiceheader_set/', views.Invoiceheader_set, name='Invoiceheader_set'),
 
     #Br_Makersummary  -#Br_RentCreate

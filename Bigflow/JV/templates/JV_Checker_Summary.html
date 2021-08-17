@@ -1,0 +1,702 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %} JV Checker Summary {% endblock %}
+{% block content %}
+{% csrf_token %}
+{% verbatim %}
+<div class="maincontent">
+    <div ng-app="App_maker_summary" ng-controller="Ctrl_amc_maker" class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <h4>JV Checker Summary </h4>
+            </div>
+        </div>
+        </br>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="cr_number"
+                               ng-change="filtersearch()" placeholder=" CR Number">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label> Type</label>
+                        <md-select ng-model="entry_type">
+                            <md-option ng-repeat="x in jv_types"
+                                       ng-value="x.metadata_gid"
+                                       ng-click="filtersearch(x.metadata_value)">{{ x.metadata_value }}
+                            </md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="ref_number"
+                               ng-change="filtersearch()" placeholder="Ref Number">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="branch_name"
+                               ng-change="filtersearch()" placeholder="Branch Name">
+                    </md-input-container>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer">
+                        <label>Txn Date</label>
+                        <md-datepicker md-hide-icons="calendar" ng-model="txn_date" md-hide-icons="calendar"
+                                       ng-click="date" md-min-date="maxDate" ng-change="filtersearch()"
+                                       md-max-date="minDate" formatDate></md-datepicker>
+                    </md-input-container>
+                </div>
+                <div class="col-md-3">
+                    <md-input-container class="md-block inputcontainer" md-no-float>
+                        <input maxlength="256" ng-model="amount"
+                               ng-change="filtersearch()" placeholder="Amount">
+                    </md-input-container>
+                </div>
+                <div class="col-md-3"></div>
+                <div class="col-md-2">
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-click="find_maker_summary()">
+                        <md-icon>search</md-icon>
+                        <md-tooltip>Search</md-tooltip>
+                    </md-button>
+                </div>
+                <div class="col-md-1">
+                    <md-button class="md-fab md-mini md-primary custbutton"
+                               ng-click="clear_seach()">
+                        <md-icon>search_off</md-icon>
+                        <md-tooltip>Clear Search</md-tooltip>
+                    </md-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row table-responsive">
+            <div class="col-md-12 col-lg-12 col-sm-12">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <tr>
+                        <th>S NO</th>
+                        <th>CR Number</th>
+                        <th>Entry Type</th>
+                        <th>Ref Number</th>
+                        <th>Branch Name</th>
+                        <th>Transaction Date</th>
+                        <th>Amount</th>
+                        <th>Attachment</th>
+                        <th>Status</th>
+                        <th>Transaction</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="jv in jv_summary_data"
+                        align="center">
+                        <td>
+                            <center>{{((currentPage-1)*itemsPerPage)+$index+1}}</center>
+                        </td>
+                        <td>{{jv.jventry_crno}}</td>
+                        <td>{{jv.metadata_value}}</td>
+                        <td>{{jv.jventry_refno}}</td>
+                        <td>{{jv.branch_name}}[{{jv.branch_code}}]</td>
+                        <td>{{jv.jventry_transactiondate |date:'dd-MMM-yyyy'}}</td>
+                        <td align="right">{{jv.jventry_amount}}</td>
+                        <td align="center">
+                            <a href="" ng-click="view_attached_file(jv)"> VIEW </a>
+                        </td>
+                        <td>{{jv.jventry_status}}</td>
+                         <td align="center">
+                            <a href="" ng-click="view_tran_details(jv)">
+                                VIEW </a>
+                        </td>
+                        <td>
+                            <span title="Approv/Reject"
+                                  ng-click="view_details(jv)" ng-hide=""
+                                  class="editlink">
+                                    <span class="material-icons">done</span>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr ng-show="jv_summary_data.length ==  0">
+                        <td class="warning" colspan="12">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr align="center">
+                        <td colspan="8">
+                            <ul uib-pagination total-items="Total_Row"
+                                ng-model="currentPage"
+                                max-size="maxSize"
+                                class="pagination-sm"
+                                ng-change="pageChanged()"
+                                boundary-links="true"
+                                items-per-page="itemsPerPage"></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{Total_Row}}
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal fade" id="view_attached_file" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:70%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabelss">
+                            Attached File
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>Fine Name</th>
+                                                <th>View File</th>
+                                                <th>Download File</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr align="center"
+                                                ng-repeat="file in all_files.slice(((currentPages-1)*itemsPerPages),((currentPages)*itemsPerPages)) | filter:search:strict">
+                                                <td>{{((currentPages-1)*itemsPerPages)+$index+1}}
+                                                </td>
+                                                <td align="left">{{file.file_name}}</td>
+                                                <td><span class="editlink material-icons"
+                                                          ng-click="view_file(file)">insert_photo
+                                                        </span>
+                                                </td>
+                                                <td>
+                                                    <md-button class="md-icon-button md-primary" aria-label="Settings"
+                                                               href="common_s3_file_download?filename={{file.file_name}}">
+                                                        <md-icon>get_app</md-icon>
+                                                        <md-tooltip>Download File</md-tooltip>
+                                                    </md-button>
+                                                </td>
+                                            </tr>
+                                            <tr ng-show="all_files.length == 0">
+                                                <td class="warning" colspan="11">
+                                                    No Records Found.
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                            <tfoot>
+                                            <tr align="center">
+                                                <td colspan="3">
+                                                    <ul uib-pagination
+                                                        total-items="all_files.length"
+                                                        ng-model="currentPages"
+                                                        max-size="maxSizes"
+                                                        class="pagination-sm"
+                                                        boundary-links="true"
+                                                        items-per-page="itemsPerPages"></ul>
+                                                </td>
+                                                <td colspan="2">
+                                                    Total Count:{{all_files.length}}
+                                                </td>
+                                            </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="show_file" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="view_files">
+                            {{url_data[0].file_name}}
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <br/>
+                    <div class="body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-12" align="center">
+                                    <img src="{{url_datas[0].file_path}}"
+                                         alt="{{url_datas[0].file_name}}"
+                                         class="img-thumbnail"
+                                         align="center"
+                                         ng-show="extension!='pdf'">
+                                    <hr/>
+                                </div>
+                                <iframe src="{{pdf_file_url_path}}" frameborder="0"
+                                        height="600px" width="97%" ng-show="extension=='pdf'"></iframe>
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="view_tran" tabindex="-1" role="dialog" data-backdrop="static"
+             data-keyboard="false"
+             aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document" style="width:90%">
+                <div class="modal-content">
+                    <div class="modal-header popup-header">
+                        <h5 class="modal-title" id="exampleModalLabels_tran">
+                            Transaction Details
+                            <button type="button" class="close" data-dismiss="modal"
+                                    ng-click="close_pr_popup()"
+                                    aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </h5>
+                    </div>
+                    <div class="body">
+                        <div class="row table-responsive">
+                            <div class="col-md-12 col-lg-12 col-sm-12">
+                                <div class="row table-responsive">
+                                    <div class="col-md-12 col-lg-12 col-sm-12">
+                                        <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                                               md-progress="deferred">
+                                            <thead class="header">
+                                            <tr>
+                                                <th>S.No</th>
+                                                <th>Status</th>
+                                                <th>From Date</th>
+                                                <th>Remarks</th>
+                                                <th>Employee Name</th>
+                                                <th>Approver Name</th>
+                                                <th>Approved By</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr align="center"
+                                                ng-repeat="tran in jv_tran_data_all.slice(((currentPage4-1)*itemsPerPage4),((currentPage4)*itemsPerPage4)) | filter:search:strict">
+                                                <td>
+                                                    {{((currentPage4-1)*itemsPerPage4)+$index+1}}
+                                                </td>
+                                                <td>{{tran.tran_status}}</td>
+                                                <td>{{tran.tran_fromdate}}</td>
+                                                <td>{{tran.tran_remarks}}</td>
+                                                <td>{{tran.employee_name}}<br>
+                                                    <span ng-hide="tran.employee_name==null"
+                                                          ng-click=view_emp(tran.employee_gid) style="color:green">View Details</span>
+                                                </td>
+                                                <td>{{tran.approvername}}<br>
+                                                    <span ng-hide="tran.approvername==null"
+                                                          ng-click=view_emp(tran.approver_gid) style="color:green">View Details</span>
+                                                </td>
+                                                <td>{{tran.approvedby}}<br>
+                                                    <span ng-hide="tran.approvedby==null"
+                                                          ng-click=view_emp(tran.approveby_gid) style="color:green">View Details</span>
+                                                </td>
+                                            </tr>
+                                            <tr ng-show="jv_tran_data_all.length == 0">
+                                                <td class="warning" colspan="8">
+                                                    No Records Found.
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                            <tfoot>
+                                            <tr align="center">
+                                                <td colspan="5">
+                                                    <ul uib-pagination
+                                                        total-items="jv_tran_data_all.length"
+                                                        ng-model="currentPage4"
+                                                        max-size="maxSize34"
+                                                        class="pagination-sm"
+                                                        boundary-links="true"
+                                                        items-per-page="itemsPerPage4"></ul>
+                                                </td>
+                                                <td colspan="2">
+                                                    Total Count:{{jv_tran_data_all.length}}
+                                                </td>
+                                            </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="col-md-4">
+                                    <span class="md-title title-color">Employee Name : </span>
+                                    <span class="md-subhead">{{emp_details[0].employee_name}}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="md-title title-color">Branch  Code: </span>
+                                    <span class="md-subhead">{{emp_details[0].branch_code}}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="md-title title-color">Designation: </span>
+                                    <span class="md-subhead">{{emp_details[0].designation_name}}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-offset-6">
+                                <md-button class="md-raised md-warn" value="close" data-dismiss="modal"
+                                           aria-label="Close">Cancel
+                                </md-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+{% endverbatim %}
+<style>
+            .title-color{
+    color:#2159A6;
+    }
+
+</style>
+<script>
+var myApp = angular.module('App_maker_summary', ['ngMaterial','ui.bootstrap','ngMessages']).config(function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+});
+
+myApp.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+})
+
+myApp.controller('Ctrl_amc_maker', ['$scope','jv_service','$mdDialog','$window','$filter','$http','$q','$sce',
+ function($scope,jv_service,$mdDialog,$window,$filter,$http,$q,$sce) {
+    $scope.currentPage=1;
+    $scope.maxSize=3;
+    $scope.itemsPerPage=10;
+
+    $scope.currentPages=1;
+    $scope.maxSizes=3;
+    $scope.itemsPerPages=10;
+
+    $scope.currentPage4=1;
+    $scope.maxSize4=3;
+    $scope.itemsPerPage4=10;
+
+    $scope.maintable = [];
+    $scope.amc_assets=[];
+    $scope.jv_summary_data=[];
+
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+
+    $scope.loading_view_attached_file = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_attached_file')),
+                clickOutsideToClose: false
+            });
+    };
+    $scope.loading_transaction = function() {
+            $mdDialog.show({
+                templateUrl: 'loaderSpinner',
+                parent: angular.element(document.getElementById('view_tran')),
+                clickOutsideToClose: false
+            });
+        };
+
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.pageChanged = function(){
+        debugger;
+        if($scope.jv_summary_data.length==0){
+            $scope.currentPage=1;
+        }
+        $scope.summary();
+    }
+
+    $scope.summary=function(){
+        debugger;
+        if($scope.txn_date!=undefined){
+            $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+        }
+        var datas={"action":'GET',"type":"JV_HEADER_SUMMARY",
+         "filter":{"cr_number":$scope.cr_number,"entry_type":$scope.entry_type,
+         "jventry_refno":$scope.ref_number,"branch_name":$scope.branch_name,"mode":"CBS",
+         "amount":$scope.amount,"Jv_Status":"MAKER,ENTRY","txn_date":$scope.transaction_date,
+         "Page_Index":$scope.currentPage-1,"Page_Size":$scope.itemsPerPage}};
+            $scope.loading();
+            var jv_summary = jv_service.jv_process_get(datas);
+             jv_summary.then(function(result) {
+            debugger;
+                    $scope.jv_summary_data =result.data;
+                    $scope.jv_summary_data_filter =result.data;
+                    if($scope.currentPage==1){
+                        $scope.Total_Row=$scope.jv_summary_data[0].Total_Row;
+                    }
+                    console.log($scope.jv_summary_data);
+                },
+                function(err) {
+                    alert("No JV Data");
+        }).finally($scope.endloading);
+    }
+
+    $scope.summary();
+    $scope.find_maker_summary=function(){
+                $scope.currentPage=1;
+                $scope.Total_Row=0;
+                $scope.summary();
+    }
+
+    $scope.view_details=function(jv_data){
+        debugger;
+            var datas={"action":"SET","type":"JV_DATA",
+            "filter":{"JV_Entry_Gid":jv_data.jventry_gid,"JV_Page_Name": "Checker"}};
+            $scope.loading();
+            var asset = jv_service.set_session_jv(datas);
+                asset.then(function(result) {
+                   if(result.data="SUCCESS"){
+                        $window.location.href = "JV/JV_View_Details ";
+                   }
+                }).finally($scope.endloading);
+    }
+
+    $scope.filtersearch = function(selected_type) {
+    debugger;
+        $scope.transaction_date=$filter('date')($scope.txn_date, "yyyy-MM-dd");
+        $scope.jv_summary_data = $filter('filter')($scope.jv_summary_data_filter, {
+            "jventry_crno": $scope.cr_number,
+            "metadata_value": selected_type,
+            "jventry_refno": $scope.ref_number,
+            "branch_name": $scope.branch_name,
+            "jventry_transactiondate": $scope.transaction_date,
+            "jventry_amount": $scope.amount,
+            "jventry_status": $scope.status,
+        });
+    }
+
+    var get_jv_types = jv_service.get_all_table_metadata_values();
+        get_jv_types.then(function(result) {
+            $scope.jv_types = result.data.DATA;
+            console.log($scope.jv_types);
+
+        }, function() {
+           alert("Some Interanal Error");
+    });
+
+    $scope.clear_seach=function(){
+        $scope.status="";
+        $scope.amount="";
+        $scope.txn_date="";
+        $scope.branch_name="";
+        $scope.ref_number="";
+        $scope.cr_number="";
+        $scope.entry_type="";
+        $scope.filtersearch();
+    }
+
+    $scope.view_attached_file=function(header_values){
+        debugger;
+        var jventry_gid=header_values.jventry_gid;
+        var datas={params:{"action":"GET","type":"FILE_DETAIL",
+            "filter":{"file_reftablegid":jventry_gid,"ref_name":"JV"}}};
+         $scope.loading();
+         var ecf_file_data = jv_service.get_approval_summary(datas);
+         ecf_file_data.then(function(result) {
+            $scope.all_files = result.data;
+             modalshow('view_attached_file');
+         },
+         function(err) {
+            alert('No data!.');
+         }).finally($scope.endloading);
+
+        }
+
+        $scope.view_file=function(file_list){
+            debugger;
+            var datas={"file_data":[file_list]};
+             $scope.loading_view_attached_file();
+             var generated_urls = jv_service.get_generated_url_data(datas);
+             generated_urls.then(function(result) {
+                   $scope.url_datas = result.data;
+                    $scope.file_url_path=$scope.url_datas[0].file_path;
+                    var final_file_name=$scope.url_datas[0].file_name;
+                    $scope.extension=final_file_name.substr(final_file_name.lastIndexOf('.')+1);
+                    if($scope.extension=="pdf"){
+                        complete_url ='http://docs.google.com/gview?url=' + encodeURIComponent($scope.file_url_path) + '&embedded=true';
+                        $scope.pdf_file_url_path = $sce.trustAsResourceUrl(complete_url);
+                    }
+                     modalshow('show_file');
+             },
+             function(err) {
+                alert('No data!.');
+             }).finally($scope.endloading);
+        }
+
+         $scope.jv_tran_data_all=[];
+        $scope.view_tran_details=function(jv){
+             $scope.emp_details=[];
+             var datas={"action":"GET","type":"JV_TRANS_GET","filter":{"Ref_Name":"JV","RefTable_Gid":jv.jventry_gid}};
+            $scope.loading();
+            var tran_data = jv_service.jv_process_get(datas);
+            tran_data.then(function(result) {
+                $scope.jv_tran_data_all = result.data;
+                modalshow('view_tran');
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+        }
+
+        $scope.view_emp=function(emp_gid){
+            debugger;
+            $scope.emp_details=[];
+            var datas={params:{"action":"GET","type":"EMP_DETAILS", "filter":{"employee_gid":emp_gid}}};
+            $scope.loading_transaction();
+            var summarys = jv_service.get_approval_summary(datas);
+            summarys.then(function(result) {
+                $scope.endloading();
+                if(result.data.MESSAGE=="ERROR_OCCURED"){
+                    alert(JSON.stringify(result.data.DATA));
+                }
+                $scope.emp_details= result.data;
+                console.log($scope.emp_details);
+
+            },
+            function(err) {
+                alert('No data!.');
+            }).finally($scope.endloading);
+       }
+
+
+
+
+
+
+
+
+   }]);
+
+myApp.service("jv_service", function ($http) {
+
+   this.jv_process_get=function (data) {
+        var response=$http.post(Appname+"/JV_Process_Get/",data);
+        return response;
+   }
+
+   this.set_session_jv = function (data) {
+        var response=$http.post(Appname+"/JV_Session_Set/",data);
+        return response;
+   }
+
+   this.get_all_table_metadata_values = function () {
+        var response=$http.post(Appname+"/jv_get_all_table_metadata_value/",{"action":"Get","type":"JV_Type","filter":{}});
+        return response;
+   }
+
+    this.get_generated_url_data=function(data){
+        var response=$http.post(Appname+"/common_s3_file_url_generate/",data);
+        return response;
+   }
+
+    this.get_approval_summary=function(data){
+        var response=$http.post(Appname+"/get_onward_data/",data);
+        return response;
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<style>
+    .app-modal-window .modal-dialog {
+    width: 1000px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+{% endblock %}

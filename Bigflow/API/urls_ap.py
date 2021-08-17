@@ -13,6 +13,7 @@ urlpatterns = [
     path('ECF_STATUS_GET', ap_api_view.ECFstatus_get.as_view()),
     path('ECF_STATUS_SET', ap_api_view.ECFStatus_set.as_view()),
     path('AP_STATUS_SET', ap_api_view.APStatus_set.as_view()),
+    path('WS_PROFFING_API', ap_api_view.WS_PROFFING_API.as_view()),
 
 
     ]

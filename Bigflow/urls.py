@@ -57,11 +57,10 @@ from Bigflow.Memo import urls as MemoUrl
 from Bigflow.API import Memo_urls as Memo_urls
 from Bigflow.API import Purchase_urls as Purchase_API_URL
 from Bigflow.API import urls_ap as AP_API_URL
-# from Bigflow.JV import urls as JV_App_URL
-# from Bigflow.JVWiseFin import urls as JVWiseFin_App_URL
+from Bigflow.JV import urls as JV_App_URL
+from Bigflow.JVWiseFin import urls as JVWiseFin_App_URL
 from Bigflow.API import urls_jv as JV_API_URL
 from Bigflow.EBexpense import urls as ElectricityUrl
-
 
 
 
@@ -477,7 +476,7 @@ urlpatterns = [
 
                   # JV
                   path('', include(JV_API_URL)),
-                  # path('', include(JV_App_URL)),
-                  # path('', include(JVWiseFin_App_URL))
+                  path('', include(JV_App_URL)),
+                  path('', include(JVWiseFin_App_URL))
 
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

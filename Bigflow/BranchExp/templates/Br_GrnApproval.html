@@ -38,14 +38,14 @@
                                     md-input-maxlength=126
                                     md-input-id="Supplier_Names"
                                     ng-modle="suppliers"
-                                    md-item-text="itempn.supplier_name"
+                                    md-item-text="itempn.supplier_branchname"
                                     md-items="itempn in getSupplierName(searchSuplierName)"
                                     md-selected-item-change="supplierNameChanged(itempn.supplier_gid)"
                                     md-min-length=0 md-search-text="searchSuplierName"
                                     ng-model="itempn" md-no-cache="true" size="5"
                                     md-selected-item="selectedsupplier">
                                 <md-item-template>
-                                    <span md-highlight-text="searchSuplierName"> {{itempn.supplier_name}}</span>
+                                    <span md-highlight-text="searchSuplierName"> {{itempn.supplier_branchname}}</span>
                                 </md-item-template>
                                 <md-not-found>
                                     No Supplier Name matching were {{searchSuplierName}}found.
@@ -116,6 +116,13 @@
                                        ng-click="find_maker_summary()">
                                 <md-icon>search</md-icon>
                                 <md-tooltip>Search</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div class="col-md-1">
+                            <md-button class="md-fab md-mini md-warn"
+                                       ng-click="clear_seach()">
+                                <md-icon>search_off</md-icon>
+                                <md-tooltip>Clear Search</md-tooltip>
                             </md-button>
                         </div>
                     </div>
@@ -196,29 +203,28 @@
                     </tbody>
                     <tfoot>
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <ul uib-pagination total-items="Total_Row" ng-model="currentPage"
                                 max-size="maxSize" ng-change="pageChanged()"
                                 class="pagination-sm" boundary-links="true" items-per-page="itemsPerPage"></ul>
                         </td>
-                        <td colspan="1">
-                            <label>Page Count:</label>
-                            <select type="text" style="width:100px;"
-                                    class="form-control" placeholder="count"
-                                    ng-model="itemsPerPage" ng-change="pageChanged()">
-                                <option ng-value="10">10</option>
-                                <option ng-value="20">20</option>
-                                <option ng-value="50">50</option>
-                                <option ng-value="100">100</option>
-                                <option ng-value="150">150</option>
-                                <option ng-value="200">200</option>
-                                <option ng-value="300">300</option>
-                                <option ng-value="500">500</option>
-                            </select>
-                        </td>
+                        <!--                        <td colspan="1">-->
+                        <!--                            <label>Page Count:</label>-->
+                        <!--                            <select type="text" style="width:100px;"-->
+                        <!--                                    class="form-control" placeholder="count"-->
+                        <!--                                    ng-model="itemsPerPage" ng-change="pageChanged()">-->
+                        <!--                                <option ng-value="10">10</option>-->
+                        <!--                                <option ng-value="20">20</option>-->
+                        <!--                                <option ng-value="50">50</option>-->
+                        <!--                                <option ng-value="100">100</option>-->
+                        <!--                                <option ng-value="150">150</option>-->
+                        <!--                                <option ng-value="200">200</option>-->
+                        <!--                                <option ng-value="300">300</option>-->
+                        <!--                                <option ng-value="500">500</option>-->
+                        <!--                            </select>-->
+                        <!--                        </td>-->
                         <td colspan="2">
-                            <strong>Total Count:{{Total_Row}}</strong>
-
+                            <strong ng-hide="!total_row_execute">Total Count:{{Total_Row}}</strong>
                         </td>
                     </tr>
                     </tfoot>
@@ -319,22 +325,24 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesum
             var res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + afterPoint;
             return res;
         }
-
+        $scope.total_row_execute=0;
         $scope.pageChanged = function(){
              if($scope.maker_summary.length==0){
                 $scope.currentPage=1;
              }
-             summary();
+              if($scope.total_row_execute==0){
+                $scope.total_row_execute=1;
+                $scope.get_total_row_maker_summary();
+              }
+             $scope.summary();
         }
         $scope.find_maker_summary=function(){
             $scope.currentPage=1;
             $scope.Total_Row=0;
-            summary();
+             $scope.total_row_execute=0;
+            $scope.summary();
         }
-
-        summary();
-
-        function summary() {
+        $scope.summary=function() {
              $scope.invdate=$filter('date')($scope.invdate,"yyyy-MM-dd");
              $scope.from_date=$filter('date')($scope.from_date,"yyyy-MM-dd");
              $scope.to_date=$filter('date')($scope.to_date,"yyyy-MM-dd");
@@ -355,9 +363,8 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesum
                         alert(JSON.stringify(result.data.DATA));
                         $scope.maker_summary=[];
                     }
-
-                     if($scope.currentPage==1){
-                        $scope.Total_Row=$scope.maker_summary[0].Total_Row;
+                    if($scope.total_row_execute==0){
+                        $scope.Total_Row=($scope.maker_summary.length)+($scope.currentPage*10);
                     }
                     for(var s=0;s<$scope.maker_summary.length;s++){
                         $scope.maker_summary[s].selected=false;
@@ -377,6 +384,34 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesum
                 }).finally($scope.endloading);
         }
 
+        $scope.get_total_row_maker_summary=function() {
+             $scope.invdate=$filter('date')($scope.invdate,"yyyy-MM-dd");
+             $scope.from_date=$filter('date')($scope.from_date,"yyyy-MM-dd");
+             $scope.to_date=$filter('date')($scope.to_date,"yyyy-MM-dd");
+            var datas={params:{"action":"GET","type":"INVOICE_APPROVAL_COUNT",
+            "filter":{"employee_gid":employee_gid,"invoiceheader_inwarddetailsgid":"",
+            "invoiceheader_invoicetype":"BRANCH EXP","branch_gid":$scope.branch_gid,
+            "invoiceheader_otheramount":"","employee_name":"","invoiceheader_invoiceno":$scope.invoice_number,
+            "invoiceheader_status":"","supplier_gid":$scope.supplier_gid,"invoiceheader_gst":"","br_number":$scope.br_number,
+            "supplier_name":$scope.supplier_name,"from_date":$scope.from_date,"to_date":$scope.to_date,"min_amount":$scope.min_amount,
+             "max_amount":$scope.max_amount,"Page_Index":0,
+            "Page_Size":$scope.itemsPerPage}}};
+            $scope.loading();
+            var summary = servicesummary.get_expensesummary(datas);
+            summary.then(function(result) {
+                    $scope.maker_summary_count = result.data;
+                    if(result.data.MESSAGE=="ERROR_OCCURED"){
+                        alert(JSON.stringify(result.data.DATA));
+                    }
+                     $scope.Total_Row=$scope.maker_summary_count[0].count;
+                },
+                function(err) {
+                    alert('No data!.');
+                }).finally($scope.endloading);
+        }
+
+        $scope.summary();
+
         $scope.ACselectchange = function() {
         debugger;
             $scope.ddMMyyyy = $filter('date')($scope.from_date, 'dd-MM-yyyy');
@@ -389,6 +424,20 @@ app.controller('ctrlsummary', ['$scope', '$filter', '$mdDateLocale', 'servicesum
                 "invoiceheader_amount":$scope.min_amount
             }, );
         }
+        $scope.clear_seach=function(){
+            $scope.invoice_type="";
+            $scope.br_number="";
+            $scope.branch_gid="";
+            $scope.supplier_gid="";
+            $scope.invoice_number="";
+            $scope.from_date="";
+            $scope.to_date="";
+            $scope.min_amount="";
+            $scope.max_amount="";
+            $scope.selected_branch="";
+            $scope.selectedsupplier="";
+        }
+
         $scope.change_invoice=function(invoice,values){
             var header_gid=invoice.invoiceheader_gid;
             for(var k=0;k<$scope.maker_summary.length;k++){
@@ -515,7 +564,7 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                 Service_date = curr_year + "-" + curr_month + "-" + curr_date;
                 alert(Service_date)
             }
-            summary();
+            $scope.summary();
         }
 
         $scope.getSupplierName = function(query) {
@@ -523,7 +572,7 @@ aray.forEach(function(key) { sessionStorage.removeItem(key) });
                 $scope.clear_old_supplier_values();
             }
             var datas={"Params":{"Group":"GET_EMP_DATA","Type":"SUPPLIER","Sub_Type":"SUPPLIER_ALL",
-                 "FILTER":{"Supplier_name" :$scope.searchSuplierName,
+                 "FILTER":{"supplier_branchname" :$scope.searchSuplierName,
                  "Supplier_code":$scope.search_supplier_code,
                  "Supplier_gstno":$scope.search_supplier_gstno,"Pan_Number":$scope.pan_number},"Limit": 0 + "," + 30,}};
 
@@ -620,6 +669,8 @@ app.service("servicesummary", function ($http) {
 
 
 });
+
+
 
 
 

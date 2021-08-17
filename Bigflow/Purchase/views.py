@@ -1,5 +1,8 @@
+import os
 from decimal import Decimal
 from typing import Dict
+
+from django.core.files.storage import default_storage
 from django.shortcuts import render
 from Bigflow.API import views as commonview
 from Bigflow import settings
@@ -8,7 +11,7 @@ from django.template.loader import get_template
 from django.template import Context
 from Bigflow.Purchase.Model import mPurchase
 from Bigflow.AP.model import mAP
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 import json
 import base64
 import ast
@@ -457,13 +460,23 @@ from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 def common_downloadfile(request):
     utl.check_authorization(request)
     if request.method == 'GET':
+        # filename = request.GET['filename']
+        # s3 = boto3.resource('s3')
+
         filename = request.GET['filename']
-        s3 = boto3.resource('s3')
-        s3_obj=s3.Object(bucket_name=common.s3_bucket_name(),key=filename)
-        body=s3_obj.get()['Body']
-        response = StreamingHttpResponse(body, content_type='application/octet-stream')
-        response['Content-Disposition'] = 'inline; filename="{}"'.format(filename)
-        return response
+        file_path = os.path.join(settings.MEDIA_ROOT+'/PRPO/', filename)
+        print(file_path)
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as fh:
+                response = StreamingHttpResponse(fh.read(), content_type='application/octet-stream')
+                response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                return response
+        else:
+            raise Http404
+
+        # s3_obj=s3.Object(bucket_name=common.s3_bucket_name(),key=filename)
+        # body=s3_obj.get()['Body']
+        
 
 
 def pur_poclosesummary(request):
@@ -2122,13 +2135,18 @@ def PO_finalinsert(request):
             obj_.action = jsondata.get('Params').get('Action')
             obj_.sub = jsondata.get('Params').get('Subtype')
             data2 = jsondata.get('Params').get('filter')
-            notepad = jsondata.get('Params').get('filter').get('Notepad')
+            notepad = jsondata.get('Params').get('filter').get('Notepad') #{"filter":{'Notepad':"hello world"}}
             if notepad != "":
                 millis = int(round(time.time() * 1000))
                 filename = request.session['Emp_gid'] + "_" + str(millis) + '.txt'
-                s3 = boto3.resource('s3')
-                object = s3.Object(common.s3_bucket_name(), filename)
-                object.put(Body=notepad)
+                file_path = os.path.join(settings.MEDIA_ROOT + '/PRPO/', filename)
+
+                # s3 = boto3.resource('s3')
+                # object = s3.Object(common.s3_bucket_name(), filename)
+                # object.put(Body=notepad)
+                with open(file_path,'x') as txt_file:
+                    txt_file.write(notepad)
+
             else:
                 filename = ""
             obj_.filename = filename
@@ -2183,9 +2201,21 @@ def imageconvert(request):
         filename = str(request.FILES['file'])
         millis = int(round(time.time() * 1000))
         concat_filename = request.session['Emp_gid'] + "_" + str(millis) + "_" + filename
-        s3 = boto3.resource('s3')
-        s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
-        s3_obj.put(Body=request.FILES['file'])
+        # current_month = datetime.now().strftime('%m')
+        # current_day = datetime.now().strftime('%d')
+        # current_year_full = datetime.now().strftime('%Y')
+        # filename = str(request.FILES['file'])
+        # millis = int(round(time.time() * 1000))
+        # s1 = str(millis)
+        # Create_By = decry_data(request.POST['Create_By'])
+        # c1 = str(Create_By)
+        # concat_filename = c1 + "_" + s1 + "_" + filename
+        save_path = str(settings.MEDIA_ROOT) + '/PRPO/' + concat_filename
+        # print(save_path)
+        path = default_storage.save(str(save_path), request.FILES['file'])
+        # s3 = boto3.resource('s3')
+        # s3_obj = s3.Object(bucket_name=common.s3_bucket_name(), key=concat_filename)
+        # s3_obj.put(Body=request.FILES['file'])
         return HttpResponse(concat_filename)
 
 
@@ -2259,9 +2289,13 @@ def saveccbs(request):
             if notepad != "":
                 millis = int(round(time.time() * 1000))
                 filename = request.session['Emp_gid'] + "_" + str(millis) + '.txt'
-                s3 = boto3.resource('s3')
-                object = s3.Object(common.s3_bucket_name(), filename)
-                object.put(Body=notepad)
+                file_path = os.path.join(settings.MEDIA_ROOT + '/PRPO/', filename)
+
+                # s3 = boto3.resource('s3')
+                # object = s3.Object(common.s3_bucket_name(), filename)
+                # object.put(Body=notepad)
+                with open(file_path, 'x') as txt_file:
+                    txt_file.write(notepad)
             else:
                 filename = ""
             prheaderddl.update({"prheader_notepad": filename})
@@ -2345,22 +2379,17 @@ def common_viewfile(request):
         jsondata = json.loads(request.body.decode('utf-8'))
         filename= jsondata.get('Filename')
         s3_client = boto3.client('s3','ap-south-1')
-        file_path = s3_client.generate_presigned_url('get_object',
-                                                     Params={'Bucket': common.s3_bucket_name(), 'Key': filename},
-                                                     ExpiresIn=900)
+        file_path = settings.MEDIA_ROOT+'/PRPO/'+filename
         return JsonResponse(file_path, safe=False)
 
 def common_read_file(request):
     if request.method == 'POST':
         jsondata = json.loads(request.body.decode('utf-8'))
         s3_client = boto3.client('s3', 'ap-south-1')
-        fileobj = s3_client.get_object(
-            Bucket=common.s3_bucket_name(),
-            Key= jsondata.get('Filename')
-        )
-        filedata = fileobj['Body'].read()
-        contents = filedata.decode('utf-8')
-        file_path = {"file_path":contents}
+        filename = jsondata.get('Filename')
+        filepath = settings.MEDIA_ROOT + '/PRPO/' + filename
+        with open(filepath,'r') as filedata:
+            file_path = {"file_path":filedata.read()}
         return JsonResponse(file_path, safe=False)
 
 # from decouple import config

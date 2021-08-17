@@ -6697,7 +6697,7 @@ def common_pdf_gen(output, create_by):
                                                 ExpiresIn=3600)
     classify = {
         "bar_code_path": response,
-        "logo_path": ip + "/static/Images/kvbLogo.png"
+        "logo_path": ip + "/static/Images/vsolvLogo.png"
     }
     output['INVOICE_HEADER'][0].update(classify)
     invoicedetails_totalamt = 0

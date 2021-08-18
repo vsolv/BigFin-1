@@ -6682,22 +6682,23 @@ def common_pdf_gen(output, create_by):
     ean = EAN(ecf_no, writer=ImageWriter())
     concat_filename = str(create_by) + "_" + str(ecf_no) + "_" + "ecf_barcode" + ".png"
     save_file = str(create_by) + "_" + str(ecf_no) + "_" + "ecf_barcode"
-    tmp = tempfile.NamedTemporaryFile()
-    with open(tmp.name, 'wb') as f:
-        EAN(ecf_no, writer=ImageWriter()).write(f)
-    with open(tmp.name, 'rb') as f:
-        contents = f.read()
-    s3 = boto3.resource('s3')
-    s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
-    s3_obj.put(Body=contents)
-    s3_client = boto3.client('s3', 'ap-south-1')
-    response = s3_client.generate_presigned_url('get_object',
-                                                Params={'Bucket': S3_BUCKET_NAME,
-                                                        'Key': concat_filename},
-                                                ExpiresIn=3600)
+    # tmp = tempfile.NamedTemporaryFile()
+    # with open(tmp.name, 'wb') as f:
+    #     EAN(ecf_no, writer=ImageWriter()).write(f)
+    # with open(tmp.name, 'rb') as f:
+    #     contents = f.read()
+    # s3 = boto3.resource('s3')
+    # s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
+    # s3_obj.put(Body=contents)
+    # s3_client = boto3.client('s3', 'ap-south-1')
+    # response = s3_client.generate_presigned_url('get_object',
+    #                                             Params={'Bucket': S3_BUCKET_NAME,
+    #                                                     'Key': concat_filename},
+    #                                             ExpiresIn=3600)
+    # print(response)
     classify = {
-        "bar_code_path": response,
-        "logo_path": ip + "/static/Images/kvbLogo.png"
+        "bar_code_path": ip + "/static/Images/temp_ecf_barcode.png",
+        "logo_path":ip + "/static/Images/vsolvLogo.png"
     }
     output['INVOICE_HEADER'][0].update(classify)
     invoicedetails_totalamt = 0

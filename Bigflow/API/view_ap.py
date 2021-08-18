@@ -428,29 +428,29 @@ class ECFInvoice_get(APIView):
             jdata = out.to_json(orient='records')
             jdata = json.loads(jdata)
             output['TRAN_DATA'] = jdata
-            EAN = barcode.get_barcode_class('Code128')
-            concat_filename = str(create_by) + "_" + str(ecf_no) + "_" + "ecf_barcode" + ".png"
-            print(concat_filename)
-            tmp = tempfile.NamedTemporaryFile()
-            with open(tmp.name, 'wb') as f:
-                EAN(ecf_no, writer=ImageWriter()).write(f)
-
-            with open(tmp.name, 'rb') as f:
-                contents = f.read()
-
-            s3 = boto3.resource('s3')
-            s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
-            s3_obj.put(Body=contents)
-            s3_client = boto3.client('s3','ap-south-1')
-            response = s3_client.generate_presigned_url('get_object',
-                                                        Params={'Bucket': S3_BUCKET_NAME,
-                                                                'Key': concat_filename},
-                                                        ExpiresIn=3600)
-            print(response)
+            # EAN = barcode.get_barcode_class('Code128')
+            # concat_filename = str(create_by) + "_" + str(ecf_no) + "_" + "ecf_barcode" + ".png"
+            # print(concat_filename)
+            # tmp = tempfile.NamedTemporaryFile()
+            # with open(tmp.name, 'wb') as f:
+            #     EAN(ecf_no, writer=ImageWriter()).write(f)
+            #
+            # with open(tmp.name, 'rb') as f:
+            #     contents = f.read()
+            #
+            # s3 = boto3.resource('s3')
+            # s3_obj = s3.Object(bucket_name=S3_BUCKET_NAME, key=concat_filename)
+            # s3_obj.put(Body=contents)
+            # s3_client = boto3.client('s3','ap-south-1')
+            # response = s3_client.generate_presigned_url('get_object',
+            #                                             Params={'Bucket': S3_BUCKET_NAME,
+            #                                                     'Key': concat_filename},
+            #                                             ExpiresIn=3600)
+            # print(response)
             classify = {
-                "bar_code_path": response,
-                "logo_path": ip + "/static/Images/kvbLogo.png",
-                "icon_path": ip + "/static/Images/kvb_logo.jpg"
+                "bar_code_path": ip + "/static/Images/temp_ecf_barcode.png",
+                "logo_path": ip + "/static/Images/vsolvLogo.png",
+                "icon_path": ip + "/static/Images/vsolvLogo.png"
             }
             output['INVOICE_HEADER'][0].update(classify)
             invoicedetails_totalamt = 0

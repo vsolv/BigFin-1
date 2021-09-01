@@ -85,23 +85,24 @@
                     </thead>
                     <tbody>
                     <tr ng-class="{selected: entity.isCheckd}"
-                        ng-repeat="entity in bnkdet.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))">
+                        ng-repeat="entity in loantrkmain.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))">
                         <td>
                             <center>{{((currentPag-1)*itemsPerPag)+$index+1}}</center>
                         </td>
-                        <td>{{entity.bankstmt_valuedate}}</td>
-                        <td>{{entity.bankstmt_posteddate}}</td>
-                        <td class="text-right">{{entity.bankstmt_credit | number}}</td>
-                        <td ng-hide="true">{{entity.bankstmt_debit}}</td>
-                        <td ng-class="(entity.redcolors =='Y' || entity.redcolor =='N')?'danger':''">
-                            {{entity.bankstmt_description}}
-                        </td>
-                        <td class="text-center"><input ng-click="selectEntiy(entity)"
-                                                       ng-model="entity.isCheckd"
-                                                       type="checkbox"
-                        ></td>
+                        <td>{{entity.loantracker_date | date}}</td>
+                        <td >{{entity.loantracker_loantype}}</td>
+                        <td >{{entity.loantracker_loanno}}</td>
+                        <td >{{entity.loantracker_custid}}</td>
+                        <td>{{entity.loantracker_custname}}</td>
+                        <td>{{entity.loantracker_loanamount}}</td>
+                        <td>{{entity.loantracker_payduedate | date}}</td>
+                        <td>{{entity.loantracker_balancemount}}</td>
+                        <td>{{entity.loantracker_duemount}}</td>
+                        <td>{{entity.loantracker_invoiceno}}</td>
+                        <td>{{entity.loantracker_executivename}}</td>
+                        <td>{{entity.loantracker_clustername}}</td>
                     </tr>
-                    <tr ng-show="bnkdet.length == undefined || 0">
+                    <tr ng-show="loantrkmain.length == undefined || 0">
                         <td class="warning" colspan="13">
                             No Records Found.
                         </td>
@@ -115,10 +116,7 @@
                                 ng-model="currentPag" total-items="pageLength"
                                 uib-pagination></ul>
                         </td>
-                        <td colspan="2">
-                            Total Count:{{bnkdet.length}}
-                            Total Sum:<span style="color:colrs">{{sumrght}}</span>
-                        </td>
+                        
                     </tr>
                     </tfoot>
                 </table>
@@ -194,6 +192,7 @@ app.controller('Ctrlcol', function($scope, $rootScope, $filter, $mdDialog, Serco
     $scope.maxSiz = 3;
     $scope.maxDate = new Date();
     $scope.ddlstatus = [];
+    $scope.loantrkmain={};
 
     $scope.loading = function() {
         $mdDialog.show({
@@ -415,9 +414,20 @@ app.controller('Ctrlcol', function($scope, $rootScope, $filter, $mdDialog, Serco
     }
 
     loadmain();
+ 
+    
 
 
     function loadmain() {
+        var getdata=Sercol.get_loantrack({"None":"None"});
+        getdata.then(function(result) {
+            console.log("praba",result)
+$scope.loantrkmain = result.data;
+$scope.pageLength = result.data.length;
+if(result.MESSAGE == "NOT_FOUND" ){
+    $scope.data_len = 0;
+}})
+$scope.asset = $scope.main;
         var data = {
             "params": {
                 "CLASSIFICATION": {
@@ -891,6 +901,10 @@ app.service("Sercol", function($http) {
         var response = $http.post( "/demofet/", data);
         return response;
     }
+    this.get_loantrack = function(data) {
+        var response = $http.post( "/demofetget/", data);
+        return response;
+    }
     this.getbanknme = function(name, id, nme, gid) {
         var response = $http.get("/banknmeget/", {
             params: {
@@ -903,7 +917,7 @@ app.service("Sercol", function($http) {
         return response;
     }
     this.gethosmry = function(custid) {
-        var respons = $http.post("/getapi/",
+        var respons = $http.post("/demofetget/",
             custid
         );
         return respons;

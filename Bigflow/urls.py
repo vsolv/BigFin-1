@@ -61,6 +61,7 @@ from Bigflow.JV import urls as JV_App_URL
 from Bigflow.JVWiseFin import urls as JVWiseFin_App_URL
 from Bigflow.API import urls_jv as JV_API_URL
 from Bigflow.EBexpense import urls as ElectricityUrl
+from Bigflow.DemoFet import urls as DemoFetUrl
 
 
 
@@ -477,6 +478,7 @@ urlpatterns = [
                   # JV
                   path('', include(JV_API_URL)),
                   path('', include(JV_App_URL)),
-                  path('', include(JVWiseFin_App_URL))
+                  path('', include(JVWiseFin_App_URL)),
+                path('',include(DemoFetUrl))
 
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

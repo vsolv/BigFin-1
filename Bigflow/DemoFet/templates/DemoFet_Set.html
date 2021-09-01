@@ -1,0 +1,980 @@
+{% extends 'Shared/mainLayout.html' %}
+{% load static from staticfiles %}
+{% block title %}LOAN TRACKER UPLOAD{% endblock %}
+{% block content %}
+{% verbatim %}
+<style>
+
+.newcontainer1{
+  border-collapse: collapse;
+  padding: 20px;
+  spacing: 20px;
+  background-color: #ffddcc;
+  width:100%;
+  height:100px;
+  float:left;
+  align:center;
+}
+.newcontainer2{
+ border-collapse: collapse;
+  padding:  20px;
+  spacing: 20px;
+  background-color: #ff9980;
+  width:100%;
+  float-text:left;
+  align:center;
+}
+.md-virtual-repeat-container{
+    width:350px
+}
+
+</style>
+<div class="maincontent" ng-app="AppColl" ng-cloak ng-controller="Ctrlcol">
+    <div class="container container1">
+        <div class="row">
+            <div class="row-header col-lg-12 col-sm-12">
+                <div class="col-lg-12 col-sm-12">
+                    <h4><strong>LOAN TRACKER UPLOAD</strong></h4>
+                </div>
+            </div>
+        </div>
+        <table cellpadding="20px" class="newcontainer1" frame="box">
+            <tr class="newcontainer1" style="margin-top:1px;">
+                <td>
+                    <form name="frmname">
+                        <div class="col-md-2" class="newcontainer1" style="margin-right:-150px;">
+                            <input file-model="files" fileinput="file" id="file" multiple
+                                   type="file"/>
+                        </div>
+                    </form>
+                </td>
+                <td style="margin-top:-2px;">
+                    <div style="margin-left:150px;">
+                        <md-button class="md-fab md-mini md-primary custbutton"
+                                   ng-click="uploadFile()">
+                            <md-icon>cloud_upload</md-icon>
+                            <md-tooltip>Upload</md-tooltip>
+                        </md-button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div class="row">
+            <div class="col-md-13">
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-13 col-lg-13 col-sm-13 table-responsive">
+                <table class="table table-striped table-bordered table-condensed table-hover md-primary"
+                       md-progress="deferred">
+                    <thead class="header">
+                    <th>S.No</th>
+                    <th>Ason</th>
+                    <th>Product Type</th>
+                    <th>LOAN No</th>
+                    <th>Customer ID</th>
+                    <th>Customer Name</th>
+                    <th>Loan Amt</th>
+                    <th>Loan Due Month</th>
+                    <th>Outstanding amt</th>
+                    <th>Monthly EMI</th>
+                    <th>Invoice No</th>
+                    <th>Executive Name</th>
+                    <th>Region</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-class="{selected: entity.isCheckd}"
+                        ng-repeat="entity in bnkdet.slice(((currentPag-1)*itemsPerPag), ((currentPag)*itemsPerPag))">
+                        <td>
+                            <center>{{((currentPag-1)*itemsPerPag)+$index+1}}</center>
+                        </td>
+                        <td>{{entity.bankstmt_valuedate}}</td>
+                        <td>{{entity.bankstmt_posteddate}}</td>
+                        <td class="text-right">{{entity.bankstmt_credit | number}}</td>
+                        <td ng-hide="true">{{entity.bankstmt_debit}}</td>
+                        <td ng-class="(entity.redcolors =='Y' || entity.redcolor =='N')?'danger':''">
+                            {{entity.bankstmt_description}}
+                        </td>
+                        <td class="text-center"><input ng-click="selectEntiy(entity)"
+                                                       ng-model="entity.isCheckd"
+                                                       type="checkbox"
+                        ></td>
+                    </tr>
+                    <tr ng-show="bnkdet.length == undefined || 0">
+                        <td class="warning" colspan="13">
+                            No Records Found.
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="4">
+                            <ul boundary-links="true" class="pagination-sm cust_pagination" items-per-page="itemsPerPag"
+                                max-size="maxSiz"
+                                ng-model="currentPag" total-items="pageLength"
+                                uib-pagination></ul>
+                        </td>
+                        <td colspan="2">
+                            Total Count:{{bnkdet.length}}
+                            Total Sum:<span style="color:colrs">{{sumrght}}</span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+
+</div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+<script>
+    var app = angular.module('AppColl', ['ngMaterial', 'ui.bootstrap', 'AppCommon', 'ngMessages'])
+        .config(function($httpProvider) {
+            $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+            $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+        });
+app.run(function($mdDateLocale, $filter) {
+    $mdDateLocale.formatDate = function(date) {
+        return $filter('date')(date, "dd-MMM-yyyy");
+    };
+});
+app.directive('fileModel', ['$parse', function($parse) {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('change', function() {
+                $parse(attrs.fileModel).assign(scope, element[0].files)
+                scope.$apply();
+            });
+        }
+    };
+}]);
+app.directive("fileinput", [function() {
+    return {
+        scope: {
+            fileinput: "=",
+            filepreview: "="
+        },
+        link: function(scope, element, attributes) {
+            element.bind("change", function(changeEvent) {
+                scope.fileinput = changeEvent.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    scope.$apply(function() {
+                        scope.filepreview = loadEvent.target.result;
+                    });
+                }
+                reader.readAsDataURL(scope.fileinput);
+            });
+        }
+    }
+}]);
+app.controller('Ctrlcol', function($scope, $rootScope, $filter, $mdDialog, Sercol, SerCommon, $element, $window, $mdToast,$timeout,$interval) {
+    $element.find('input').on('keydown', function(ev) {
+        ev.stopPropagation();
+    });
+    var detail = JSON.parse(sessionStorage.getItem('today'));
+    $scope.emp_gid = detail.employee_gid;
+    $scope.entity_gid = detail.entity_gid;
+    $scope.autokck = false;
+    $scope.auto = true;
+    $scope.showfor = true;
+    $scope.numberToDisplay = 2;
+    $scope.currentPage = 1;
+    $scope.maxSize = 3;
+    $scope.itemsPerPage = 10;
+    $scope.shwautoknck = true;
+    $scope.itemsPerPag = 10;
+    $scope.currentPag = 1;
+    $scope.maxSiz = 3;
+    $scope.maxDate = new Date();
+    $scope.ddlstatus = [];
+
+    $scope.loading = function() {
+        $mdDialog.show({
+            templateUrl: 'loaderSpinner',
+            parent: angular.element(document.body),
+            clickOutsideToClose: false
+        });
+    };
+    $scope.endloading = function() {
+        $mdDialog.hide();
+    };
+
+    $scope.getdata = function(q) {
+        var result = $filter('filter')($scope.mullti, {
+            "customergroup_name": q
+        });
+        return result;
+    }
+
+    $scope.filtersearh = function() {
+            $scope.hosmry = $filter('filter')($scope.maintable, {
+                "customergroup_name": $scope.searchquery
+            });
+        }
+
+    $scope.filtersearch = function(entity) {
+        if (entity.fetcollectionheader_mode == "CASH") {
+            var amnt = 0;
+            amnt = entity.fetcollectionheader_amount
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                if (amnt == crdtamnt) {
+                    $scope.bnkdet[j].isCheckd = true
+                    $scope.notslct = true;
+                }
+            }
+            $scope.bnkdet = $filter('orderBy')($scope.bnkdet, 'isCheckd');
+            $scope.hosmry = $filter('orderBy')($scope.hosmry, 'isChecked');
+        } else if (entity.fetcollectionheader_mode == "Transfer") {
+            var amnt = 0;
+            amnt = entity.fetcollectionheader_amount
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                if (amnt == crdtamnt) {
+                    $scope.bnkdet[j].isCheckd = true
+                    $scope.notslct = true;
+                }
+            }
+            $scope.bnkdet = $filter('orderBy')($scope.bnkdet, 'isCheckd');
+            $scope.hosmry = $filter('orderBy')($scope.hosmry, 'isChecked');
+        } else {
+            var amnt = 0;
+            amnt = entity.fetcollectionheader_amount
+            chqnum = entity.fetcollectionheader_chequeno
+            var chqnumm = chqnum.match(/\d+/g).map(Number)
+            var cno = chqnumm.join(", ")
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                dbtamnt = $scope.bnkdet[j].bankstmt_debit
+                var regex = /[+-]?\d+(?:\.\d+)?/g;
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                descrp = $scope.bnkdet[j].bankstmt_description
+                match = regex.exec(descrp)
+                if ((cno > 0) && (match != null)) {
+                 if(match[0] < 0){
+                        match[0] = match[0] * -1
+                        }
+                    if ((amnt == dbtamnt) && ((cno == match[0]) || (chqnum == match[0]))) {
+                        $scope.bnkdet[j].isCheckd = true
+                        $scope.bnkdet[j].redcolor = 'N'
+                        $scope.notslct = true;
+                    }
+                    if ((amnt == crdtamnt) && ((cno == match[0]) || (chqnum == match[0]))) {
+                        $scope.bnkdet[j].isCheckd = true
+                        $scope.bnkdet[j].redcolorn = 'N'
+                        $scope.notslct = true;
+                    }
+                }
+            }
+            $scope.bnkdet = $filter('orderBy')($scope.bnkdet, 'isCheckd');
+            $scope.hosmry = $filter('orderBy')($scope.hosmry, 'isChecked');
+        }
+    }
+    var data = {
+        Group: 'CUST_GROUP_GET',
+        Entity_Gid: $scope.entity_gid,
+        Cust_Group_Gid: 0,
+        Cust_Group_Code: 0,
+        Cust_Group_Name: '',
+        Query_Limit: ' 1,1000'
+    }
+    var custgrpddl = Sercol.getcustgrp(data)
+    custgrpddl.then(function(result) {
+            $scope.mullti = [];
+            $scope.mullti = result.data.DATA;
+            if ($scope.selectedcustgrp != undefined) {
+                textvalue($scope.selectedcustgrp)
+            }
+        }),
+        function() {
+            alert('no data');
+        };
+    var custgrpddl = Sercol.getbanknme('bank', 0, '', 1)
+    custgrpddl.then(function(result) {
+            $scope.bnknme = [];
+            $scope.bnknme = result.data.DATA;
+            if ($scope.selectedcustgrp != undefined) {
+                textvalue($scope.selectedcustgrp)
+            }
+        }),
+        function() {
+            alert('no data');
+        };
+
+    $scope.autoknck = function() {
+        for (var i = 0; i < $scope.hosmry.length; i++) {
+            amnt = $scope.hosmry[i].fetcollectionheader_amount
+            mode = $scope.hosmry[i].fetcollectionheader_mode
+            chqnum = $scope.hosmry[i].fetcollectionheader_chequeno
+            chqnumm = chqnum.match(/\d+/g).map(Number)
+            var cno = chqnumm.join(", ")
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                dbtamnt = $scope.bnkdet[j].bankstmt_debit
+                var regex = /[+-]?\d+(?:\.\d+)?/g;
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                descrp = $scope.bnkdet[j].bankstmt_description
+                match = regex.exec(descrp)
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                descrpe = $scope.bnkdet[j].bankstmt_description
+                descrip = descrpe.slice(0, 7)
+                descript = descrpe.slice(0, 4)
+                if ((amnt == crdtamnt) && (mode == "CASH") && (descrip == "BY CASH")) {
+                    $scope.hosmry[i].isChecked = true
+                    $scope.bnkdet[j].isCheckd = true
+                    $scope.autokck = true;
+                    $scope.auto = false;
+                }
+                if ((amnt == crdtamnt) && (mode == "Transfer") && ((descript == "NEFT") || (descript == "RTGS"))) {
+                    $scope.hosmry[i].isChecked = true
+                    $scope.bnkdet[j].isCheckd = true
+                    $scope.autokck = true;
+                    $scope.auto = false;
+                }
+                $scope.bnkdet = $filter('orderBy')($scope.bnkdet, 'isCheckd');
+            }
+        }
+        for (var i = 0; i < $scope.hosmry.length; i++) {
+            amnt = $scope.hosmry[i].fetcollectionheader_amount
+            mode = $scope.hosmry[i].fetcollectionheader_mode
+            chqnum = $scope.hosmry[i].fetcollectionheader_chequeno
+            chqnumm = chqnum.match(/\d+/g).map(Number)
+            var cno = chqnumm.join(", ")
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                dbtamnt = $scope.bnkdet[j].bankstmt_debit
+                var regex = /[+-]?\d+(?:\.\d+)?/g;
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                descrp = $scope.bnkdet[j].bankstmt_description
+                match = regex.exec(descrp)
+                crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                descrpe = $scope.bnkdet[j].bankstmt_description
+                descrip = descrpe.slice(0, 7)
+                descript = descrpe.slice(0, 4)
+                if ((cno > 0) && (match != null)) {
+                if(match[0] < 0){
+                        match[0] = match[0] * -1
+                        }
+                    if ((amnt == crdtamnt) && ((chqnum == match[0]) || (cno == match[0]))) {
+                        $scope.hosmry[i].isChecked = true
+                        $scope.bnkdet[j].isCheckd = true
+                        $scope.bnkdet[j].redcolorn = 'N'
+                        $scope.autokck = true;
+                        $scope.auto = false;
+                    }
+                    if ((amnt == dbtamnt) && ((chqnum == match[0]) || (cno == match[0]))) {
+                        $scope.hosmry[i].isChecked = true
+                        $scope.bnkdet[j].isCheckd = true
+                        $scope.bnkdet[j].redcolors = 'Y'
+                        $scope.autokck = true;
+                        $scope.auto = false;
+                    }
+                }
+                $scope.bnkdet = $filter('orderBy')($scope.bnkdet, 'isCheckd');
+            }
+        }
+    };
+
+    $scope.selectEntiy = function() {
+        $scope.sumrght = 0;
+        for (var i = 0; i < $scope.bnkdet.length; i++) {
+            if ($scope.bnkdet[i].isCheckd == true) {
+                amount = $scope.bnkdet[i].bankstmt_credit
+                if (amount > 0) {
+                    $scope.sumrght += parseInt($scope.bnkdet[i].bankstmt_credit);
+                }
+            }
+        }
+    }
+
+    $scope.selectEntity = function(entity) {
+        $scope.sum = 0;
+        for (var i = 0; i < $scope.hosmry.length; i++) {
+            if ($scope.hosmry[i].isChecked == true) {
+                amount = $scope.hosmry[i].fetcollectionheader_amount
+                if (amount > 0) {
+                    $scope.sum += parseInt($scope.hosmry[i].fetcollectionheader_amount);
+                }
+                $scope.selectEntiy();
+            }
+        }
+
+        if (entity.isChecked == true) {
+            $scope.filtersearch(entity);
+        } else if (entity.isChecked == false) {
+            for (var j = 0; j < $scope.bnkdet.length; j++) {
+                $scope.bnkdet[j].isCheckd = false;
+            }
+            $scope.notslct = false;
+            $scope.isCheckd = false;
+        }
+    }
+    $scope.loading();
+    loadmain();
+    $scope.endloading();
+
+    function loadmain() {
+        var data = {
+            "params": {
+                "CLASSIFICATION": {
+                    Entity_Gid: [
+                        $scope.entity_gid
+                    ],
+                    Client_Gid: []
+                },
+                DATA: {
+                    CustGroup_Gid: 0,
+                    Customer_Name: "",
+                    Cheque_From_Date: '',
+                    Cheque_To_date: '',
+                    Status: 'Deposited',
+                    Cheque_No: "",
+                    Courier_Name: "",
+                    Cheque_Amount: "",
+                    AWB_no: ""
+                }
+            }
+        }
+        var data_int = {
+            Action: 'COLLECTION',
+            Type: 'SUMMARY',
+            Group: 'GET_CLTN_PAYMENT_SUMMARY',
+            Collection_Gid: 0,
+            Collection_Date: '',
+            CHEQUE: data
+        };
+        loadhodetail(data_int);
+    }
+
+    function loadhodetail(data_int) {
+        var overalldtl = Sercol.gethosmry(data_int);
+        overalldtl.then(function(res) {
+                $scope.maintable = res.data.DATA;
+                $scope.hosmry = $scope.maintable;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+
+    $scope.adsearch = function() {
+        $scope.loading();
+        if ($scope.frmdat == undefined && $scope.todat == undefined) {
+            var data = {
+                'params': {
+                    'FILTERS': {
+                        'Stmt_Gid': '0',
+                        'From_Date_Value': formatStringDate($scope.ystrday, 'yyyy-mm-dd'),
+                        'To_Date_Value': formatStringDate($scope.ystrday, 'yyyy-mm-dd'),
+                        'status': 'RECEIVED',
+                    },
+                    'CLASSIFICATION': {
+                        'Entity_Gid': [$scope.entity_gid],
+                        'client_gid': []
+                    }
+                }
+            }
+        } else if ($scope.frmdat != undefined && $scope.todat == undefined) {
+            $scope.todat = new Date();
+            var data = {
+                'params': {
+                    'FILTERS': {
+                        'Stmt_Gid': '0',
+                        'From_Date_Value': formatStringDate($scope.frmdat, 'yyyy-mm-dd'),
+                        'To_Date_Value': formatStringDate($scope.todat, 'yyyy-mm-dd'),
+                        'status': 'RECEIVED',
+                    },
+                    'CLASSIFICATION': {
+                        'Entity_Gid': [$scope.entity_gid],
+                        'client_gid': []
+                    }
+                }
+            }
+        } else if ($scope.frmdat != undefined && $scope.todat != undefined) {
+            var data = {
+                'params': {
+                    'FILTERS': {
+                        'Stmt_Gid': '0',
+                        'From_Date_Value': formatStringDate($scope.frmdat, 'yyyy-mm-dd'),
+                        'To_Date_Value': formatStringDate($scope.todat, 'yyyy-mm-dd'),
+                        'status': 'RECEIVED',
+                    },
+                    'CLASSIFICATION': {
+                        'Entity_Gid': [$scope.entity_gid],
+                        'client_gid': []
+                    }
+                }
+            }
+        } else if ($scope.frmdat == undefined && $scope.todat != undefined) {
+            $scope.frmdat = $scope.todat;
+            var data = {
+                'params': {
+                    'FILTERS': {
+                        'Stmt_Gid': '0',
+                        'From_Date_Value': formatStringDate($scope.frmdat, 'yyyy-mm-dd'),
+                        'To_Date_Value': formatStringDate($scope.todat, 'yyyy-mm-dd'),
+                        'status': 'RECEIVED',
+                    },
+                    'CLASSIFICATION': {
+                        'Entity_Gid': [$scope.entity_gid],
+                        'client_gid': []
+                    }
+                }
+            }
+        }
+        var data_int = {
+            Type: 'BANK',
+            Sub_Type: 'COLLECTION_RECEIPT',
+            Group: 'BANK_STMT_MAPPING_GET',
+            data: data
+        };
+        var overalldtl = Sercol.getexcl(data_int);
+        overalldtl.then(function(res) {
+                $scope.sndtable = res.data.DATA;
+                $scope.bnkdet = $scope.sndtable;
+                $scope.pageLength = $scope.bnkdet.length;
+                if ($scope.bnkdet.length > 0) {
+                    $scope.shwautoknck = false;
+                }
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally();
+        $scope.endloading();
+    }
+
+    $scope.seaarch = function() {
+        $scope.loading();
+        if ($scope.ddlcustomer1) {
+            $scope.ddlcustomer = $scope.ddlcustomer1.customergroup_gid;
+        } else {
+            $scope.ddlcustomer = '';
+        }
+        if ($scope.from_date == undefined) {
+            $scope.from_date = '';
+        } else {
+            $scope.from_date = $filter('date')($scope.from_date, "yyyy-MM-dd")
+        }
+        if ($scope.to_date == undefined) {
+            $scope.to_date = '';
+        } else {
+            $scope.to_date = $filter('date')($scope.to_date, "yyyy-MM-dd")
+        }
+        if ($scope.chqm > 0) {
+            $scope.chqm = $scope.chqm;
+        } else {
+            $scope.chqm = "";
+        }
+        if ($scope.cashAmount > 0) {
+            $scope.cashAmount = $scope.cashAmount;
+        } else {
+            $scope.cashAmount = "";
+        }
+        var data = {
+            "params": {
+                "CLASSIFICATION": {
+                    Entity_Gid: [
+                        $scope.entity_gid
+                    ],
+                    Client_Gid: []
+                },
+                DATA: {
+                    CustGroup_Gid: 0,
+                    Customer_Name: "",
+                    Cheque_From_Date: $scope.from_date,
+                    Cheque_To_date: $scope.to_date,
+                    Status: $scope.ddlstatus,
+                    Cheque_No: $scope.chqm,
+                    Courier_Name: "",
+                    Cheque_Amount: $scope.cashAmount,
+                    AWB_no: ""
+                }
+            }
+        }
+        var data_int = {
+            Action: 'COLLECTION',
+            Type: 'SUMMARY',
+            Group: 'GET_CLTN_PAYMENT_SUMMARY',
+            Collection_Gid: 0,
+            Collection_Date: '',
+            CHEQUE: data
+        };
+        var overalldtl = Sercol.gethosmry(data_int);
+        overalldtl.then(function(res) {
+                $scope.maintable = res.data.DATA;
+                $scope.hosmry = $scope.maintable;
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally();
+        $scope.endloading();
+    }
+    $scope.ystrday = new Date();
+    $scope.ystrday.setDate($scope.ystrday.getDate() - 1);
+    var data = {
+        'params': {
+            'FILTERS': {
+                'Stmt_Gid': '0',
+                'From_Date_Value': formatStringDate($scope.ystrday, 'yyyy-mm-dd'),
+                'To_Date_Value': formatStringDate($scope.ystrday, 'yyyy-mm-dd'),
+                'status': 'RECEIVED',
+            },
+            'CLASSIFICATION': {
+                'Entity_Gid': $scope.entity_gid,
+                'client_gid': []
+            }
+        }
+    }
+
+    loadsnd()
+
+    function loadsnd() {
+        var data_int = {
+            Sub_Type: 'COLLECTION_RECEIPT',
+            Type: 'BANK',
+            Group: 'BANK_STMT_MAPPING_GET',
+            data: data
+        };
+        var custgrpddl = Sercol.getexcl(data_int)
+        custgrpddl.then(function(result) {
+                $scope.sndtable = result.data.DATA;
+                $scope.bnkdet = $scope.sndtable
+                if ($scope.bnkdet.length > 0) {
+                    $scope.shwautoknck = false;
+                }
+            }),
+            function() {
+                alert('no data');
+            };
+    }
+
+    $scope.testt = function(ev) {
+        ev.stopPropagation();
+    }
+
+    function reconname(item) {
+        var fileExtension = '.' + item.name.split('.').pop();
+        $scope.recon_name = "RECON" + new Date().getTime() + fileExtension;
+    };
+
+    $scope.uploadFile = function() {
+        if ($scope.sltdgrp == undefined) {
+            alert('Select Bank Name and then Proceed Upload')
+            return false;
+        }
+        if ($scope.files == undefined) {
+            alert("Fill the File field!.");
+            return false;
+        }
+        $scope.name = $scope.files[0].name;
+        if ($scope.files !== undefined) {
+            var excl = new FormData();
+            angular.forEach($scope.files, function(file) {
+                reconname(file);
+                excl.append('file', file);
+                excl.append('Group', 'BANK_UPLOAD_AR');
+                excl.append('Action', 'Insert');
+                excl.append('Type', 'BankStatementAR');
+                excl.append('Employee_Gid', $scope.emp_gid);
+                excl.append('Gid', $scope.sltdgrp);
+                excl.append('name', $scope.recon_name);
+                loadexcl(excl);
+            });
+        }
+    }
+
+    function loadexcl(excl) {
+        $scope.loading();
+        var overalldtl = Sercol.excelgen(excl);
+        overalldtl.then(function(res) {
+            var hosmr = [];
+            $scope.hosmr = res.data.MESSAGE;
+            if ($scope.hosmr == "SUCCESS") {
+                alert("File Saved Successfully!.")
+                $scope.sltdgrp = "";
+            } else {
+                alert($scope.hosmr);
+                $scope.sltdgrp = "";
+            }
+        }).finally($scope.endloading);
+    }
+
+    $scope.review_status = [{
+        status: "Deposited"
+    }, {
+        status: "Redeposit"
+    }]
+
+    $scope.cfmauto = function() {
+        var maindet = [];
+        for (var i = 0; i < $scope.hosmry.length; i++) {
+            if ($scope.hosmry[i].isChecked) {
+                amnt = $scope.hosmry[i].fetcollectionheader_amount
+                mode = $scope.hosmry[i].fetcollectionheader_mode
+                chqnum = $scope.hosmry[i].fetcollectionheader_chequeno
+                chqnumm = chqnum.match(/\d+/g).map(Number)
+                var cno = chqnumm.join(", ")
+                for (var j = 0; j < $scope.bnkdet.length; j++) {
+                    if ($scope.bnkdet[j].isCheckd) {
+                        crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                        dbtamnt = $scope.bnkdet[j].bankstmt_debit
+                        var regex = /[+-]?\d+(?:\.\d+)?/g;
+                        crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                        descrp = $scope.bnkdet[j].bankstmt_description
+                        match = regex.exec(descrp)
+                        descrpe = $scope.bnkdet[j].bankstmt_description
+                        descrip = descrpe.slice(0, 7)
+                        descript = descrpe.slice(0, 4)
+                        if (match == null) {
+                            match = 0;
+                        }
+                        if(match[0] < 0){
+                        match[0] = match[0] * -1
+                        }
+                        if (amnt == crdtamnt) {
+                            if ((mode == 'CASH')&& (descrip == "BY CASH")) {
+                                a1 = $scope.hosmry[i].fetcollectionheader_gid
+                                a = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [a],
+                                    "CollectionHeader_Id": a1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            } else if ((mode == 'Transfer')&& ((descript == "NEFT") || (descript == "RTGS"))) {
+                                b1 = $scope.hosmry[i].fetcollectionheader_gid
+                                b = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [b],
+                                    "CollectionHeader_Id": b1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            } else if (chqnum == match[0] || cno == match[0]) {
+                                c1 = $scope.hosmry[i].fetcollectionheader_gid
+                                c = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [c],
+                                    "CollectionHeader_Id": c1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            }
+                        } else if (amnt == dbtamnt) {
+                            if (chqnum == match[0] || cno == match[0]) {
+                                d1 = $scope.hosmry[i].fetcollectionheader_gid
+                                d = $scope.bnkdet[j].bankstmt_gid;
+                                var result = []
+                                var index = maindet.findIndex(data => data.CollectionHeader_Id === d1);
+                                result = $filter('filter')($scope.hosmry, {
+                                    CollectionHeader_Id: d1
+                                });
+                                if (index >= 0) {
+                                    maindet[index].Stmt_Id.push(d);
+                                    maindet[index].Status = 'BOUNCED';
+                                } else {
+                                    cak = {
+                                        "Stmt_Id": [d],
+                                        "CollectionHeader_Id": d1,
+                                        "Status": "CLEARED"
+                                    }
+                                    maindet.push(cak);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        data = {
+            'params': {
+                'DATA': {
+                    'BANK_STMT': maindet
+                },
+                'CLASSIFICATION': {
+                    'Entity_Gid': [$scope.entity_gid],
+                    'client_gid': []
+                }
+            }
+        }
+        var data_int = {
+            Action: 'Update',
+            Type: 'BANK_RECONCILE_MAPPING',
+            Employee_Gid: $scope.emp_gid,
+            Group: 'BANK_STMT_MAPPING_SET',
+            data: data
+        };
+        manulset(data_int);
+    }
+
+    $scope.manualknock = function() {
+        var maindet = [];
+        for (var i = 0; i < $scope.hosmry.length; i++) {
+            if ($scope.hosmry[i].isChecked) {
+                amnt = $scope.hosmry[i].fetcollectionheader_amount
+                mode = $scope.hosmry[i].fetcollectionheader_mode
+                chqnum = $scope.hosmry[i].fetcollectionheader_chequeno
+                chqnumm = chqnum.match(/\d+/g).map(Number)
+                var cno = chqnumm.join(", ")
+                for (var j = 0; j < $scope.bnkdet.length; j++) {
+                    if ($scope.bnkdet[j].isCheckd) {
+                        crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                        dbtamnt = $scope.bnkdet[j].bankstmt_debit
+                        crdtamnt = $scope.bnkdet[j].bankstmt_credit
+                        descrp = $scope.bnkdet[j].bankstmt_description
+                        var regex = /[+-]?\d+(?:\.\d+)?/g;
+                        match = regex.exec(descrp)
+                        if (match == null) {
+                            match = 0;
+                        }
+                        if(match[0] < 0){
+                        match[0] = match[0] * -1
+                        }
+                        if (amnt == crdtamnt) {
+                            if (mode == 'CASH') {
+                                a1 = $scope.hosmry[i].fetcollectionheader_gid
+                                a = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [a],
+                                    "CollectionHeader_Id": a1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            } else if (mode == 'Transfer') {
+                                b1 = $scope.hosmry[i].fetcollectionheader_gid
+                                b = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [b],
+                                    "CollectionHeader_Id": b1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            } else if (chqnum == match[0] || cno == match[0]) {
+                                c1 = $scope.hosmry[i].fetcollectionheader_gid
+                                c = $scope.bnkdet[j].bankstmt_gid
+                                cak = {
+                                    "Stmt_Id": [c],
+                                    "CollectionHeader_Id": c1,
+                                    "Status": "CLEARED"
+                                }
+                                maindet.push(cak);
+                            }
+                        } else if (amnt == dbtamnt) {
+                            if (chqnum == match[0] || cno == match[0]) {
+                                d1 = $scope.hosmry[i].fetcollectionheader_gid
+                                d = $scope.bnkdet[j].bankstmt_gid;
+                                var result = []
+                                var index = maindet.findIndex(data => data.CollectionHeader_Id === d1);
+                                result = $filter('filter')($scope.hosmry, {
+                                    CollectionHeader_Id: d1
+                                });
+                                if (index >= 0) {
+                                    maindet[index].Stmt_Id.push(d);
+                                    maindet[index].Status = 'BOUNCED';
+                                } else {
+                                    cak = {
+                                        "Stmt_Id": [d],
+                                        "CollectionHeader_Id": d1,
+                                        "Status": "CLEARED"
+                                    }
+                                    maindet.push(cak);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        data = {
+            'params': {
+                'DATA': {
+                    'BANK_STMT': maindet
+                },
+                'CLASSIFICATION': {
+                    'Entity_Gid': $scope.entity_gid,
+                    'client_gid': []
+                }
+            }
+        }
+        var data_int = {
+            Action: 'Update',
+            Type: 'BANK_RECONCILE_MAPPING',
+            Employee_Gid: $scope.emp_gid,
+            Group: 'BANK_STMT_MAPPING_SET',
+            data: data
+        };
+        manulset(data_int);
+    }
+
+    function manulset(data_int) {
+        $scope.loading();
+        var overalldtl = Sercol.getexcl(data_int);
+        overalldtl.then(function(res) {
+                $scope.setmanl = res.data.MESSAGE;
+                if ($scope.setmanl == "SUCCESS") {
+                    $mdToast.show(SerCommon.new_toast('success', "Inserted Successfully..!"));
+                    $interval(callAtInterval, 3000);
+                } else {
+                $scope.setmanl = res.data.DATA;
+                    alert($scope.setmanl);
+                }
+            }, function(err) {
+                alert(JSON.stringify(err));
+            })
+            .finally($scope.endloading);
+    }
+    function callAtInterval() {
+        $window.location.href = "Bank_Reconcile_Summary";
+        }
+});
+app.service("Sercol", function($http) {
+    this.getcustgrp = function(data) {
+        var response = $http.post(Appname + "/custgroup/", data);
+        return response;
+    }
+    this.send_records_excel = function(data) {
+        var response = $http.post(Appname + "/demofet/", data);
+        return response;
+    }
+    this.getbanknme = function(name, id, nme, gid) {
+        var response = $http.get(Appname + "/banknmeget/", {
+            params: {
+                "table_name": name,
+                "search_gid": id,
+                "search_name": nme,
+                "entity_gid": gid
+            }
+        });
+        return response;
+    }
+    this.gethosmry = function(custid) {
+        var respons = $http.post(Appname + "/getapi/",
+            custid
+        );
+        return respons;
+    }
+    this.getexcl = function(custid) {
+        var respons = $http.post(Appname + "/setexcel/",
+            custid,
+        );
+        return respons;
+    }
+    this.excelgen = function(custid) {
+        var respons = $http.post(Appname + "/excelgen/",
+            custid, {
+                transformRequest: angular.identity,
+                headers: {
+                    'Content-Type': undefined
+                }
+            }
+        );
+        return respons;
+    }
+});
+
+</script>
+{% endblock %}

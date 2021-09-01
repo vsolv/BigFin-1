@@ -211,6 +211,7 @@ INSTALLED_APPS = [
     'Bigflow.BranchExp',
     # 'Bigflow.Memo'
     'Bigflow.EBexpense',
+    'Bigflow.DemoFet',
     #'preventconcurrentlogins'
 
     # 'django_celery_results',

@@ -22,7 +22,6 @@ def demo_fet_get(request):
     json_df=(df.to_json(orient='records'))
     return HttpResponse(str(json_df))
 def demo_fet_set(request):
-    demo_fet_get()
     import xlrd
     from django.db import connection
     from django.http.response import JsonResponse

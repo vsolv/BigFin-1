@@ -11,9 +11,9 @@ def demo_fet_set(request):
     import xlrd
     from django.db import connection
     from django.http.response import JsonResponse
-    xfile=request.FILES['excelfile']
+    xfile=request.FILES['file']
     # xfile=("C:\\Users\\PrabhaAishu\\Downloads\\sale coll Guardian - Copy.xlsx")
-    wb = xlrd.open_workbook(xfile)
+    wb =  xlrd.open_workbook(file_contents=xfile.read())
     sheet = wb.sheet_by_index(0)
     cols=['Slno','Ason','Product_Type','LAN_No','Cust_ID','Cust_Name','Loan_Amt','Loan_Due_Month','Outstanding_amt','Monthly_EMI','Invoice_No','Executive_Name','Region']
     print(sheet.ncols)
@@ -36,9 +36,10 @@ def demo_fet_set(request):
         cursor=connection.cursor()
         paramet=('INSERT',json.dumps(records),'@message')
         print(paramet)
-        cursor.callproc('sp_DemoFet_Set_1',paramet)
+        cursor.callproc('sp_DemoFet_Set',paramet)
         for out in cursor.fetchall():
             print(out)
-        return JsonResponse({"RESULT":"SUCCESS"})
+        return JsonResponse({"MESSAGE":"SUCCESS"})
     except:
         traceback.print_exc()
+        return JsonResponse({"MESSAGE":"FAIL"})

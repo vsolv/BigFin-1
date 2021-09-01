@@ -8,15 +8,25 @@ def demo_fet(request):
     utl.check_authorization(request)
     return render(request, "DemoFet_Set.html")
 def demo_fet_get(request):
+    from django.http import HttpResponse
     import pandas as pd
-    df=pd.dataframe()
-    pass
+    from django.db import connection
+    cursor=connection.cursor()
+    paramet=('@message',)
+    cursor.callproc('sp_DemoFet_Get',paramet)
+    field_names = [i[0] for i in cursor.description]
+    print(field_names)
+    # for record in cursor.fetchall():
+    #     print(record)
+    df=pd.DataFrame.from_records(list(cursor.fetchall()),columns=field_names)
+    json_df=(df.to_json(orient='records'))
+    return HttpResponse(str(json_df))
 def demo_fet_set(request):
+    demo_fet_get()
     import xlrd
     from django.db import connection
     from django.http.response import JsonResponse
     xfile=request.FILES['file']
-    # xfile=("C:\\Users\\PrabhaAishu\\Downloads\\sale coll Guardian - Copy.xlsx")
     wb =  xlrd.open_workbook(file_contents=xfile.read())
     sheet = wb.sheet_by_index(0)
     cols=['Slno','Ason','Product_Type','LAN_No','Cust_ID','Cust_Name','Loan_Amt','Loan_Due_Month','Outstanding_amt','Monthly_EMI','Invoice_No','Executive_Name','Region']
@@ -44,11 +54,10 @@ def demo_fet_set(request):
             record={}
         cursor=connection.cursor()
         paramet=('INSERT',json.dumps(records),'@message')
-        print(paramet)
         cursor.callproc('sp_DemoFet_Set',paramet)
-        for out in cursor.fetchall():
-            print(out)
-        return JsonResponse({"MESSAGE":"SUCCESS"})
+        cursor.execute('select @message')
+        if(cursor.fetchone()=='SUCCESS'):
+            return JsonResponse({"MESSAGE":"SUCCESS"})
     except:
         traceback.print_exc()
         return JsonResponse({"MESSAGE":"FAIL"})

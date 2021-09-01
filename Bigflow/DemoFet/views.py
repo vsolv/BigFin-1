@@ -7,6 +7,10 @@ from django.shortcuts import render
 def demo_fet(request):
     utl.check_authorization(request)
     return render(request, "DemoFet_Set.html")
+def demo_fet_get(request):
+    import pandas as pd
+    df=pd.dataframe()
+    pass
 def demo_fet_set(request):
     import xlrd
     from django.db import connection
@@ -26,6 +30,11 @@ def demo_fet_set(request):
             for col_no in range(no_cols):
                 if col_no not in (1,7):
                     record[cols[col_no]]=sheet.cell_value(row_no,col_no)
+                    if (cols[col_no])=='Executive_Name':
+                        if record[cols[col_no]]=='' or record[cols[col_no]]==None:
+                            message="Executive Name not given for Record"
+                            return JsonResponse({"MESSAGE":message})
+                        pass
                 else:
                     if col_no==1:
                         record[cols[col_no]]=str(datetime.datetime(*xlrd.xldate_as_tuple(sheet.cell_value(row_no,col_no), wb.datemode)))

@@ -1,5 +1,5 @@
-import datetime
-from datetime import timedelta
+# import datetime
+from datetime import timedelta,datetime as dt
 import io
 import time
 import pandas as pd
@@ -1471,7 +1471,7 @@ def outstandingExcel(request):
         subheader_format = utility.subHeaderFormat(workbook)
         ws.merge_range(0, 0, 0, column_count, 'VSOLV ENGINEERING INDIA PVT LTD', header_format)
         ws.merge_range(1, 0, 1, column_count, 'CUSTOMER OUTSTANDING REPORT', subheader_format)
-        ws.merge_range(2, 0, 2, 3, 'Date: ' + datetime.datetime.today().strftime("%d/%m/%Y"),
+        ws.merge_range(2, 0, 2, 3, 'Date: ' + datetime.today().strftime("%d/%m/%Y"),
                        subheader_format)
         if employee_gid != 0:
             header_text = request.GET['employee_name']
@@ -1523,7 +1523,7 @@ def outstandingExcel(request):
         ws.merge_range(0, 0, 0, bcolumn_count, 'VSOLV ENGINEERING INDIA PVT LTD', header_format)
         ws.merge_range(1, 0, 1, bcolumn_count
                        , 'CUSTOMER OUTSTANDING REPORT - Branchwise', subheader_format)
-        ws.merge_range(2, 0, 2, 3, 'Date: ' + datetime.datetime.today().strftime("%d/%m/%Y"),
+        ws.merge_range(2, 0, 2, 3, 'Date: ' + datetime.today().strftime("%d/%m/%Y"),
                        subheader_format)
         if employee_gid != 0:
             header_text = request.GET['employee_name']

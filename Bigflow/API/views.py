@@ -792,7 +792,8 @@ class Customer_view_get(APIView):
             obj_collection.type = jsondata.get('Outstanding_Type')
             obj_collection.sub_type = jsondata.get('Outstanding_SubType')
             obj_collection.filter_json = jsondata
-            obj_collection.filter_json['Employee_Gid'] = decry_data(obj_collection.filter_json['Employee_Gid'])
+            # obj_collection.filter_json['Employee_Gid'] = decry_data(obj_collection.filter_json['Employee_Gid'])
+            obj_collection.filter_json['Employee_Gid'] = 1
             obj_collection.filter_json = json.dumps(jsondata)
             obj_collection.Classification = jsondata.get('CLASSIFICATION')
 
@@ -807,7 +808,8 @@ class Customer_view_get(APIView):
             object_viewdetail.employee_gid = jsondata.get('Employee_Gid')
             object_viewdetail.from_date = ""
             object_viewdetail.to_date = ""
-            object_viewdetail.entity_gid = decry_data(obj_collection.filter_json['Employee_Gid'])
+            # object_viewdetail.entity_gid = decry_data(obj_collection.filter_json['Employee_Gid'])
+            object_viewdetail.entity_gid = 1
             object_viewdetail.limit = self.request.query_params.get("Limit")
             sales_history = object_viewdetail.get_sales_history_fet()
 
@@ -824,8 +826,10 @@ class Customer_view_get(APIView):
             ## For Get Hierarchy
             object_viewdetail.employee_gid = jsondata.get('Employee_Gid')
             object_viewdetail.group = 'CUSTOMER_OUTSTANDING_GROUP'
-            object_viewdetail.create_by = decry_data(jsondata.get('Employee_Gid'))
-            object_viewdetail.entity_gid = self.request.query_params.get("Entity_gid")
+            # object_viewdetail.create_by = decry_data(jsondata.get('Employee_Gid'))
+            object_viewdetail.create_by = 1
+            # object_viewdetail.entity_gid = self.request.query_params.get("Entity_gid")
+            object_viewdetail.entity_gid = 1
 
             lt_out_message = object_viewdetail.get_hierarchy()
             ls_hierarchy = lt_out_message[0]

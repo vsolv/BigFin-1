@@ -259,10 +259,12 @@ def decrpt(encrypt_text):
     hashid = hashids.decode(encrypt_text)
     data = hashid[0]
     return data
+    # return encrypt_text
 def encrypt1(text):
     hashids = Hashids(salt=Password_Key)
     ints = hashids.encode(text)
     return ints
+    # return text
 def Excelfilename(filename):
     File_name=time.strftime(filename+"_%Y_%m_%d_%H_%M.xlsx")
     return File_name

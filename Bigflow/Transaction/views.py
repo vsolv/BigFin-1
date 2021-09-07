@@ -2392,7 +2392,8 @@ def getclustermaster(request):
         jsondata = json.loads(request.body.decode('utf-8'))
         if (jsondata.get('Group')) == 'CLUSTER_EMPMAP_FLAG':
             jsondata = json.loads(request.body.decode('utf-8'))
-            jsondata['Classification']['entity_gid'] = decry_data(request.session['Entity_gid'])
+            # jsondata['Classification']['entity_gid'] = decry_data(request.session['Entity_gid'])
+            jsondata['data']['Classification']['entity_gid'] = 1
             group = jsondata.get('Group')
             params = {'Group': "" + group + ""}
             headers = {"content-type": "application/json", "Authorization": "" + token + ""}

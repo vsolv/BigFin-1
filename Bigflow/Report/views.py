@@ -1369,7 +1369,7 @@ def get_Outstanding_comparison(request):
 def outstandingExcel(request):
     if request.method == 'GET':
         employee_gid = request.GET['employee_gid']
-        head_columns = ['S.No', 'Customer Name', 'Location', 'Invoice No', 'Due Date', 'Quantity', 'Bill Amount'
+        head_columns = ['S.No', 'Customer Name', 'Location', 'Ref No', 'Due Date', 'Quantity', 'Bill Amount'
             , 'Due Amount', 'Due Days', 'Credit Days', '< 30', '30 - 45', '45 - 60', '60 - 75', '75 - 90', '90 - 120',
                         '120 - 150',
                         '150 - 180', '> 180', 'Last pmt Date', 'Payment Amt',
@@ -1487,6 +1487,7 @@ def outstandingExcel(request):
         ws.set_column('F:F', None, None, {'hidden': True})
         ws.set_column('G:G', None, None, {'hidden': True})
 
+
         # branchwise
         header = []
         for i in range(0, len(bhead_columns)):
@@ -1527,7 +1528,7 @@ def outstandingExcel(request):
         ws.merge_range(0, 0, 0, bcolumn_count, 'VSOLV ENGINEERING INDIA PVT LTD', header_format)
         ws.merge_range(1, 0, 1, bcolumn_count
                        , 'CUSTOMER OUTSTANDING REPORT - Branchwise', subheader_format)
-        ws.merge_range(2, 0, 2, 3, 'Date: ' + datetime.today().strftime("%d/%m/%Y"),
+        ws.merge_range(2, 0, 2, 2, 'Date: ' + datetime.today().strftime("%d/%m/%Y"),
                        subheader_format)
         if employee_gid != 0:
             header_text = request.GET['employee_name']
@@ -1541,6 +1542,7 @@ def outstandingExcel(request):
         ws.set_column(12, 12, cell_format=number_format)
         # ws.set_column(19, 19, cell_format=number_format)
         ws.set_column('D:D', None, None, {'hidden': True})
+        ws.set_column('C:C', None, None, {'hidden': True})
         writer.save()
         workbook.close()
         # XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
